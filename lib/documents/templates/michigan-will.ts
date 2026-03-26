@@ -24,21 +24,24 @@ DOCUMENT REQUIREMENTS:
 2. Family identification section identifying spouse/children if provided.
 3. Specific gifts section if any specific bequests are provided.
 4. Residuary clause distributing the remainder of the estate to named beneficiaries with specified splits.
+4a. If contingent beneficiaries are provided, add a CONTINGENT BENEFICIARIES article after the residuary clause: "If [primary beneficiary] does not survive me by thirty (30) days, I give my entire residuary estate to [contingent beneficiary names] in equal shares. If any contingent beneficiary shall predecease me, their share shall pass to the surviving contingent beneficiaries in equal shares." If no contingent beneficiaries are provided, use Michigan intestate succession as the fallback.
 5. Executor appointment with successor executor, granting full powers to manage, sell, lease, or otherwise handle estate property without court supervision where permitted by Michigan law.
 6. Guardian appointment for minor children if applicable, with successor guardian.
 7. No-contest clause: Any beneficiary who contests this Will shall forfeit their share, which shall be distributed among the remaining beneficiaries proportionally.
 8. Executor powers: The executor shall have full authority under the Michigan Estates and Protected Individuals Code (EPIC), MCL 700.3715, including but not limited to the power to sell, lease, mortgage, or otherwise deal with estate property, pay debts and expenses, distribute assets in kind or in cash, employ professionals, and compromise claims.
-9. Governing law clause: This Will shall be governed by and construed in accordance with the laws of the State of Michigan.
-10. Severability clause: If any provision of this Will is found to be invalid or unenforceable, the remaining provisions shall continue in full force and effect.
-11. Attestation clause for witnesses affirming the testator signed willingly and appeared of sound mind.
+9. Digital Assets article: "I authorize my Executor to access, manage, distribute, copy, delete, or terminate any digital asset, digital account, or electronically stored information owned by me, including but not limited to email accounts, social media accounts, financial accounts accessed online, cryptocurrency and digital currency, domain names, and any other digital property. This authority is granted pursuant to the Revised Uniform Fiduciary Access to Digital Assets Act as adopted in Michigan."
+10. Governing law clause: This Will shall be governed by and construed in accordance with the laws of the State of Michigan.
+11. Severability clause: If any provision of this Will is found to be invalid or unenforceable, the remaining provisions shall continue in full force and effect.
+12. Attestation clause for witnesses affirming the testator signed willingly and appeared of sound mind.
+13. If guardian information is provided, include a Guardian Designation article: "If my spouse does not survive me, I nominate [Guardian Name] as guardian of the person and estate of my minor children. If [Guardian Name] is unable or unwilling to serve, I nominate [Successor Guardian] as successor guardian. I request that no bond be required of any guardian named herein."
 
 OUTPUT FORMAT:
-- Use formal legal language appropriate for a Michigan Last Will and Testament.
+- Return PLAIN TEXT only. Do NOT use any markdown formatting. No pound signs (#), no asterisks (**), no dashes for rules (---), no backticks. Use ALL CAPS for section headers and article titles.
 - Use numbered articles (ARTICLE I, ARTICLE II, etc.) for major sections.
 - Use [SIGNATURE LINE] where the testator signs.
 - Use [DATE LINE] where the date of signing goes.
-- Use [WITNESS SIGNATURE] where each witness signs (include two witness blocks).
-- Use [NOTARY BLOCK] where notary acknowledgment goes (for self-proving affidavit).
+- For witness blocks use EXACTLY: [WITNESS SIGNATURE] on its own line. Include two witness blocks. Do not add additional labels or headers around witness blocks.
+- Use [NOTARY BLOCK] EXACTLY ONCE at the end of the document for the self-proving affidavit. Do NOT write out notary acknowledgment language in the document body — the platform renders this automatically.
 - Do NOT include any commentary, instructions, or explanations outside the document text itself.
 - Output ONLY the complete will text ready for formatting.`;
 
@@ -59,6 +62,7 @@ export function buildWillPrompt(intake: Record<string, unknown>): string {
   const guardian_relationship = (i.guardian_relationship || i.guardianRelationship || "") as string;
   const successor_guardian = (i.successor_guardian || i.successorGuardianName || "") as string;
   const specific_gifts = (i.specific_gifts || (i.hasSpecificGifts === "Yes" ? i.specificGiftsDescription : "") || "") as string;
+  const contingent_beneficiaries = (i.contingent_beneficiaries || i.contingentBeneficiaries || []) as Array<{ name: string; relationship: string }>;
 
   let prompt = `Draft a Michigan Last Will and Testament with the following client intake data:
 
@@ -76,9 +80,24 @@ BENEFICIARY DESIGNATIONS:
 
   if (secondary_beneficiary) {
     prompt += `\n- Secondary Beneficiary: ${secondary_beneficiary}`;
+    prompt += `\n- Estate Distribution: ${estate_split}`;
+    prompt += `\n\nRESIDUARY CLAUSE INSTRUCTIONS:
+If the primary beneficiary does not survive the testator by thirty (30) days, the entire residuary estate shall pass to the secondary beneficiary, ${secondary_beneficiary}. If neither the primary nor secondary beneficiary survives the testator by thirty (30) days, then the estate shall pass to the testator's heirs at law under Michigan intestate succession.`;
+  } else {
+    prompt += `\n- Estate Distribution: 100% to primary beneficiary`;
+    prompt += `\n\nRESIDUARY CLAUSE INSTRUCTIONS:
+If the primary beneficiary does not survive the testator by thirty (30) days, the entire residuary estate shall pass to the testator's heirs at law as determined under the laws of intestate succession of the State of Michigan.`;
   }
 
-  prompt += `\n- Estate Distribution: ${estate_split}`;
+  if (contingent_beneficiaries.length > 0) {
+    prompt += `\n\nCONTINGENT BENEFICIARIES:`;
+    contingent_beneficiaries.forEach((b, idx) => {
+      prompt += `\nContingent Beneficiary ${idx + 1}: ${b.name} (${b.relationship})`;
+    });
+    prompt += `\n\nContingent beneficiaries inherit only if ALL primary beneficiaries predecease the testator or fail to survive by 30 days. If multiple contingent beneficiaries, they share equally. If any contingent beneficiary predeceases the testator, their share passes to the surviving contingent beneficiaries.`;
+  } else {
+    prompt += `\n\nCONTINGENT BENEFICIARIES: None designated. If primary beneficiary does not survive, estate passes to heirs under Michigan intestate succession.`;
+  }
 
   if (guardian_name) {
     prompt += `\n\nGUARDIAN APPOINTMENT (for minor children):

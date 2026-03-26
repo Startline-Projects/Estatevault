@@ -33,12 +33,12 @@ DOCUMENT REQUIREMENTS:
 THIS IS A SHORTER DOCUMENT than a standard will. Do not include detailed distribution provisions, specific gifts, or extensive executor powers beyond what is needed to pour assets into the trust.
 
 OUTPUT FORMAT:
-- Use formal legal language appropriate for a Michigan Pour-Over Will.
+- Return PLAIN TEXT only. Do NOT use any markdown formatting. No pound signs (#), no asterisks (**), no dashes for rules (---), no backticks. Use ALL CAPS for section headers and article titles.
 - Use numbered articles (ARTICLE I, ARTICLE II, etc.) for major sections.
 - Use [SIGNATURE LINE] where the testator signs.
 - Use [DATE LINE] where the date of signing goes.
-- Use [WITNESS SIGNATURE] where each witness signs (include two witness blocks).
-- Use [NOTARY BLOCK] where notary acknowledgment goes (for self-proving affidavit).
+- For witness blocks use EXACTLY: [WITNESS SIGNATURE] on its own line. Include two witness blocks. Do not add additional labels or headers around witness blocks.
+- Use [NOTARY BLOCK] EXACTLY ONCE at the end of the document. Do NOT write out notary acknowledgment language in the document body — the platform renders this automatically.
 - Do NOT include any commentary, instructions, or explanations outside the document text itself.
 - Output ONLY the complete pour-over will text ready for formatting.`;
 

@@ -49,14 +49,14 @@ DOCUMENT REQUIREMENTS:
 10. Governing law: This document shall be governed by the laws of the State of Michigan.
 
 OUTPUT FORMAT:
-- Use formal legal language appropriate for a Michigan Patient Advocate Designation.
+- Return PLAIN TEXT only. Do NOT use any markdown formatting. No pound signs (#), no asterisks (**), no dashes for rules (---), no backticks. Use ALL CAPS for section headers.
 - Use numbered sections (Section 1, Section 2, etc.) for major provisions.
 - Use [SIGNATURE LINE] where the patient signs.
 - Use [DATE LINE] where the date of signing goes.
-- Use [WITNESS SIGNATURE] where each witness signs (include two witness blocks with printed name and address lines).
-- Include witness disqualification attestation statements.
+- For witness blocks use EXACTLY: [WITNESS SIGNATURE] on its own line. Include two witness blocks. Do not add additional labels or headers around witness blocks.
+- Include witness disqualification attestation statements in the body text.
 - Include an advocate acceptance section with [SIGNATURE LINE] for the advocate.
-- Use [NOTARY BLOCK] where notary acknowledgment goes (optional but recommended for Michigan).
+- Use [NOTARY BLOCK] EXACTLY ONCE at the end of the document. Do NOT write out notary acknowledgment language in the document body — the platform renders this automatically.
 - Do NOT include any commentary, instructions, or explanations outside the document text itself.
 - Output ONLY the complete Patient Advocate Designation text ready for formatting.`;
 

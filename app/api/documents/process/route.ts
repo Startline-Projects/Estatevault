@@ -82,18 +82,21 @@ export async function GET() {
           const template = await getTemplate(docType);
           const userPrompt = template.buildPrompt(intake);
 
+          // Trust documents are longer and need more tokens
+          const maxTokens = docType === "trust" ? 16000 : 8000;
+
           const response = await claude.messages.create({
             model: CLAUDE_MODEL,
-            max_tokens: 8000,
+            max_tokens: maxTokens,
             system: template.systemPrompt,
             messages: [{ role: "user", content: userPrompt }],
           });
 
           const documentText = response.content[0].type === "text" ? response.content[0].text : "";
-          console.log("Document generated, length:", documentText.length);
+          console.log("Document generated:", docType, "length:", documentText.length, "stop_reason:", response.stop_reason);
 
           const { generatePDF } = await import("@/lib/documents/generate-pdf");
-          const pdfBuffer = await generatePDF(documentText, docType, String(intake.firstName || "") + " " + String(intake.lastName || ""), undefined);
+          const pdfBuffer = await generatePDF(documentText, docType, String(intake.firstName || "") + " " + String(intake.lastName || ""), undefined, String(intake.city || ""));
 
           await uploadDocument(order.client_id, order.id, docType, pdfBuffer);
           console.log("Document uploaded:", docType);

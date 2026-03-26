@@ -42,6 +42,7 @@ DOCUMENT REQUIREMENTS:
    - Settle or compromise claims
    - Continue any business or investment of the Grantor
 8. Distribution standards: Specify how and when beneficiaries receive their shares, including any conditions or age restrictions.
+8a. Remainder beneficiaries (contingent): If remainder beneficiaries are provided, include an article specifying that if all primary beneficiaries predecease the Grantor or fail to survive by 30 days, the trust estate passes to the remainder beneficiaries in equal shares. Use the term "remainder beneficiaries" in the trust (not "contingent beneficiaries").
 9. Minor beneficiary protection: If a beneficiary is under the specified distribution age, the Trustee shall hold that beneficiary's share in a separate sub-trust, making distributions for health, education, maintenance, and support until the beneficiary reaches the distribution age.
 10. Digital asset authority: The Trustee shall have full authority to access, manage, and distribute digital assets including online accounts, digital files, cryptocurrency, domain names, and intellectual property stored digitally, in accordance with Michigan law and the Revised Uniform Fiduciary Access to Digital Assets Act.
 11. Governing law: This Trust shall be governed by and construed in accordance with the laws of the State of Michigan.
@@ -51,12 +52,12 @@ DOCUMENT REQUIREMENTS:
 15. Assets schedule (Schedule A) listing assets to be transferred to the trust.
 
 OUTPUT FORMAT:
-- Use formal legal language appropriate for a Michigan Revocable Living Trust.
+- Return PLAIN TEXT only. Do NOT use any markdown formatting. No pound signs (#), no asterisks (**), no dashes for rules (---), no backticks. Use ALL CAPS for section headers and article titles.
 - Use numbered articles (ARTICLE I, ARTICLE II, etc.) for major sections.
 - Use [SIGNATURE LINE] where the Grantor signs.
 - Use [DATE LINE] where the date of signing goes.
-- Use [WITNESS SIGNATURE] where each witness signs (include two witness blocks).
-- Use [NOTARY BLOCK] where notary acknowledgment goes.
+- For witness blocks use EXACTLY: [WITNESS SIGNATURE] on its own line. Include two witness blocks. Do not add additional labels or headers around witness blocks.
+- Use [NOTARY BLOCK] EXACTLY ONCE at the end of the document. Do NOT write out notary acknowledgment language in the document body — the platform renders this automatically.
 - Include a Trustee acceptance section with [SIGNATURE LINE] for the Trustee if different from Grantor.
 - Include Schedule A for trust assets.
 - Do NOT include any commentary, instructions, or explanations outside the document text itself.
@@ -80,6 +81,7 @@ export function buildTrustPrompt(intake: Record<string, unknown>): string {
   const successor_guardian = (i.successor_guardian || i.successorGuardianName || "") as string;
   const specific_gifts = (i.specific_gifts || (i.hasSpecificGifts === "Yes" ? i.specificGiftsDescription : "") || "") as string;
   const assets = (i.assets || i.assetTypes || []) as string[];
+  const contingent_beneficiaries = (i.contingent_beneficiaries || i.contingentBeneficiaries || []) as Array<{ name: string; relationship: string }>;
 
   let prompt = `Draft a Michigan Revocable Living Trust with the following client intake data:
 
@@ -108,6 +110,16 @@ BENEFICIARY DESIGNATIONS:
     prompt += `\n\nGUARDIAN APPOINTMENT (for minor beneficiaries):
 - Primary Guardian: ${guardian_name}
 - Successor Guardian: ${successor_guardian ?? 'Not specified'}`;
+  }
+
+  if (contingent_beneficiaries.length > 0) {
+    prompt += `\n\nREMAINDER BENEFICIARIES (contingent):`;
+    contingent_beneficiaries.forEach((b, idx) => {
+      prompt += `\nRemainder Beneficiary ${idx + 1}: ${b.name} (${b.relationship})`;
+    });
+    prompt += `\n\nRemainder beneficiaries receive the trust estate only if all primary beneficiaries predecease the Grantor or fail to survive by 30 days. If multiple remainder beneficiaries, they share equally.`;
+  } else {
+    prompt += `\n\nREMAINDER BENEFICIARIES: None designated. If primary beneficiary does not survive, trust assets distribute to Grantor's heirs under Michigan intestate succession.`;
   }
 
   if (specific_gifts && typeof specific_gifts === "string" && specific_gifts.trim()) {

@@ -96,12 +96,13 @@ export default function TrustPage() {
       case "trustee":
         return intake.primaryTrustee !== "" && (intake.primaryTrustee === "Myself" || intake.trusteeName.trim() !== "") && intake.successorTrusteeName.trim() !== "" && intake.successorTrusteeRelationship !== "";
       case "beneficiaries": {
-        const base = intake.primaryBeneficiaryName.trim() !== "" && intake.primaryBeneficiaryRelationship !== "" && intake.hasSecondBeneficiary !== "";
+        const base = intake.primaryBeneficiaryName.trim() !== "" && intake.primaryBeneficiaryRelationship !== "" && intake.hasSecondBeneficiary !== "" && intake.hasContingentBeneficiary !== "";
         if (!base) return false;
         if (intake.hasSecondBeneficiary === "Yes") {
           if (!intake.secondBeneficiaryName.trim() || !intake.secondBeneficiaryRelationship || !intake.estateSplit) return false;
           if (intake.estateSplit === "Other" && !intake.customSplit.trim()) return false;
         }
+        if (intake.hasContingentBeneficiary === "Yes" && (intake.contingentBeneficiaries.length === 0 || intake.contingentBeneficiaries.some((b) => !b.name.trim() || !b.relationship))) return false;
         if (hasMinorChildren && !intake.distributionAge) return false;
         return true;
       }
@@ -247,6 +248,28 @@ export default function TrustPage() {
             {hasMinorChildren && (
               <div className="mt-5"><QuestionLabel>If a beneficiary is under 25, at what age should they receive their full inheritance?</QuestionLabel><p className="mb-2 text-xs text-charcoal/50">Assets are held in trust until this age.</p><div className="grid grid-cols-4 gap-3">{["18", "21", "25", "30"].map((opt) => (<ChoiceTile key={opt} label={opt} selected={intake.distributionAge === opt} onClick={() => update({ distributionAge: opt })} />))}</div></div>
             )}
+            {/* Contingent beneficiary */}
+            <div className="mt-5">
+              <QuestionLabel>Add a contingent beneficiary?</QuestionLabel>
+              <p className="mb-3 text-xs text-charcoal/50">A contingent beneficiary inherits only if your primary beneficiary cannot. Example: your children inherit if your spouse passes before you.</p>
+              <YesNoTiles value={intake.hasContingentBeneficiary} onChange={(v) => { update({ hasContingentBeneficiary: v }); if (v === "Yes" && intake.contingentBeneficiaries.length === 0) update({ contingentBeneficiaries: [{ name: "", relationship: "" }] }); if (v === "No") update({ contingentBeneficiaries: [] }); }} />
+            </div>
+            {intake.hasContingentBeneficiary === "Yes" && (
+              <>
+                {intake.contingentBeneficiaries.map((cb, idx) => (
+                  <div key={idx} className="mt-5 rounded-lg bg-gray-50 p-4">
+                    <QuestionLabel>Contingent beneficiary {idx + 1} full name</QuestionLabel>
+                    <TextInput value={cb.name} onChange={(v) => { const u = [...intake.contingentBeneficiaries]; u[idx] = { ...u[idx], name: v }; update({ contingentBeneficiaries: u }); }} placeholder="Full name" />
+                    <div className="mt-3"><QuestionLabel>Relationship</QuestionLabel>
+                      <div className="grid grid-cols-2 gap-2">{["Child", "Parent", "Sibling", "Friend", "Charity/Organization", "Other"].map((opt) => (<ChoiceTile key={opt} label={opt} selected={cb.relationship === opt} onClick={() => { const u = [...intake.contingentBeneficiaries]; u[idx] = { ...u[idx], relationship: opt }; update({ contingentBeneficiaries: u }); }} />))}</div>
+                    </div>
+                  </div>
+                ))}
+                {intake.contingentBeneficiaries.length < 3 && (
+                  <button type="button" onClick={() => update({ contingentBeneficiaries: [...intake.contingentBeneficiaries, { name: "", relationship: "" }] })} className="mt-3 text-sm text-gold font-medium hover:text-gold/80">+ Add another contingent beneficiary</button>
+                )}
+              </>
+            )}
           </>
         );
 
@@ -369,6 +392,11 @@ export default function TrustPage() {
               <p className="text-charcoal/70">{intake.primaryBeneficiaryName} ({intake.primaryBeneficiaryRelationship})</p>
               {intake.hasSecondBeneficiary === "Yes" && <p className="text-charcoal/70">{intake.secondBeneficiaryName} ({intake.secondBeneficiaryRelationship}) &middot; Split: {intake.estateSplit === "Other" ? intake.customSplit : intake.estateSplit}</p>}
               {hasMinorChildren && intake.distributionAge && <p className="text-charcoal/50 text-xs">Distribution age: {intake.distributionAge}</p>}
+              {intake.hasContingentBeneficiary === "Yes" && intake.contingentBeneficiaries.length > 0 ? (
+                <p className="text-charcoal/50 text-xs mt-1">Contingent: {intake.contingentBeneficiaries.map((b) => `${b.name} (${b.relationship})`).join(", ")}</p>
+              ) : (
+                <p className="text-charcoal/50 text-xs mt-1">No contingent beneficiary designated</p>
+              )}
             </div>
             <hr className="border-gray-100" />
             <div><p className="font-medium text-navy">Pour-Over Will</p><p className="text-charcoal/70">Executor: {intake.executorName} ({intake.executorRelationship})</p><p className="text-charcoal/50 text-xs">Backup: {intake.successorExecutorName}</p></div>

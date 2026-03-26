@@ -131,17 +131,21 @@ function buildEmailHtml({
 }
 
 export async function sendDocumentEmail(params: SendDocumentEmailParams) {
-  const packageName = params.productType === "will" ? "Will Package" : "Trust Package";
+  try {
+    const packageName = params.productType === "will" ? "Will Package" : "Trust Package";
 
-  const { error } = await resend.emails.send({
-    from: "EstateVault <noreply@estatevault.com>",
-    to: params.to,
-    subject: `Your ${packageName} is ready`,
-    html: buildEmailHtml(params),
-  });
+    const { error } = await resend.emails.send({
+      from: "EstateVault <noreply@estatesvault.com>",
+      to: params.to,
+      subject: `Your ${packageName} is ready`,
+      html: buildEmailHtml(params),
+    });
 
-  if (error) {
-    console.error("Email send error:", error);
-    throw new Error(`Failed to send email: ${error.message}`);
+    if (error) {
+      console.error("Email delivery failed — documents are still saved in Supabase:", error);
+    }
+  } catch (emailError) {
+    console.error("Email delivery failed — documents are still saved in Supabase:", emailError);
+    // Do NOT re-throw — generation succeeded, client can download from their account
   }
 }

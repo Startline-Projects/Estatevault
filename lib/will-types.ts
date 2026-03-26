@@ -16,6 +16,8 @@ export interface WillIntake {
   guardianName: string;
   guardianRelationship: string;
   successorGuardianName: string;
+  hasContingentBeneficiary: string;
+  contingentBeneficiaries: Array<{ name: string; relationship: string }>;
   hasSpecificGifts: string;
   specificGiftsDescription: string;
 }
@@ -38,6 +40,8 @@ export const initialWillIntake: WillIntake = {
   guardianName: "",
   guardianRelationship: "",
   successorGuardianName: "",
+  hasContingentBeneficiary: "",
+  contingentBeneficiaries: [],
   hasSpecificGifts: "",
   specificGiftsDescription: "",
 };

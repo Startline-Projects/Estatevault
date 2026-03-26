@@ -40,6 +40,9 @@ export interface TrustIntake {
   successorPatientAdvocateName: string;
   hasHealthcareWishes: string;
   healthcareWishesDescription: string;
+  // Contingent beneficiaries
+  hasContingentBeneficiary: string;
+  contingentBeneficiaries: Array<{ name: string; relationship: string }>;
   // Specific gifts
   hasSpecificGifts: string;
   specificGiftsDescription: string;
@@ -79,6 +82,8 @@ export const initialTrustIntake: TrustIntake = {
   successorPatientAdvocateName: "",
   hasHealthcareWishes: "",
   healthcareWishesDescription: "",
+  hasContingentBeneficiary: "",
+  contingentBeneficiaries: [],
   hasSpecificGifts: "",
   specificGiftsDescription: "",
 };

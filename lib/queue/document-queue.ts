@@ -29,13 +29,27 @@ export interface DocumentJob {
   error: string | null;
 }
 
+function sanitizeForRedis(obj: Record<string, unknown>): Record<string, string> {
+  const sanitized: Record<string, string> = {};
+  for (const [key, value] of Object.entries(obj)) {
+    if (value === null || value === undefined) {
+      sanitized[key] = "";
+    } else if (typeof value === "object") {
+      sanitized[key] = JSON.stringify(value);
+    } else {
+      sanitized[key] = String(value);
+    }
+  }
+  return sanitized;
+}
+
 export async function addJob(job: DocumentJob): Promise<void> {
   if (!redis) {
-    // Fallback: store in a simple key when Redis not configured
-    console.log("Queue: Redis not configured, job stored as key", job.job_id);
+    console.log("Queue: Redis not configured, job not queued", job.job_id);
     return;
   }
-  await redis.hset(`job:${job.job_id}`, job as unknown as Record<string, unknown>);
+  const sanitized = sanitizeForRedis(job as unknown as Record<string, unknown>);
+  await redis.hset(`job:${job.job_id}`, sanitized);
   await redis.lpush("doc_queue", job.job_id);
 }
 
@@ -43,12 +57,25 @@ export async function getJob(jobId: string): Promise<DocumentJob | null> {
   if (!redis) return null;
   const data = await redis.hgetall(`job:${jobId}`);
   if (!data || Object.keys(data).length === 0) return null;
-  return data as unknown as DocumentJob;
+  // Parse stringified fields back
+  const raw = data as Record<string, string>;
+  return {
+    ...raw,
+    document_types: raw.document_types ? JSON.parse(raw.document_types) : [],
+    intake_answers: raw.intake_answers ? JSON.parse(raw.intake_answers) : {},
+    partner_id: raw.partner_id || undefined,
+    attorney_review: raw.attorney_review === "true",
+    started_at: raw.started_at || null,
+    completed_at: raw.completed_at || null,
+    attempts: parseInt(raw.attempts || "0", 10),
+    error: raw.error || null,
+  } as unknown as DocumentJob;
 }
 
 export async function updateJob(jobId: string, updates: Partial<DocumentJob>): Promise<void> {
   if (!redis) return;
-  await redis.hset(`job:${jobId}`, updates as Record<string, unknown>);
+  const sanitized = sanitizeForRedis(updates as unknown as Record<string, unknown>);
+  await redis.hset(`job:${jobId}`, sanitized);
 }
 
 export async function popNextJob(): Promise<string | null> {

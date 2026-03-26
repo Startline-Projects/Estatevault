@@ -42,12 +42,12 @@ DOCUMENT REQUIREMENTS:
 11. Governing law: This document shall be governed by the laws of the State of Michigan.
 
 OUTPUT FORMAT:
-- Use formal legal language appropriate for a Michigan Durable Power of Attorney.
+- Return PLAIN TEXT only. Do NOT use any markdown formatting. No pound signs (#), no asterisks (**), no dashes for rules (---), no backticks. Use ALL CAPS for section headers.
 - Use numbered sections (Section 1, Section 2, etc.) for major provisions.
 - Use [SIGNATURE LINE] where the principal signs.
 - Use [DATE LINE] where the date of signing goes.
-- Use [WITNESS SIGNATURE] where each witness signs (include two witness blocks).
-- Use [NOTARY BLOCK] where notary acknowledgment goes.
+- For witness blocks use EXACTLY: [WITNESS SIGNATURE] on its own line. Include two witness blocks. Do not add additional labels or headers around witness blocks.
+- Use [NOTARY BLOCK] EXACTLY ONCE at the end of the document. Do NOT write out notary acknowledgment language in the document body — the platform renders this automatically.
 - Include an agent acceptance section with [SIGNATURE LINE] for the agent.
 - Do NOT include any commentary, instructions, or explanations outside the document text itself.
 - Output ONLY the complete power of attorney text ready for formatting.`;
