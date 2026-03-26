@@ -61,21 +61,13 @@ OUTPUT FORMAT:
 - Output ONLY the complete Patient Advocate Designation text ready for formatting.`;
 
 export function buildHCDPrompt(intake: Record<string, unknown>): string {
-  const {
-    full_name,
-    city,
-    advocate_name,
-    advocate_relationship,
-    successor_advocate,
-    healthcare_wishes,
-  } = intake as {
-    full_name: string;
-    city: string;
-    advocate_name: string;
-    advocate_relationship: string;
-    successor_advocate: string;
-    healthcare_wishes?: string;
-  };
+  const i = intake;
+  const full_name = (i.full_name || `${i.firstName || ""} ${i.lastName || ""}`.trim()) as string;
+  const city = (i.city || "") as string;
+  const advocate_name = (i.advocate_name || i.patientAdvocateName || i.medicalDecisionMaker || "") as string;
+  const advocate_relationship = (i.advocate_relationship || i.patientAdvocateRelationship || "") as string;
+  const successor_advocate = (i.successor_advocate || i.successorPatientAdvocateName || "") as string;
+  const healthcare_wishes = (i.healthcare_wishes || (i.hasHealthcareWishes === "Yes" ? i.healthcareWishesDescription : "") || "") as string;
 
   let prompt = `Draft a Michigan Patient Advocate Designation with the following client intake data:
 

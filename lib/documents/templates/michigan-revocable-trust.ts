@@ -63,41 +63,23 @@ OUTPUT FORMAT:
 - Output ONLY the complete trust text ready for formatting.`;
 
 export function buildTrustPrompt(intake: Record<string, unknown>): string {
-  const {
-    full_name,
-    date_of_birth,
-    city,
-    primary_trustee,
-    trustee_name,
-    successor_trustee,
-    second_successor_trustee,
-    primary_beneficiary,
-    primary_beneficiary_relationship,
-    secondary_beneficiary,
-    estate_split,
-    distribution_age,
-    guardian_name,
-    successor_guardian,
-    specific_gifts,
-    assets,
-  } = intake as {
-    full_name: string;
-    date_of_birth: string;
-    city: string;
-    primary_trustee: string;
-    trustee_name: string;
-    successor_trustee: string;
-    second_successor_trustee: string;
-    primary_beneficiary: string;
-    primary_beneficiary_relationship: string;
-    secondary_beneficiary?: string;
-    estate_split: string;
-    distribution_age: number;
-    guardian_name?: string;
-    successor_guardian?: string;
-    specific_gifts?: Array<{ recipient: string; description: string }>;
-    assets?: string[];
-  };
+  const i = intake;
+  const full_name = (i.full_name || `${i.firstName || ""} ${i.lastName || ""}`.trim()) as string;
+  const date_of_birth = (i.date_of_birth || i.dateOfBirth || "") as string;
+  const city = (i.city || "") as string;
+  const primary_trustee = (i.primary_trustee || i.primaryTrustee || "Myself") as string;
+  const trustee_name = (i.trustee_name || i.trusteeName || "") as string;
+  const successor_trustee = (i.successor_trustee || i.successorTrusteeName || "") as string;
+  const second_successor_trustee = (i.second_successor_trustee || i.secondSuccessorTrusteeName || "") as string;
+  const primary_beneficiary = (i.primary_beneficiary || i.primaryBeneficiaryName || "") as string;
+  const primary_beneficiary_relationship = (i.primary_beneficiary_relationship || i.primaryBeneficiaryRelationship || "") as string;
+  const secondary_beneficiary = (i.secondary_beneficiary || i.secondBeneficiaryName || "") as string;
+  const estate_split = (i.estate_split || i.estateSplit || "100% to primary beneficiary") as string;
+  const distribution_age = (i.distribution_age || i.distributionAge || 25) as number;
+  const guardian_name = (i.guardian_name || i.guardianName || "") as string;
+  const successor_guardian = (i.successor_guardian || i.successorGuardianName || "") as string;
+  const specific_gifts = (i.specific_gifts || (i.hasSpecificGifts === "Yes" ? i.specificGiftsDescription : "") || "") as string;
+  const assets = (i.assets || i.assetTypes || []) as string[];
 
   let prompt = `Draft a Michigan Revocable Living Trust with the following client intake data:
 
@@ -128,11 +110,8 @@ BENEFICIARY DESIGNATIONS:
 - Successor Guardian: ${successor_guardian ?? 'Not specified'}`;
   }
 
-  if (specific_gifts && specific_gifts.length > 0) {
-    prompt += '\n\nSPECIFIC GIFTS:';
-    for (const gift of specific_gifts) {
-      prompt += `\n- To ${gift.recipient}: ${gift.description}`;
-    }
+  if (specific_gifts && typeof specific_gifts === "string" && specific_gifts.trim()) {
+    prompt += `\n\nSPECIFIC GIFTS:\n${specific_gifts}`;
   }
 
   if (assets && assets.length > 0) {

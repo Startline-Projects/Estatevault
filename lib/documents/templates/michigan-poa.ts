@@ -53,34 +53,23 @@ OUTPUT FORMAT:
 - Output ONLY the complete power of attorney text ready for formatting.`;
 
 export function buildPOAPrompt(intake: Record<string, unknown>): string {
-  const {
-    full_name,
-    city,
-    agent_name,
-    agent_relationship,
-    successor_agent,
-    powers,
-  } = intake as {
-    full_name: string;
-    city: string;
-    agent_name: string;
-    agent_relationship: string;
-    successor_agent: string;
-    powers: {
-      real_estate: boolean;
-      business: boolean;
-      tax: boolean;
-    };
-  };
+  const i = intake;
+  const full_name = (i.full_name || `${i.firstName || ""} ${i.lastName || ""}`.trim()) as string;
+  const city = (i.city || "") as string;
+  const agent_name = (i.agent_name || i.poaAgentName || i.financeManager || "") as string;
+  const agent_relationship = (i.agent_relationship || i.poaAgentRelationship || "") as string;
+  const successor_agent = (i.successor_agent || i.poaSuccessorAgentName || "") as string;
 
+  // Handle powers - could be array of strings or object with booleans
+  const poaPowers = (i.poaPowers || []) as string[];
   const optionalPowers: string[] = [];
-  if (powers.real_estate) {
+  if (poaPowers.includes("Real estate transactions") || (i.powers as Record<string, boolean>)?.real_estate) {
     optionalPowers.push('Real Estate Powers (buy, sell, lease, mortgage, manage real property)');
   }
-  if (powers.business) {
+  if (poaPowers.includes("Business operations") || (i.powers as Record<string, boolean>)?.business) {
     optionalPowers.push('Business Powers (operate, manage, buy, sell, dissolve business interests)');
   }
-  if (powers.tax) {
+  if (poaPowers.includes("Tax filings") || (i.powers as Record<string, boolean>)?.tax) {
     optionalPowers.push('Tax Powers (prepare, sign, file returns; represent before tax authorities)');
   }
 

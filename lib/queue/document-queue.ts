@@ -1,8 +1,11 @@
 import { Redis } from "@upstash/redis";
 import { Ratelimit } from "@upstash/ratelimit";
 
-const redis = process.env.UPSTASH_REDIS_URL
-  ? new Redis({ url: process.env.UPSTASH_REDIS_URL!, token: process.env.UPSTASH_REDIS_TOKEN! })
+const redisUrl = process.env.UPSTASH_REDIS_URL || process.env.UPSTASH_REDIS_REST_URL;
+const redisToken = process.env.UPSTASH_REDIS_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN;
+
+const redis = redisUrl && redisToken
+  ? new Redis({ url: redisUrl, token: redisToken })
   : null;
 
 export const ratelimit = redis

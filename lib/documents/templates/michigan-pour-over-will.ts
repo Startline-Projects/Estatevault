@@ -43,27 +43,16 @@ OUTPUT FORMAT:
 - Output ONLY the complete pour-over will text ready for formatting.`;
 
 export function buildPourOverWillPrompt(intake: Record<string, unknown>): string {
-  const {
-    full_name,
-    city,
-    trust_name,
-    executor_name,
-    executor_relationship,
-    successor_executor,
-    guardian_name,
-    successor_guardian,
-  } = intake as {
-    full_name: string;
-    city: string;
-    trust_name?: string;
-    executor_name: string;
-    executor_relationship: string;
-    successor_executor: string;
-    guardian_name?: string;
-    successor_guardian?: string;
-  };
+  const i = intake;
+  const full_name = (i.full_name || `${i.firstName || ""} ${i.lastName || ""}`.trim()) as string;
+  const city = (i.city || "") as string;
+  const executor_name = (i.executor_name || i.executorName || "") as string;
+  const executor_relationship = (i.executor_relationship || i.executorRelationship || "") as string;
+  const successor_executor = (i.successor_executor || i.successorExecutorName || "") as string;
+  const guardian_name = (i.guardian_name || i.guardianName || "") as string;
+  const successor_guardian = (i.successor_guardian || i.successorGuardianName || "") as string;
 
-  const resolvedTrustName = trust_name ?? `The ${full_name} Revocable Living Trust`;
+  const resolvedTrustName = `The ${full_name} Revocable Living Trust`;
 
   let prompt = `Draft a Michigan Pour-Over Will with the following client intake data:
 

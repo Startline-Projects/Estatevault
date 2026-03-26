@@ -43,37 +43,22 @@ OUTPUT FORMAT:
 - Output ONLY the complete will text ready for formatting.`;
 
 export function buildWillPrompt(intake: Record<string, unknown>): string {
-  const {
-    full_name,
-    date_of_birth,
-    city,
-    executor_name,
-    executor_relationship,
-    successor_executor,
-    primary_beneficiary,
-    primary_beneficiary_relationship,
-    secondary_beneficiary,
-    estate_split,
-    guardian_name,
-    guardian_relationship,
-    successor_guardian,
-    specific_gifts,
-  } = intake as {
-    full_name: string;
-    date_of_birth: string;
-    city: string;
-    executor_name: string;
-    executor_relationship: string;
-    successor_executor: string;
-    primary_beneficiary: string;
-    primary_beneficiary_relationship: string;
-    secondary_beneficiary?: string;
-    estate_split: string;
-    guardian_name?: string;
-    guardian_relationship?: string;
-    successor_guardian?: string;
-    specific_gifts?: Array<{ recipient: string; description: string }>;
-  };
+  // Map camelCase intake fields to template fields
+  const i = intake;
+  const full_name = (i.full_name || `${i.firstName || ""} ${i.lastName || ""}`.trim()) as string;
+  const date_of_birth = (i.date_of_birth || i.dateOfBirth || "") as string;
+  const city = (i.city || "") as string;
+  const executor_name = (i.executor_name || i.executorName || "") as string;
+  const executor_relationship = (i.executor_relationship || i.executorRelationship || "") as string;
+  const successor_executor = (i.successor_executor || i.successorExecutorName || "") as string;
+  const primary_beneficiary = (i.primary_beneficiary || i.primaryBeneficiaryName || "") as string;
+  const primary_beneficiary_relationship = (i.primary_beneficiary_relationship || i.primaryBeneficiaryRelationship || "") as string;
+  const secondary_beneficiary = (i.secondary_beneficiary || i.secondBeneficiaryName || "") as string;
+  const estate_split = (i.estate_split || i.estateSplit || "100% to primary beneficiary") as string;
+  const guardian_name = (i.guardian_name || i.guardianName || "") as string;
+  const guardian_relationship = (i.guardian_relationship || i.guardianRelationship || "") as string;
+  const successor_guardian = (i.successor_guardian || i.successorGuardianName || "") as string;
+  const specific_gifts = (i.specific_gifts || (i.hasSpecificGifts === "Yes" ? i.specificGiftsDescription : "") || "") as string;
 
   let prompt = `Draft a Michigan Last Will and Testament with the following client intake data:
 
@@ -101,11 +86,8 @@ BENEFICIARY DESIGNATIONS:
 - Successor Guardian: ${successor_guardian ?? 'Not specified'}`;
   }
 
-  if (specific_gifts && specific_gifts.length > 0) {
-    prompt += '\n\nSPECIFIC GIFTS:';
-    for (const gift of specific_gifts) {
-      prompt += `\n- To ${gift.recipient}: ${gift.description}`;
-    }
+  if (specific_gifts && typeof specific_gifts === "string" && specific_gifts.trim()) {
+    prompt += `\n\nSPECIFIC GIFTS:\n${specific_gifts}`;
   }
 
   prompt += `\n\nGenerate the complete Last Will and Testament document text now. Include all required articles, signature blocks, witness attestation, and self-proving affidavit with notary block.`;

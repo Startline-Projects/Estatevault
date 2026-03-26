@@ -167,6 +167,41 @@ export async function POST(request: Request) {
       });
     }
 
+    // ── 4b. Queue document generation ───────────────────────────
+    try {
+      const { addJob } = await import("@/lib/queue/document-queue");
+      const { randomUUID } = await import("crypto");
+
+      const { data: quizData } = await supabase
+        .from("quiz_sessions")
+        .select("answers")
+        .eq("client_id", clientId)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .single();
+
+      await addJob({
+        job_id: randomUUID(),
+        order_id: orderId,
+        client_id: clientId || "",
+        document_types: documentTypes,
+        intake_answers: (quizData?.answers as Record<string, unknown>) || {},
+        product_type: productType,
+        partner_id: undefined,
+        attorney_review: attorneyReview,
+        status: "queued",
+        created_at: new Date().toISOString(),
+        started_at: null,
+        completed_at: null,
+        attempts: 0,
+        error: null,
+      });
+
+      console.log("Document generation job queued for order:", orderId);
+    } catch (queueError) {
+      console.error("Failed to queue document generation:", queueError);
+    }
+
     // ── 5. Pre-populate vault with estate documents entry ──────
     if (clientId) {
       await supabase.from("vault_items").insert({

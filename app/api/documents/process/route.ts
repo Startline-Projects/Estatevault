@@ -37,9 +37,83 @@ async function getTemplate(docType: string) {
 
 export async function GET() {
   try {
+    // Try Redis queue first
     const jobId = await popNextJob();
-    if (!jobId) return NextResponse.json({ message: "No jobs in queue" });
 
+    // If no queued jobs, check for unprocessed orders directly in Supabase
+    const supabase = createAdminClient();
+
+    if (!jobId) {
+      // Fallback: find orders with status 'generating' that have pending documents
+      const { data: pendingOrders } = await supabase
+        .from("orders")
+        .select("id, client_id, product_type, attorney_review_requested")
+        .eq("status", "generating")
+        .limit(1);
+
+      if (!pendingOrders || pendingOrders.length === 0) {
+        return NextResponse.json({ message: "No jobs in queue and no pending orders" });
+      }
+
+      const order = pendingOrders[0];
+      const { data: quiz } = await supabase
+        .from("quiz_sessions")
+        .select("answers")
+        .eq("client_id", order.client_id)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .single();
+
+      const documentTypes = order.product_type === "trust"
+        ? ["trust", "pour_over_will", "poa", "healthcare_directive"]
+        : ["will", "poa", "healthcare_directive"];
+
+      console.log("Processing order directly:", order.id, "documents:", documentTypes);
+
+      if (!process.env.ANTHROPIC_API_KEY || process.env.ANTHROPIC_API_KEY === "placeholder") {
+        return NextResponse.json({ message: "Anthropic API key not configured" });
+      }
+
+      const intake = (quiz?.answers as Record<string, unknown>) || {};
+
+      for (const docType of documentTypes) {
+        try {
+          console.log("Generating document:", docType);
+          const template = await getTemplate(docType);
+          const userPrompt = template.buildPrompt(intake);
+
+          const response = await claude.messages.create({
+            model: CLAUDE_MODEL,
+            max_tokens: 8000,
+            system: template.systemPrompt,
+            messages: [{ role: "user", content: userPrompt }],
+          });
+
+          const documentText = response.content[0].type === "text" ? response.content[0].text : "";
+          console.log("Document generated, length:", documentText.length);
+
+          const { generatePDF } = await import("@/lib/documents/generate-pdf");
+          const pdfBuffer = await generatePDF(documentText, docType, String(intake.firstName || "") + " " + String(intake.lastName || ""), undefined);
+
+          await uploadDocument(order.client_id, order.id, docType, pdfBuffer);
+          console.log("Document uploaded:", docType);
+        } catch (docError) {
+          console.error(`Error generating ${docType}:`, docError);
+        }
+      }
+
+      // Update order status
+      if (order.attorney_review_requested) {
+        await supabase.from("orders").update({ status: "review" }).eq("id", order.id);
+      } else {
+        await supabase.from("orders").update({ status: "delivered" }).eq("id", order.id);
+        await supabase.from("documents").update({ status: "delivered", delivered_at: new Date().toISOString() }).eq("order_id", order.id);
+      }
+
+      return NextResponse.json({ message: "Order processed directly", order_id: order.id });
+    }
+
+    // Redis queue path
     const job = await getJob(jobId);
     if (!job) return NextResponse.json({ message: "Job not found" });
 
@@ -49,7 +123,6 @@ export async function GET() {
 
     await updateJob(jobId, { status: "processing", started_at: new Date().toISOString(), attempts: job.attempts + 1 });
 
-    const supabase = createAdminClient();
     const intake = job.intake_answers;
 
     for (const docType of job.document_types) {
