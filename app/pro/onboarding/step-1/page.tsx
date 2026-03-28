@@ -18,11 +18,12 @@ export default function Step1Page() {
       const supabase = createClient();
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { router.push("/pro/login"); return; }
-      const { data: partner } = await supabase.from("partners").select("id, tier, annual_fee_paid").eq("profile_id", user.id).single();
+      const { data: partner } = await supabase.from("partners").select("id, tier, annual_fee_paid, one_time_fee_paid, professional_type").eq("profile_id", user.id).single();
       if (partner) {
         setPartnerId(partner.id);
         if (partner.tier) setSelectedTier(partner.tier as "standard" | "enterprise");
-        if (partner.annual_fee_paid) { router.push("/pro/onboarding/step-2"); return; }
+        // Skip payment step for attorneys who paid one-time fee or any partner who paid annual fee
+        if (partner.annual_fee_paid || partner.one_time_fee_paid) { router.push("/pro/onboarding/step-2"); return; }
       }
     }
     load();
