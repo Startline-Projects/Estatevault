@@ -128,12 +128,7 @@ export default function SalesDashboardPage() {
         )
         .eq("created_by", user.id);
 
-      if (!partners || partners.length === 0) {
-        setLoading(false);
-        return;
-      }
-
-      const typedPartners = partners as PartnerRow[];
+      const typedPartners = (partners || []) as PartnerRow[];
 
       // Stat cards
       const active = typedPartners.filter((p) => p.status === "active").length;
