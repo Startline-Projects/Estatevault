@@ -391,23 +391,29 @@ export default function SalesDashboardPage() {
       </div>
 
       {/* Pending Bar Verification */}
-      {pendingAttorneys.length > 0 && (
-        <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-          <div className="px-5 py-4 border-b border-gray-100 flex items-center gap-3">
-            <h2 className="text-sm font-semibold text-[#2D2D2D]">Pending Bar Verification</h2>
+      <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+        <div className="px-5 py-4 border-b border-gray-100 flex items-center gap-3">
+          <h2 className="text-sm font-semibold text-[#2D2D2D]">Pending Bar Verification</h2>
+          {pendingAttorneys.length > 0 && (
             <span className="inline-flex items-center justify-center px-2 py-0.5 rounded-full text-xs font-bold bg-red-500 text-white min-w-[20px]">
               {pendingAttorneys.length}
             </span>
-          </div>
-
-          {barVerificationMessage && (
-            <div className="px-5 pt-3">
-              <div className="text-sm px-4 py-2 rounded-lg bg-green-50 text-green-700 border border-green-200">
-                {barVerificationMessage}
-              </div>
-            </div>
           )}
+        </div>
 
+        {barVerificationMessage && (
+          <div className="px-5 pt-3">
+            <div className="text-sm px-4 py-2 rounded-lg bg-green-50 text-green-700 border border-green-200">
+              {barVerificationMessage}
+            </div>
+          </div>
+        )}
+
+        {pendingAttorneys.length === 0 ? (
+          <div className="px-5 py-10 text-center text-sm text-gray-400">
+            No attorneys waiting for bar verification.
+          </div>
+        ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
@@ -503,8 +509,8 @@ export default function SalesDashboardPage() {
               </tbody>
             </table>
           </div>
-        </div>
-      )}
+        )}
+      </div>
 
       {/* Alerts Panel */}
       {stuckPartners.length > 0 && (
