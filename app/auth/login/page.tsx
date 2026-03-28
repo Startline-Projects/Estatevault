@@ -33,7 +33,32 @@ function LoginForm() {
       return;
     }
 
-    router.push(redirect);
+    // Check user type and redirect accordingly
+    const { data: { user } } = await supabase.auth.getUser();
+    const userType = user?.user_metadata?.user_type;
+
+    if (userType === "partner") {
+      // Check if partner has completed onboarding
+      const { data: partner } = await supabase
+        .from("partners")
+        .select("onboarding_completed, status")
+        .eq("profile_id", user?.id)
+        .single();
+
+      if (partner?.status === "pending_verification") {
+        router.push("/partners/attorneys/welcome");
+      } else if (partner?.onboarding_completed) {
+        router.push("/pro/dashboard");
+      } else {
+        router.push("/pro/onboarding/step-1");
+      }
+    } else if (userType === "sales_rep") {
+      router.push("/sales/dashboard");
+    } else if (userType === "admin") {
+      router.push("/admin/dashboard");
+    } else {
+      router.push(redirect);
+    }
     router.refresh();
   }
 
