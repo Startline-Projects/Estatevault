@@ -122,6 +122,11 @@ export async function generatePDF(
   documentType: string,
   clientName: string,
   partnerName?: string,
+  reviewingAttorney?: {
+    name: string;
+    barNumber: string;
+    reviewedAt: string;
+  },
   city?: string
 ): Promise<Buffer> {
   const pdfDoc = await PDFDocument.create();
@@ -138,7 +143,9 @@ export async function generatePDF(
   const title = TYPE_NAMES[documentType] || documentType;
   const county = getMichiganCounty(city || "");
   const today = new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
-  const footerText = `Prepared by EstateVault${partnerName ? ` on behalf of ${partnerName}` : ""} | Document preparation service only | Not legal advice | Template Version 1.0.0-michigan`;
+  const footerText = reviewingAttorney
+    ? `Prepared by EstateVault | Reviewed by ${reviewingAttorney.name}, Bar #${reviewingAttorney.barNumber} | ${reviewingAttorney.reviewedAt}`
+    : `Prepared by EstateVault${partnerName ? ` on behalf of ${partnerName}` : ""} | Document preparation service only | Not legal advice | Template Version 1.0.0-michigan`;
 
   let currentPage = pdfDoc.addPage(PageSizes.Letter);
   let yPos = pageHeight - margin;

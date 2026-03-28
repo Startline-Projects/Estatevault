@@ -8,6 +8,7 @@ const navLinks = [
   { label: "Pricing", href: "#pricing" },
   { label: "FAQ", href: "#faq" },
   { label: "The Vault", href: "#vault" },
+  { label: "For Professionals", href: "/professionals" },
 ];
 
 export default function Header() {
@@ -23,23 +24,33 @@ export default function Header() {
 
         {/* Desktop Nav */}
         <nav className="hidden md:flex items-center gap-8">
-          {navLinks.map((link) => (
-            <a
-              key={link.href}
-              href={link.href}
-              className="text-sm font-medium text-charcoal hover:text-navy transition-colors"
-            >
-              {link.label}
-            </a>
-          ))}
+          {navLinks.map((link) =>
+            link.href.startsWith("#") ? (
+              <a
+                key={link.href}
+                href={link.href}
+                className="text-sm font-medium text-charcoal hover:text-navy transition-colors"
+              >
+                {link.label}
+              </a>
+            ) : (
+              <Link
+                key={link.href}
+                href={link.href}
+                className="text-sm font-medium text-charcoal hover:text-navy transition-colors"
+              >
+                {link.label}
+              </Link>
+            )
+          )}
         </nav>
 
-        {/* CTA */}
+        {/* Sign In Button */}
         <Link
-          href="/pro"
+          href="/auth/login"
           className="hidden md:inline-flex items-center rounded-md border border-navy px-4 py-2 text-sm font-medium text-navy hover:bg-navy hover:text-white transition-colors"
         >
-          For Professionals
+          Sign In
         </Link>
 
         {/* Mobile hamburger */}
@@ -64,21 +75,32 @@ export default function Header() {
       {mobileOpen && (
         <div className="md:hidden border-t border-gold/20 bg-white px-6 pb-4">
           <nav className="flex flex-col gap-4 pt-4">
-            {navLinks.map((link) => (
-              <a
-                key={link.href}
-                href={link.href}
-                onClick={() => setMobileOpen(false)}
-                className="text-sm font-medium text-charcoal hover:text-navy"
-              >
-                {link.label}
-              </a>
-            ))}
+            {navLinks.map((link) =>
+              link.href.startsWith("#") ? (
+                <a
+                  key={link.href}
+                  href={link.href}
+                  onClick={() => setMobileOpen(false)}
+                  className="text-sm font-medium text-charcoal hover:text-navy"
+                >
+                  {link.label}
+                </a>
+              ) : (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  onClick={() => setMobileOpen(false)}
+                  className="text-sm font-medium text-charcoal hover:text-navy"
+                >
+                  {link.label}
+                </Link>
+              )
+            )}
             <Link
-              href="/pro"
+              href="/auth/login"
               className="inline-flex items-center justify-center rounded-md border border-navy px-4 py-2 text-sm font-medium text-navy hover:bg-navy hover:text-white transition-colors"
             >
-              For Professionals
+              Sign In
             </Link>
           </nav>
         </div>

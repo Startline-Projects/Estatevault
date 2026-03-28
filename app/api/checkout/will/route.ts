@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { stripe } from "@/lib/stripe";
-import { createClient } from "@/lib/supabase/server";
 import { createServerClient } from "@supabase/ssr";
 
 function createAdminClient() {
@@ -21,20 +20,10 @@ export async function POST(request: Request) {
     const body = await request.json();
     const { userId, attorneyReview, intakeAnswers } = body;
 
-    if (!userId || !intakeAnswers) {
+    if (!intakeAnswers) {
       return NextResponse.json(
-        { error: "Missing required fields" },
+        { error: "Missing intake answers" },
         { status: 400 }
-      );
-    }
-
-    // Verify the user is authenticated
-    const authClient = createClient();
-    const { data: { user } } = await authClient.auth.getUser();
-    if (!user || user.id !== userId) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
       );
     }
 
@@ -43,25 +32,45 @@ export async function POST(request: Request) {
 
     // Get or create client record
     let clientId: string;
-    const { data: existingClient } = await supabase
-      .from("clients")
-      .select("id")
-      .eq("profile_id", userId)
-      .single();
 
-    if (existingClient) {
-      clientId = existingClient.id;
+    if (userId) {
+      // Logged-in user — find or create their client record
+      const { data: existingClient } = await supabase
+        .from("clients")
+        .select("id")
+        .eq("profile_id", userId)
+        .single();
+
+      if (existingClient) {
+        clientId = existingClient.id;
+      } else {
+        const { data: newClient, error: clientError } = await supabase
+          .from("clients")
+          .insert({ profile_id: userId, source: "direct", state: "Michigan" })
+          .select("id")
+          .single();
+
+        if (clientError || !newClient) {
+          console.error("Client creation error:", clientError);
+          return NextResponse.json(
+            { error: "Failed to create client record" },
+            { status: 500 }
+          );
+        }
+        clientId = newClient.id;
+      }
     } else {
+      // Anonymous user — create client record without profile_id
       const { data: newClient, error: clientError } = await supabase
         .from("clients")
-        .insert({ profile_id: userId, source: "direct", state: "Michigan" })
+        .insert({ source: "direct", state: "Michigan" })
         .select("id")
         .single();
 
       if (clientError || !newClient) {
-        console.error("Client creation error:", clientError);
+        console.error("Anonymous client creation error:", clientError);
         return NextResponse.json(
-          { error: "Failed to create client record: " + (clientError?.message || "unknown") },
+          { error: "Failed to create client record" },
           { status: 500 }
         );
       }
@@ -170,7 +179,7 @@ export async function POST(request: Request) {
 
     // Audit log
     await supabase.from("audit_log").insert({
-      actor_id: userId,
+      actor_id: userId || null,
       action: "checkout.started",
       resource_type: "order",
       resource_id: order.id,

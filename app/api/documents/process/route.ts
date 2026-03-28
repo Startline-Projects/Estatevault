@@ -96,7 +96,7 @@ export async function GET() {
           console.log("Document generated:", docType, "length:", documentText.length, "stop_reason:", response.stop_reason);
 
           const { generatePDF } = await import("@/lib/documents/generate-pdf");
-          const pdfBuffer = await generatePDF(documentText, docType, String(intake.firstName || "") + " " + String(intake.lastName || ""), undefined, String(intake.city || ""));
+          const pdfBuffer = await generatePDF(documentText, docType, String(intake.firstName || "") + " " + String(intake.lastName || ""), undefined, undefined, String(intake.city || ""));
 
           await uploadDocument(order.client_id, order.id, docType, pdfBuffer);
           console.log("Document uploaded:", docType);

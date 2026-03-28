@@ -34,52 +34,42 @@ export default function WillPage() {
     []
   );
 
-  // Check auth on mount
   useEffect(() => {
-    async function checkAuth() {
+    async function init() {
       const supabase = createClient();
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        router.push("/auth/signup?redirect=/will");
-        return;
-      }
-      setUserId(user.id);
-
-      // Try to pre-populate from quiz session
-      try {
-        const { data: client } = await supabase
-          .from("clients")
-          .select("id")
-          .eq("profile_id", user.id)
-          .single();
-
-        if (client) {
-          const { data: quiz } = await supabase
-            .from("quiz_sessions")
-            .select("answers")
-            .eq("client_id", client.id)
-            .order("created_at", { ascending: false })
-            .limit(1)
+      if (user) {
+        setUserId(user.id);
+        // Try to pre-populate from quiz session
+        try {
+          const { data: client } = await supabase
+            .from("clients")
+            .select("id")
+            .eq("profile_id", user.id)
             .single();
-
-          if (quiz?.answers) {
-            const a = quiz.answers as Record<string, string>;
-            if (a.financeManager) update({ executorName: a.financeManager });
-            if (a.childGuardian && a.childGuardian !== "N/A") {
-              update({ guardianName: a.childGuardian });
-              setHasMinorChildren(true);
+          if (client) {
+            const { data: quiz } = await supabase
+              .from("quiz_sessions")
+              .select("answers")
+              .eq("client_id", client.id)
+              .order("created_at", { ascending: false })
+              .limit(1)
+              .single();
+            if (quiz?.answers) {
+              const a = quiz.answers as Record<string, string>;
+              if (a.financeManager) update({ executorName: a.financeManager });
+              if (a.childGuardian && a.childGuardian !== "N/A") {
+                update({ guardianName: a.childGuardian });
+                setHasMinorChildren(true);
+              }
             }
-            if (a.hasChildren === "Yes") setHasMinorChildren(true);
           }
-        }
-      } catch {
-        // No quiz data — that's fine
+        } catch {}
       }
-
       setStage("acknowledgment");
     }
-    checkAuth();
-  }, [router, update]);
+    init();
+  }, [update]);
 
   // ── Intake card logic ─────────────────────────────────────────
   type CardId = "about" | "executor" | "beneficiaries" | "guardian" | "gifts" | "review";

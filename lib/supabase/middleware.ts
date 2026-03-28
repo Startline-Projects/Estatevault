@@ -38,10 +38,10 @@ export async function updateSession(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
 
   // Public routes — no auth required
-  const publicPaths = ["/", "/quiz", "/will", "/trust", "/auth", "/attorney-referral", "/pro/login", "/api/webhooks", "/api/documents/process", "/api/attorney/check-sla"];
+  const publicPaths = ["/", "/quiz", "/will", "/trust", "/auth", "/attorney-referral", "/pro/login", "/pro-partners", "/partners", "/professionals", "/api/webhooks", "/api/documents/process", "/api/attorney/check-sla", "/api/checkout", "/api/quiz", "/api/professionals"];
   const isPublic = publicPaths.some(
     (p) => pathname === p || pathname.startsWith(p + "/")
-  );
+  ) || pathname === "/sales";
 
   if (!isPublic && !user) {
     // Not authenticated — redirect to login
@@ -61,6 +61,41 @@ export async function updateSession(request: NextRequest) {
 
     const allowedTypes = ["partner", "sales_rep", "admin"];
     if (!profile || !allowedTypes.includes(profile.user_type)) {
+      const url = request.nextUrl.clone();
+      url.pathname = "/dashboard";
+      return NextResponse.redirect(url);
+    }
+
+    // Redirect sales_rep users from /pro to /sales/dashboard
+    if (profile?.user_type === "sales_rep") {
+      const url = request.nextUrl.clone();
+      url.pathname = "/sales/dashboard";
+      return NextResponse.redirect(url);
+    }
+  }
+
+  // Protected sales routes
+  if (pathname.startsWith("/sales/") && pathname !== "/sales") {
+    if (!user) {
+      const url = request.nextUrl.clone();
+      url.pathname = "/sales";
+      return NextResponse.redirect(url);
+    }
+
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("user_type")
+      .eq("id", user.id)
+      .single();
+
+    const salesTypes = ["sales_rep", "admin"];
+    if (!profile || !salesTypes.includes(profile.user_type)) {
+      // Redirect wrong user types
+      if (profile?.user_type === "partner") {
+        const url = request.nextUrl.clone();
+        url.pathname = "/pro/dashboard";
+        return NextResponse.redirect(url);
+      }
       const url = request.nextUrl.clone();
       url.pathname = "/dashboard";
       return NextResponse.redirect(url);

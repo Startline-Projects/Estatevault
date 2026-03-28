@@ -4,6 +4,7 @@ import Stripe from "stripe";
 import { stripe } from "@/lib/stripe";
 import { createServerClient } from "@supabase/ssr";
 import { sendDocumentEmail, buildAssetChecklist } from "@/lib/email";
+import { calculateSplit, transferToPartner } from "@/lib/stripe-payouts";
 
 function createAdminClient() {
   return createServerClient(
@@ -138,6 +139,86 @@ export async function POST(request: Request) {
       })
       .eq("id", orderId);
 
+    // ── 2b. Partner payout via Stripe Connect ──────────────────
+    const partnerId = metadata.partner_id;
+    if (partnerId) {
+      try {
+        const { data: partner } = await supabase
+          .from("partners")
+          .select("stripe_account_id, tier")
+          .eq("id", partnerId)
+          .single();
+
+        if (partner?.stripe_account_id && partner.tier) {
+          const { evCut, partnerCut } = calculateSplit(
+            productType,
+            partner.tier as "standard" | "enterprise"
+          );
+
+          if (partnerCut > 0) {
+            const transfer = await transferToPartner(
+              partner.stripe_account_id,
+              partnerCut,
+              orderId,
+              partnerId,
+              productType
+            );
+
+            if (transfer) {
+              // Update order with revenue split
+              await supabase
+                .from("orders")
+                .update({
+                  ev_cut: evCut,
+                  partner_cut: partnerCut,
+                })
+                .eq("id", orderId);
+
+              // Create payout record
+              await supabase.from("payouts").insert({
+                partner_id: partnerId,
+                amount: partnerCut,
+                status: "sent",
+                stripe_transfer_id: transfer.id,
+                orders_included: [orderId],
+              });
+
+              // Audit log
+              await supabase.from("audit_log").insert({
+                action: "payout.sent",
+                resource_type: "payout",
+                metadata: {
+                  partner_id: partnerId,
+                  amount: partnerCut,
+                  transfer_id: transfer.id,
+                },
+              });
+            }
+          }
+        } else if (partnerId) {
+          // Store pending earnings — no Stripe account yet
+          const { evCut, partnerCut } = calculateSplit(
+            productType,
+            "standard"
+          );
+          await supabase
+            .from("orders")
+            .update({ ev_cut: evCut, partner_cut: partnerCut })
+            .eq("id", orderId);
+
+          await supabase.from("payouts").insert({
+            partner_id: partnerId,
+            amount: partnerCut,
+            status: "pending",
+            orders_included: [orderId],
+          });
+        }
+      } catch (payoutError) {
+        console.error("Partner payout failed:", payoutError);
+        // Don't fail the webhook — log and continue
+      }
+    }
+
     // ── 3. Create document records ─────────────────────────────
     const documentTypes =
       productType === "trust"
@@ -159,10 +240,27 @@ export async function POST(request: Request) {
       const slaDeadline = new Date();
       slaDeadline.setHours(slaDeadline.getHours() + 48);
 
+      let attorneyId = null;
+      let reviewFee = 30000;
+
+      if (partnerId) {
+        const { data: partnerForReview } = await supabase
+          .from("partners")
+          .select("profile_id, professional_type, custom_review_fee")
+          .eq("id", partnerId)
+          .single();
+
+        if (partnerForReview?.professional_type === 'attorney') {
+          attorneyId = partnerForReview.profile_id;
+          reviewFee = partnerForReview.custom_review_fee || 30000;
+        }
+      }
+
       await supabase.from("attorney_reviews").insert({
         order_id: orderId,
+        attorney_id: attorneyId,
         status: "pending",
-        attorney_fee: 30000,
+        attorney_fee: reviewFee,
         sla_deadline: slaDeadline.toISOString(),
       });
     }

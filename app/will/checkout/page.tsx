@@ -23,22 +23,19 @@ export default function WillCheckoutPage() {
   const total = attorneyReview ? 700 : 400;
 
   useEffect(() => {
-    async function checkAuth() {
+    async function init() {
       const supabase = createClient();
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        router.push("/auth/login?redirect=/will");
-        return;
+      if (user) {
+        setUserId(user.id);
       }
-      setUserId(user.id);
-
       // Verify intake data exists
       const intake = sessionStorage.getItem("willIntake");
       if (!intake) {
         router.push("/will");
       }
     }
-    checkAuth();
+    init();
   }, [router]);
 
   async function handlePayment() {
@@ -56,7 +53,7 @@ export default function WillCheckoutPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          userId,
+          userId: userId || null,
           attorneyReview,
           intakeAnswers: JSON.parse(intake),
         }),

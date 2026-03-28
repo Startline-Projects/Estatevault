@@ -4,6 +4,20 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 
+interface LeadRow {
+  id: string;
+  first_name: string;
+  last_name: string;
+  email: string;
+  phone: string;
+  company_name: string;
+  professional_type: string;
+  client_count: number;
+  referral_source: string;
+  status: string;
+  created_at: string;
+}
+
 interface PartnerRow {
   id: string;
   company_name: string;
@@ -18,6 +32,17 @@ interface PartnerRow {
 interface OrderRow {
   amount_total: number;
   partner_id: string;
+}
+
+interface PendingAttorney {
+  id: string;
+  company_name: string;
+  bar_number: string;
+  tier: string;
+  review_fee: number | null;
+  created_at: string;
+  profile_name: string;
+  profile_email: string;
 }
 
 interface StuckPartner {
@@ -43,6 +68,21 @@ function getGreeting(): string {
   return "Good evening";
 }
 
+function relativeTime(dateStr: string): string {
+  const now = Date.now();
+  const then = new Date(dateStr).getTime();
+  const diffMs = now - then;
+  const diffMin = Math.floor(diffMs / 60000);
+  if (diffMin < 1) return "Just now";
+  if (diffMin < 60) return `${diffMin} minute${diffMin === 1 ? "" : "s"} ago`;
+  const diffHr = Math.floor(diffMin / 60);
+  if (diffHr < 24) return `${diffHr} hour${diffHr === 1 ? "" : "s"} ago`;
+  const diffDay = Math.floor(diffHr / 24);
+  if (diffDay === 1) return "Yesterday";
+  if (diffDay < 7) return `${diffDay} days ago`;
+  return new Date(dateStr).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+
 function formatCurrency(amount: number): string {
   return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(amount);
 }
@@ -57,6 +97,12 @@ export default function SalesDashboardPage() {
   const [stuckPartners, setStuckPartners] = useState<StuckPartner[]>([]);
   const [recentPartners, setRecentPartners] = useState<RecentPartnerDisplay[]>([]);
   const [nudgingId, setNudgingId] = useState<string | null>(null);
+  const [leads, setLeads] = useState<LeadRow[]>([]);
+  const [markingLeadId, setMarkingLeadId] = useState<string | null>(null);
+  const [pendingAttorneys, setPendingAttorneys] = useState<PendingAttorney[]>([]);
+  const [activatingId, setActivatingId] = useState<string | null>(null);
+  const [rejectingId, setRejectingId] = useState<string | null>(null);
+  const [barVerificationMessage, setBarVerificationMessage] = useState<string | null>(null);
 
   useEffect(() => {
     async function load() {
@@ -150,6 +196,72 @@ export default function SalesDashboardPage() {
         };
       });
       setRecentPartners(recentDisplay);
+
+      // Fetch new leads
+      const { data: leadsData } = await supabase
+        .from("professional_leads")
+        .select("*")
+        .in("status", ["new", "contacted"])
+        .order("created_at", { ascending: false })
+        .limit(10);
+
+      if (leadsData) {
+        setLeads(leadsData as LeadRow[]);
+      }
+
+      // Fetch pending attorney verifications
+      const { data: pendingData } = await supabase
+        .from("partners")
+        .select("id, company_name, bar_number, tier, custom_review_fee, created_at, profile_id")
+        .eq("status", "pending_verification")
+        .eq("professional_type", "attorney")
+        .order("created_at", { ascending: false });
+
+      if (pendingData && pendingData.length > 0) {
+        const profileIds = pendingData
+          .map((p: { profile_id: string | null }) => p.profile_id)
+          .filter(Boolean) as string[];
+
+        let profileMap: Record<string, { full_name: string; email: string }> = {};
+        if (profileIds.length > 0) {
+          const { data: profiles } = await supabase
+            .from("profiles")
+            .select("id, full_name, email")
+            .in("id", profileIds);
+
+          if (profiles) {
+            for (const prof of profiles) {
+              profileMap[prof.id] = {
+                full_name: prof.full_name || "Unknown",
+                email: prof.email || "",
+              };
+            }
+          }
+        }
+
+        const mapped: PendingAttorney[] = pendingData.map(
+          (p: {
+            id: string;
+            company_name: string;
+            bar_number: string;
+            tier: string;
+            custom_review_fee: number | null;
+            created_at: string;
+            profile_id: string | null;
+          }) => ({
+            id: p.id,
+            company_name: p.company_name,
+            bar_number: p.bar_number || "N/A",
+            tier: p.tier,
+            review_fee: p.custom_review_fee,
+            created_at: p.created_at,
+            profile_name: p.profile_id ? profileMap[p.profile_id]?.full_name || "Unknown" : "Unknown",
+            profile_email: p.profile_id ? profileMap[p.profile_id]?.email || "" : "",
+          })
+        );
+        setPendingAttorneys(mapped);
+      }
+
       setLoading(false);
     }
     load();
@@ -161,6 +273,79 @@ export default function SalesDashboardPage() {
     await new Promise((r) => setTimeout(r, 800));
     setStuckPartners((prev) => prev.filter((p) => p.id !== partnerId));
     setNudgingId(null);
+  }
+
+  async function handleMarkContacted(leadId: string) {
+    setMarkingLeadId(leadId);
+    const supabase = createClient();
+    const { error } = await supabase
+      .from("professional_leads")
+      .update({ status: "contacted" })
+      .eq("id", leadId);
+
+    if (!error) {
+      setLeads((prev) =>
+        prev.map((l) => (l.id === leadId ? { ...l, status: "contacted" } : l))
+      );
+    }
+    setMarkingLeadId(null);
+  }
+
+  async function handleActivateAttorney(partnerId: string, email: string, name: string) {
+    setActivatingId(partnerId);
+    setBarVerificationMessage(null);
+    const supabase = createClient();
+
+    const { error } = await supabase
+      .from("partners")
+      .update({ status: "active" })
+      .eq("id", partnerId);
+
+    if (error) {
+      setBarVerificationMessage("Failed to activate account. Please try again.");
+      setActivatingId(null);
+      return;
+    }
+
+    try {
+      await fetch("/api/email/partner-activated", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, name }),
+      });
+    } catch {
+      console.error("Activation email failed to send, but account was activated.");
+    }
+
+    setPendingAttorneys((prev) => prev.filter((a) => a.id !== partnerId));
+    setBarVerificationMessage(`${name} has been activated successfully.`);
+    setActivatingId(null);
+  }
+
+  async function handleRejectAttorney(partnerId: string, name: string) {
+    const confirmed = window.confirm(
+      `Are you sure you want to reject ${name}? This action cannot be easily undone.`
+    );
+    if (!confirmed) return;
+
+    setRejectingId(partnerId);
+    setBarVerificationMessage(null);
+    const supabase = createClient();
+
+    const { error } = await supabase
+      .from("partners")
+      .update({ status: "rejected" })
+      .eq("id", partnerId);
+
+    if (error) {
+      setBarVerificationMessage("Failed to reject account. Please try again.");
+      setRejectingId(null);
+      return;
+    }
+
+    setPendingAttorneys((prev) => prev.filter((a) => a.id !== partnerId));
+    setBarVerificationMessage(`${name} has been rejected.`);
+    setRejectingId(null);
   }
 
   if (loading) {
@@ -203,6 +388,97 @@ export default function SalesDashboardPage() {
         ))}
       </div>
 
+      {/* Pending Bar Verification */}
+      <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+        <div className="px-5 py-4 border-b border-gray-100 flex items-center gap-3">
+          <h2 className="text-sm font-semibold text-[#2D2D2D]">Pending Bar Verification</h2>
+          {pendingAttorneys.length > 0 && (
+            <span className="inline-flex items-center justify-center px-2 py-0.5 rounded-full text-xs font-bold bg-red-500 text-white min-w-[20px]">
+              {pendingAttorneys.length}
+            </span>
+          )}
+        </div>
+
+        {barVerificationMessage && (
+          <div className="px-5 pt-3">
+            <div className="text-sm px-4 py-2 rounded-lg bg-green-50 text-green-700 border border-green-200">
+              {barVerificationMessage}
+            </div>
+          </div>
+        )}
+
+        {pendingAttorneys.length === 0 ? (
+          <div className="px-5 py-10 text-center text-sm text-gray-400">
+            No attorneys waiting for bar verification.
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-gray-100 bg-gray-50/50">
+                  <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Attorney</th>
+                  <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Firm</th>
+                  <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Bar Number</th>
+                  <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Tier</th>
+                  <th className="text-right px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Review Fee</th>
+                  <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Signed Up</th>
+                  <th className="text-right px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {pendingAttorneys.map((attorney) => (
+                  <tr key={attorney.id} className="border-b border-gray-50 hover:bg-gray-50/50 transition-colors">
+                    <td className="px-5 py-3">
+                      <p className="font-medium text-[#2D2D2D]">{attorney.profile_name}</p>
+                      {attorney.profile_email && (
+                        <p className="text-xs text-gray-400">{attorney.profile_email}</p>
+                      )}
+                    </td>
+                    <td className="px-5 py-3 text-gray-600 whitespace-nowrap">{attorney.company_name}</td>
+                    <td className="px-5 py-3 font-mono text-[#1C3557] whitespace-nowrap">{attorney.bar_number}</td>
+                    <td className="px-5 py-3">
+                      <span className="inline-block px-2 py-0.5 rounded text-xs font-medium bg-[#1C3557]/10 text-[#1C3557] capitalize">
+                        {attorney.tier}
+                      </span>
+                    </td>
+                    <td className="px-5 py-3 text-right text-gray-600">
+                      {attorney.review_fee != null ? formatCurrency(attorney.review_fee / 100) : "--"}
+                    </td>
+                    <td className="px-5 py-3 text-gray-500 whitespace-nowrap">{relativeTime(attorney.created_at)}</td>
+                    <td className="px-5 py-3 text-right whitespace-nowrap">
+                      <div className="flex items-center justify-end gap-2">
+                        <a
+                          href="https://www.michbar.org/memberdirectory"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-medium bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors"
+                        >
+                          Verify at michbar.org &rarr;
+                        </a>
+                        <button
+                          onClick={() => handleActivateAttorney(attorney.id, attorney.profile_email, attorney.profile_name)}
+                          disabled={activatingId === attorney.id}
+                          className="inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-medium bg-green-600 text-white hover:bg-green-700 transition-colors disabled:opacity-50"
+                        >
+                          {activatingId === attorney.id ? "Activating..." : "Activate Account"}
+                        </button>
+                        <button
+                          onClick={() => handleRejectAttorney(attorney.id, attorney.profile_name)}
+                          disabled={rejectingId === attorney.id}
+                          className="inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-medium bg-red-600 text-white hover:bg-red-700 transition-colors disabled:opacity-50"
+                        >
+                          {rejectingId === attorney.id ? "Rejecting..." : "Reject"}
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
       {/* Alerts Panel */}
       {stuckPartners.length > 0 && (
         <div className="bg-amber-50 border border-amber-200 rounded-xl p-5">
@@ -233,6 +509,123 @@ export default function SalesDashboardPage() {
           </div>
         </div>
       )}
+
+      {/* New Leads */}
+      <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+        <div className="px-5 py-4 border-b border-gray-100 flex items-center gap-3">
+          <h2 className="text-sm font-semibold text-[#2D2D2D]">New Leads</h2>
+          {leads.filter((l) => l.status === "new").length > 0 && (
+            <span className="inline-flex items-center justify-center px-2 py-0.5 rounded-full text-xs font-bold bg-[#C9A84C] text-white min-w-[20px]">
+              {leads.filter((l) => l.status === "new").length}
+            </span>
+          )}
+        </div>
+        {leads.length === 0 ? (
+          <div className="px-5 py-10 text-center text-sm text-gray-400">
+            No new leads. Share{" "}
+            <span className="font-medium text-[#C9A84C]">estatevault.us/professionals</span>{" "}
+            to generate interest.
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-gray-100 bg-gray-50/50">
+                  <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                    Name
+                  </th>
+                  <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                    Company
+                  </th>
+                  <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                    Type
+                  </th>
+                  <th className="text-right px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                    Clients
+                  </th>
+                  <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                    Source
+                  </th>
+                  <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                    Submitted
+                  </th>
+                  <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                    Status
+                  </th>
+                  <th className="text-right px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {leads.map((lead) => (
+                  <tr
+                    key={lead.id}
+                    className="border-b border-gray-50 hover:bg-gray-50/50 transition-colors"
+                  >
+                    <td className="px-5 py-3 font-medium text-[#2D2D2D] whitespace-nowrap">
+                      {lead.first_name} {lead.last_name}
+                    </td>
+                    <td className="px-5 py-3 text-gray-600 whitespace-nowrap">
+                      {lead.company_name}
+                    </td>
+                    <td className="px-5 py-3 text-gray-600 capitalize whitespace-nowrap">
+                      {lead.professional_type}
+                    </td>
+                    <td className="px-5 py-3 text-right text-gray-600">
+                      {lead.client_count ?? "—"}
+                    </td>
+                    <td className="px-5 py-3 text-gray-600 capitalize whitespace-nowrap">
+                      {lead.referral_source || "—"}
+                    </td>
+                    <td className="px-5 py-3 text-gray-500 whitespace-nowrap">
+                      {relativeTime(lead.created_at)}
+                    </td>
+                    <td className="px-5 py-3 whitespace-nowrap">
+                      <span
+                        className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${
+                          lead.status === "new"
+                            ? "bg-[#C9A84C]/15 text-[#C9A84C]"
+                            : "bg-blue-100 text-blue-700"
+                        }`}
+                      >
+                        {lead.status === "new" ? "New" : "Contacted"}
+                      </span>
+                    </td>
+                    <td className="px-5 py-3 text-right whitespace-nowrap">
+                      <div className="flex items-center justify-end gap-2">
+                        <Link
+                          href={`/pro/sales/new-partner?name=${encodeURIComponent(
+                            lead.company_name
+                          )}&email=${encodeURIComponent(
+                            lead.email
+                          )}&phone=${encodeURIComponent(
+                            lead.phone || ""
+                          )}&type=${encodeURIComponent(
+                            lead.professional_type
+                          )}`}
+                          className="inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-medium bg-[#C9A84C] text-white hover:bg-[#b8963f] transition-colors"
+                        >
+                          Create Account →
+                        </Link>
+                        {lead.status === "new" && (
+                          <button
+                            onClick={() => handleMarkContacted(lead.id)}
+                            disabled={markingLeadId === lead.id}
+                            className="inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-medium bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors disabled:opacity-50"
+                          >
+                            {markingLeadId === lead.id ? "Updating..." : "Mark Contacted"}
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
 
       {/* Recent Partners Table */}
       <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">

@@ -30,8 +30,9 @@ export default function TrustCheckoutPage() {
     async function init() {
       const supabase = createClient();
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) { router.push("/auth/login?redirect=/trust"); return; }
-      setUserId(user.id);
+      if (user) {
+        setUserId(user.id);
+      }
 
       const intake = sessionStorage.getItem("trustIntake");
       if (!intake) { router.push("/trust"); return; }
@@ -61,7 +62,7 @@ export default function TrustCheckoutPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          userId,
+          userId: userId || null,
           attorneyReview,
           intakeAnswers: JSON.parse(intake),
           complexityFlag: complexity.flagged,
