@@ -212,7 +212,7 @@ export default function SalesDashboardPage() {
       // Fetch pending attorney verifications
       const { data: pendingData } = await supabase
         .from("partners")
-        .select("id, company_name, bar_number, tier, review_fee, created_at, profile_id")
+        .select("id, company_name, bar_number, tier, custom_review_fee, created_at, profile_id")
         .eq("status", "pending_verification")
         .eq("professional_type", "attorney")
         .order("created_at", { ascending: false });
@@ -245,7 +245,7 @@ export default function SalesDashboardPage() {
             company_name: string;
             bar_number: string;
             tier: string;
-            review_fee: number | null;
+            custom_review_fee: number | null;
             created_at: string;
             profile_id: string | null;
           }) => ({
@@ -253,7 +253,7 @@ export default function SalesDashboardPage() {
             company_name: p.company_name,
             bar_number: p.bar_number || "N/A",
             tier: p.tier,
-            review_fee: p.review_fee,
+            review_fee: p.custom_review_fee,
             created_at: p.created_at,
             profile_name: p.profile_id ? profileMap[p.profile_id]?.full_name || "Unknown" : "Unknown",
             profile_email: p.profile_id ? profileMap[p.profile_id]?.email || "" : "",
