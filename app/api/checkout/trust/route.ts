@@ -120,6 +120,8 @@ export async function POST(request: Request) {
         const { data: existingUser } = await supabase.from("profiles").select("id").eq("email", emailAddr).single();
         if (existingUser) {
           profileId = existingUser.id;
+          // Update password for existing user so temp password works
+          await supabase.auth.admin.updateUserById(existingUser.id, { password: tempPassword });
         } else {
           const fullName = `${intakeAnswers.firstName || ""} ${intakeAnswers.lastName || ""}`.trim();
           const { data: newUser } = await supabase.auth.admin.createUser({
