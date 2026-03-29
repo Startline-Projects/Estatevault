@@ -147,19 +147,36 @@ export async function POST(request: Request) {
           await supabase.auth.admin.updateUserById(existingUser.id, { password: tempPassword });
         } else {
           const fullName = `${intakeAnswers.firstName || ""} ${intakeAnswers.lastName || ""}`.trim();
-          const { data: newUser } = await supabase.auth.admin.createUser({
-            email: emailAddr,
-            password: tempPassword,
-            email_confirm: true,
-            user_metadata: { full_name: fullName, user_type: "client" },
-          });
-          if (newUser?.user) {
-            profileId = newUser.user.id;
+          // Check if auth user exists even without a profile (orphaned from previous attempt)
+          const { data: authUsers } = await supabase.auth.admin.listUsers();
+          const existingAuthUser = authUsers?.users?.find((u) => u.email === emailAddr);
+
+          if (existingAuthUser) {
+            profileId = existingAuthUser.id;
+            await supabase.auth.admin.updateUserById(existingAuthUser.id, { password: tempPassword });
             await supabase.from("profiles").upsert({
-              id: newUser.user.id, email: emailAddr,
+              id: existingAuthUser.id, email: emailAddr,
               full_name: fullName,
               user_type: "client",
             });
+          } else {
+            const { data: newUser, error: createErr } = await supabase.auth.admin.createUser({
+              email: emailAddr,
+              password: tempPassword,
+              email_confirm: true,
+              user_metadata: { full_name: fullName, user_type: "client" },
+            });
+            console.log("createUser result:", { user: newUser?.user?.id, error: createErr?.message });
+            if (newUser?.user) {
+              profileId = newUser.user.id;
+              await supabase.from("profiles").upsert({
+                id: newUser.user.id, email: emailAddr,
+                full_name: fullName,
+                user_type: "client",
+              });
+            } else if (createErr) {
+              console.error("Failed to create auth user:", createErr.message);
+            }
           }
         }
         if (profileId) {
