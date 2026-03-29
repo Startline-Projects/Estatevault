@@ -227,7 +227,7 @@ export async function POST(request: Request) {
     }
 
     // Create Stripe Checkout Session
-    const origin = request.headers.get("origin") || "http://localhost:3000";
+    const origin = request.headers.get("origin") || "https://www.estatevault.us";
 
     const session = await stripe.checkout.sessions.create({
       mode: "payment",

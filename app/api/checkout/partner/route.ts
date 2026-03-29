@@ -19,7 +19,7 @@ export async function POST(request: Request) {
     const amount = tier === "enterprise" ? 600000 : 120000;
     const planName = tier === "enterprise" ? "Enterprise" : "Standard";
 
-    const origin = request.headers.get("origin") || "http://localhost:3000";
+    const origin = request.headers.get("origin") || "https://www.estatevault.us";
 
     const session = await stripe.checkout.sessions.create({
       mode: "payment",

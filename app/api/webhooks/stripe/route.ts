@@ -449,12 +449,12 @@ export async function POST(request: Request) {
             type: "magiclink",
             email: customerEmail,
             options: {
-              redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000"}/auth/callback?redirect=/dashboard`,
+              redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || "https://www.estatevault.us"}/auth/callback?redirect=/dashboard`,
             },
           });
 
         const passwordLink = linkError || !linkData?.properties?.action_link
-          ? `${process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000"}/auth/login`
+          ? `${process.env.NEXT_PUBLIC_SITE_URL || "https://www.estatevault.us"}/auth/login`
           : linkData.properties.action_link;
 
         // Build asset checklist for trust emails
