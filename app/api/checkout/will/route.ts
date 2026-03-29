@@ -37,8 +37,10 @@ export async function POST(request: Request) {
     // ── TEST PROMO CODE ────────────────────────────────────
     if (isTestCode) {
       // Only valid on estatevault.us — block on partner URLs
-      const origin = request.headers.get("origin") || "";
-      if (!origin.includes("estatevault.us") || origin.includes("legacy.")) {
+      const origin = request.headers.get("origin") || request.headers.get("referer") || request.headers.get("host") || "";
+      const isPartnerUrl = origin.includes("legacy.");
+      const isEstateVault = origin.includes("estatevault.us");
+      if (isPartnerUrl || (!isEstateVault && origin !== "" && !origin.includes("localhost"))) {
         return NextResponse.json({ error: "Invalid promo code." }, { status: 400 });
       }
 
