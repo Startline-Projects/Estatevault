@@ -38,67 +38,74 @@ export async function updateSession(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
 
   // Public routes — no auth required
-  const publicPaths = ["/", "/quiz", "/will", "/trust", "/auth", "/attorney-referral", "/pro/login", "/pro-partners", "/partners", "/professionals", "/api/webhooks", "/api/documents/process", "/api/attorney/check-sla", "/api/checkout", "/api/quiz", "/api/professionals"];
+  const publicPaths = ["/", "/quiz", "/will", "/trust", "/auth", "/attorney-referral", "/pro-partners", "/partners", "/professionals", "/api/webhooks", "/api/documents/process", "/api/attorney/check-sla", "/api/checkout", "/api/quiz", "/api/professionals"];
   const isPublic = publicPaths.some(
     (p) => pathname === p || pathname.startsWith(p + "/")
-  ) || pathname === "/sales";
+  );
 
   if (!isPublic && !user) {
-    // Not authenticated — redirect to login
+    // Not authenticated — redirect to universal login
     const url = request.nextUrl.clone();
     url.pathname = "/auth/login";
     url.searchParams.set("redirect", pathname);
     return NextResponse.redirect(url);
   }
 
-  // Protected partner/admin routes
-  if (user && pathname.startsWith("/pro")) {
+  // Fetch user profile once for role-based routing
+  let userType: string | null = null;
+  if (user) {
     const { data: profile } = await supabase
       .from("profiles")
       .select("user_type")
       .eq("id", user.id)
       .single();
-
-    const allowedTypes = ["partner", "sales_rep", "admin"];
-    if (!profile || !allowedTypes.includes(profile.user_type)) {
-      const url = request.nextUrl.clone();
-      url.pathname = "/dashboard";
-      return NextResponse.redirect(url);
-    }
-
-    // Redirect sales_rep users from /pro to /sales/dashboard
-    if (profile?.user_type === "sales_rep") {
-      const url = request.nextUrl.clone();
-      url.pathname = "/sales/dashboard";
-      return NextResponse.redirect(url);
-    }
+    userType = profile?.user_type || null;
   }
 
-  // Protected sales routes
-  if (pathname.startsWith("/sales/") && pathname !== "/sales") {
-    if (!user) {
-      const url = request.nextUrl.clone();
-      url.pathname = "/sales";
-      return NextResponse.redirect(url);
-    }
-
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("user_type")
-      .eq("id", user.id)
-      .single();
-
-    const salesTypes = ["sales_rep", "admin"];
-    if (!profile || !salesTypes.includes(profile.user_type)) {
-      // Redirect wrong user types
-      if (profile?.user_type === "partner") {
+  // Cross-portal guards: redirect users to their correct portal
+  if (user && userType) {
+    // Client dashboard — redirect non-clients to their portal
+    if (pathname.startsWith("/dashboard")) {
+      if (userType === "sales_rep" || userType === "admin") {
+        const url = request.nextUrl.clone();
+        url.pathname = "/sales/dashboard";
+        return NextResponse.redirect(url);
+      }
+      if (userType === "partner") {
         const url = request.nextUrl.clone();
         url.pathname = "/pro/dashboard";
         return NextResponse.redirect(url);
       }
-      const url = request.nextUrl.clone();
-      url.pathname = "/dashboard";
-      return NextResponse.redirect(url);
+    }
+
+    // Partner portal — only partners and admins
+    if (pathname.startsWith("/pro") && pathname !== "/pro-partners") {
+      const allowedTypes = ["partner", "admin"];
+      if (!allowedTypes.includes(userType)) {
+        if (userType === "sales_rep") {
+          const url = request.nextUrl.clone();
+          url.pathname = "/sales/dashboard";
+          return NextResponse.redirect(url);
+        }
+        const url = request.nextUrl.clone();
+        url.pathname = "/dashboard";
+        return NextResponse.redirect(url);
+      }
+    }
+
+    // Sales portal — only sales_rep and admin
+    if (pathname.startsWith("/sales/") || pathname === "/sales") {
+      const salesTypes = ["sales_rep", "admin"];
+      if (!salesTypes.includes(userType)) {
+        if (userType === "partner") {
+          const url = request.nextUrl.clone();
+          url.pathname = "/pro/dashboard";
+          return NextResponse.redirect(url);
+        }
+        const url = request.nextUrl.clone();
+        url.pathname = "/dashboard";
+        return NextResponse.redirect(url);
+      }
     }
   }
 

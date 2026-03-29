@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
+import TeamManagement from "@/components/sales/TeamManagement";
 
 interface LeadRow {
   id: string;
@@ -89,6 +90,7 @@ function formatCurrency(amount: number): string {
 
 export default function SalesDashboardPage() {
   const [repName, setRepName] = useState("");
+  const [userType, setUserType] = useState("");
   const [loading, setLoading] = useState(true);
   const [activePartners, setActivePartners] = useState(0);
   const [onboardingPartners, setOnboardingPartners] = useState(0);
@@ -112,13 +114,19 @@ export default function SalesDashboardPage() {
       } = await supabase.auth.getUser();
       if (!user) return;
 
-      // Rep name from profile metadata
-      const name =
+      // Rep name and type from profile
+      const { data: profileData } = await supabase
+        .from("profiles")
+        .select("full_name, user_type")
+        .eq("id", user.id)
+        .single();
+
+      const name = profileData?.full_name ||
         user.user_metadata?.full_name ||
-        user.user_metadata?.name ||
         user.email?.split("@")[0] ||
         "Rep";
       setRepName(name);
+      if (profileData?.user_type) setUserType(profileData.user_type);
 
       // Fetch all partners created by this rep
       const { data: partners } = await supabase
@@ -725,6 +733,9 @@ export default function SalesDashboardPage() {
           </div>
         )}
       </div>
+
+      {/* Team Management — Admin Only */}
+      {userType === "admin" && <TeamManagement />}
     </div>
   );
 }

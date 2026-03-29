@@ -14,7 +14,7 @@ export default function ProPreviewPage() {
     async function load() {
       const supabase = createClient();
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) { router.push("/pro/login"); return; }
+      if (!user) { router.push("/auth/login"); return; }
       const { data: partner } = await supabase.from("partners").select("company_name, business_url, tier").eq("profile_id", user.id).single();
       if (partner) {
         setCompanyName(partner.company_name || "Your Company");

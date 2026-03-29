@@ -17,7 +17,7 @@ export default function Step1Page() {
     async function load() {
       const supabase = createClient();
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) { router.push("/pro/login"); return; }
+      if (!user) { router.push("/auth/login"); return; }
       const { data: partner } = await supabase.from("partners").select("id, tier, annual_fee_paid, one_time_fee_paid, professional_type").eq("profile_id", user.id).single();
       if (partner) {
         setPartnerId(partner.id);

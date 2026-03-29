@@ -43,7 +43,7 @@ export default function ProShell({ companyName, userName, tier, logoUrl, onboard
   async function handleSignOut() {
     const supabase = createClient();
     await supabase.auth.signOut();
-    router.push("/pro/login");
+    router.push("/auth/login");
   }
 
   const initials = companyName.split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase();
