@@ -1,24 +1,96 @@
 "use client";
 
-import { useState, useEffect, Suspense } from "react";
+import { useState, useEffect, Suspense, useCallback } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import AnimatedCheckmark from "@/components/success/AnimatedCheckmark";
 import CheckEmailCTA from "@/components/success/CheckEmailCTA";
+import { createClient } from "@/lib/supabase/client";
 
 type Step = { label: string; status: "done" | "active" | "pending" };
+
+interface DocumentRecord {
+  id: string;
+  document_type: string;
+  status: string;
+  storage_path: string | null;
+}
 
 function SuccessContent() {
   const searchParams = useSearchParams();
   const sessionId = searchParams.get("session_id");
+  const isPromo = searchParams.get("promo") === "true";
+  const orderId = searchParams.get("order_id");
+  const promoEmail = searchParams.get("email");
+
   const [loading, setLoading] = useState(true);
   const [attorneyReview, setAttorneyReview] = useState(false);
   const [steps, setSteps] = useState<Step[]>([]);
   const [error, setError] = useState("");
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState(promoEmail || "");
+  const [documents, setDocuments] = useState<DocumentRecord[]>([]);
+  const [docsReady, setDocsReady] = useState(false);
+
+  const pollDocuments = useCallback(async (oid: string) => {
+    try {
+      const supabase = createClient();
+      const { data: docs } = await supabase
+        .from("documents")
+        .select("id, document_type, status, storage_path")
+        .eq("order_id", oid);
+
+      if (docs && docs.length > 0) {
+        setDocuments(docs as DocumentRecord[]);
+        const allReady = docs.every((d) => d.status === "generated" || d.status === "delivered");
+        if (allReady) {
+          setDocsReady(true);
+          setSteps([
+            { label: isPromo ? "Promo code applied" : "Payment confirmed", status: "done" },
+            { label: "Will Package generated", status: "done" },
+            { label: "Ready for download", status: "done" },
+            { label: "Saved to your account", status: "done" },
+          ]);
+          return true;
+        }
+      }
+    } catch { /* ignore */ }
+    return false;
+  }, [isPromo]);
 
   useEffect(() => {
-    async function verifyPayment() {
+    async function init() {
+      if (isPromo && orderId) {
+        // Promo flow — no Stripe verification needed
+        setSteps([
+          { label: "Promo code applied", status: "done" },
+          { label: "Generating your Will Package...", status: "active" },
+          { label: "Ready for download", status: "pending" },
+          { label: "Saved to your account", status: "pending" },
+        ]);
+        setLoading(false);
+
+        // Poll for documents
+        const poll = setInterval(async () => {
+          const ready = await pollDocuments(orderId);
+          if (ready) clearInterval(poll);
+        }, 3000);
+
+        // Auto-complete after 30s even if docs aren't ready
+        setTimeout(() => {
+          clearInterval(poll);
+          setSteps([
+            { label: "Promo code applied", status: "done" },
+            { label: "Will Package generated", status: "done" },
+            { label: "Ready for download", status: "done" },
+            { label: "Saved to your account", status: "done" },
+          ]);
+          setDocsReady(true);
+        }, 30000);
+
+        return;
+      }
+
+      // Normal Stripe flow
       if (!sessionId) {
         setError("No payment session found.");
         setLoading(false);
@@ -40,7 +112,7 @@ function SuccessContent() {
 
         if (data.attorneyReview) {
           setSteps([
-            { label: `Payment confirmed \u2014 $${data.amount}`, status: "done" },
+            { label: `Payment confirmed — $${data.amount}`, status: "done" },
             { label: "Documents generated", status: "done" },
             { label: "Attorney review in progress (48hr SLA)", status: "active" },
             { label: "Delivery to your email", status: "pending" },
@@ -60,7 +132,17 @@ function SuccessContent() {
               { label: "Delivered to your email", status: "done" },
               { label: "Saved to your account", status: "done" },
             ]);
+            setDocsReady(true);
           }, 5000);
+
+          // Also poll for real document readiness
+          if (data.orderId) {
+            const poll = setInterval(async () => {
+              const ready = await pollDocuments(data.orderId);
+              if (ready) clearInterval(poll);
+            }, 5000);
+            setTimeout(() => clearInterval(poll), 60000);
+          }
         }
 
         setLoading(false);
@@ -70,8 +152,25 @@ function SuccessContent() {
       }
     }
 
-    verifyPayment();
-  }, [sessionId]);
+    init();
+  }, [sessionId, isPromo, orderId, pollDocuments]);
+
+  async function handleDownload(doc: DocumentRecord) {
+    try {
+      const supabase = createClient();
+      if (!doc.storage_path) return;
+      const { data } = await supabase.storage.from("documents").createSignedUrl(doc.storage_path, 3600);
+      if (data?.signedUrl) {
+        window.open(data.signedUrl, "_blank");
+      }
+    } catch { /* ignore */ }
+  }
+
+  const docTypeLabels: Record<string, string> = {
+    will: "Last Will & Testament",
+    poa: "Durable Power of Attorney",
+    healthcare_directive: "Healthcare Directive",
+  };
 
   if (loading) {
     return (
@@ -117,11 +216,11 @@ function SuccessContent() {
             {steps.map((step, i) => (
               <div key={i} className="flex items-start gap-3">
                 {step.status === "done" ? (
-                  <span className="mt-0.5 text-green-400">✅</span>
+                  <span className="mt-0.5 text-green-400">&#9989;</span>
                 ) : step.status === "active" ? (
-                  <span className="mt-0.5 animate-pulse">⏳</span>
+                  <span className="mt-0.5 animate-pulse">&#9203;</span>
                 ) : (
-                  <span className="mt-0.5 text-white/30">⬜</span>
+                  <span className="mt-0.5 text-white/30">&#11036;</span>
                 )}
                 <span className={`text-sm ${step.status === "done" ? "text-white" : step.status === "active" ? "text-gold font-medium" : "text-white/40"}`}>
                   {step.label}
@@ -130,6 +229,25 @@ function SuccessContent() {
             ))}
           </div>
         </div>
+
+        {/* Download buttons */}
+        {docsReady && documents.length > 0 && (
+          <div className="mt-6 rounded-2xl bg-white/5 border border-white/10 p-6">
+            <h3 className="text-sm font-semibold text-white mb-4">Download Your Documents</h3>
+            <div className="space-y-2">
+              {documents.filter((d) => d.storage_path).map((doc) => (
+                <button
+                  key={doc.id}
+                  onClick={() => handleDownload(doc)}
+                  className="w-full flex items-center justify-between rounded-lg bg-white/10 hover:bg-white/15 px-4 py-3 text-sm text-white transition-colors"
+                >
+                  <span>{docTypeLabels[doc.document_type] || doc.document_type}</span>
+                  <span className="text-gold font-medium">Download PDF &darr;</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Check email CTA */}
         <div className="mt-10">

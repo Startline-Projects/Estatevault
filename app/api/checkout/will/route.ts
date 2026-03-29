@@ -18,7 +18,7 @@ function createAdminClient() {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { userId, attorneyReview, intakeAnswers } = body;
+    const { userId, attorneyReview, intakeAnswers, promoCode, email: promoEmail } = body;
 
     if (!intakeAnswers) {
       return NextResponse.json(
@@ -26,6 +26,9 @@ export async function POST(request: Request) {
         { status: 400 }
       );
     }
+
+    const VALID_PROMO_CODES: Record<string, boolean> = { FREE134: true };
+    const isPromoFree = promoCode && VALID_PROMO_CODES[promoCode.toUpperCase()];
 
     // Use admin client for DB operations (bypasses RLS)
     const supabase = createAdminClient();
@@ -116,6 +119,74 @@ export async function POST(request: Request) {
       recommendation: "will",
       completed: true,
     });
+
+    // ── PROMO CODE: Free Will ──────────────────────────────
+    if (isPromoFree) {
+      const emailAddr = promoEmail || intakeAnswers.email;
+      if (!emailAddr) {
+        return NextResponse.json({ error: "Email is required for promo orders" }, { status: 400 });
+      }
+
+      // Update order to free + generating
+      await supabase.from("orders").update({
+        amount_total: 0, ev_cut: 0, partner_cut: 0, attorney_cut: 0,
+        status: "generating",
+        attorney_review_requested: false,
+      }).eq("id", order.id);
+
+      // Create auth user if needed
+      let profileId = userId;
+      if (!profileId) {
+        const { data: existingUser } = await supabase.from("profiles").select("id").eq("email", emailAddr).single();
+        if (existingUser) {
+          profileId = existingUser.id;
+        } else {
+          const { data: newUser } = await supabase.auth.admin.createUser({
+            email: emailAddr,
+            email_confirm: true,
+            user_metadata: { full_name: `${intakeAnswers.firstName || ""} ${intakeAnswers.lastName || ""}`.trim(), user_type: "client" },
+          });
+          if (newUser?.user) {
+            profileId = newUser.user.id;
+            await supabase.from("profiles").upsert({
+              id: newUser.user.id, email: emailAddr,
+              full_name: `${intakeAnswers.firstName || ""} ${intakeAnswers.lastName || ""}`.trim(),
+              user_type: "client",
+            });
+          }
+        }
+        if (profileId) {
+          await supabase.from("clients").update({ profile_id: profileId }).eq("id", clientId);
+        }
+      }
+
+      // Send magic link email
+      try {
+        if (profileId) {
+          const { data: linkData } = await supabase.auth.admin.generateLink({ type: "magiclink", email: emailAddr });
+          const passwordLink = linkData?.properties?.action_link || "https://www.estatevault.us/auth/login";
+          const { sendDocumentEmail, buildAssetChecklist } = await import("@/lib/email");
+          await sendDocumentEmail({ to: emailAddr, productType: "will", passwordLink });
+        }
+      } catch (emailErr) { console.error("Promo email failed:", emailErr); }
+
+      // Create document records
+      const docTypes = ["will", "poa", "healthcare_directive"];
+      await supabase.from("documents").insert(docTypes.map((dt) => ({
+        order_id: order.id, document_type: dt, status: "pending",
+      })));
+
+      // Audit log
+      await supabase.from("audit_log").insert({
+        actor_id: profileId || null,
+        action: "checkout.promo_free",
+        resource_type: "order",
+        resource_id: order.id,
+        metadata: { product_type: "will", promo_code: promoCode, email: emailAddr },
+      });
+
+      return NextResponse.json({ free: true, orderId: order.id, email: emailAddr });
+    }
 
     // Build Stripe line items
     const lineItems: Array<{
