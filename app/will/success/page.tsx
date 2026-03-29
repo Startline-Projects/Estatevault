@@ -36,6 +36,27 @@ function SuccessContent() {
 
   const pollDocuments = useCallback(async (oid: string) => {
     try {
+      if (isTest) {
+        // Test mode: use server-side API (no auth, bypasses RLS)
+        const res = await fetch(`/api/documents/check-status?order_id=${oid}`);
+        const data = await res.json();
+        if (data.ready && data.documents.length > 0) {
+          setDocuments(data.documents.map((d: { id: string; document_type: string; status: string; has_file: boolean }) => ({
+            id: d.id, document_type: d.document_type, status: d.status, storage_path: d.has_file ? "exists" : null,
+          })));
+          setDocsReady(true);
+          setSteps([
+            { label: "Promo code applied", status: "done" },
+            { label: "Will Package generated", status: "done" },
+            { label: "Ready for download", status: "done" },
+            { label: "Test Mode — not saved", status: "done" },
+          ]);
+          return true;
+        }
+        return false;
+      }
+
+      // Normal flow: use client-side Supabase
       const supabase = createClient();
       const { data: docs } = await supabase
         .from("documents")
@@ -47,12 +68,11 @@ function SuccessContent() {
         const allReady = docs.every((d) => d.status === "generated" || d.status === "delivered");
         if (allReady) {
           setDocsReady(true);
-          const lastStep = isTest ? "Test Mode — not saved" : "Saved to your account";
           setSteps([
-            { label: (isPromo || isTest) ? "Promo code applied" : "Payment confirmed", status: "done" },
+            { label: isPromo ? "Promo code applied" : "Payment confirmed", status: "done" },
             { label: "Will Package generated", status: "done" },
             { label: "Ready for download", status: "done" },
-            { label: lastStep, status: "done" },
+            { label: "Saved to your account", status: "done" },
           ]);
           return true;
         }
