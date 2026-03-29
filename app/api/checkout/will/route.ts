@@ -36,6 +36,12 @@ export async function POST(request: Request) {
 
     // ── TEST PROMO CODE ────────────────────────────────────
     if (isTestCode) {
+      // Only valid on estatevault.us — block on partner URLs
+      const origin = request.headers.get("origin") || "";
+      if (!origin.includes("estatevault.us") || origin.includes("legacy.")) {
+        return NextResponse.json({ error: "Invalid promo code." }, { status: 400 });
+      }
+
       // Check if test code is active
       const { data: setting } = await supabase.from("app_settings").select("value").eq("key", "test_promo_code").single();
       const testActive = (setting?.value as { active?: boolean })?.active ?? false;
