@@ -12,7 +12,7 @@ export default function Hero() {
           Simple. Complete with your family&apos;s vault.
         </p>
 
-        <ul className="mt-4 mb-4 flex flex-col items-center gap-1 text-sm text-blue-100/60">
+        <ul className="mt-4 mb-4 flex flex-col items-center gap-1.5 text-sm text-white/50">
           <li>&#8226; A will gives instructions for the judge</li>
           <li>&#8226; A trust avoids court and a judge</li>
         </ul>
