@@ -47,45 +47,44 @@ function SuccessContent() {
         const allReady = docs.every((d) => d.status === "generated" || d.status === "delivered");
         if (allReady) {
           setDocsReady(true);
+          const lastStep = isTest ? "Test Mode — not saved" : "Saved to your account";
           setSteps([
-            { label: isPromo ? "Promo code applied" : "Payment confirmed", status: "done" },
+            { label: (isPromo || isTest) ? "Promo code applied" : "Payment confirmed", status: "done" },
             { label: "Will Package generated", status: "done" },
             { label: "Ready for download", status: "done" },
-            { label: "Saved to your account", status: "done" },
+            { label: lastStep, status: "done" },
           ]);
           return true;
         }
       }
     } catch { /* ignore */ }
     return false;
-  }, [isPromo]);
+  }, [isPromo, isTest]);
 
   useEffect(() => {
     async function init() {
       if ((isPromo || isTest) && orderId) {
-        // Promo flow — no Stripe verification needed
+        const lastStep = isTest ? "Test Mode — not saved" : "Saved to your account";
         setSteps([
           { label: "Promo code applied", status: "done" },
           { label: "Generating your Will Package...", status: "active" },
           { label: "Ready for download", status: "pending" },
-          { label: "Saved to your account", status: "pending" },
+          { label: lastStep, status: "pending" },
         ]);
         setLoading(false);
 
-        // Poll for documents
         const poll = setInterval(async () => {
           const ready = await pollDocuments(orderId);
           if (ready) clearInterval(poll);
         }, 3000);
 
-        // Auto-complete after 30s even if docs aren't ready
         setTimeout(() => {
           clearInterval(poll);
           setSteps([
             { label: "Promo code applied", status: "done" },
             { label: "Will Package generated", status: "done" },
             { label: "Ready for download", status: "done" },
-            { label: "Saved to your account", status: "done" },
+            { label: lastStep, status: "done" },
           ]);
           setDocsReady(true);
         }, 30000);
@@ -208,7 +207,9 @@ function SuccessContent() {
             {attorneyReview ? "Your documents are being reviewed." : "Your documents are being prepared."}
           </h1>
           <p className="mt-3 text-sm text-blue-100/60 max-w-md mx-auto">
-            {attorneyReview
+            {isTest
+              ? "Your documents are ready to download."
+              : attorneyReview
               ? "A licensed Michigan attorney is reviewing your documents. You\u2019ll receive your completed package within 48 hours."
               : "You\u2019ll receive a download link by email within a few minutes. Your documents are also saved in your account."}
           </p>
@@ -250,6 +251,24 @@ function SuccessContent() {
                 </button>
               ))}
             </div>
+          </div>
+        )}
+
+        {/* Test mode: ZIP download button */}
+        {isTest && docsReady && orderId && (
+          <div className="mt-6">
+            <button
+              onClick={() => {
+                const intake = sessionStorage.getItem("willIntake") || sessionStorage.getItem("trustIntake");
+                const parsed = intake ? JSON.parse(intake) : {};
+                const fn = parsed.firstName || "Test";
+                const ln = parsed.lastName || "User";
+                window.location.href = `/api/documents/download-zip?order_id=${orderId}&first_name=${encodeURIComponent(fn)}&last_name=${encodeURIComponent(ln)}`;
+              }}
+              className="w-full min-h-[48px] rounded-full bg-[#C9A84C] py-3.5 text-base font-semibold text-white hover:bg-[#C9A84C]/90 transition-colors shadow-lg"
+            >
+              Download Documents
+            </button>
           </div>
         )}
 
