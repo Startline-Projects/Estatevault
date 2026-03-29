@@ -75,7 +75,7 @@ export async function POST(request: Request) {
             const { Resend } = await import("resend");
             const resend = new Resend(process.env.RESEND_API_KEY);
             await resend.emails.send({
-              from: "EstateVault <noreply@estatevault.us>",
+              from: "EstateVault <info@estatevault.us>",
               to: profile.email,
               subject: "Action Required — Vault Subscription Payment Failed",
               html: `<div style="font-family:Inter,sans-serif;max-width:500px;margin:0 auto;padding:32px;"><h1 style="color:#1C3557;">Payment Failed</h1><p>Hi ${profile.full_name || "there"},</p><p>We were unable to process your annual Vault subscription payment of $99. Your premium vault features (free amendments, farewell messages) will be paused until payment is resolved.</p><p>Please update your payment method to continue enjoying these benefits.</p><a href="https://www.estatevault.us/dashboard/settings" style="display:inline-block;background:#C9A84C;color:white;text-decoration:none;padding:12px 24px;border-radius:999px;font-weight:600;font-size:14px;">Update Payment Method</a></div>`,

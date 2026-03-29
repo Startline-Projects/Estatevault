@@ -84,7 +84,7 @@ export async function POST(request: Request) {
         const resend = new Resend(resendKey);
 
         await resend.emails.send({
-          from: "EstateVault <noreply@estatevault.us>",
+          from: "EstateVault <info@estatevault.us>",
           to: notifyEmail,
           subject: `New Partner Lead: ${firstName} ${lastName} (${professionalType})`,
           html: `
@@ -113,7 +113,7 @@ export async function POST(request: Request) {
         const resend = new Resend(resendKey);
 
         await resend.emails.send({
-          from: "EstateVault <noreply@estatevault.us>",
+          from: "EstateVault <info@estatevault.us>",
           to: email,
           subject: "We received your EstateVault Pro request",
           html: `

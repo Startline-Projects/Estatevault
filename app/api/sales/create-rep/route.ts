@@ -75,7 +75,7 @@ export async function POST(request: Request) {
     const resend = new Resend(process.env.RESEND_API_KEY);
 
     await resend.emails.send({
-      from: "EstateVault <noreply@estatevault.us>",
+      from: "EstateVault <info@estatevault.us>",
       to: email,
       subject: "Welcome to EstateVault — Your Sales Account",
       html: `

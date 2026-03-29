@@ -16,7 +16,7 @@ export async function POST(request: Request) {
     const displayName = name || "Partner";
 
     await resend.emails.send({
-      from: "EstateVault <noreply@estatevault.us>",
+      from: "EstateVault <info@estatevault.us>",
       to: email,
       subject: "Your EstateVault Partner Account is Active",
       html: `<!DOCTYPE html>

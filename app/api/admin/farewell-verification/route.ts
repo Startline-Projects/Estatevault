@@ -127,7 +127,7 @@ export async function POST(request: Request) {
 
         for (const msg of unlockedMessages || []) {
           await resend.emails.send({
-            from: "EstateVault <noreply@estatevault.us>",
+            from: "EstateVault <info@estatevault.us>",
             to: msg.recipient_email,
             subject: "A message has been left for you",
             html: `<div style="font-family:Inter,sans-serif;max-width:500px;margin:0 auto;padding:32px;"><h1 style="color:#1C3557;">A Message for You</h1><p>We're sorry for your loss.</p><p>${clientName} left you a farewell message titled "<strong>${msg.title}</strong>".</p><p>Click below to access it.</p><a href="https://www.estatevault.us/farewell/${verReq.client_id}" style="display:inline-block;background:#C9A84C;color:white;text-decoration:none;padding:14px 24px;border-radius:999px;font-weight:600;font-size:14px;">View Message</a><p style="color:#999;font-size:12px;margin-top:24px;">This link will remain accessible for you to view at any time.</p></div>`,
@@ -165,7 +165,7 @@ export async function POST(request: Request) {
         const { Resend } = await import("resend");
         const resend = new Resend(process.env.RESEND_API_KEY);
         await resend.emails.send({
-          from: "EstateVault <noreply@estatevault.us>",
+          from: "EstateVault <info@estatevault.us>",
           to: verReq.trustee_email,
           subject: "Verification Update",
           html: `<div style="font-family:Inter,sans-serif;max-width:500px;margin:0 auto;padding:32px;"><h1 style="color:#1C3557;">Verification Update</h1><p>We were unable to verify the documentation you submitted. ${notes ? `<br><br>Reason: ${notes}` : ""}</p><p>If you believe this is an error, please resubmit with a clearer copy of the documentation.</p><p style="color:#999;font-size:12px;">— EstateVault</p></div>`,

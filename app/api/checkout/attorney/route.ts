@@ -116,7 +116,7 @@ export async function POST(request: Request) {
         const salesEmail = process.env.SALES_NOTIFICATION_EMAIL || "support@estatevault.us";
 
         await resend.emails.send({
-          from: "EstateVault <noreply@estatevault.us>",
+          from: "EstateVault <info@estatevault.us>",
           to: salesEmail,
           subject: `New Attorney Partner (PROMO) — Bar Verification Needed — ${firm_name || name}`,
           html: `<p><strong>New attorney partner signed up with promo code ${promo_code.toUpperCase()}</strong></p>
