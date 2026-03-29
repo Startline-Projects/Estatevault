@@ -2,7 +2,7 @@
   "crons": [
     {
       "path": "/api/documents/process",
-      "schedule": "0 0 * * *"
+      "schedule": "* * * * *"
     },
     {
       "path": "/api/attorney/check-sla",
@@ -19,6 +19,9 @@
     },
     "app/api/documents/generate/route.ts": {
       "maxDuration": 60
+    },
+    "app/api/documents/process-now/route.ts": {
+      "maxDuration": 300
     }
   }
 }
