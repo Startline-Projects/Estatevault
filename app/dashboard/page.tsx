@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import Link from "next/link";
+import DocumentActions from "@/components/dashboard/DocumentActions";
 
 function CompletionRing({ percent }: { percent: number }) {
   const r = 50;
@@ -144,6 +145,17 @@ export default async function DashboardHome() {
           <Link href="/dashboard/documents" className="mt-4 inline-block text-sm text-navy/60 hover:text-navy transition-colors">
             View all documents →
           </Link>
+        </div>
+      )}
+
+      {/* Document downloads + email + generation status */}
+      {latestOrder && (
+        <div className="mt-4">
+          <DocumentActions
+            orderId={latestOrder.id}
+            productType={latestOrder.product_type}
+            orderStatus={latestOrder.status}
+          />
         </div>
       )}
 

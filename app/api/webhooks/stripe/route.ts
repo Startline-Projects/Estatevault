@@ -3,7 +3,7 @@ import { headers } from "next/headers";
 import Stripe from "stripe";
 import { stripe } from "@/lib/stripe";
 import { createServerClient } from "@supabase/ssr";
-import { sendDocumentEmail, buildAssetChecklist } from "@/lib/email";
+import { buildAssetChecklist } from "@/lib/email";
 import { calculateSplit, transferToPartner } from "@/lib/stripe-payouts";
 
 function createAdminClient() {
@@ -440,55 +440,10 @@ export async function POST(request: Request) {
       }
     }
 
-    // ── 7. Send email with password link ───────────────────────
-    if (customerEmail) {
-      try {
-        // Generate a magic link for password setup
-        const { data: linkData, error: linkError } =
-          await supabase.auth.admin.generateLink({
-            type: "invite",
-            email: customerEmail,
-            options: {
-              redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || "https://www.estatevault.us"}/auth/callback?redirect=/dashboard`,
-            },
-          });
-
-        const passwordLink = linkError || !linkData?.properties?.action_link
-          ? `${process.env.NEXT_PUBLIC_SITE_URL || "https://www.estatevault.us"}/auth/login`
-          : linkData.properties.action_link;
-
-        // Build asset checklist for trust emails
-        let assetChecklist: { asset: string; instruction: string }[] | undefined;
-        if (productType === "trust") {
-          const { data: quizSession } = await supabase
-            .from("quiz_sessions")
-            .select("answers")
-            .eq("client_id", clientId)
-            .eq("recommendation", "trust")
-            .order("created_at", { ascending: false })
-            .limit(1)
-            .single();
-
-          if (quizSession?.answers) {
-            const answers = quizSession.answers as Record<string, unknown>;
-            const assetTypes = answers.assetTypes as string[] | undefined;
-            if (assetTypes) {
-              assetChecklist = buildAssetChecklist(assetTypes);
-            }
-          }
-        }
-
-        await sendDocumentEmail({
-          to: customerEmail,
-          productType,
-          passwordLink,
-          assetChecklist,
-        });
-      } catch (emailErr) {
-        // Log but don't fail the webhook
-        console.error("Email send failed:", emailErr);
-      }
-    }
+    // ── 7. Email removed — client sets password on success page ──
+    // No automatic email sent. Client creates password inline on
+    // the success page and can send documents to their email later
+    // via the "Send documents to my email" button on their dashboard.
 
     // ── 8. Audit log ───────────────────────────────────────────
     await supabase.from("audit_log").insert({

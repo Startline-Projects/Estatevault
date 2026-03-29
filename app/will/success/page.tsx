@@ -4,7 +4,7 @@ import { useState, useEffect, Suspense, useCallback } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import AnimatedCheckmark from "@/components/success/AnimatedCheckmark";
-import CheckEmailCTA from "@/components/success/CheckEmailCTA";
+import PasswordSetup from "@/components/success/PasswordSetup";
 import { createClient } from "@/lib/supabase/client";
 
 type Step = { label: string; status: "done" | "active" | "pending" };
@@ -28,6 +28,7 @@ function SuccessContent() {
   const [steps, setSteps] = useState<Step[]>([]);
   const [error, setError] = useState("");
   const [email, setEmail] = useState(promoEmail || "");
+  const [userId, setUserId] = useState("");
   const [documents, setDocuments] = useState<DocumentRecord[]>([]);
   const [docsReady, setDocsReady] = useState(false);
 
@@ -109,6 +110,7 @@ function SuccessContent() {
 
         setAttorneyReview(data.attorneyReview);
         if (data.email) setEmail(data.email);
+        if (data.userId) setUserId(data.userId);
 
         if (data.attorneyReview) {
           setSteps([
@@ -249,10 +251,12 @@ function SuccessContent() {
           </div>
         )}
 
-        {/* Check email CTA */}
-        <div className="mt-10">
-          <CheckEmailCTA email={email} />
-        </div>
+        {/* Password setup */}
+        {email && !attorneyReview && (
+          <div className="mt-10">
+            <PasswordSetup email={email} userId={userId} />
+          </div>
+        )}
       </div>
     </div>
   );
