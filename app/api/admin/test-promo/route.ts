@@ -14,15 +14,21 @@ function createAdminClient() {
 export async function GET() {
   try {
     const admin = createAdminClient();
-    const { data } = await admin
+    const { data, error } = await admin
       .from("app_settings")
       .select("value")
       .eq("key", "test_promo_code")
       .single();
 
+    if (error) {
+      console.error("app_settings read error:", error.message);
+      return NextResponse.json({ active: false });
+    }
+
     const active = (data?.value as { active?: boolean })?.active ?? false;
     return NextResponse.json({ active });
-  } catch {
+  } catch (err) {
+    console.error("test-promo GET error:", err);
     return NextResponse.json({ active: false });
   }
 }
