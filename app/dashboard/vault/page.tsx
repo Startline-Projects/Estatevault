@@ -288,6 +288,14 @@ export default function VaultPage() {
             </button>
           );
         })}
+
+        {/* Farewell Messages card */}
+        <Link href="/dashboard/vault/farewell"
+          className="rounded-xl p-5 text-left transition-all hover:shadow-md bg-[#1C3557]/5 border border-[#C9A84C]/30 text-[#1C3557]">
+          <span className="text-2xl">🎥</span>
+          <p className="mt-3 text-sm font-semibold">Farewell Messages</p>
+          <p className="mt-1 text-xs text-[#2D2D2D]/50">Video messages for loved ones</p>
+        </Link>
       </div>
     </div>
   );

@@ -1,7 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import SubscriptionBanner from "@/components/dashboard/SubscriptionBanner";
 
 const CHANGE_OPTIONS = [
   "Beneficiary",
@@ -13,11 +15,13 @@ const CHANGE_OPTIONS = [
 ];
 
 export default function AmendmentPage() {
+  const router = useRouter();
   const [changeType, setChangeType] = useState("");
   const [description, setDescription] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [userId, setUserId] = useState("");
+  const [isSubscriber, setIsSubscriber] = useState(false);
 
   useEffect(() => {
     async function init() {
@@ -41,6 +45,14 @@ export default function AmendmentPage() {
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error || "Something went wrong"); setLoading(false); return; }
+
+      // Free amendment for subscribers — redirect directly
+      if (data.free) {
+        router.push(data.url || "/dashboard/documents?amended=true");
+        return;
+      }
+
+      // Paid amendment — redirect to Stripe
       window.location.href = data.url;
     } catch {
       setError("Something went wrong. Please try again.");
@@ -49,11 +61,20 @@ export default function AmendmentPage() {
   }
 
   return (
-    <div className="max-w-2xl">
-      <h1 className="text-2xl font-bold text-navy">Request an Amendment</h1>
-      <p className="mt-1 text-sm text-charcoal/60">Update your estate planning documents for $50.</p>
+    <div className="max-w-2xl space-y-6">
+      <div>
+        <h1 className="text-2xl font-bold text-navy">Request an Amendment</h1>
+        <p className="mt-1 text-sm text-charcoal/60">
+          {isSubscriber
+            ? "Amendments are included with your Vault subscription at no extra charge."
+            : "Update your estate planning documents for $50."
+          }
+        </p>
+      </div>
 
-      <div className="mt-8 rounded-xl bg-white border border-gray-200 p-6">
+      <SubscriptionBanner onStatusLoaded={(s) => setIsSubscriber(s.canAmendFree)} />
+
+      <div className="rounded-xl bg-white border border-gray-200 p-6">
         <div>
           <label className="block text-sm font-medium text-navy mb-2">What would you like to change?</label>
           <select value={changeType} onChange={(e) => setChangeType(e.target.value)} className="w-full min-h-[44px] rounded-xl border-2 border-gray-200 px-4 py-3 text-sm focus:border-gold focus:outline-none">
@@ -70,9 +91,12 @@ export default function AmendmentPage() {
         {error && <p className="mt-4 text-sm text-red-600">{error}</p>}
 
         <button onClick={handleSubmit} disabled={loading || !changeType || !description.trim()} className="mt-6 w-full min-h-[44px] rounded-full bg-gold py-3 text-sm font-semibold text-white hover:bg-gold/90 disabled:opacity-50 disabled:cursor-not-allowed">
-          {loading ? "Redirecting to payment..." : "Proceed to Payment — $50"}
+          {loading
+            ? (isSubscriber ? "Submitting..." : "Redirecting to payment...")
+            : (isSubscriber ? "Submit Amendment (Included with Subscription)" : "Proceed to Payment — $50")
+          }
         </button>
-        <p className="mt-2 text-center text-xs text-charcoal/40">🔒 Secure payment powered by Stripe</p>
+        {!isSubscriber && <p className="mt-2 text-center text-xs text-charcoal/40">Secure payment powered by Stripe</p>}
       </div>
     </div>
   );

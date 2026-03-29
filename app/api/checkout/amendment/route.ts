@@ -17,15 +17,57 @@ export async function POST(request: Request) {
     if (!user || user.id !== userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const supabase = createAdminClient();
-    const { data: client } = await supabase.from("clients").select("id").eq("profile_id", userId).single();
+    const { data: client } = await supabase
+      .from("clients")
+      .select("id, vault_subscription_status")
+      .eq("profile_id", userId)
+      .single();
     if (!client) return NextResponse.json({ error: "No client record" }, { status: 400 });
 
+    const isSubscriber = client.vault_subscription_status === "active";
+
+    if (isSubscriber) {
+      // Free amendment for active subscribers — bypass Stripe
+      const { data: order, error: orderError } = await supabase.from("orders").insert({
+        client_id: client.id,
+        product_type: "amendment",
+        status: "generating",
+        amount_total: 0,
+        ev_cut: 0,
+        amendment_type: "subscription_included",
+        acknowledgment_signed: true,
+        acknowledgment_signed_at: new Date().toISOString(),
+      }).select("id").single();
+
+      if (orderError || !order) return NextResponse.json({ error: "Failed to create order" }, { status: 500 });
+
+      await supabase.from("quiz_sessions").insert({
+        client_id: client.id,
+        answers: { changeType, description },
+        recommendation: "will",
+        completed: true,
+      });
+
+      // Audit log
+      await supabase.from("audit_log").insert({
+        actor_id: user.id,
+        action: "amendment.subscription_included",
+        resource_type: "order",
+        resource_id: order.id,
+        metadata: { amendment_type: "subscription_included", change_type: changeType },
+      });
+
+      return NextResponse.json({ free: true, orderId: order.id, url: "/dashboard/documents?amended=true" });
+    }
+
+    // Paid amendment — normal Stripe flow
     const { data: order, error: orderError } = await supabase.from("orders").insert({
       client_id: client.id,
       product_type: "amendment",
       status: "pending",
       amount_total: 5000,
       ev_cut: 5000,
+      amendment_type: "paid",
       acknowledgment_signed: true,
       acknowledgment_signed_at: new Date().toISOString(),
     }).select("id").single();
@@ -34,7 +76,7 @@ export async function POST(request: Request) {
 
     await supabase.from("quiz_sessions").insert({ client_id: client.id, answers: { changeType, description }, recommendation: "will", completed: true });
 
-    const origin = request.headers.get("origin") || "http://localhost:3000";
+    const origin = request.headers.get("origin") || "https://www.estatevault.us";
     const session = await stripe.checkout.sessions.create({
       mode: "payment",
       line_items: [{ price_data: { currency: "usd", product_data: { name: "Document Amendment", description: `${changeType}: ${description.substring(0, 100)}` }, unit_amount: 5000 }, quantity: 1 }],

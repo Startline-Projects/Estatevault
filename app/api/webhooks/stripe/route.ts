@@ -32,9 +32,101 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: `Webhook Error: ${message}` }, { status: 400 });
   }
 
+  const supabase = createAdminClient();
+
+  // ── VAULT SUBSCRIPTION EVENTS ───────────────────────────────
+  if (event.type === "invoice.payment_succeeded") {
+    const invoice = event.data.object as Stripe.Invoice;
+    // Only handle renewals, not initial subscription (handled by checkout.session.completed)
+    if (invoice.billing_reason === "subscription_cycle") {
+      const subscriptionId = (invoice as unknown as Record<string, unknown>).subscription as string | null;
+      if (subscriptionId) {
+        const expiry = new Date();
+        expiry.setFullYear(expiry.getFullYear() + 1);
+        await supabase
+          .from("clients")
+          .update({ vault_subscription_status: "active", vault_subscription_expiry: expiry.toISOString() })
+          .eq("vault_subscription_stripe_id", subscriptionId);
+        await supabase.from("audit_log").insert({
+          action: "subscription.renewed",
+          resource_type: "client",
+          metadata: { subscription_id: subscriptionId },
+        });
+      }
+    }
+    return NextResponse.json({ received: true });
+  }
+
+  if (event.type === "invoice.payment_failed") {
+    const invoice = event.data.object as Stripe.Invoice;
+    const subscriptionId = (invoice as unknown as Record<string, unknown>).subscription as string | null;
+    if (subscriptionId) {
+      const { data: client } = await supabase
+        .from("clients")
+        .select("id, profile_id")
+        .eq("vault_subscription_stripe_id", subscriptionId)
+        .single();
+      if (client) {
+        await supabase.from("clients").update({ vault_subscription_status: "past_due" }).eq("id", client.id);
+        // Send dunning email
+        try {
+          const { data: profile } = await supabase.from("profiles").select("email, full_name").eq("id", client.profile_id).single();
+          if (profile?.email) {
+            const { Resend } = await import("resend");
+            const resend = new Resend(process.env.RESEND_API_KEY);
+            await resend.emails.send({
+              from: "EstateVault <noreply@estatevault.us>",
+              to: profile.email,
+              subject: "Action Required — Vault Subscription Payment Failed",
+              html: `<div style="font-family:Inter,sans-serif;max-width:500px;margin:0 auto;padding:32px;"><h1 style="color:#1C3557;">Payment Failed</h1><p>Hi ${profile.full_name || "there"},</p><p>We were unable to process your annual Vault subscription payment of $99. Your premium vault features (free amendments, farewell messages) will be paused until payment is resolved.</p><p>Please update your payment method to continue enjoying these benefits.</p><a href="https://www.estatevault.us/dashboard/settings" style="display:inline-block;background:#C9A84C;color:white;text-decoration:none;padding:12px 24px;border-radius:999px;font-weight:600;font-size:14px;">Update Payment Method</a></div>`,
+            });
+          }
+        } catch (emailErr) { console.error("Dunning email failed:", emailErr); }
+        await supabase.from("audit_log").insert({ action: "subscription.payment_failed", resource_type: "client", resource_id: client.id });
+      }
+    }
+    return NextResponse.json({ received: true });
+  }
+
+  if (event.type === "customer.subscription.deleted") {
+    const subscription = event.data.object as Stripe.Subscription;
+    await supabase
+      .from("clients")
+      .update({ vault_subscription_status: "cancelled", vault_subscription_stripe_id: null })
+      .eq("vault_subscription_stripe_id", subscription.id);
+    await supabase.from("audit_log").insert({
+      action: "subscription.deleted",
+      resource_type: "client",
+      metadata: { subscription_id: subscription.id },
+    });
+    return NextResponse.json({ received: true });
+  }
+
+  // ── CHECKOUT SESSION COMPLETED ──────────────────────────────
   if (event.type === "checkout.session.completed") {
     const session = event.data.object as Stripe.Checkout.Session;
     const metadata = session.metadata || {};
+
+    // Handle vault subscription checkout
+    if (metadata.product_type === "vault_subscription") {
+      const clientId = metadata.client_id;
+      const subscriptionId = typeof session.subscription === "string" ? session.subscription : null;
+      const expiry = new Date();
+      expiry.setFullYear(expiry.getFullYear() + 1);
+      await supabase.from("clients").update({
+        vault_subscription_status: "active",
+        vault_subscription_expiry: expiry.toISOString(),
+        vault_subscription_stripe_id: subscriptionId,
+      }).eq("id", clientId);
+      await supabase.from("audit_log").insert({
+        action: "subscription.activated",
+        resource_type: "client",
+        resource_id: clientId,
+        metadata: { subscription_id: subscriptionId },
+      });
+      return NextResponse.json({ received: true });
+    }
+
     const orderId = metadata.order_id;
     const clientId = metadata.client_id;
     const productType = metadata.product_type as "will" | "trust";
@@ -46,7 +138,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ received: true });
     }
 
-    const supabase = createAdminClient();
+    // Use the supabase admin client created above
 
     // ── 1. Ensure user account exists ──────────────────────────
     let profileId: string | null = null;

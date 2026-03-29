@@ -11,6 +11,7 @@ const navItems = [
   { icon: "\u{2795}", label: "New Partner", href: "/sales/new-partner" },
   { icon: "\u{1F4C8}", label: "Pipeline", href: "/sales/pipeline" },
   { icon: "\u{1F4B0}", label: "My Commission", href: "/sales/commission" },
+  { icon: "\u{1F3A5}", label: "Farewell Verification", href: "/sales/farewell-verification" },
   { icon: "\u{2699}", label: "Account", href: "/sales/account" },
 ];
 
