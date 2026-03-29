@@ -111,22 +111,28 @@ export async function POST(request: Request) {
         attorney_review_requested: false,
       }).eq("id", order.id);
 
+      // Create user account with temp password
       let profileId = userId;
+      const { generateTempPassword } = await import("@/lib/utils/generate-password");
+      const tempPassword = generateTempPassword();
+
       if (!profileId) {
         const { data: existingUser } = await supabase.from("profiles").select("id").eq("email", emailAddr).single();
         if (existingUser) {
           profileId = existingUser.id;
         } else {
+          const fullName = `${intakeAnswers.firstName || ""} ${intakeAnswers.lastName || ""}`.trim();
           const { data: newUser } = await supabase.auth.admin.createUser({
             email: emailAddr,
+            password: tempPassword,
             email_confirm: true,
-            user_metadata: { full_name: `${intakeAnswers.firstName || ""} ${intakeAnswers.lastName || ""}`.trim(), user_type: "client" },
+            user_metadata: { full_name: fullName, user_type: "client" },
           });
           if (newUser?.user) {
             profileId = newUser.user.id;
             await supabase.from("profiles").upsert({
               id: newUser.user.id, email: emailAddr,
-              full_name: `${intakeAnswers.firstName || ""} ${intakeAnswers.lastName || ""}`.trim(),
+              full_name: fullName,
               user_type: "client",
             });
           }
@@ -136,18 +142,34 @@ export async function POST(request: Request) {
         }
       }
 
+      // Send document email with temp password
       try {
-        if (profileId) {
-          // Use invite link instead of magic link — more reliable, lets user set password
-          const { data: linkData } = await supabase.auth.admin.generateLink({
-            type: "invite",
-            email: emailAddr,
-            options: { redirectTo: "https://www.estatevault.us/auth/callback?redirect=/dashboard" },
-          });
-          const passwordLink = linkData?.properties?.action_link || "https://www.estatevault.us/auth/login";
-          const { sendDocumentEmail } = await import("@/lib/email");
-          await sendDocumentEmail({ to: emailAddr, productType: "trust", passwordLink });
-        }
+        const { Resend } = await import("resend");
+        const resend = new Resend(process.env.RESEND_API_KEY);
+        await resend.emails.send({
+          from: "EstateVault <info@estatevault.us>",
+          to: emailAddr,
+          subject: "Your Trust Package is ready",
+          html: `<div style="font-family:Inter,sans-serif;max-width:600px;margin:0 auto;">
+            <div style="background:#1C3557;padding:24px 32px;border-radius:12px 12px 0 0;"><h1 style="color:white;font-size:20px;margin:0;">EstateVault</h1></div>
+            <div style="padding:32px;border:1px solid #e5e7eb;border-top:none;border-radius:0 0 12px 12px;">
+              <h2 style="color:#1C3557;font-size:22px;">Your Trust Package is ready.</h2>
+              <p style="color:#2D2D2D;line-height:1.6;">Your documents have been generated and are saved in your account. Sign in below to view and download them.</p>
+              <div style="background:#f8f9fa;border-radius:12px;padding:20px;margin:24px 0;">
+                <p style="margin:0 0 8px;color:#666;font-size:13px;">Email</p>
+                <p style="margin:0 0 16px;color:#1C3557;font-weight:600;">${emailAddr}</p>
+                <p style="margin:0 0 8px;color:#666;font-size:13px;">Temporary Password</p>
+                <p style="margin:0;color:#1C3557;font-weight:600;font-family:monospace;font-size:18px;">${tempPassword}</p>
+              </div>
+              <a href="https://www.estatevault.us/auth/login" style="display:block;text-align:center;background:#C9A84C;color:white;text-decoration:none;padding:14px 24px;border-radius:999px;font-weight:600;font-size:14px;">Sign In & View Documents</a>
+              <p style="color:#999;font-size:12px;margin-top:24px;text-align:center;">Please change your password after signing in.</p>
+              <hr style="border:none;border-top:1px solid #e5e7eb;margin:24px 0;" />
+              <p style="color:#2D2D2D;font-weight:600;font-size:14px;">Documents Included:</p>
+              <p style="color:#666;font-size:14px;line-height:1.8;">&#10003; Revocable Living Trust<br/>&#10003; Pour-Over Will<br/>&#10003; Durable Power of Attorney<br/>&#10003; Healthcare Directive<br/>&#10003; Asset Funding Checklist</p>
+              <p style="color:#999;font-size:12px;margin-top:24px;">This platform provides document preparation services only. It does not provide legal advice.</p>
+            </div>
+          </div>`,
+        });
       } catch (emailErr) { console.error("Promo email failed:", emailErr); }
 
       const docTypes = ["trust", "pour_over_will", "poa", "healthcare_directive"];
