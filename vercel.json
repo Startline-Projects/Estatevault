@@ -7,6 +7,10 @@
     {
       "path": "/api/attorney/check-sla",
       "schedule": "0 12 * * *"
+    },
+    {
+      "path": "/api/documents/cleanup-test-orders",
+      "schedule": "0 * * * *"
     }
   ],
   "functions": {

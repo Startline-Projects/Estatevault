@@ -47,7 +47,7 @@ export async function GET() {
       // Fallback: find orders with status 'generating' that have pending documents
       const { data: pendingOrders } = await supabase
         .from("orders")
-        .select("id, client_id, product_type, attorney_review_requested")
+        .select("id, client_id, product_type, attorney_review_requested, order_type, quiz_session_id")
         .eq("status", "generating")
         .limit(1);
 
@@ -56,13 +56,17 @@ export async function GET() {
       }
 
       const order = pendingOrders[0];
-      const { data: quiz } = await supabase
-        .from("quiz_sessions")
-        .select("answers")
-        .eq("client_id", order.client_id)
-        .order("created_at", { ascending: false })
-        .limit(1)
-        .single();
+      const isTestOrder = order.order_type === "test";
+
+      // For test orders, use quiz_session_id; for normal orders, use client_id
+      let quizAnswers: Record<string, unknown> = {};
+      if (order.quiz_session_id) {
+        const { data } = await supabase.from("quiz_sessions").select("answers").eq("id", order.quiz_session_id).single();
+        if (data) quizAnswers = (data.answers as Record<string, unknown>) || {};
+      } else if (order.client_id) {
+        const { data } = await supabase.from("quiz_sessions").select("answers").eq("client_id", order.client_id).order("created_at", { ascending: false }).limit(1).single();
+        if (data) quizAnswers = (data.answers as Record<string, unknown>) || {};
+      }
 
       const documentTypes = order.product_type === "trust"
         ? ["trust", "pour_over_will", "poa", "healthcare_directive"]
@@ -74,7 +78,7 @@ export async function GET() {
         return NextResponse.json({ message: "Anthropic API key not configured" });
       }
 
-      const intake = (quiz?.answers as Record<string, unknown>) || {};
+      const intake = quizAnswers;
 
       for (const docType of documentTypes) {
         try {
@@ -98,8 +102,9 @@ export async function GET() {
           const { generatePDF } = await import("@/lib/documents/generate-pdf");
           const pdfBuffer = await generatePDF(documentText, docType, String(intake.firstName || "") + " " + String(intake.lastName || ""), undefined, undefined, String(intake.city || ""));
 
-          await uploadDocument(order.client_id, order.id, docType, pdfBuffer);
-          console.log("Document uploaded:", docType);
+          const storageClientId = isTestOrder ? "test" : order.client_id;
+          await uploadDocument(storageClientId, order.id, docType, pdfBuffer);
+          console.log("Document uploaded:", docType, "test:", isTestOrder);
         } catch (docError) {
           console.error(`Error generating ${docType}:`, docError);
         }

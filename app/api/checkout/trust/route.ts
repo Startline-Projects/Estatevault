@@ -47,24 +47,32 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: "Rate limit exceeded. Try again later." }, { status: 429 });
       }
 
+      const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
       const { data: order, error: orderErr } = await supabase.from("orders").insert({
         product_type: "trust",
         status: "generating",
         amount_total: 0,
         ev_cut: 0,
+        order_type: "test",
+        expires_at: expiresAt,
         acknowledgment_signed: true,
         acknowledgment_signed_at: new Date().toISOString(),
       }).select("id").single();
 
       if (orderErr || !order) {
+        console.error("Test order creation error:", orderErr);
         return NextResponse.json({ error: "Failed to create test order" }, { status: 500 });
       }
 
-      await supabase.from("quiz_sessions").insert({
+      const { data: quizSession } = await supabase.from("quiz_sessions").insert({
         answers: { ...intakeAnswers, declinedAttorneyReview: true },
         recommendation: "trust",
         completed: true,
-      });
+      }).select("id").single();
+
+      if (quizSession) {
+        await supabase.from("orders").update({ quiz_session_id: quizSession.id }).eq("id", order.id);
+      }
 
       const docTypes = ["trust", "pour_over_will", "poa", "healthcare_directive"];
       await supabase.from("documents").insert(docTypes.map((dt) => ({

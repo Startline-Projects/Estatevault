@@ -59,25 +59,33 @@ export async function POST(request: Request) {
       }
 
       // Create a temporary order (no client, no account)
+      const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
       const { data: order, error: orderErr } = await supabase.from("orders").insert({
         product_type: "will",
         status: "generating",
         amount_total: 0,
         ev_cut: 0,
+        order_type: "test",
+        expires_at: expiresAt,
         acknowledgment_signed: true,
         acknowledgment_signed_at: new Date().toISOString(),
       }).select("id").single();
 
       if (orderErr || !order) {
+        console.error("Test order creation error:", orderErr);
         return NextResponse.json({ error: "Failed to create test order" }, { status: 500 });
       }
 
-      // Save intake for document generation
-      await supabase.from("quiz_sessions").insert({
+      // Save intake for document generation — link to order via quiz_session_id
+      const { data: quizSession } = await supabase.from("quiz_sessions").insert({
         answers: intakeAnswers,
         recommendation: "will",
         completed: true,
-      });
+      }).select("id").single();
+
+      if (quizSession) {
+        await supabase.from("orders").update({ quiz_session_id: quizSession.id }).eq("id", order.id);
+      }
 
       // Create document records
       const docTypes = ["will", "poa", "healthcare_directive"];
