@@ -30,11 +30,12 @@ export async function GET(request: Request) {
 
     const supabase = createAdminClient();
 
-    // Get documents for this order
+    // Get documents for this order — only those that are generated
     const { data: documents } = await supabase
       .from("documents")
       .select("document_type, storage_path, status")
       .eq("order_id", orderId)
+      .in("status", ["generated", "delivered"])
       .not("storage_path", "is", null);
 
     if (!documents || documents.length === 0) {

@@ -234,19 +234,29 @@ function SuccessContent() {
         )}
 
         {/* Test mode: ZIP download button */}
-        {isTest && docsReady && orderId && (
+        {isTest && orderId && (
           <div className="mt-6">
             <button
-              onClick={() => {
+              onClick={async () => {
                 const intake = sessionStorage.getItem("trustIntake") || sessionStorage.getItem("willIntake");
                 const parsed = intake ? JSON.parse(intake) : {};
                 const fn = parsed.firstName || "Test";
                 const ln = parsed.lastName || "User";
-                window.location.href = `/api/documents/download-zip?order_id=${orderId}&first_name=${encodeURIComponent(fn)}&last_name=${encodeURIComponent(ln)}`;
+                const zipName = `Test - ${fn} ${ln}.zip`;
+                const res = await fetch(`/api/documents/download-zip?order_id=${orderId}&first_name=${encodeURIComponent(fn)}&last_name=${encodeURIComponent(ln)}`);
+                if (!res.ok) return;
+                const blob = await res.blob();
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = zipName;
+                a.click();
+                URL.revokeObjectURL(url);
               }}
-              className="w-full min-h-[48px] rounded-full bg-[#C9A84C] py-3.5 text-base font-semibold text-white hover:bg-[#C9A84C]/90 transition-colors shadow-lg"
+              disabled={!docsReady || documents.filter((d) => d.storage_path).length === 0}
+              className="w-full min-h-[48px] rounded-full bg-[#C9A84C] py-3.5 text-base font-semibold text-white hover:bg-[#C9A84C]/90 transition-colors shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Download Documents
+              {docsReady && documents.filter((d) => d.storage_path).length > 0 ? "Download Documents" : "Preparing your documents..."}
             </button>
           </div>
         )}
