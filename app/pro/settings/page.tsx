@@ -175,7 +175,7 @@ export default function ProSettingsPage() {
     {
       key: "plan",
       title: "Plan",
-      subtitle: isEnterprise ? "Enterprise Plan - $6,000/year" : "Standard Plan - $1,200/year",
+      subtitle: isEnterprise ? "Enterprise Plan - $6,000 one-time" : "Standard Plan - $1,200 one-time",
       content: (
         <div>
           <div className="rounded-xl bg-gray-50 p-4">
@@ -185,7 +185,7 @@ export default function ProSettingsPage() {
                   {isEnterprise ? "Enterprise" : "Standard"} Plan
                 </p>
                 <p className="text-xs text-charcoal/50 mt-1">
-                  {isEnterprise ? "$6,000/year" : "$1,200/year"} - Unlimited documents
+                  {isEnterprise ? "$6,000 one-time" : "$1,200 one-time"} - Unlimited documents
                 </p>
               </div>
               <span

@@ -227,7 +227,7 @@ function PricingSection() {
               Standard Partner
             </p>
             <p className="mt-2 text-3xl font-bold text-navy">
-              $1,200<span className="text-base font-normal text-charcoal/60">/year</span>
+              $1,200<span className="text-base font-normal text-charcoal/60"> one-time</span>
             </p>
             <ul className="mt-8 flex-1 space-y-4">
               {STANDARD_FEATURES.map((f) => (
@@ -254,7 +254,7 @@ function PricingSection() {
               Enterprise Partner
             </p>
             <p className="mt-2 text-3xl font-bold text-navy">
-              $6,000<span className="text-base font-normal text-charcoal/60">/year</span>
+              $6,000<span className="text-base font-normal text-charcoal/60"> one-time</span>
             </p>
             <ul className="mt-8 flex-1 space-y-4">
               {ENTERPRISE_FEATURES.map((f) => (

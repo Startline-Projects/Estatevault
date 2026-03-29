@@ -24,12 +24,12 @@ export async function POST(request: Request) {
     const session = await stripe.checkout.sessions.create({
       mode: "payment",
       line_items: [{
-        price_data: { currency: "usd", product_data: { name: `EstateVault Pro ${planName} — Annual`, description: `${planName} partner platform annual subscription` }, unit_amount: amount },
+        price_data: { currency: "usd", product_data: { name: `EstateVault Pro ${planName} — Platform Access`, description: `${planName} partner platform one-time fee` }, unit_amount: amount },
         quantity: 1,
       }],
       success_url: `${origin}/pro/onboarding/step-2`,
       cancel_url: `${origin}/pro/onboarding/step-1`,
-      metadata: { partner_id: partnerId, tier, type: "partner_annual" },
+      metadata: { partner_id: partnerId, tier, type: "partner_platform_fee" },
     });
 
     // Update tier immediately

@@ -22,7 +22,7 @@ export default function Step1Page() {
       if (partner) {
         setPartnerId(partner.id);
         if (partner.tier) setSelectedTier(partner.tier as "standard" | "enterprise");
-        // Skip payment step for attorneys who paid one-time fee or any partner who paid annual fee
+        // Skip payment step if platform fee already paid (one-time or legacy annual)
         if (partner.annual_fee_paid || partner.one_time_fee_paid) { router.push("/pro/onboarding/step-2"); return; }
       }
     }
@@ -30,10 +30,10 @@ export default function Step1Page() {
   }, [router]);
 
   const earningsPerTrust = selectedTier === "enterprise" ? 450 : 400;
-  const annualFee = selectedTier === "enterprise" ? 6000 : 1200;
+  const platformFee = selectedTier === "enterprise" ? 6000 : 1200;
   const monthlyEarnings = sliderValue * earningsPerTrust;
   const annualEarnings = monthlyEarnings * 12;
-  const netProfit = annualEarnings - annualFee;
+  const netFirstYearProfit = annualEarnings - platformFee;
 
   async function handleGetStarted() {
     if (!agreed) return;
@@ -56,14 +56,14 @@ export default function Step1Page() {
   }
 
   const plans = [
-    { tier: "standard" as const, name: "Standard", price: "$1,200/year", badge: null, features: ["Unlimited will and trust documents", "Branded white-label platform", "Custom subdomain (legacy.yourdomain.com)", "Branded email delivery", "3 team seats", "Partner earnings: $300/will · $400/trust", "Email and chat support", "Marketing toolkit"], btnClass: "bg-navy text-white hover:bg-navy/90" },
-    { tier: "enterprise" as const, name: "Enterprise", price: "$6,000/year", badge: "Most Popular for Agencies", features: ["Everything in Standard", "Lower EstateVault cut: $50/will · $150/trust", "Partner earnings: $350/will · $450/trust", "Custom domain support", "10 team seats", "Custom commission hierarchy for sub-agents", "Dedicated account manager", "Attorney review tier included (10/month)"], btnClass: "bg-gold text-white hover:bg-gold/90" },
+    { tier: "standard" as const, name: "Standard", price: "$1,200 one-time", badge: null, features: ["Unlimited will and trust documents", "Branded white-label platform", "Custom subdomain (legacy.yourdomain.com)", "Branded email delivery", "3 team seats", "Partner earnings: $300/will · $400/trust", "Email and chat support", "Marketing toolkit"], btnClass: "bg-navy text-white hover:bg-navy/90" },
+    { tier: "enterprise" as const, name: "Enterprise", price: "$6,000 one-time", badge: "Most Popular for Agencies", features: ["Everything in Standard", "Lower EstateVault cut: $50/will · $150/trust", "Partner earnings: $350/will · $450/trust", "Custom domain support", "10 team seats", "Custom commission hierarchy for sub-agents", "Dedicated account manager", "Attorney review tier included (10/month)"], btnClass: "bg-gold text-white hover:bg-gold/90" },
   ];
 
   return (
     <div>
       <h1 className="text-2xl font-bold text-navy">Choose Your Plan</h1>
-      <p className="mt-1 text-sm text-charcoal/60">Both plans include unlimited documents and full platform access.</p>
+      <p className="mt-1 text-sm text-charcoal/60">Both plans include unlimited documents and full platform access. One-time fee, no recurring charges.</p>
 
       <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-6">
         {plans.map((plan) => (
@@ -89,8 +89,8 @@ export default function Step1Page() {
         <div className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
           <div><p className="text-xs text-charcoal/50">Monthly earnings</p><p className="text-lg font-bold text-navy">${monthlyEarnings.toLocaleString()}</p></div>
           <div><p className="text-xs text-charcoal/50">Annual earnings</p><p className="text-lg font-bold text-navy">${annualEarnings.toLocaleString()}</p></div>
-          <div><p className="text-xs text-charcoal/50">Platform fee</p><p className="text-lg font-bold text-charcoal/60">${annualFee.toLocaleString()}</p></div>
-          <div><p className="text-xs text-charcoal/50">Net annual profit</p><p className={`text-lg font-bold ${netProfit > 0 ? "text-green-600" : "text-red-600"}`}>${netProfit.toLocaleString()}</p></div>
+          <div><p className="text-xs text-charcoal/50">One-time platform fee</p><p className="text-lg font-bold text-charcoal/60">${platformFee.toLocaleString()}</p></div>
+          <div><p className="text-xs text-charcoal/50">First-year net profit</p><p className={`text-lg font-bold ${netFirstYearProfit > 0 ? "text-green-600" : "text-red-600"}`}>${netFirstYearProfit.toLocaleString()}</p></div>
         </div>
       </div>
 
@@ -112,7 +112,7 @@ export default function Step1Page() {
       {error && <div className="mt-4 rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">{error}</div>}
 
       <button onClick={handleGetStarted} disabled={!agreed || loading} className="mt-8 w-full min-h-[44px] rounded-full bg-gold py-3.5 text-sm font-semibold text-white hover:bg-gold/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
-        {loading ? "Redirecting to payment..." : `Get Started — ${selectedTier === "enterprise" ? "$6,000" : "$1,200"}/year`}
+        {loading ? "Redirecting to payment..." : `Get Started — ${selectedTier === "enterprise" ? "$6,000" : "$1,200"} one-time`}
       </button>
     </div>
   );

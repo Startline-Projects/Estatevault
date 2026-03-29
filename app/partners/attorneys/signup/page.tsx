@@ -566,8 +566,8 @@ function AttorneySignupContent() {
                   <span className="font-semibold text-green-600">$0</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-charcoal/70">Renewal fee</span>
-                  <span className="font-semibold text-green-600">$0</span>
+                  <span className="text-charcoal/70">Recurring fees</span>
+                  <span className="font-semibold text-green-600">None</span>
                 </div>
                 <hr className="border-gray-200" />
                 <div className="flex justify-between">
