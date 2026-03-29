@@ -12,7 +12,12 @@ export default function Hero() {
           Simple. Complete with your family&apos;s vault.
         </p>
 
-        <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
+        <ul className="mt-4 mb-4 flex flex-col items-center gap-1 text-sm text-blue-100/60">
+          <li>&#8226; A will gives instructions for the judge</li>
+          <li>&#8226; A trust avoids court and a judge</li>
+        </ul>
+
+        <div className="mt-6 flex flex-col sm:flex-row items-center justify-center gap-4">
           <Link
             href="/quiz"
             className="rounded-full bg-gold px-8 py-3.5 text-base font-semibold text-white hover:bg-gold/90 transition-colors shadow-lg"

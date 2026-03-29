@@ -3,6 +3,7 @@ import Link from "next/link";
 const packages = [
   {
     title: "Will Package",
+    descriptor: "A will gives instructions for the judge",
     price: "$400",
     popular: false,
     features: [
@@ -18,6 +19,7 @@ const packages = [
   },
   {
     title: "Trust Package",
+    descriptor: "A trust avoids court and a judge",
     price: "$600",
     popular: true,
     features: [
@@ -55,6 +57,7 @@ export default function PackageCards() {
                 </span>
               )}
               <h3 className="text-xl font-bold text-navy">{pkg.title}</h3>
+              <p className="mt-1 text-sm text-gray-400">{pkg.descriptor}</p>
               <p className="mt-2 text-4xl font-bold text-navy">{pkg.price}</p>
 
               <ul className="mt-6 space-y-3">
