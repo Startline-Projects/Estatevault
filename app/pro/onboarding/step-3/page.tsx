@@ -7,6 +7,7 @@ import { createClient } from "@/lib/supabase/client";
 export default function Step3Page() {
   const router = useRouter();
   const [tier, setTier] = useState("standard");
+  const [isAttorney, setIsAttorney] = useState(false);
   const [accepted, setAccepted] = useState(false);
   const [partnerId, setPartnerId] = useState("");
 
@@ -15,8 +16,16 @@ export default function Step3Page() {
       const supabase = createClient();
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
-      const { data: partner } = await supabase.from("partners").select("id, tier").eq("profile_id", user.id).single();
-      if (partner) { setPartnerId(partner.id); setTier(partner.tier || "standard"); }
+      const { data: partner } = await supabase
+        .from("partners")
+        .select("id, tier, professional_type")
+        .eq("profile_id", user.id)
+        .single();
+      if (partner) {
+        setPartnerId(partner.id);
+        setTier(partner.tier || "standard");
+        setIsAttorney(partner.professional_type === "attorney");
+      }
     }
     load();
   }, []);
@@ -24,8 +33,6 @@ export default function Step3Page() {
   const isEnterprise = tier === "enterprise";
   const willEarnings = isEnterprise ? "$350" : "$300";
   const trustEarnings = isEnterprise ? "$450" : "$400";
-  const willFee = isEnterprise ? "$50" : "$100";
-  const trustFee = isEnterprise ? "$150" : "$200";
   const amendEarnings = isEnterprise ? "$40" : "$35";
   const scenarioEarnings = isEnterprise ? "$2,250" : "$2,000";
 
@@ -36,39 +43,48 @@ export default function Step3Page() {
     router.push("/pro/onboarding/step-4");
   }
 
-  const packages = [
-    { name: "Will Package", clientPays: "$400", earnings: willEarnings, fee: willFee },
-    { name: "Trust Package", clientPays: "$600", earnings: trustEarnings, fee: trustFee },
-  ];
-
   return (
     <div>
       <h1 className="text-2xl font-bold text-navy">Your Pricing</h1>
       <p className="mt-1 text-sm text-charcoal/60">EstateVault sets the prices — this keeps the product premium and your earnings consistent.</p>
 
       <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-4">
-        {packages.map((pkg) => (
-          <div key={pkg.name} className="rounded-xl bg-white border border-gray-200 p-6">
-            <h3 className="text-base font-bold text-navy">{pkg.name}</h3>
-            <div className="mt-4 space-y-2 text-sm">
-              <div className="flex justify-between"><span className="text-charcoal/60">Client pays</span><span className="font-semibold text-navy">{pkg.clientPays}</span></div>
-              <div className="flex justify-between"><span className="text-charcoal/60">Your earnings</span><span className="font-semibold text-green-600">{pkg.earnings}</span></div>
-              <div className="flex justify-between"><span className="text-charcoal/60">EstateVault fee</span><span className="text-charcoal/50">{pkg.fee}</span></div>
-            </div>
+        <div className="rounded-xl bg-white border border-gray-200 p-6">
+          <h3 className="text-base font-bold text-navy">Will Package</h3>
+          <div className="mt-4 space-y-2 text-sm">
+            <div className="flex justify-between"><span className="text-charcoal/60">Client pays</span><span className="font-semibold text-navy">$400</span></div>
+            <div className="flex justify-between"><span className="text-charcoal/60">Your earnings</span><span className="font-semibold text-green-600">{willEarnings}</span></div>
           </div>
-        ))}
+        </div>
+        <div className="rounded-xl bg-white border border-gray-200 p-6">
+          <h3 className="text-base font-bold text-navy">Trust Package</h3>
+          <div className="mt-4 space-y-2 text-sm">
+            <div className="flex justify-between"><span className="text-charcoal/60">Client pays</span><span className="font-semibold text-navy">$600</span></div>
+            <div className="flex justify-between"><span className="text-charcoal/60">Your earnings</span><span className="font-semibold text-green-600">{trustEarnings}</span></div>
+          </div>
+        </div>
       </div>
 
       <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="rounded-xl bg-white border border-gray-200 p-6">
-          <h3 className="text-base font-bold text-navy">Attorney Review Add-On</h3>
-          <div className="mt-4 space-y-2 text-sm">
-            <div className="flex justify-between"><span className="text-charcoal/60">Client pays</span><span className="font-semibold text-navy">$300</span></div>
-            <div className="flex justify-between"><span className="text-charcoal/60">Your earnings</span><span className="text-charcoal/50">$0</span></div>
-            <div className="flex justify-between"><span className="text-charcoal/60">Goes to</span><span className="text-charcoal/50">Reviewing attorney</span></div>
+        {isAttorney ? (
+          <div className="rounded-xl bg-white border border-gray-200 p-6">
+            <h3 className="text-base font-bold text-navy">Attorney Review Add-On</h3>
+            <div className="mt-4 space-y-2 text-sm">
+              <div className="flex justify-between"><span className="text-charcoal/60">Client pays</span><span className="font-semibold text-navy">$300</span></div>
+              <div className="flex justify-between"><span className="text-charcoal/60">Your earnings</span><span className="font-semibold text-green-600">$300</span></div>
+            </div>
+            <p className="mt-3 text-xs text-charcoal/40">As a reviewing attorney, you earn 100% of the review fee when clients in your network request attorney review.</p>
           </div>
-          <p className="mt-3 text-xs text-charcoal/40">Attorney review fees go directly to the reviewing attorney. This protects you from any fee-splitting concerns.</p>
-        </div>
+        ) : (
+          <div className="rounded-xl bg-white border border-gray-200 p-6">
+            <h3 className="text-base font-bold text-navy">Attorney Review Add-On</h3>
+            <div className="mt-4 space-y-2 text-sm">
+              <div className="flex justify-between"><span className="text-charcoal/60">Client pays</span><span className="font-semibold text-navy">$300</span></div>
+              <div className="flex justify-between"><span className="text-charcoal/60">Goes to</span><span className="text-charcoal/50">Reviewing attorney</span></div>
+            </div>
+            <p className="mt-3 text-xs text-charcoal/40">Attorney review fees go directly to the reviewing attorney. This protects you from any fee-splitting concerns.</p>
+          </div>
+        )}
         <div className="rounded-xl bg-white border border-gray-200 p-6">
           <h3 className="text-base font-bold text-navy">Document Amendment</h3>
           <div className="mt-4 space-y-2 text-sm">
