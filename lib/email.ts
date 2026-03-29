@@ -135,7 +135,7 @@ export async function sendDocumentEmail(params: SendDocumentEmailParams) {
     const packageName = params.productType === "will" ? "Will Package" : "Trust Package";
 
     const { error } = await resend.emails.send({
-      from: "EstateVault <noreply@estatesvault.com>",
+      from: "EstateVault <noreply@estatevault.us>",
       to: params.to,
       subject: `Your ${packageName} is ready`,
       html: buildEmailHtml(params),

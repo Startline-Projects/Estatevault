@@ -134,7 +134,7 @@ export async function POST(request: Request) {
       if (resendKey && email) {
         const resend = new Resend(resendKey);
         await resend.emails.send({
-          from: "EstateVault <noreply@estatesvault.com>",
+          from: "EstateVault <noreply@estatevault.us>",
           to: email,
           subject: "Welcome to EstateVault Attorney Partner Program",
           html: `
@@ -185,7 +185,7 @@ export async function POST(request: Request) {
       if (resendKey && notifyEmail) {
         const resend = new Resend(resendKey);
         await resend.emails.send({
-          from: "EstateVault <noreply@estatesvault.com>",
+          from: "EstateVault <noreply@estatevault.us>",
           to: notifyEmail,
           subject: `New Attorney Partner Signup: ${firstName} ${lastName} (${tier})`,
           html: `
