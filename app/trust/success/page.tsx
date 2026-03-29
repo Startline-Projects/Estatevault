@@ -22,13 +22,14 @@ function SuccessContent() {
   const isPromo = searchParams.get("promo") === "true";
   const orderId = searchParams.get("order_id");
   const promoEmail = searchParams.get("email");
+  const promoUserId = searchParams.get("user_id");
 
   const [loading, setLoading] = useState(true);
   const [attorneyReview, setAttorneyReview] = useState(false);
   const [steps, setSteps] = useState<Step[]>([]);
   const [error, setError] = useState("");
   const [email, setEmail] = useState(promoEmail || "");
-  const [userId, setUserId] = useState("");
+  const [userId, setUserId] = useState(promoUserId || "");
   const [documents, setDocuments] = useState<DocumentRecord[]>([]);
   const [docsReady, setDocsReady] = useState(false);
 

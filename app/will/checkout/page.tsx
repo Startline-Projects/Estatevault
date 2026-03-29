@@ -22,7 +22,8 @@ export default function WillCheckoutPage() {
   const [promoCode, setPromoCode] = useState("");
   const [promoApplied, setPromoApplied] = useState(false);
   const [promoEmail, setPromoEmail] = useState("");
-  const [userEmail, setUserEmail] = useState("");
+  const [showAcknowledgment, setShowAcknowledgment] = useState(false);
+  const [ackChecked, setAckChecked] = useState(false);
 
   const total = promoApplied ? 0 : (attorneyReview ? 700 : 400);
 
@@ -32,7 +33,6 @@ export default function WillCheckoutPage() {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
         setUserId(user.id);
-        setUserEmail(user.email || "");
         setPromoEmail(user.email || "");
       }
       const intake = sessionStorage.getItem("willIntake");
@@ -52,6 +52,50 @@ export default function WillCheckoutPage() {
     }
   }
 
+  function handlePromoSubmit() {
+    if (!promoEmail.trim()) { setError("Please enter your email address."); return; }
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(promoEmail)) { setError("Please enter a valid email address."); return; }
+    setError("");
+    // Show acknowledgment form before proceeding
+    setShowAcknowledgment(true);
+  }
+
+  async function handleAcknowledgmentAccepted() {
+    setLoading(true);
+    setError("");
+
+    try {
+      const intake = sessionStorage.getItem("willIntake");
+      if (!intake) { router.push("/will"); return; }
+
+      const res = await fetch("/api/checkout/will", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId: userId || null,
+          attorneyReview: false,
+          intakeAnswers: JSON.parse(intake),
+          promoCode,
+          email: promoEmail,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) { setError(data.error || "Something went wrong."); setLoading(false); setShowAcknowledgment(false); return; }
+
+      if (data.free) {
+        router.push(`/will/success?promo=true&order_id=${data.orderId}&email=${encodeURIComponent(data.email)}&user_id=${data.userId || ""}`);
+        return;
+      }
+    } catch {
+      setError("Something went wrong. Please try again.");
+      setLoading(false);
+      setShowAcknowledgment(false);
+    }
+  }
+
   async function handlePayment() {
     setLoading(true);
     setError("");
@@ -60,38 +104,57 @@ export default function WillCheckoutPage() {
       const intake = sessionStorage.getItem("willIntake");
       if (!intake) { router.push("/will"); return; }
 
-      const payload: Record<string, unknown> = {
-        userId: userId || null,
-        attorneyReview: promoApplied ? false : attorneyReview,
-        intakeAnswers: JSON.parse(intake),
-      };
-
-      if (promoApplied) {
-        if (!promoEmail.trim()) { setError("Please enter your email address."); setLoading(false); return; }
-        payload.promoCode = promoCode;
-        payload.email = promoEmail;
-      }
-
       const res = await fetch("/api/checkout/will", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+        body: JSON.stringify({
+          userId: userId || null,
+          attorneyReview,
+          intakeAnswers: JSON.parse(intake),
+        }),
       });
 
       const data = await res.json();
       if (!res.ok) { setError(data.error || "Something went wrong."); setLoading(false); return; }
-
-      if (data.free) {
-        // Promo order — redirect to success with order ID
-        router.push(`/will/success?promo=true&order_id=${data.orderId}&email=${encodeURIComponent(data.email)}`);
-        return;
-      }
-
       window.location.href = data.url;
     } catch {
       setError("Something went wrong. Please try again.");
       setLoading(false);
     }
+  }
+
+  // Acknowledgment modal
+  if (showAcknowledgment) {
+    return (
+      <div className="min-h-screen bg-navy flex items-center justify-center px-6 py-12">
+        <div className="w-full max-w-lg">
+          <p className="text-center text-2xl font-bold text-white mb-8">EstateVault</p>
+          <div className="rounded-2xl bg-white p-8 shadow-xl">
+            <h1 className="text-xl font-bold text-navy">Before We Begin</h1>
+            <div className="mt-6 space-y-4 text-sm text-charcoal/70 leading-relaxed">
+              <p>This platform provides document preparation services only. It does not provide legal advice. No attorney-client relationship is created by your use of this platform.</p>
+              <p>The documents generated are based solely on the information you provide. You are responsible for ensuring all information is accurate and complete. You are responsible for properly executing your documents in accordance with Michigan law requirements.</p>
+              <p>If your situation is complex, we recommend consulting a licensed Michigan estate planning attorney.</p>
+            </div>
+            <label className="mt-8 flex items-start gap-3 cursor-pointer">
+              <input type="checkbox" checked={ackChecked} onChange={(e) => setAckChecked(e.target.checked)} className="mt-0.5 h-5 w-5 rounded border-gray-300 accent-gold" />
+              <span className="text-sm text-charcoal leading-relaxed">I understand and agree that this is a document preparation service only, not legal advice.</span>
+            </label>
+            {error && <div className="mt-4 rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">{error}</div>}
+            <button
+              onClick={handleAcknowledgmentAccepted}
+              disabled={!ackChecked || loading}
+              className="mt-6 w-full min-h-[44px] rounded-full bg-gold py-3.5 text-sm font-semibold text-white hover:bg-gold/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {loading ? "Creating your account..." : "I Agree — Continue"}
+            </button>
+            <button onClick={() => setShowAcknowledgment(false)} className="mt-3 w-full text-sm text-charcoal/50 hover:text-charcoal transition-colors">
+              Go Back
+            </button>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -141,7 +204,6 @@ export default function WillCheckoutPage() {
               <span className="text-base font-bold text-navy">Total</span>
               <span className="text-2xl font-bold text-navy">{promoApplied ? <span className="text-green-600">$0</span> : `$${total}`}</span>
             </div>
-
             {promoApplied && (
               <div className="mt-3 rounded-lg bg-green-50 border border-green-200 px-4 py-2 text-sm text-green-700 font-medium text-center">
                 Promo code applied — Will Package is free
@@ -154,19 +216,8 @@ export default function WillCheckoutPage() {
         <div className="mt-6 rounded-2xl bg-white border border-gray-200 p-6 shadow-sm">
           <h3 className="text-sm font-semibold text-navy mb-3">Promo Code</h3>
           <div className="flex gap-2">
-            <input
-              type="text"
-              value={promoCode}
-              onChange={(e) => { setPromoCode(e.target.value); if (promoApplied) { setPromoApplied(false); } }}
-              placeholder="Enter promo code"
-              disabled={promoApplied}
-              className="flex-1 rounded-lg border border-gray-300 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gold/30 focus:border-gold disabled:bg-gray-50"
-            />
-            <button
-              onClick={handleApplyPromo}
-              disabled={!promoCode.trim() || promoApplied}
-              className="px-4 py-2.5 rounded-lg bg-navy text-sm font-medium text-white hover:bg-navy/90 transition-colors disabled:opacity-50"
-            >
+            <input type="text" value={promoCode} onChange={(e) => { setPromoCode(e.target.value); if (promoApplied) setPromoApplied(false); }} placeholder="Enter promo code" disabled={promoApplied} className="flex-1 rounded-lg border border-gray-300 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gold/30 focus:border-gold disabled:bg-gray-50" />
+            <button onClick={handleApplyPromo} disabled={!promoCode.trim() || promoApplied} className="px-4 py-2.5 rounded-lg bg-navy text-sm font-medium text-white hover:bg-navy/90 transition-colors disabled:opacity-50">
               {promoApplied ? "Applied" : "Apply"}
             </button>
           </div>
@@ -176,14 +227,8 @@ export default function WillCheckoutPage() {
         {promoApplied && (
           <div className="mt-6 rounded-2xl bg-white border border-gray-200 p-6 shadow-sm">
             <h3 className="text-sm font-semibold text-navy mb-3">Your Email</h3>
-            <p className="text-xs text-charcoal/50 mb-3">We will email your documents and account login link to this address.</p>
-            <input
-              type="email"
-              value={promoEmail}
-              onChange={(e) => setPromoEmail(e.target.value)}
-              placeholder="your@email.com"
-              className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gold/30 focus:border-gold"
-            />
+            <p className="text-xs text-charcoal/50 mb-3">We&apos;ll use this to create your account.</p>
+            <input type="email" value={promoEmail} onChange={(e) => setPromoEmail(e.target.value)} placeholder="your@email.com" className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gold/30 focus:border-gold" />
           </div>
         )}
 
@@ -194,9 +239,7 @@ export default function WillCheckoutPage() {
               <span className="text-2xl">⚖</span>
               <div className="flex-1">
                 <h3 className="text-base font-bold text-navy">Attorney Review — $300</h3>
-                <p className="mt-1 text-sm text-charcoal/60 leading-relaxed">
-                  A licensed Michigan attorney will personally review your documents before delivery. (48hr turnaround)
-                </p>
+                <p className="mt-1 text-sm text-charcoal/60 leading-relaxed">A licensed Michigan attorney will personally review your documents before delivery. (48hr turnaround)</p>
               </div>
             </div>
             <label className="mt-4 flex items-center gap-3 cursor-pointer">
@@ -212,12 +255,12 @@ export default function WillCheckoutPage() {
         )}
 
         <button
-          onClick={handlePayment}
+          onClick={promoApplied ? handlePromoSubmit : handlePayment}
           disabled={loading || (promoApplied && !promoEmail.trim())}
           className="mt-8 w-full min-h-[44px] rounded-full bg-gold py-4 text-base font-semibold text-white hover:bg-gold/90 transition-colors shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {loading
-            ? (promoApplied ? "Processing..." : "Redirecting to payment...")
+            ? "Processing..."
             : (promoApplied ? "Get Your Documents — Free" : `Proceed to Payment — $${total}`)
           }
         </button>
