@@ -20,6 +20,7 @@ function SuccessContent() {
   const searchParams = useSearchParams();
   const sessionId = searchParams.get("session_id");
   const isPromo = searchParams.get("promo") === "true";
+  const isTest = searchParams.get("test") === "true";
   const orderId = searchParams.get("order_id");
   const promoEmail = searchParams.get("email");
   const promoUserId = searchParams.get("user_id");
@@ -61,7 +62,7 @@ function SuccessContent() {
 
   useEffect(() => {
     async function init() {
-      if (isPromo && orderId) {
+      if ((isPromo || isTest) && orderId) {
         setSteps([
           { label: "Promo code applied", status: "done" },
           { label: "Generating your Trust Package...", status: "active" },
@@ -228,8 +229,13 @@ function SuccessContent() {
           </div>
         )}
 
-        {/* Password setup */}
-        {email && !attorneyReview && (
+        {/* Test mode label */}
+        {isTest && (
+          <p className="mt-6 text-center text-xs text-white/30">Test Mode — Documents will not be saved</p>
+        )}
+
+        {/* Password setup — not shown in test mode */}
+        {email && !attorneyReview && !isTest && (
           <div className="mt-10">
             <PasswordSetup email={email} userId={userId} />
           </div>

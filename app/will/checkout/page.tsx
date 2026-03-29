@@ -21,6 +21,7 @@ export default function WillCheckoutPage() {
   const [userId, setUserId] = useState<string | null>(null);
   const [promoCode, setPromoCode] = useState("");
   const [promoApplied, setPromoApplied] = useState(false);
+  const [isTestMode, setIsTestMode] = useState(false);
   const [promoEmail, setPromoEmail] = useState("");
   const [showAcknowledgment, setShowAcknowledgment] = useState(false);
   const [ackChecked, setAckChecked] = useState(false);
@@ -41,14 +42,23 @@ export default function WillCheckoutPage() {
     init();
   }, [router]);
 
-  function handleApplyPromo() {
-    if (promoCode.toUpperCase() === "FREE134") {
-      setPromoApplied(true);
-      setAttorneyReview(false);
-      setError("");
+  async function handleApplyPromo() {
+    const code = promoCode.toUpperCase();
+    if (code === "FREE134") {
+      setPromoApplied(true); setIsTestMode(false); setAttorneyReview(false); setError("");
+    } else if (code === "TEST") {
+      // Validate server-side — don't expose test logic in client JS
+      try {
+        const res = await fetch("/api/admin/test-promo");
+        const data = await res.json();
+        if (data.active) {
+          setPromoApplied(true); setIsTestMode(true); setAttorneyReview(false); setError("");
+        } else {
+          setError("This code is not valid"); setPromoApplied(false);
+        }
+      } catch { setError("This code is not valid"); setPromoApplied(false); }
     } else {
-      setError("Invalid promo code.");
-      setPromoApplied(false);
+      setError("Invalid promo code."); setPromoApplied(false);
     }
   }
 
@@ -60,6 +70,26 @@ export default function WillCheckoutPage() {
     setError("");
     // Show acknowledgment form before proceeding
     setShowAcknowledgment(true);
+  }
+
+  async function handleTestSubmit() {
+    setLoading(true);
+    setError("");
+    try {
+      const intake = sessionStorage.getItem("willIntake");
+      if (!intake) { router.push("/will"); return; }
+      const res = await fetch("/api/checkout/will", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: null, attorneyReview: false, intakeAnswers: JSON.parse(intake), promoCode }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setError(data.error || "Something went wrong."); setLoading(false); return; }
+      if (data.test) {
+        router.push(`/will/success?test=true&order_id=${data.orderId}`);
+        return;
+      }
+    } catch { setError("Something went wrong."); setLoading(false); }
   }
 
   async function handleAcknowledgmentAccepted() {
@@ -223,8 +253,8 @@ export default function WillCheckoutPage() {
           </div>
         </div>
 
-        {/* Email for promo orders */}
-        {promoApplied && (
+        {/* Email for promo orders (not shown for test mode) */}
+        {promoApplied && !isTestMode && (
           <div className="mt-6 rounded-2xl bg-white border border-gray-200 p-6 shadow-sm">
             <h3 className="text-sm font-semibold text-navy mb-3">Your Email</h3>
             <p className="text-xs text-charcoal/50 mb-3">We&apos;ll use this to create your account.</p>
@@ -255,13 +285,15 @@ export default function WillCheckoutPage() {
         )}
 
         <button
-          onClick={promoApplied ? handlePromoSubmit : handlePayment}
-          disabled={loading || (promoApplied && !promoEmail.trim())}
+          onClick={isTestMode ? handleTestSubmit : (promoApplied ? handlePromoSubmit : handlePayment)}
+          disabled={loading || (promoApplied && !isTestMode && !promoEmail.trim())}
           className="mt-8 w-full min-h-[44px] rounded-full bg-gold py-4 text-base font-semibold text-white hover:bg-gold/90 transition-colors shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {loading
             ? "Processing..."
-            : (promoApplied ? "Get Your Documents — Free" : `Proceed to Payment — $${total}`)
+            : isTestMode ? "Generate Test Documents"
+            : promoApplied ? "Get Your Documents — Free"
+            : `Proceed to Payment — $${total}`
           }
         </button>
         {!promoApplied && <p className="mt-3 text-center text-xs text-charcoal/40">Secure payment powered by Stripe</p>}

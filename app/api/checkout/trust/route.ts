@@ -21,8 +21,57 @@ export async function POST(request: Request) {
 
     const VALID_PROMO_CODES: Record<string, boolean> = { FREE134: true };
     const isPromoFree = promoCode && VALID_PROMO_CODES[promoCode.toUpperCase()];
+    const isTestCode = promoCode && promoCode.toUpperCase() === "TEST";
 
     const supabase = createAdminClient();
+
+    // ── TEST PROMO CODE ────────────────────────────────────
+    if (isTestCode) {
+      const { data: setting } = await supabase.from("app_settings").select("value").eq("key", "test_promo_code").single();
+      const testActive = (setting?.value as { active?: boolean })?.active ?? false;
+      if (!testActive) {
+        return NextResponse.json({ error: "This code is not valid" }, { status: 400 });
+      }
+
+      const oneHourAgo = new Date(Date.now() - 3600000).toISOString();
+      const { count } = await supabase.from("audit_log").select("id", { count: "exact", head: true }).eq("action", "test_promo.used").gte("created_at", oneHourAgo);
+      if ((count || 0) >= 50) {
+        return NextResponse.json({ error: "Rate limit exceeded. Try again later." }, { status: 429 });
+      }
+
+      const { data: order, error: orderErr } = await supabase.from("orders").insert({
+        product_type: "trust",
+        status: "generating",
+        amount_total: 0,
+        ev_cut: 0,
+        acknowledgment_signed: true,
+        acknowledgment_signed_at: new Date().toISOString(),
+      }).select("id").single();
+
+      if (orderErr || !order) {
+        return NextResponse.json({ error: "Failed to create test order" }, { status: 500 });
+      }
+
+      await supabase.from("quiz_sessions").insert({
+        answers: { ...intakeAnswers, declinedAttorneyReview: true },
+        recommendation: "trust",
+        completed: true,
+      });
+
+      const docTypes = ["trust", "pour_over_will", "poa", "healthcare_directive"];
+      await supabase.from("documents").insert(docTypes.map((dt) => ({
+        order_id: order.id, document_type: dt, status: "pending",
+      })));
+
+      await supabase.from("audit_log").insert({
+        action: "test_promo.used",
+        resource_type: "order",
+        resource_id: order.id,
+        metadata: { product_type: "trust", promo_code: "TEST" },
+      });
+
+      return NextResponse.json({ test: true, orderId: order.id });
+    }
 
     // Get or create client
     let clientId: string;

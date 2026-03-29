@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import TeamManagement from "@/components/sales/TeamManagement";
+import TestControls from "@/components/sales/TestControls";
 
 interface LeadRow {
   id: string;
@@ -734,8 +735,13 @@ export default function SalesDashboardPage() {
         )}
       </div>
 
-      {/* Team Management — Admin Only */}
-      {userType === "admin" && <TeamManagement />}
+      {/* Admin Only Sections */}
+      {userType === "admin" && (
+        <>
+          <TeamManagement />
+          <TestControls />
+        </>
+      )}
     </div>
   );
 }

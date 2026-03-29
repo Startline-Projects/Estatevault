@@ -29,9 +29,64 @@ export async function POST(request: Request) {
 
     const VALID_PROMO_CODES: Record<string, boolean> = { FREE134: true };
     const isPromoFree = promoCode && VALID_PROMO_CODES[promoCode.toUpperCase()];
+    const isTestCode = promoCode && promoCode.toUpperCase() === "TEST";
 
     // Use admin client for DB operations (bypasses RLS)
     const supabase = createAdminClient();
+
+    // ── TEST PROMO CODE ────────────────────────────────────
+    if (isTestCode) {
+      // Check if test code is active
+      const { data: setting } = await supabase.from("app_settings").select("value").eq("key", "test_promo_code").single();
+      const testActive = (setting?.value as { active?: boolean })?.active ?? false;
+      if (!testActive) {
+        return NextResponse.json({ error: "This code is not valid" }, { status: 400 });
+      }
+
+      // Rate limit: max 50 uses per hour (check audit log)
+      const oneHourAgo = new Date(Date.now() - 3600000).toISOString();
+      const { count } = await supabase.from("audit_log").select("id", { count: "exact", head: true }).eq("action", "test_promo.used").gte("created_at", oneHourAgo);
+      if ((count || 0) >= 50) {
+        return NextResponse.json({ error: "Rate limit exceeded. Try again later." }, { status: 429 });
+      }
+
+      // Create a temporary order (no client, no account)
+      const { data: order, error: orderErr } = await supabase.from("orders").insert({
+        product_type: "will",
+        status: "generating",
+        amount_total: 0,
+        ev_cut: 0,
+        acknowledgment_signed: true,
+        acknowledgment_signed_at: new Date().toISOString(),
+      }).select("id").single();
+
+      if (orderErr || !order) {
+        return NextResponse.json({ error: "Failed to create test order" }, { status: 500 });
+      }
+
+      // Save intake for document generation
+      await supabase.from("quiz_sessions").insert({
+        answers: intakeAnswers,
+        recommendation: "will",
+        completed: true,
+      });
+
+      // Create document records
+      const docTypes = ["will", "poa", "healthcare_directive"];
+      await supabase.from("documents").insert(docTypes.map((dt) => ({
+        order_id: order.id, document_type: dt, status: "pending",
+      })));
+
+      // Audit log — no personal data
+      await supabase.from("audit_log").insert({
+        action: "test_promo.used",
+        resource_type: "order",
+        resource_id: order.id,
+        metadata: { product_type: "will", promo_code: "TEST" },
+      });
+
+      return NextResponse.json({ test: true, orderId: order.id });
+    }
 
     // Get or create client record
     let clientId: string;
