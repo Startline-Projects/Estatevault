@@ -138,7 +138,12 @@ export async function POST(request: Request) {
 
       try {
         if (profileId) {
-          const { data: linkData } = await supabase.auth.admin.generateLink({ type: "magiclink", email: emailAddr });
+          // Use invite link instead of magic link — more reliable, lets user set password
+          const { data: linkData } = await supabase.auth.admin.generateLink({
+            type: "invite",
+            email: emailAddr,
+            options: { redirectTo: "https://www.estatevault.us/auth/callback?redirect=/dashboard" },
+          });
           const passwordLink = linkData?.properties?.action_link || "https://www.estatevault.us/auth/login";
           const { sendDocumentEmail } = await import("@/lib/email");
           await sendDocumentEmail({ to: emailAddr, productType: "trust", passwordLink });

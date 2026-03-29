@@ -160,12 +160,16 @@ export async function POST(request: Request) {
         }
       }
 
-      // Send magic link email
+      // Send invite link email — lets user set password
       try {
         if (profileId) {
-          const { data: linkData } = await supabase.auth.admin.generateLink({ type: "magiclink", email: emailAddr });
+          const { data: linkData } = await supabase.auth.admin.generateLink({
+            type: "invite",
+            email: emailAddr,
+            options: { redirectTo: "https://www.estatevault.us/auth/callback?redirect=/dashboard" },
+          });
           const passwordLink = linkData?.properties?.action_link || "https://www.estatevault.us/auth/login";
-          const { sendDocumentEmail, buildAssetChecklist } = await import("@/lib/email");
+          const { sendDocumentEmail } = await import("@/lib/email");
           await sendDocumentEmail({ to: emailAddr, productType: "will", passwordLink });
         }
       } catch (emailErr) { console.error("Promo email failed:", emailErr); }

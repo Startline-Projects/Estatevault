@@ -446,7 +446,7 @@ export async function POST(request: Request) {
         // Generate a magic link for password setup
         const { data: linkData, error: linkError } =
           await supabase.auth.admin.generateLink({
-            type: "magiclink",
+            type: "invite",
             email: customerEmail,
             options: {
               redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || "https://www.estatevault.us"}/auth/callback?redirect=/dashboard`,
