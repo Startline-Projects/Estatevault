@@ -10,7 +10,7 @@
     },
     {
       "path": "/api/documents/cleanup-test-orders",
-      "schedule": "0 * * * *"
+      "schedule": "0 6 * * *"
     }
   ],
   "functions": {
