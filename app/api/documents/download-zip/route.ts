@@ -10,6 +10,24 @@ function createAdminClient() {
   );
 }
 
+// CRC32 lookup table
+const crc32Table = new Uint32Array(256);
+for (let i = 0; i < 256; i++) {
+  let c = i;
+  for (let j = 0; j < 8; j++) {
+    c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
+  }
+  crc32Table[i] = c;
+}
+
+function crc32(data: Uint8Array): number {
+  let crc = 0xffffffff;
+  for (let i = 0; i < data.length; i++) {
+    crc = crc32Table[(crc ^ data[i]) & 0xff] ^ (crc >>> 8);
+  }
+  return (crc ^ 0xffffffff) >>> 0;
+}
+
 const DOC_LABELS: Record<string, string> = {
   will: "Last Will and Testament",
   trust: "Revocable Living Trust",
@@ -90,6 +108,7 @@ export async function GET(request: Request) {
       const nameLen = nameBytes.length;
       const fileData = file.data;
       const fileLen = fileData.length;
+      const fileCrc = crc32(fileData);
 
       // Local file header (30 bytes + name + data)
       const localHeader = new Uint8Array(30 + nameLen);
@@ -100,7 +119,7 @@ export async function GET(request: Request) {
       lhView.setUint16(8, 0, true); // compression (stored)
       lhView.setUint16(10, 0, true); // mod time
       lhView.setUint16(12, 0, true); // mod date
-      lhView.setUint32(14, 0, true); // crc32 (0 for simplicity)
+      lhView.setUint32(14, fileCrc, true); // crc32
       lhView.setUint32(18, fileLen, true); // compressed size
       lhView.setUint32(22, fileLen, true); // uncompressed size
       lhView.setUint16(26, nameLen, true); // name length
@@ -120,7 +139,7 @@ export async function GET(request: Request) {
       cdView.setUint16(10, 0, true); // compression
       cdView.setUint16(12, 0, true); // mod time
       cdView.setUint16(14, 0, true); // mod date
-      cdView.setUint32(16, 0, true); // crc32
+      cdView.setUint32(16, fileCrc, true); // crc32
       cdView.setUint32(20, fileLen, true); // compressed size
       cdView.setUint32(24, fileLen, true); // uncompressed size
       cdView.setUint16(28, nameLen, true); // name length
