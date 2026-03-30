@@ -107,7 +107,7 @@ function SuccessContent() {
             { label: lastStep, status: "done" },
           ]);
           setDocsReady(true);
-        }, 30000);
+        }, 120000);
 
         return;
       }
