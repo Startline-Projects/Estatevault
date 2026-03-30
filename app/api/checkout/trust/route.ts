@@ -77,7 +77,7 @@ export async function POST(request: Request) {
 
       const docTypes = ["trust", "pour_over_will", "poa", "healthcare_directive"];
       await supabase.from("documents").insert(docTypes.map((dt) => ({
-        order_id: order.id, document_type: dt, status: "pending",
+        order_id: order.id, document_type: dt, status: "pending", template_version: "1.0",
       })));
 
       await supabase.from("audit_log").insert({
@@ -233,7 +233,7 @@ export async function POST(request: Request) {
 
       const docTypes = ["trust", "pour_over_will", "poa", "healthcare_directive"];
       await supabase.from("documents").insert(docTypes.map((dt) => ({
-        order_id: order.id, document_type: dt, status: "pending",
+        order_id: order.id, document_type: dt, status: "pending", template_version: "1.0",
       })));
 
       await supabase.from("audit_log").insert({

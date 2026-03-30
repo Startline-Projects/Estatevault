@@ -91,7 +91,7 @@ export async function POST(request: Request) {
       // Create document records
       const docTypes = ["will", "poa", "healthcare_directive"];
       await supabase.from("documents").insert(docTypes.map((dt) => ({
-        order_id: order.id, document_type: dt, status: "pending",
+        order_id: order.id, document_type: dt, status: "pending", template_version: "1.0",
       })));
 
       // Audit log — no personal data
@@ -262,7 +262,7 @@ export async function POST(request: Request) {
       // Create document records
       const docTypes = ["will", "poa", "healthcare_directive"];
       await supabase.from("documents").insert(docTypes.map((dt) => ({
-        order_id: order.id, document_type: dt, status: "pending",
+        order_id: order.id, document_type: dt, status: "pending", template_version: "1.0",
       })));
 
       // Audit log
