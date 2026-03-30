@@ -87,6 +87,11 @@ export async function POST(request: Request) {
         metadata: { product_type: "trust", promo_code: "TEST" },
       });
 
+      // Trigger document generation immediately (fire-and-forget)
+      const reqOrigin = request.headers.get("origin") || request.headers.get("referer") || "";
+      const baseUrl = reqOrigin.replace(/\/$/, "") || "https://www.estatevault.us";
+      fetch(`${baseUrl}/api/documents/process`, { method: "GET" }).catch(() => {});
+
       return NextResponse.json({ test: true, orderId: order.id });
     }
 

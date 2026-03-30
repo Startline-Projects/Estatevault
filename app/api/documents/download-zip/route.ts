@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
+import { generateFundingInstructionsPDF } from "@/lib/documents/generate-funding-instructions";
 
 function createAdminClient() {
   return createServerClient(
@@ -63,6 +64,20 @@ export async function GET(request: Request) {
 
     if (files.length === 0) {
       return NextResponse.json({ error: "No files available" }, { status: 400 });
+    }
+
+    // Add funding instructions PDF for trust orders
+    const { data: order } = await supabase
+      .from("orders")
+      .select("product_type, intake_data")
+      .eq("id", orderId)
+      .single();
+
+    if (order?.product_type === "trust") {
+      const intake = (order.intake_data || {}) as Record<string, unknown>;
+      const assetTypes = (intake.assetTypes as string[]) || [];
+      const fundingPdf = await generateFundingInstructionsPDF(firstName, lastName, assetTypes);
+      files.push({ name: "Trust Funding Instructions.pdf", data: fundingPdf });
     }
 
     // Build ZIP file manually (minimal ZIP format — no external library)
