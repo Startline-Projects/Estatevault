@@ -93,21 +93,16 @@ function SuccessContent() {
         ]);
         setLoading(false);
 
+        // Trigger document generation (fire-and-forget — don't await)
+        fetch(`/api/documents/process-now?order_id=${orderId}`).catch(() => {});
+
+        // Poll for document readiness
         const poll = setInterval(async () => {
           const ready = await pollDocuments(orderId);
           if (ready) clearInterval(poll);
-        }, 3000);
+        }, 5000);
 
-        setTimeout(() => {
-          clearInterval(poll);
-          setSteps([
-            { label: "Promo code applied", status: "done" },
-            { label: "Trust Package generated", status: "done" },
-            { label: "Ready for download", status: "done" },
-            { label: lastStep, status: "done" },
-          ]);
-          setDocsReady(true);
-        }, 120000);
+        setTimeout(() => clearInterval(poll), 300000);
 
         return;
       }
