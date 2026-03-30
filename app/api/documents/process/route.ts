@@ -47,7 +47,7 @@ export async function GET() {
       // Fallback: find orders with status 'generating' that have pending documents
       const { data: pendingOrders } = await supabase
         .from("orders")
-        .select("id, client_id, product_type, attorney_review_requested, order_type, quiz_session_id")
+        .select("id, client_id, product_type, attorney_review_requested, order_type, quiz_session_id, intake_data")
         .eq("status", "generating")
         .limit(1);
 
@@ -58,9 +58,11 @@ export async function GET() {
       const order = pendingOrders[0];
       const isTestOrder = order.order_type === "test";
 
-      // For test orders, use quiz_session_id; for normal orders, use client_id
+      // For test orders, prefer intake_data on the order; fallback to quiz_session_id or client_id
       let quizAnswers: Record<string, unknown> = {};
-      if (order.quiz_session_id) {
+      if (order.intake_data && typeof order.intake_data === "object") {
+        quizAnswers = order.intake_data as Record<string, unknown>;
+      } else if (order.quiz_session_id) {
         const { data } = await supabase.from("quiz_sessions").select("answers").eq("id", order.quiz_session_id).single();
         if (data) quizAnswers = (data.answers as Record<string, unknown>) || {};
       } else if (order.client_id) {

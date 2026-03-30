@@ -69,6 +69,7 @@ export async function POST(request: Request) {
         expires_at: expiresAt,
         acknowledgment_signed: true,
         acknowledgment_signed_at: new Date().toISOString(),
+        intake_data: intakeAnswers,
       }).select("id").single();
 
       if (orderErr || !order) {

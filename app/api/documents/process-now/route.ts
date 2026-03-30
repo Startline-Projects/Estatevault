@@ -51,7 +51,7 @@ export async function GET(request: Request) {
     // Find the order
     const { data: order, error: orderErr } = await supabase
       .from("orders")
-      .select("id, client_id, product_type, status, order_type, quiz_session_id")
+      .select("id, client_id, product_type, status, order_type, quiz_session_id, intake_data")
       .eq("id", orderId)
       .single();
 
@@ -60,11 +60,14 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: "Order not found", log });
     }
 
-    log.push(`2. Order found: type=${order.product_type}, status=${order.status}, order_type=${order.order_type}, client_id=${order.client_id}, quiz_session_id=${order.quiz_session_id}`);
+    log.push(`2. Order found: type=${order.product_type}, status=${order.status}, order_type=${order.order_type}, client_id=${order.client_id}, quiz_session_id=${order.quiz_session_id}, has_intake_data=${!!order.intake_data}`);
 
-    // Get quiz answers
+    // Get quiz answers — prefer intake_data on the order, then quiz_session_id, then client_id
     let quizAnswers: Record<string, unknown> = {};
-    if (order.quiz_session_id) {
+    if (order.intake_data && typeof order.intake_data === "object") {
+      quizAnswers = order.intake_data as Record<string, unknown>;
+      log.push("3. Quiz answers found via order.intake_data");
+    } else if (order.quiz_session_id) {
       const { data, error } = await supabase.from("quiz_sessions").select("answers").eq("id", order.quiz_session_id).single();
       if (data) { quizAnswers = (data.answers as Record<string, unknown>) || {}; log.push("3. Quiz answers found via quiz_session_id"); }
       else log.push(`3. Quiz session NOT found: ${error?.message}`);
@@ -73,7 +76,7 @@ export async function GET(request: Request) {
       if (data) { quizAnswers = (data.answers as Record<string, unknown>) || {}; log.push("3. Quiz answers found via client_id"); }
       else log.push("3. No quiz session found for client_id");
     } else {
-      log.push("3. No quiz_session_id and no client_id — cannot find intake answers");
+      log.push("3. No intake_data, no quiz_session_id, and no client_id — cannot find intake answers");
       return NextResponse.json({ error: "No intake answers available", log });
     }
 
