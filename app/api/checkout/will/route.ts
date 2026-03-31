@@ -173,6 +173,7 @@ export async function POST(request: Request) {
         attorney_cut: attorneyAmount,
         acknowledgment_signed: true,
         acknowledgment_signed_at: new Date().toISOString(),
+        intake_data: intakeAnswers,
       })
       .select("id")
       .single();
@@ -184,13 +185,17 @@ export async function POST(request: Request) {
       );
     }
 
-    // Save intake answers to quiz_sessions for record keeping
-    await supabase.from("quiz_sessions").insert({
+    // Save intake answers and link quiz_session_id to order
+    const { data: quizSession } = await supabase.from("quiz_sessions").insert({
       client_id: clientId,
       answers: intakeAnswers,
       recommendation: "will",
       completed: true,
-    });
+    }).select("id").single();
+
+    if (quizSession) {
+      await supabase.from("orders").update({ quiz_session_id: quizSession.id }).eq("id", order.id);
+    }
 
     // ── PROMO CODE: Free Will ──────────────────────────────
     if (isPromoFree) {

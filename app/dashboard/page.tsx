@@ -128,16 +128,24 @@ export default async function DashboardHome() {
         <div className="mt-6 rounded-xl bg-white border border-gray-200 p-6">
           <div className="flex items-center justify-between">
             <h2 className="text-base font-bold text-navy">{packageName}</h2>
-            <span className={`rounded-full px-3 py-1 text-xs font-medium ${latestOrder.status === "delivered" ? "bg-green-100 text-green-700" : latestOrder.status === "review" ? "bg-amber-100 text-amber-700" : "bg-blue-100 text-blue-700"}`}>
-              {latestOrder.status === "delivered" ? "Delivered" : latestOrder.status === "review" ? "Under Review" : latestOrder.status === "paid" || latestOrder.status === "generating" ? "Generated" : "Processing"}
-            </span>
+            {(() => {
+              const allDocsReady = documents.length > 0 && documents.every((d) => d.status === "generated" || d.status === "delivered");
+              const isReview = latestOrder.status === "review";
+              const isDelivered = latestOrder.status === "delivered" || allDocsReady;
+              const isPreparing = latestOrder.status === "generating" || latestOrder.status === "paid";
+              return (
+                <span className={`rounded-full px-3 py-1 text-xs font-medium ${isDelivered ? "bg-green-100 text-green-700" : isReview ? "bg-amber-100 text-amber-700" : isPreparing ? "bg-blue-100 text-blue-700" : "bg-gray-100 text-gray-700"}`}>
+                  {isDelivered ? "Generated" : isReview ? "Under Review" : isPreparing ? "Preparing" : "Processing"}
+                </span>
+              );
+            })()}
           </div>
           <div className="mt-4 space-y-2">
             {documents.map((doc) => (
               <div key={doc.id} className="flex items-center justify-between text-sm">
                 <span className="text-charcoal/80">{doc.document_type.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())}</span>
-                <span className={`text-xs font-medium ${doc.status === "delivered" ? "text-green-600" : doc.status === "under_review" ? "text-amber-600" : "text-blue-600"}`}>
-                  {doc.status === "delivered" ? "✅ Delivered" : doc.status === "under_review" ? "⏳ Under Review" : "✅ Generated"}
+                <span className={`text-xs font-medium ${doc.status === "delivered" || doc.status === "generated" ? "text-green-600" : doc.status === "under_review" ? "text-amber-600" : "text-blue-600"}`}>
+                  {doc.status === "delivered" || doc.status === "generated" ? "✅ Ready" : doc.status === "under_review" ? "⏳ Under Review" : "⏳ Preparing"}
                 </span>
               </div>
             ))}

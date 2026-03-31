@@ -147,6 +147,7 @@ export async function POST(request: Request) {
         complexity_flag_reason: complexityReasons?.join("; ") || null,
         acknowledgment_signed: true,
         acknowledgment_signed_at: new Date().toISOString(),
+        intake_data: intakeAnswers,
       })
       .select("id")
       .single();
@@ -156,13 +157,17 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Failed to create order" }, { status: 500 });
     }
 
-    // Save intake
-    await supabase.from("quiz_sessions").insert({
+    // Save intake and link quiz_session_id to order
+    const { data: quizSession } = await supabase.from("quiz_sessions").insert({
       client_id: clientId,
       answers: { ...intakeAnswers, declinedAttorneyReview },
       recommendation: "trust",
       completed: true,
-    });
+    }).select("id").single();
+
+    if (quizSession) {
+      await supabase.from("orders").update({ quiz_session_id: quizSession.id }).eq("id", order.id);
+    }
 
     // ── PROMO CODE: Free Trust ──────────────────────────────
     if (isPromoFree) {

@@ -221,15 +221,27 @@ export async function POST(request: Request) {
       }
     }
 
-    // ── 2. Update order to paid ────────────────────────────────
-    await supabase
-      .from("orders")
-      .update({
-        status: attorneyReview ? "review" : "generating",
-        stripe_payment_intent_id:
-          typeof session.payment_intent === "string" ? session.payment_intent : null,
-      })
-      .eq("id", orderId);
+    // ── 2. Update order to paid/generating ──────────────────────
+    // Also ensure intake_data is saved (belt-and-suspenders — checkout should have saved it too)
+    const { data: quizForIntake } = await supabase
+      .from("quiz_sessions")
+      .select("id, answers")
+      .eq("client_id", clientId)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .single();
+
+    const updatePayload: Record<string, unknown> = {
+      status: attorneyReview ? "review" : "generating",
+      stripe_payment_intent_id:
+        typeof session.payment_intent === "string" ? session.payment_intent : null,
+    };
+    if (quizForIntake) {
+      updatePayload.intake_data = quizForIntake.answers;
+      updatePayload.quiz_session_id = quizForIntake.id;
+    }
+
+    await supabase.from("orders").update(updatePayload).eq("id", orderId);
 
     // ── 2b. Partner payout via Stripe Connect ──────────────────
     const partnerId = metadata.partner_id;

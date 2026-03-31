@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 
@@ -54,71 +54,180 @@ interface Document {
   id: string;
   document_type: string;
   status: string;
+  storage_path: string | null;
   generated_at: string | null;
   delivered_at: string | null;
+}
+
+interface Order {
+  id: string;
+  product_type: string;
+  status: string;
 }
 
 export default function DocumentsPage() {
   const [documents, setDocuments] = useState<Document[]>([]);
   const [loading, setLoading] = useState(true);
   const [openGuide, setOpenGuide] = useState<string | null>(null);
-  const [productType, setProductType] = useState<string>("");
+  const [pendingOrder, setPendingOrder] = useState<Order | null>(null);
+  const [docsReady, setDocsReady] = useState(false);
 
-  useEffect(() => {
-    async function load() {
-      const supabase = createClient();
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+  const fetchData = useCallback(async () => {
+    const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return false;
 
-      const { data: client } = await supabase.from("clients").select("id").eq("profile_id", user.id).single();
-      if (!client) { setLoading(false); return; }
+    const { data: client } = await supabase.from("clients").select("id").eq("profile_id", user.id).single();
+    if (!client) { setLoading(false); return false; }
 
-      const { data: orders } = await supabase.from("orders").select("product_type").eq("client_id", client.id).order("created_at", { ascending: false }).limit(1);
-      if (orders?.[0]) setProductType(orders[0].product_type);
+    // Check for pending/processing orders
+    const { data: orders } = await supabase
+      .from("orders")
+      .select("id, product_type, status")
+      .eq("client_id", client.id)
+      .order("created_at", { ascending: false })
+      .limit(1);
 
-      const { data: docs } = await supabase.from("documents").select("id, document_type, status, generated_at, delivered_at").eq("client_id", client.id).order("created_at", { ascending: true });
-      setDocuments(docs || []);
+    const latestOrder = orders?.[0] || null;
+    const isPending = latestOrder && (latestOrder.status === "generating" || latestOrder.status === "paid");
+
+    // Get documents
+    const { data: docs } = await supabase
+      .from("documents")
+      .select("id, document_type, status, storage_path, generated_at, delivered_at")
+      .eq("client_id", client.id)
+      .order("created_at", { ascending: true });
+
+    const docList = docs || [];
+    setDocuments(docList);
+
+    const allReady = docList.length > 0 && docList.every((d) => d.status === "generated" || d.status === "delivered");
+
+    if (allReady) {
+      setDocsReady(true);
+      setPendingOrder(null);
       setLoading(false);
+      return true;
     }
-    load();
+
+    if (isPending) {
+      setPendingOrder(latestOrder);
+    } else {
+      setPendingOrder(null);
+    }
+
+    setLoading(false);
+    return false;
   }, []);
+
+  // Initial load
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  // Poll when there's a pending order
+  useEffect(() => {
+    if (!pendingOrder || docsReady) return;
+
+    const interval = setInterval(async () => {
+      const ready = await fetchData();
+      if (ready) clearInterval(interval);
+    }, 3000);
+
+    const timeout = setTimeout(() => clearInterval(interval), 300000);
+    return () => { clearInterval(interval); clearTimeout(timeout); };
+  }, [pendingOrder, docsReady, fetchData]);
 
   function formatDocType(t: string) {
     return t.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+  }
+
+  async function handleDownload(doc: Document) {
+    if (!doc.storage_path) return;
+    const supabase = createClient();
+    const { data } = await supabase.storage.from("documents").createSignedUrl(doc.storage_path, 3600);
+    if (data?.signedUrl) window.open(data.signedUrl, "_blank");
   }
 
   if (loading) {
     return <div className="max-w-4xl space-y-4">{[1, 2, 3].map((i) => <div key={i} className="h-20 rounded-xl bg-gray-100 animate-pulse" />)}</div>;
   }
 
+  const readyDocs = documents.filter((d) => d.status === "generated" || d.status === "delivered");
+  const packageName = pendingOrder?.product_type === "trust" ? "Trust" : "Will";
+
   return (
     <div className="max-w-4xl">
       <h1 className="text-2xl font-bold text-navy">My Documents</h1>
       <p className="mt-1 text-sm text-charcoal/60">Your estate planning documents and execution guides.</p>
 
-      {documents.length === 0 ? (
+      {/* Preparing status card — shown when order is processing */}
+      {pendingOrder && !docsReady && (
+        <div className="mt-6 rounded-xl bg-blue-50 border border-blue-200 p-6">
+          <div className="flex items-center gap-3">
+            <div className="w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin flex-shrink-0" />
+            <div>
+              <p className="text-sm font-semibold text-blue-800">
+                Your {packageName} Package is being prepared
+              </p>
+              <p className="text-xs text-blue-600 mt-1">Usually ready within 2 minutes</p>
+            </div>
+          </div>
+          {/* Show individual document progress */}
+          {documents.length > 0 && (
+            <div className="mt-4 space-y-2 ml-9">
+              {documents.map((doc) => (
+                <div key={doc.id} className="flex items-center gap-2 text-sm">
+                  {doc.status === "generated" || doc.status === "delivered" ? (
+                    <span className="text-green-600">&#10003;</span>
+                  ) : (
+                    <div className="w-3.5 h-3.5 border-2 border-blue-400 border-t-transparent rounded-full animate-spin" />
+                  )}
+                  <span className={doc.status === "generated" || doc.status === "delivered" ? "text-charcoal" : "text-charcoal/50"}>
+                    {formatDocType(doc.document_type)}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* No documents and no pending order */}
+      {documents.length === 0 && !pendingOrder && (
         <div className="mt-10 text-center">
           <span className="text-4xl">📄</span>
           <p className="mt-4 text-sm text-charcoal/50">No documents yet.</p>
           <Link href="/quiz" className="mt-4 inline-flex items-center rounded-full bg-gold px-6 py-2.5 text-sm font-semibold text-white hover:bg-gold/90 transition-colors">Take the Quiz</Link>
         </div>
-      ) : (
+      )}
+
+      {/* Document cards — show when ready */}
+      {readyDocs.length > 0 && (
         <>
-          {/* Document cards */}
           <div className="mt-6 space-y-3">
-            {documents.map((doc) => (
+            {readyDocs.map((doc) => (
               <div key={doc.id} className="rounded-xl bg-white border border-gray-200 p-5 flex items-center justify-between">
                 <div>
                   <p className="text-sm font-semibold text-navy">{formatDocType(doc.document_type)}</p>
                   <p className="text-xs text-charcoal/50 mt-1">
-                    {doc.delivered_at ? `Delivered ${new Date(doc.delivered_at).toLocaleDateString()}` : doc.generated_at ? `Generated ${new Date(doc.generated_at).toLocaleDateString()}` : "Processing..."}
+                    {doc.delivered_at ? `Delivered ${new Date(doc.delivered_at).toLocaleDateString()}` : doc.generated_at ? `Generated ${new Date(doc.generated_at).toLocaleDateString()}` : "Ready"}
                   </p>
                 </div>
                 <div className="flex items-center gap-3">
-                  <span className={`rounded-full px-3 py-1 text-xs font-medium ${doc.status === "delivered" ? "bg-green-100 text-green-700" : doc.status === "under_review" ? "bg-amber-100 text-amber-700" : "bg-blue-100 text-blue-700"}`}>
-                    {doc.status === "delivered" ? "Delivered" : doc.status === "under_review" ? "Under Review" : "Generated"}
+                  <span className="rounded-full px-3 py-1 text-xs font-medium bg-green-100 text-green-700">
+                    Ready
                   </span>
-                  <button disabled className="rounded-lg bg-gray-100 px-4 py-2 text-xs text-gray-400 cursor-not-allowed" title="Coming soon">Download</button>
+                  {doc.storage_path ? (
+                    <button
+                      onClick={() => handleDownload(doc)}
+                      className="rounded-lg bg-navy px-4 py-2 text-xs text-white font-semibold hover:bg-navy/90 transition-colors"
+                    >
+                      Download
+                    </button>
+                  ) : (
+                    <button disabled className="rounded-lg bg-gray-100 px-4 py-2 text-xs text-gray-400 cursor-not-allowed">Download</button>
+                  )}
                 </div>
               </div>
             ))}
@@ -129,7 +238,7 @@ export default function DocumentsPage() {
             <h2 className="text-lg font-bold text-navy">Execution Guides</h2>
             <p className="mt-1 text-sm text-charcoal/60">How to properly sign and execute each document.</p>
             <div className="mt-4 space-y-2">
-              {documents.map((doc) => {
+              {readyDocs.map((doc) => {
                 const guide = EXECUTION_GUIDES[doc.document_type];
                 if (!guide) return null;
                 const isOpen = openGuide === doc.document_type;
@@ -137,14 +246,14 @@ export default function DocumentsPage() {
                   <div key={doc.document_type} className="rounded-xl bg-white border border-gray-200 overflow-hidden">
                     <button onClick={() => setOpenGuide(isOpen ? null : doc.document_type)} className="w-full flex items-center justify-between px-5 py-4 text-left">
                       <span className="text-sm font-medium text-navy">{guide.title}</span>
-                      <span className="text-gold">{isOpen ? "−" : "+"}</span>
+                      <span className="text-gold">{isOpen ? "\u2212" : "+"}</span>
                     </button>
                     {isOpen && (
                       <div className="px-5 pb-4">
                         <ul className="space-y-2">
                           {guide.steps.map((step, i) => (
                             <li key={i} className="flex items-start gap-2 text-sm text-charcoal/70">
-                              <span className="mt-1 text-xs text-gold">•</span>{step}
+                              <span className="mt-1 text-xs text-gold">&bull;</span>{step}
                             </li>
                           ))}
                         </ul>
