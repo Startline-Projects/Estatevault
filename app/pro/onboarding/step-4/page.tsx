@@ -40,9 +40,9 @@ export default function Step4Page() {
   }
 
   const providerGuides: Record<string, string[]> = {
-    GoDaddy: ["Log in to your GoDaddy account", "Go to DNS Management", "Add a new CNAME record", "Set Host to 'legacy' and Value to cname.estatevault.com", "Save changes — may take up to 48 hours"],
-    Namecheap: ["Log in to Namecheap", "Go to Domain List → Manage → Advanced DNS", "Add a CNAME record", "Host: legacy, Value: cname.estatevault.com", "Save — propagation may take up to 48 hours"],
-    Cloudflare: ["Log in to Cloudflare", "Select your domain → DNS", "Add CNAME record: Name: legacy, Target: cname.estatevault.com", "Set proxy status to DNS only", "Save"],
+    GoDaddy: ["Log in to your GoDaddy account", "Go to DNS Management", "Add a new CNAME record", "Set Host to 'legacy' and Value to cname.estatevault.us", "Save changes — may take up to 48 hours"],
+    Namecheap: ["Log in to Namecheap", "Go to Domain List → Manage → Advanced DNS", "Add a CNAME record", "Host: legacy, Value: cname.estatevault.us", "Save — propagation may take up to 48 hours"],
+    Cloudflare: ["Log in to Cloudflare", "Select your domain → DNS", "Add CNAME record: Name: legacy, Target: cname.estatevault.us", "Set proxy status to DNS only", "Save"],
   };
 
   return (
@@ -64,8 +64,8 @@ export default function Step4Page() {
             <tr className="border-t border-gray-100">
               <td className="px-4 py-3 text-charcoal/70">CNAME</td>
               <td className="px-4 py-3 font-mono text-charcoal">legacy</td>
-              <td className="px-4 py-3 font-mono text-charcoal text-xs">cname.estatevault.com</td>
-              <td className="px-4 py-3"><button onClick={() => copyToClipboard("cname.estatevault.com", "cname")} className="text-xs text-gold hover:text-gold/80">{copied === "cname" ? "Copied!" : "Copy"}</button></td>
+              <td className="px-4 py-3 font-mono text-charcoal text-xs">cname.estatevault.us</td>
+              <td className="px-4 py-3"><button onClick={() => copyToClipboard("cname.estatevault.us", "cname")} className="text-xs text-gold hover:text-gold/80">{copied === "cname" ? "Copied!" : "Copy"}</button></td>
             </tr>
           </tbody>
         </table>
@@ -93,7 +93,7 @@ export default function Step4Page() {
 
       <div className="mt-4 rounded-lg bg-gray-50 p-4">
         <p className="text-xs text-charcoal/50">Until your custom domain is set up, your platform is accessible at:</p>
-        <p className="mt-1 text-sm font-mono text-navy">estatevault.com/{slug || "your-company"}</p>
+        <p className="mt-1 text-sm font-mono text-navy">estatevault.us/{slug || "your-company"}</p>
       </div>
 
       <button onClick={handleContinue} className="mt-8 w-full min-h-[44px] rounded-full bg-gold py-3.5 text-sm font-semibold text-white hover:bg-gold/90 transition-colors">Continue</button>
