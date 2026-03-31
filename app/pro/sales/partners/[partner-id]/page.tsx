@@ -104,6 +104,11 @@ export default function PartnerDetailPage() {
   const [newNote, setNewNote] = useState("");
   const [savingNote, setSavingNote] = useState(false);
 
+  // Promo code
+  const [promoInput, setPromoInput] = useState("");
+  const [promoSaving, setPromoSaving] = useState(false);
+  const [promoSaved, setPromoSaved] = useState(false);
+
   // Actions
   const [toggling, setToggling] = useState(false);
 
@@ -223,6 +228,27 @@ export default function PartnerDetailPage() {
     await supabase.from("partners").update({ status: newStatus }).eq("id", partnerId);
     setPartner((prev) => prev ? { ...prev, status: newStatus } : prev);
     setToggling(false);
+  }
+
+  async function handleApplyPromo() {
+    if (!promoInput.trim()) return;
+    setPromoSaving(true);
+    setPromoSaved(false);
+    const supabase = createClient();
+    const upper = promoInput.trim().toUpperCase();
+    const VALID_PARTNER_PROMOS: Record<string, boolean> = { FREE676: true };
+    if (!VALID_PARTNER_PROMOS[upper]) {
+      alert("Invalid promo code.");
+      setPromoSaving(false);
+      return;
+    }
+    await supabase.from("partners").update({
+      promo_code: upper,
+      one_time_fee_paid: true,
+      onboarding_step: Math.max((partner as unknown as { onboarding_step: number })?.onboarding_step || 1, 2),
+    }).eq("id", partnerId);
+    setPromoSaved(true);
+    setPromoSaving(false);
   }
 
   function handleNudge() {
@@ -398,6 +424,27 @@ export default function PartnerDetailPage() {
                 <span className="text-sm text-gray-500">Plan Tier</span>
                 <span className="text-sm font-medium text-[#2D2D2D] capitalize">{partner.plan_tier || "standard"}</span>
               </div>
+            </div>
+          </div>
+
+          {/* Promo Code */}
+          <div className="bg-white rounded-xl border border-gray-200 p-6 lg:col-span-2">
+            <h3 className="text-sm font-semibold text-[#1C3557] uppercase tracking-wider mb-3">Promo Code</h3>
+            <div className="flex items-center gap-3">
+              <input
+                value={promoInput}
+                onChange={(e) => { setPromoInput(e.target.value); setPromoSaved(false); }}
+                placeholder="Enter promo code (e.g. Free676)"
+                className="flex-1 max-w-xs border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C9A84C]/40 focus:border-[#C9A84C]"
+              />
+              <button
+                onClick={handleApplyPromo}
+                disabled={promoSaving || !promoInput.trim()}
+                className="px-5 py-2 rounded-lg bg-[#C9A84C] text-white text-sm font-semibold hover:bg-[#b89740] transition disabled:opacity-50"
+              >
+                {promoSaving ? "Applying..." : "Apply"}
+              </button>
+              {promoSaved && <span className="text-sm text-green-600">&#10003; Applied — platform fee waived, partner skips Step 1</span>}
             </div>
           </div>
         </div>

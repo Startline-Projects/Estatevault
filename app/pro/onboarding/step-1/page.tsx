@@ -18,12 +18,18 @@ export default function Step1Page() {
       const supabase = createClient();
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { router.push("/auth/login"); return; }
-      const { data: partner } = await supabase.from("partners").select("id, tier, annual_fee_paid, one_time_fee_paid, professional_type").eq("profile_id", user.id).single();
+      const { data: partner } = await supabase.from("partners").select("id, tier, annual_fee_paid, one_time_fee_paid, professional_type, promo_code").eq("profile_id", user.id).single();
       if (partner) {
         setPartnerId(partner.id);
         if (partner.tier) setSelectedTier(partner.tier as "standard" | "enterprise");
-        // Skip payment step if platform fee already paid (one-time or legacy annual)
+        // Skip payment step if platform fee already paid, or promo code waives it
         if (partner.annual_fee_paid || partner.one_time_fee_paid) { router.push("/pro/onboarding/step-2"); return; }
+        if (partner.promo_code && partner.promo_code.toUpperCase() === "FREE676") {
+          // Mark fee as paid via promo and skip to step 2
+          await supabase.from("partners").update({ one_time_fee_paid: true, onboarding_step: 2 }).eq("id", partner.id);
+          router.push("/pro/onboarding/step-2");
+          return;
+        }
       }
     }
     load();

@@ -20,7 +20,7 @@ export async function POST(request: Request) {
   }
 
   const body = await request.json();
-  const { companyName, ownerName, email, businessUrl, phone, state, professionalType, tier, source, notes } = body;
+  const { companyName, ownerName, email, businessUrl, phone, state, professionalType, tier, source, notes, promoCode } = body;
 
   if (!companyName || !ownerName || !email) {
     return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
@@ -54,6 +54,10 @@ export async function POST(request: Request) {
     await admin.from("profiles").update({ user_type: "partner", full_name: ownerName, phone }).eq("id", newUser.user.id);
   }
 
+  // Validate promo code if provided
+  const VALID_PARTNER_PROMOS: Record<string, boolean> = { FREE676: true };
+  const validPromo = promoCode && VALID_PARTNER_PROMOS[promoCode.toUpperCase()] ? promoCode.toUpperCase() : null;
+
   // Create partner record
   const { data: partner, error: partnerErr } = await admin.from("partners").insert({
     profile_id: newUser.user.id,
@@ -65,6 +69,7 @@ export async function POST(request: Request) {
     created_by: user.id,
     created_by_notes: notes || null,
     prospect_source: source || null,
+    ...(validPromo ? { promo_code: validPromo, one_time_fee_paid: true, onboarding_step: 2 } : {}),
   }).select("id").single();
 
   if (partnerErr || !partner) {
