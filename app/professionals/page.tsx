@@ -442,7 +442,7 @@ function RequestAccessForm() {
   const inputClass =
     "w-full rounded-lg border border-white/20 bg-white/10 px-4 py-3 text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-gold text-sm";
   const selectClass =
-    "w-full rounded-lg border border-white/20 bg-white/10 px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-gold text-sm appearance-none";
+    "w-full rounded-lg border border-white/20 bg-white/10 px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-gold text-sm appearance-none [&>option]:text-charcoal [&>option]:bg-white";
 
   if (submitted) {
     return (
