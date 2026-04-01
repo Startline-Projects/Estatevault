@@ -108,7 +108,7 @@ export default function ProShell({ companyName, userName, tier, logoUrl, onboard
         {(!onboardingComplete || !certificationComplete) && (
           <div className="bg-amber-50 border-b border-amber-200 px-6 py-3 flex items-center gap-4 text-sm">
             <span className="text-amber-700">⚠</span>
-            <span className="text-amber-800">Your setup is incomplete.</span>
+            <span className="text-amber-800">{!onboardingComplete ? "Your setup is incomplete." : "Certification required to unlock client features."}</span>
             {!onboardingComplete && <Link href="/pro/onboarding/step-1" className="font-semibold text-amber-900 underline">Complete Setup →</Link>}
             {onboardingComplete && !certificationComplete && <Link href="/pro/training" className="font-semibold text-amber-900 underline">Complete Certification →</Link>}
           </div>

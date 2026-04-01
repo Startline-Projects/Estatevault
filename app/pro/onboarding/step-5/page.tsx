@@ -10,7 +10,6 @@ export default function Step5Page() {
   const [senderEmail, setSenderEmail] = useState("");
   const [partnerId, setPartnerId] = useState("");
   const [companyName, setCompanyName] = useState("");
-  const [testSent, setTestSent] = useState(false);
   const [copied, setCopied] = useState("");
 
   useEffect(() => {
@@ -53,22 +52,47 @@ export default function Step5Page() {
             <label className="block text-sm font-medium text-navy mb-1">Sender Email</label>
             <input type="email" value={senderEmail} onChange={(e) => setSenderEmail(e.target.value)} placeholder="plans@yourcompany.com" className="w-full min-h-[44px] rounded-xl border-2 border-gray-200 px-4 py-3 text-sm focus:border-gold focus:outline-none" />
           </div>
-          <button onClick={() => setTestSent(true)} className="rounded-full border border-navy px-5 py-2 text-sm font-medium text-navy hover:bg-navy hover:text-white transition-colors">
-            {testSent ? "✅ Test email sent!" : "Send Test Email"}
+          <button disabled className="rounded-full border border-gray-300 px-5 py-2 text-sm font-medium text-gray-400 cursor-not-allowed">
+            Send Test Email — available after launch
           </button>
 
           <div className="mt-6">
             <p className="text-sm font-semibold text-navy mb-3">DNS Records for Email</p>
-            <div className="rounded-xl bg-white border border-gray-200 overflow-hidden">
-              <table className="w-full text-sm">
-                <thead><tr className="bg-gray-50"><th className="text-left px-3 py-2 text-xs font-semibold text-navy">Type</th><th className="text-left px-3 py-2 text-xs font-semibold text-navy">Host</th><th className="text-left px-3 py-2 text-xs font-semibold text-navy">Value</th><th className="px-3 py-2" /></tr></thead>
-                <tbody>
-                  <tr className="border-t border-gray-100"><td className="px-3 py-2 text-charcoal/70">TXT</td><td className="px-3 py-2 font-mono text-xs">@</td><td className="px-3 py-2 font-mono text-xs">v=spf1 include:estatevault.com ~all</td><td className="px-3 py-2"><button onClick={() => copyToClipboard("v=spf1 include:estatevault.com ~all", "spf")} className="text-xs text-gold">{copied === "spf" ? "Copied!" : "Copy"}</button></td></tr>
-                  <tr className="border-t border-gray-100"><td className="px-3 py-2 text-charcoal/70">TXT</td><td className="px-3 py-2 font-mono text-xs">ev._domainkey</td><td className="px-3 py-2 font-mono text-xs truncate max-w-[120px]">ev-dkim-placeholder</td><td className="px-3 py-2"><button onClick={() => copyToClipboard("ev-dkim-placeholder", "dkim")} className="text-xs text-gold">{copied === "dkim" ? "Copied!" : "Copy"}</button></td></tr>
-                </tbody>
-              </table>
+            <div className="space-y-3">
+              <div className="rounded-xl border border-gray-200 bg-white p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-semibold text-navy uppercase tracking-wider">SPF Record</span>
+                  <button
+                    onClick={() => copyToClipboard("v=spf1 include:estatevault.us ~all", "spf")}
+                    className="inline-flex items-center gap-1 px-3 py-1 rounded-lg text-xs font-medium bg-[#C9A84C]/10 text-[#C9A84C] hover:bg-[#C9A84C]/20 transition-colors"
+                  >
+                    {copied === "spf" ? "Copied!" : "Copy Value"}
+                  </button>
+                </div>
+                <div className="grid grid-cols-3 gap-2 text-sm">
+                  <div><p className="text-xs text-charcoal/50 mb-0.5">Type</p><p className="font-medium text-charcoal">TXT</p></div>
+                  <div><p className="text-xs text-charcoal/50 mb-0.5">Host</p><p className="font-mono text-charcoal">@</p></div>
+                  <div><p className="text-xs text-charcoal/50 mb-0.5">Value</p><p className="font-mono text-charcoal text-xs break-all">v=spf1 include:estatevault.us ~all</p></div>
+                </div>
+              </div>
+              <div className="rounded-xl border border-gray-200 bg-white p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-semibold text-navy uppercase tracking-wider">DKIM Record</span>
+                  <button
+                    onClick={() => copyToClipboard("ev-dkim-placeholder", "dkim")}
+                    className="inline-flex items-center gap-1 px-3 py-1 rounded-lg text-xs font-medium bg-[#C9A84C]/10 text-[#C9A84C] hover:bg-[#C9A84C]/20 transition-colors"
+                  >
+                    {copied === "dkim" ? "Copied!" : "Copy Value"}
+                  </button>
+                </div>
+                <div className="grid grid-cols-3 gap-2 text-sm">
+                  <div><p className="text-xs text-charcoal/50 mb-0.5">Type</p><p className="font-medium text-charcoal">TXT</p></div>
+                  <div><p className="text-xs text-charcoal/50 mb-0.5">Host</p><p className="font-mono text-charcoal text-xs">ev._domainkey</p></div>
+                  <div><p className="text-xs text-charcoal/50 mb-0.5">Value</p><p className="font-mono text-charcoal text-xs break-all">ev-dkim-placeholder</p></div>
+                </div>
+              </div>
             </div>
-            <div className="mt-3 flex items-center gap-2"><span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700">⏳ Pending</span><span className="text-xs text-charcoal/50">Email records not verified</span></div>
+            <div className="mt-3 flex items-center gap-2"><span className="rounded-full bg-amber-100 px-2.5 py-1 text-xs font-medium text-amber-700">Pending</span><span className="text-xs text-charcoal/50">Email records not verified</span></div>
           </div>
         </div>
 

@@ -136,7 +136,7 @@ export default function NewPartnerPage() {
     ? form.businessUrl.replace(/^https?:\/\//, "").replace(/\/$/, "")
     : "";
   const previewUrl = strippedUrl
-    ? `legacy.${strippedUrl}${strippedUrl.includes(".") ? "" : ".com"}`
+    ? `legacy.${strippedUrl}`
     : "legacy.yoursite.com";
   const hasSomething = form.companyName || form.ownerName || form.email;
 

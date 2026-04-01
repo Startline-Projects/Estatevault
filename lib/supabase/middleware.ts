@@ -115,5 +115,8 @@ export async function updateSession(request: NextRequest) {
     }
   }
 
+  // Pass pathname to server components via header
+  supabaseResponse.headers.set("x-url", request.nextUrl.pathname);
+
   return supabaseResponse;
 }

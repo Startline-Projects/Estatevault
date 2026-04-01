@@ -3,9 +3,13 @@ import { createClient } from "@/lib/supabase/server";
 import ProShell from "@/components/pro/ProShell";
 
 export default async function ProLayout({ children }: { children: React.ReactNode }) {
-  // Pages that render their own full-page layout
   const headersList = headers();
-  const url = headersList.get("x-url") || headersList.get("x-invoke-path") || "";
+  const url = headersList.get("x-url") || headersList.get("x-invoke-path") || headersList.get("x-matched-path") || "";
+
+  // Onboarding and login pages render their own full-page layout — skip ProShell
+  if (url.includes("/pro/onboarding") || url.includes("/pro/login")) {
+    return <>{children}</>;
+  }
 
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();

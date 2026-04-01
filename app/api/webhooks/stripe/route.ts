@@ -107,6 +107,26 @@ export async function POST(request: Request) {
     const session = event.data.object as Stripe.Checkout.Session;
     const metadata = session.metadata || {};
 
+    // Handle partner platform fee checkout
+    if (metadata.type === "partner_platform_fee") {
+      const partnerId = metadata.partner_id;
+      if (partnerId) {
+        await supabase.from("partners").update({
+          one_time_fee_paid: true,
+          onboarding_step: 2,
+        }).eq("id", partnerId);
+        await supabase.from("audit_log").insert({
+          action: "partner.platform_fee_paid",
+          resource_type: "partner",
+          resource_id: partnerId,
+          metadata: { tier: metadata.tier, amount: session.amount_total },
+        });
+      } else {
+        console.error("partner_platform_fee webhook received without partner_id in metadata");
+      }
+      return NextResponse.json({ received: true });
+    }
+
     // Handle vault subscription checkout
     if (metadata.product_type === "vault_subscription") {
       const clientId = metadata.client_id;

@@ -222,8 +222,8 @@ export default function ProTrainingPage() {
                 </div>
                 <span className="text-sm font-medium text-navy">{res.title}</span>
               </div>
-              <button className="text-xs text-gold hover:text-gold/80 font-medium">
-                Download
+              <button disabled className="text-xs text-gray-400 cursor-not-allowed font-medium">
+                Coming soon
               </button>
             </div>
           ))}

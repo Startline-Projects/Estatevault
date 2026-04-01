@@ -25,7 +25,7 @@ export default function Step7Page() {
 
   async function handleGoToDashboard() {
     const supabase = createClient();
-    await supabase.from("partners").update({ onboarding_completed: true }).eq("id", partnerId);
+    await supabase.from("partners").update({ onboarding_completed: true, onboarding_step: 7, status: "active" }).eq("id", partnerId);
     router.push("/pro/dashboard");
   }
 
