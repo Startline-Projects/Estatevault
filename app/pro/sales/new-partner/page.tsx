@@ -47,6 +47,7 @@ interface FormData {
   planTier: string;
   leadSource: string;
   notes: string;
+  promoCode: string;
 }
 
 const initialForm: FormData = {
@@ -60,6 +61,7 @@ const initialForm: FormData = {
   planTier: "",
   leadSource: "",
   notes: "",
+  promoCode: "",
 };
 
 interface SuccessData {
@@ -89,7 +91,19 @@ export default function NewPartnerPage() {
       const res = await fetch("/api/sales/create-partner", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
+        body: JSON.stringify({
+          companyName: form.companyName,
+          ownerName: form.ownerName,
+          email: form.email,
+          businessUrl: form.businessUrl,
+          phone: form.phone,
+          state: form.state,
+          professionalType: form.professionalType,
+          tier: form.planTier,
+          source: form.leadSource,
+          notes: form.notes,
+          promoCode: form.promoCode || undefined,
+        }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to create partner");
@@ -331,6 +345,18 @@ export default function NewPartnerPage() {
                   <option key={s} value={s}>{s}</option>
                 ))}
               </select>
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Promo Code</label>
+              <input
+                value={form.promoCode}
+                onChange={(e) => set("promoCode", e.target.value)}
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C9A84C]/40 focus:border-[#C9A84C]"
+                placeholder="e.g. Free676 — skips platform fee"
+              />
+              {form.promoCode.toUpperCase() === "FREE676" && (
+                <p className="text-xs text-green-600 mt-1">&#10003; Valid — platform fee will be waived, partner skips Step 1</p>
+              )}
             </div>
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">Notes</label>

@@ -43,7 +43,13 @@ export async function updateSession(request: NextRequest) {
     (p) => pathname === p || pathname.startsWith(p + "/")
   );
 
-  if (!isPublic && !user) {
+  // Partner slug pages (e.g. /the-peoples-firm) are public — single-segment paths
+  // that don't match known app routes are treated as partner landing pages
+  const knownAppPrefixes = ["/pro", "/auth", "/dashboard", "/quiz", "/will", "/trust", "/api", "/sales", "/attorney", "/legal", "/_next", "/favicon"];
+  const segments = pathname.split("/").filter(Boolean);
+  const isPartnerSlug = segments.length === 1 && !knownAppPrefixes.some((p) => pathname.startsWith(p));
+
+  if (!isPublic && !isPartnerSlug && !user) {
     // Not authenticated — redirect to universal login
     const url = request.nextUrl.clone();
     url.pathname = "/auth/login";

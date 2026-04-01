@@ -26,7 +26,7 @@ export default async function PartnerLandingPage({
     .from("partners")
     .select("id, company_name, product_name, logo_url, accent_color, partner_slug")
     .eq("partner_slug", slug)
-    .eq("status", "active")
+    .in("status", ["active", "onboarding"])
     .single();
 
   if (!partner) return redirect("/");
