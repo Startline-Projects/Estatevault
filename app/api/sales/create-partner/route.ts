@@ -26,8 +26,14 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
   }
 
-  // Generate slug
-  const slug = companyName.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+  // Generate slug from business URL
+  const urlForSlug = (businessUrl || companyName).replace(/^https?:\/\//, "").replace(/\/$/, "");
+  const slug = urlForSlug.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+
+  const { data: existingPartner } = await admin.from("partners").select("id").eq("partner_slug", slug).single();
+  if (existingPartner) {
+    return NextResponse.json({ error: "A partner with this business URL already exists." }, { status: 409 });
+  }
 
   // Generate temp password
   const chars = "ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!@#";

@@ -89,7 +89,18 @@ export default function NewPartnerPage() {
       const res = await fetch("/api/sales/create-partner", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
+        body: JSON.stringify({
+          companyName: form.companyName,
+          ownerName: form.ownerName,
+          email: form.email,
+          businessUrl: form.businessUrl,
+          phone: form.phone,
+          state: form.state,
+          professionalType: form.professionalType,
+          tier: form.planTier,
+          source: form.leadSource,
+          notes: form.notes,
+        }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to create partner");
@@ -121,8 +132,11 @@ export default function NewPartnerPage() {
   }
 
   /* ---------- live preview helpers ---------- */
-  const previewUrl = form.businessUrl
-    ? `legacy.${form.businessUrl.replace(/^https?:\/\//, "").replace(/\/$/, "")}.com`
+  const strippedUrl = form.businessUrl
+    ? form.businessUrl.replace(/^https?:\/\//, "").replace(/\/$/, "")
+    : "";
+  const previewUrl = strippedUrl
+    ? `legacy.${strippedUrl}${strippedUrl.includes(".") ? "" : ".com"}`
     : "legacy.yoursite.com";
   const hasSomething = form.companyName || form.ownerName || form.email;
 
