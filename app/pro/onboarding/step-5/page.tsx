@@ -10,7 +10,6 @@ export default function Step5Page() {
   const [senderEmail, setSenderEmail] = useState("");
   const [partnerId, setPartnerId] = useState("");
   const [companyName, setCompanyName] = useState("");
-  const [testSent, setTestSent] = useState(false);
   const [copied, setCopied] = useState("");
 
   useEffect(() => {
@@ -53,8 +52,8 @@ export default function Step5Page() {
             <label className="block text-sm font-medium text-navy mb-1">Sender Email</label>
             <input type="email" value={senderEmail} onChange={(e) => setSenderEmail(e.target.value)} placeholder="plans@yourcompany.com" className="w-full min-h-[44px] rounded-xl border-2 border-gray-200 px-4 py-3 text-sm focus:border-gold focus:outline-none" />
           </div>
-          <button onClick={() => setTestSent(true)} className="rounded-full border border-navy px-5 py-2 text-sm font-medium text-navy hover:bg-navy hover:text-white transition-colors">
-            {testSent ? "✅ Test email sent!" : "Send Test Email"}
+          <button disabled className="rounded-full border border-gray-300 px-5 py-2 text-sm font-medium text-gray-400 cursor-not-allowed">
+            Send Test Email — available after launch
           </button>
 
           <div className="mt-6">

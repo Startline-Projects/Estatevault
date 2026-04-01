@@ -84,15 +84,9 @@ export default function Step6Page() {
           <h3 className="text-base font-bold text-navy">Bank Transfer (ACH)</h3>
           <p className="mt-2 text-sm text-charcoal/60">Direct bank deposit. Requires 2-3 day verification.</p>
           {method === "ach" && (
-            <div className="mt-4 space-y-3">
-              <input type="text" placeholder="Bank name" className="w-full min-h-[44px] rounded-xl border-2 border-gray-200 px-4 py-3 text-sm focus:border-gold focus:outline-none" />
-              <input type="text" placeholder="Account holder name" className="w-full min-h-[44px] rounded-xl border-2 border-gray-200 px-4 py-3 text-sm focus:border-gold focus:outline-none" />
-              <input type="text" placeholder="Routing number" className="w-full min-h-[44px] rounded-xl border-2 border-gray-200 px-4 py-3 text-sm focus:border-gold focus:outline-none" />
-              <input type="password" placeholder="Account number" className="w-full min-h-[44px] rounded-xl border-2 border-gray-200 px-4 py-3 text-sm focus:border-gold focus:outline-none" />
-              <div className="flex gap-3">
-                {["Checking", "Savings"].map((t) => <button key={t} className="rounded-lg border-2 border-gray-200 px-4 py-2 text-sm hover:border-gold/40">{t}</button>)}
-              </div>
-              <button className="rounded-full bg-navy px-5 py-2 text-sm font-semibold text-white">Submit for Verification</button>
+            <div className="mt-4 rounded-lg bg-amber-50 border border-amber-200 px-4 py-3">
+              <p className="text-sm text-amber-800 font-medium">Coming soon</p>
+              <p className="text-xs text-amber-700 mt-1">ACH bank transfers are not yet available. Please use Stripe Connect for now.</p>
             </div>
           )}
         </div>
