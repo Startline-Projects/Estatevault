@@ -33,7 +33,7 @@ export default function SalesLayout({ children }: { children: React.ReactNode })
   async function handleSignOut() {
     const supabase = createClient();
     await supabase.auth.signOut();
-    router.push("/auth/login");
+    router.replace("/auth/login");
   }
 
   const sidebar = (

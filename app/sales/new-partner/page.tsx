@@ -121,8 +121,11 @@ export default function NewPartnerPage() {
   }
 
   /* ---------- live preview helpers ---------- */
-  const previewUrl = form.businessUrl
-    ? `legacy.${form.businessUrl.replace(/^https?:\/\//, "").replace(/\/$/, "")}.com`
+  const strippedUrl = form.businessUrl
+    ? form.businessUrl.replace(/^https?:\/\//, "").replace(/\/$/, "")
+    : "";
+  const previewUrl = strippedUrl
+    ? `legacy.${strippedUrl}${strippedUrl.includes(".") ? "" : ".com"}`
     : "legacy.yoursite.com";
   const hasSomething = form.companyName || form.ownerName || form.email;
 

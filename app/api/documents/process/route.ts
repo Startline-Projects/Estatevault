@@ -150,9 +150,10 @@ export async function GET() {
         const template = await getTemplate(docType);
         const userPrompt = template.buildPrompt(intake);
 
+        const maxTokens = docType === "trust" ? 16000 : 8000;
         const response = await claude.messages.create({
           model: CLAUDE_MODEL,
-          max_tokens: 8000,
+          max_tokens: maxTokens,
           system: template.systemPrompt,
           messages: [{ role: "user", content: userPrompt }],
         });

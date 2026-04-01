@@ -139,27 +139,19 @@ function SuccessContent() {
           setSteps([
             { label: "Payment confirmed", status: "done" },
             { label: "Generating your Will Package...", status: "active" },
-            { label: "Delivery to your email", status: "pending" },
+            { label: "Ready for download", status: "pending" },
             { label: "Saved to your account", status: "pending" },
           ]);
 
-          setTimeout(() => {
-            setSteps([
-              { label: "Payment confirmed", status: "done" },
-              { label: "Will Package generated", status: "done" },
-              { label: "Delivered to your email", status: "done" },
-              { label: "Saved to your account", status: "done" },
-            ]);
-            setDocsReady(true);
-          }, 5000);
-
-          // Also poll for real document readiness
+          // Trigger document generation immediately
           if (data.orderId) {
+            fetch(`/api/documents/process-now?order_id=${data.orderId}`).catch(() => {});
+
             const poll = setInterval(async () => {
               const ready = await pollDocuments(data.orderId);
               if (ready) clearInterval(poll);
             }, 5000);
-            setTimeout(() => clearInterval(poll), 60000);
+            setTimeout(() => clearInterval(poll), 300000);
           }
         }
 

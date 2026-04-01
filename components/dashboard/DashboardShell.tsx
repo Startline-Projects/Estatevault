@@ -26,7 +26,7 @@ export default function DashboardShell({ userName, children }: DashboardShellPro
   async function handleSignOut() {
     const supabase = createClient();
     await supabase.auth.signOut();
-    router.push("/");
+    router.replace("/");
     router.refresh();
   }
 
