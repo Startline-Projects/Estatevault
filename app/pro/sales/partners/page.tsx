@@ -49,7 +49,7 @@ export default function PartnersListPage() {
 
       const { data } = await supabase
         .from("partners")
-        .select("id, company_name, owner_name, email, plan_tier, status, onboarding_step, certification_completed, created_at, updated_at")
+        .select("id, company_name, tier, status, onboarding_step, onboarding_completed, created_at, updated_at, profiles!profile_id(full_name, email)")
         .eq("created_by", user.id)
         .order("created_at", { ascending: false });
 
@@ -70,12 +70,18 @@ export default function PartnersListPage() {
               .eq("partner_id", p.id)
               .gte("created_at", mtdStart);
             const mtdRev = (revData || []).reduce((sum, o) => sum + (o.partner_cut || 0), 0);
+            const profile = (p as unknown as Record<string, unknown>).profiles as { full_name: string; email: string } | null;
             return {
-              ...p,
-              plan_tier: (p.plan_tier || "standard") as PlanTier,
+              id: p.id,
+              company_name: p.company_name,
+              owner_name: profile?.full_name || "",
+              email: profile?.email || "",
+              plan_tier: (p.tier || "standard") as PlanTier,
               status: (p.status || "onboarding") as PartnerStatus,
               onboarding_step: p.onboarding_step || 1,
-              certification_completed: p.certification_completed || false,
+              certification_completed: p.onboarding_completed || false,
+              created_at: p.created_at,
+              updated_at: p.updated_at,
               mtd_docs: docCount || 0,
               mtd_revenue: mtdRev,
             };
