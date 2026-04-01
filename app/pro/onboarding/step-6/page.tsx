@@ -8,6 +8,9 @@ export default function Step6Page() {
   const router = useRouter();
   const [method, setMethod] = useState<"stripe" | "ach" | "">("");
   const [partnerId, setPartnerId] = useState("");
+  const [connecting, setConnecting] = useState(false);
+  const [stripeConnected, setStripeConnected] = useState(false);
+  const [connectError, setConnectError] = useState("");
 
   useEffect(() => {
     async function load() {
@@ -17,11 +20,30 @@ export default function Step6Page() {
       const { data: partner } = await supabase.from("partners").select("id, stripe_account_id").eq("profile_id", user.id).single();
       if (partner) {
         setPartnerId(partner.id);
-        if (partner.stripe_account_id) setMethod("stripe");
+        if (partner.stripe_account_id) {
+          setMethod("stripe");
+          setStripeConnected(true);
+        }
       }
     }
     load();
   }, []);
+
+  async function handleStripeConnect() {
+    setConnecting(true);
+    setConnectError("");
+    try {
+      const res = await fetch("/api/partner/stripe-connect", { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to connect Stripe");
+      if (data.url) {
+        window.location.href = data.url;
+      }
+    } catch (err) {
+      setConnectError(err instanceof Error ? err.message : "Something went wrong");
+      setConnecting(false);
+    }
+  }
 
   async function handleContinue() {
     const supabase = createClient();
@@ -40,9 +62,22 @@ export default function Step6Page() {
           <span className="text-xs text-gold font-medium">Recommended</span>
           <p className="mt-2 text-sm text-charcoal/60">Connect your bank account through Stripe. Fastest setup. Payouts in 2-3 business days.</p>
           {method === "stripe" && (
-            <button className="mt-4 rounded-full bg-navy px-5 py-2 text-sm font-semibold text-white hover:bg-navy/90 transition-colors">
-              Connect with Stripe
-            </button>
+            stripeConnected ? (
+              <p className="mt-4 text-sm text-green-600 font-medium">&#10003; Stripe account connected</p>
+            ) : (
+              <>
+                <button
+                  onClick={handleStripeConnect}
+                  disabled={connecting}
+                  className="mt-4 rounded-full bg-navy px-5 py-2 text-sm font-semibold text-white hover:bg-navy/90 transition-colors disabled:opacity-50"
+                >
+                  {connecting ? "Connecting..." : "Connect with Stripe"}
+                </button>
+                {connectError && (
+                  <p className="mt-2 text-xs text-red-600">{connectError}</p>
+                )}
+              </>
+            )
           )}
         </div>
         <div onClick={() => setMethod("ach")} className={`rounded-xl border-2 p-6 cursor-pointer transition-all ${method === "ach" ? "border-gold bg-gold/5" : "border-gray-200 hover:border-gold/40"}`}>
