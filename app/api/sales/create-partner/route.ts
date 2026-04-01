@@ -34,24 +34,41 @@ export async function POST(request: Request) {
   let tempPassword = "";
   for (let i = 0; i < 12; i++) tempPassword += chars[Math.floor(Math.random() * chars.length)];
 
-  // Create auth user for partner
-  const { data: newUser, error: createErr } = await admin.auth.admin.createUser({
-    email,
-    password: tempPassword,
-    email_confirm: true,
-    user_metadata: { full_name: ownerName, user_type: "partner" },
-  });
+  // Check if auth user already exists with this email
+  const { data: existingProfile } = await admin.from("profiles").select("id").eq("email", email).single();
+  let userId: string;
 
-  if (createErr || !newUser.user) {
-    return NextResponse.json({ error: "Failed to create user: " + (createErr?.message || "unknown") }, { status: 500 });
+  if (existingProfile) {
+    // User already exists — reset their password to the new temp password
+    userId = existingProfile.id;
+    await admin.auth.admin.updateUserById(userId, {
+      password: tempPassword,
+      user_metadata: { full_name: ownerName, user_type: "partner" },
+    });
+  } else {
+    // Create new auth user
+    const { data: newUser, error: createErr } = await admin.auth.admin.createUser({
+      email,
+      password: tempPassword,
+      email_confirm: true,
+      user_metadata: { full_name: ownerName, user_type: "partner" },
+    });
+
+    if (createErr || !newUser.user) {
+      return NextResponse.json({ error: "Failed to create user: " + (createErr?.message || "unknown") }, { status: 500 });
+    }
+    userId = newUser.user.id;
   }
 
+  // Force-set password again to ensure it's definitely applied
+  await admin.auth.admin.updateUserById(userId, { password: tempPassword });
+
   // Ensure profile exists with partner type
-  const { data: existingProfile } = await admin.from("profiles").select("id").eq("id", newUser.user.id).single();
-  if (!existingProfile) {
-    await admin.from("profiles").insert({ id: newUser.user.id, email, full_name: ownerName, user_type: "partner", phone, state: state || "Michigan" });
+  const { data: profileCheck } = await admin.from("profiles").select("id").eq("id", userId).single();
+  if (!profileCheck) {
+    await admin.from("profiles").insert({ id: userId, email, full_name: ownerName, user_type: "partner", phone, state: state || "Michigan" });
   } else {
-    await admin.from("profiles").update({ user_type: "partner", full_name: ownerName, phone }).eq("id", newUser.user.id);
+    await admin.from("profiles").update({ user_type: "partner", full_name: ownerName, phone }).eq("id", userId);
   }
 
   // Validate promo code if provided
@@ -60,7 +77,7 @@ export async function POST(request: Request) {
 
   // Create partner record
   const { data: partner, error: partnerErr } = await admin.from("partners").insert({
-    profile_id: newUser.user.id,
+    profile_id: userId,
     company_name: companyName,
     business_url: businessUrl || "",
     tier: tier || "standard",
