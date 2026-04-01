@@ -97,7 +97,7 @@ export default function Step3Page() {
       <div className="mt-6 rounded-xl bg-gray-50 border border-gray-200 p-6 text-center">
         <p className="text-sm text-charcoal/60">If you facilitate 5 trust packages this month:</p>
         <p className="mt-2 text-3xl font-bold text-navy">{scenarioEarnings}</p>
-        <p className="text-xs text-charcoal/40">deposited to your account every Friday</p>
+        <p className="text-xs text-charcoal/40">in monthly earnings, deposited weekly every Friday</p>
       </div>
 
       <label className="mt-6 flex items-start gap-3 cursor-pointer">

@@ -128,7 +128,7 @@ export default function SalesAccountPage() {
             id="phone"
             type="tel"
             value={phone}
-            onChange={(e) => setPhone(e.target.value)}
+            onChange={(e) => setPhone(e.target.value.replace(/[^\d\-\(\)\s+]/g, ""))}
             className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm text-[#2D2D2D] focus:outline-none focus:ring-2 focus:ring-[#1C3557]/20 focus:border-[#1C3557] transition-colors"
             placeholder="(555) 123-4567"
           />
