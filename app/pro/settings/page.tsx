@@ -15,10 +15,14 @@ interface PartnerData {
   sender_name: string;
   sender_email: string;
   stripe_account_id: string | null;
+  professional_type: string | null;
+  has_inhouse_estate_attorney: boolean;
+  inhouse_review_attorney_id: string | null;
+  custom_review_fee: number | null;
   profiles: { full_name: string; email: string } | null;
 }
 
-type SectionKey = "plan" | "brand" | "pricing" | "domain" | "email" | "payouts" | "team" | "account";
+type SectionKey = "plan" | "brand" | "pricing" | "domain" | "email" | "payouts" | "team" | "account" | "attorney_review";
 
 export default function ProSettingsPage() {
   const [partner, setPartner] = useState<PartnerData | null>(null);
@@ -37,6 +41,7 @@ export default function ProSettingsPage() {
   const [senderEmail, setSenderEmail] = useState("");
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
+  const [reviewFee, setReviewFee] = useState(300);
 
   useEffect(() => {
     async function load() {
@@ -49,7 +54,7 @@ export default function ProSettingsPage() {
       const { data } = await supabase
         .from("partners")
         .select(
-          "id, tier, company_name, product_name, accent_color, logo_url, business_url, partner_slug, sender_name, sender_email, stripe_account_id, profiles(full_name, email)"
+          "id, tier, company_name, product_name, accent_color, logo_url, business_url, partner_slug, sender_name, sender_email, stripe_account_id, professional_type, has_inhouse_estate_attorney, inhouse_review_attorney_id, custom_review_fee, profiles(full_name, email)"
         )
         .eq("profile_id", user.id)
         .single();
@@ -66,6 +71,7 @@ export default function ProSettingsPage() {
         setSenderEmail(p.sender_email || "");
         setFullName(p.profiles?.full_name || "");
         setEmail(p.profiles?.email || "");
+        setReviewFee(p.custom_review_fee ? p.custom_review_fee / 100 : 300);
       }
       setLoading(false);
     }
@@ -149,6 +155,18 @@ export default function ProSettingsPage() {
     });
     setSaving(false);
     setSaveSuccess("account");
+    setTimeout(() => setSaveSuccess(""), 2000);
+  }
+
+  async function saveReviewFee() {
+    if (!partner) return;
+    setSaving(true);
+    const supabase = createClient();
+    const feeInCents = Math.round(reviewFee * 100);
+    await supabase.from("partners").update({ custom_review_fee: feeInCents }).eq("id", partner.id);
+    setPartner({ ...partner, custom_review_fee: feeInCents });
+    setSaving(false);
+    setSaveSuccess("attorney_review");
     setTimeout(() => setSaveSuccess(""), 2000);
   }
 
@@ -486,6 +504,93 @@ export default function ProSettingsPage() {
           },
         ]
       : []),
+    {
+      key: "attorney_review",
+      title: "Attorney Reviews",
+      subtitle:
+        partner.professional_type === "attorney" && partner.has_inhouse_estate_attorney
+          ? `Custom fee: $${reviewFee}`
+          : "Handled by EstateVault",
+      content:
+        partner.professional_type === "attorney" && partner.has_inhouse_estate_attorney ? (
+          <div className="space-y-4">
+            <p className="text-sm text-charcoal/60">
+              Your firm has an in-house estate planning attorney on staff. The attorney review fee
+              is paid to your firm&apos;s Stripe Connect account. You can adjust the fee charged to
+              your clients below.
+            </p>
+            <div>
+              <label className="block text-sm font-medium text-navy mb-1">
+                Attorney Review Fee
+              </label>
+              <div className="flex items-center gap-3">
+                <span className="text-sm font-medium text-charcoal/60">$</span>
+                <input
+                  type="number"
+                  min={100}
+                  max={1000}
+                  step={25}
+                  value={reviewFee}
+                  onChange={(e) => setReviewFee(Number(e.target.value))}
+                  className="w-32 min-h-[44px] rounded-xl border-2 border-gray-200 px-4 py-3 text-sm focus:border-gold focus:outline-none"
+                />
+              </div>
+              <p className="mt-1 text-xs text-charcoal/50">
+                Default is $300. This fee goes directly to your firm via Stripe Connect.
+              </p>
+            </div>
+            <div className="rounded-lg bg-navy/5 p-4">
+              <p className="text-xs font-medium text-navy">How it works</p>
+              <ul className="mt-2 space-y-1 text-xs text-charcoal/50">
+                <li>• Client adds attorney review at checkout for ${reviewFee}</li>
+                <li>• Review is assigned to your in-house attorney</li>
+                <li>• Full fee is transferred to your Stripe Connect account</li>
+                <li>• You pay your attorney via your own payroll</li>
+              </ul>
+            </div>
+            <div className="flex gap-3 pt-2">
+              <button
+                onClick={saveReviewFee}
+                disabled={saving}
+                className="rounded-full bg-gold px-6 py-2 text-sm font-semibold text-white hover:bg-gold/90 disabled:opacity-50"
+              >
+                {saving ? "Saving..." : saveSuccess === "attorney_review" ? "Saved!" : "Save Fee"}
+              </button>
+              <button
+                onClick={cancelSection}
+                className="rounded-full border border-gray-300 px-6 py-2 text-sm font-medium text-charcoal/60 hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            <div className="flex items-center gap-3">
+              <span className="rounded-full bg-green-100 px-3 py-1 text-xs font-medium text-green-700">
+                Included
+              </span>
+              <span className="text-sm text-charcoal/60">
+                Attorney reviews are handled by EstateVault&apos;s in-house counsel.
+              </span>
+            </div>
+            <div className="rounded-lg bg-gray-50 p-4">
+              <p className="text-xs font-medium text-navy">What clients see</p>
+              <ul className="mt-2 space-y-1 text-xs text-charcoal/50">
+                <li>• Optional $300 attorney review add-on at checkout</li>
+                <li>• Reviews completed within 48 hours</li>
+                <li>• Handled by a licensed estate planning attorney</li>
+              </ul>
+            </div>
+            {partner.professional_type === "attorney" && !partner.has_inhouse_estate_attorney && (
+              <p className="text-xs text-charcoal/40">
+                If your firm has a licensed estate planning attorney who can handle reviews,
+                contact support@estatevault.com to enable in-house attorney reviews.
+              </p>
+            )}
+          </div>
+        ),
+    },
     {
       key: "account",
       title: "Account",

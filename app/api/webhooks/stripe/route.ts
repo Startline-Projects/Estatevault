@@ -360,33 +360,97 @@ export async function POST(request: Request) {
     await supabase.from("documents").insert(documentRecords);
 
     // ── 4. Attorney review record if requested ─────────────────
+    //
+    // COMPLIANCE: Attorney review routing determines who reviews and where
+    // the $300 fee goes. Mo Murshed is W-2 payroll — when reviews route to him,
+    // the fee is EstateVault employment revenue, NOT fee-splitting.
+    // Review Network attorneys receive 100% — EstateVault earns $0.
+    //
     if (attorneyReview) {
+      const { resolveReviewRouting, INHOUSE_ATTORNEY_EMAIL, ESTATEVAULT_ADMIN_EMAIL } = await import("@/lib/attorney-review/routing");
+
       const slaDeadline = new Date();
       slaDeadline.setHours(slaDeadline.getHours() + 48);
 
-      let attorneyId = null;
-      let reviewFee = 30000;
-
+      // Look up partner record for routing
+      let partnerForRouting = null;
       if (partnerId) {
-        const { data: partnerForReview } = await supabase
+        const { data } = await supabase
           .from("partners")
-          .select("profile_id, professional_type, custom_review_fee")
+          .select("id, profile_id, professional_type, has_inhouse_estate_attorney, inhouse_review_attorney_id, custom_review_fee, stripe_account_id")
           .eq("id", partnerId)
           .single();
-
-        if (partnerForReview?.professional_type === 'attorney') {
-          attorneyId = partnerForReview.profile_id;
-          reviewFee = partnerForReview.custom_review_fee || 30000;
-        }
+        partnerForRouting = data;
       }
+
+      // Look up Mo's profile ID
+      const { data: moProfile } = await supabase
+        .from("profiles")
+        .select("id")
+        .eq("email", INHOUSE_ATTORNEY_EMAIL)
+        .single();
+
+      // Look up admin profile ID
+      const { data: adminProfile } = await supabase
+        .from("profiles")
+        .select("id")
+        .eq("email", ESTATEVAULT_ADMIN_EMAIL)
+        .single();
+
+      const routing = resolveReviewRouting(
+        partnerForRouting,
+        moProfile?.id || null,
+        adminProfile?.id || null
+      );
 
       await supabase.from("attorney_reviews").insert({
         order_id: orderId,
-        attorney_id: attorneyId,
+        attorney_id: routing.reviewerId,
         status: "pending",
-        attorney_fee: reviewFee,
+        attorney_fee: routing.feeAmount,
+        fee_amount: routing.feeAmount,
+        reviewer_type: routing.reviewerType,
+        fee_destination: routing.feeDestination,
+        fee_controlled_by: routing.feeControlledBy,
+        partner_id: routing.partnerId,
         sla_deadline: slaDeadline.toISOString(),
       });
+
+      // ── Handle fee routing via Stripe ──
+      // COMPLIANCE: Mo is W-2 payroll — no Stripe transfer for inhouse_estatevault.
+      // Revenue stays in EstateVault's Stripe account as employment revenue.
+      if (routing.feeDestination === "partner_admin" && partnerForRouting?.stripe_account_id) {
+        // Transfer $300 to partner's Stripe Connect — they pay their in-house attorney
+        try {
+          const transferAmount = routing.feeAmount;
+          const transfer = await stripe.transfers.create({
+            amount: transferAmount,
+            currency: "usd",
+            destination: partnerForRouting.stripe_account_id,
+            transfer_group: orderId,
+            metadata: {
+              type: "attorney_review_fee",
+              order_id: orderId,
+              reviewer_type: routing.reviewerType,
+            },
+          });
+          await supabase.from("audit_log").insert({
+            action: "attorney_review.fee_transferred",
+            resource_type: "attorney_review",
+            metadata: {
+              order_id: orderId,
+              destination: "partner_admin",
+              amount: transferAmount,
+              transfer_id: transfer.id,
+              partner_id: routing.partnerId,
+            },
+          });
+        } catch (transferErr) {
+          console.error("Attorney review fee transfer failed:", transferErr);
+        }
+      }
+      // feeDestination === "estatevault" → no transfer needed, Mo is on payroll
+      // feeDestination === "attorney_stripe_connect" → Review Network (future)
     }
 
     // ── 4b. Queue document generation ───────────────────────────
