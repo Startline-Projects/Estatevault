@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import Footer from "@/components/Footer";
 
@@ -281,23 +281,20 @@ function PricingSection() {
 /*  Earnings Calculator                                                */
 /* ------------------------------------------------------------------ */
 
-const CLIENT_STOPS = [50, 100, 250, 500, 1000];
-const PERCENT_STOPS = [10, 25, 50];
+type TierKey = "standard" | "professional";
+
+const TIER_CONFIG: Record<TierKey, { label: string; price: string; trustEarning: number; platformFee: number }> = {
+  standard: { label: "Standard", price: "$1,200 one-time", trustEarning: 400, platformFee: 1200 },
+  professional: { label: "Professional", price: "$6,000 one-time", trustEarning: 450, platformFee: 6000 },
+};
 
 function EarningsCalculator() {
-  const [clientIdx, setClientIdx] = useState(1); // default 100
-  const [pctIdx, setPctIdx] = useState(1); // default 25%
+  const [tier, setTier] = useState<TierKey>("standard");
+  const [trustsPerMonth, setTrustsPerMonth] = useState(5);
 
-  const clients = CLIENT_STOPS[clientIdx];
-  const pct = PERCENT_STOPS[pctIdx];
-
-  const earnings = useMemo(() => {
-    const trusts = Math.round(clients * (pct / 100));
-    return trusts * 400;
-  }, [clients, pct]);
-
-  const trustsSold = Math.round(clients * (pct / 100));
-  const paybackTrusts = Math.ceil(1200 / 400);
+  const config = TIER_CONFIG[tier];
+  const monthlyEarnings = trustsPerMonth * config.trustEarning;
+  const paybackMonths = monthlyEarnings > 0 ? Math.ceil(config.platformFee / monthlyEarnings) : 0;
 
   return (
     <section className="py-20 md:py-24 px-6 bg-gold/10">
@@ -306,70 +303,88 @@ function EarningsCalculator() {
           See what you could earn.
         </h2>
 
-        <div className="mt-12 bg-white rounded-2xl shadow-lg p-8 md:p-12">
-          {/* Clients slider */}
-          <div>
-            <label className="block text-sm font-medium text-charcoal mb-3">
-              How many clients do you work with?
-            </label>
-            <input
-              type="range"
-              min={0}
-              max={CLIENT_STOPS.length - 1}
-              step={1}
-              value={clientIdx}
-              onChange={(e) => setClientIdx(Number(e.target.value))}
-              className="w-full accent-gold cursor-pointer"
-            />
-            <div className="flex justify-between text-xs text-charcoal/60 mt-1">
-              {CLIENT_STOPS.map((s) => (
-                <span key={s}>{s}</span>
-              ))}
+        <div className="mt-12 bg-white rounded-2xl shadow-lg overflow-hidden">
+          {/* Tier tabs */}
+          <div className="flex">
+            {(Object.keys(TIER_CONFIG) as TierKey[]).map((key) => (
+              <button
+                key={key}
+                onClick={() => setTier(key)}
+                className={`flex-1 py-3.5 text-sm font-semibold transition-colors ${
+                  tier === key
+                    ? "bg-navy text-white"
+                    : "bg-gray-100 text-charcoal/60 hover:bg-gray-200"
+                }`}
+              >
+                {TIER_CONFIG[key].label} &mdash; {TIER_CONFIG[key].price}
+              </button>
+            ))}
+          </div>
+
+          <div className="p-8 md:p-10">
+            {/* Trust packages slider */}
+            <div>
+              <div className="flex items-center justify-between mb-4">
+                <label className="text-xs font-bold uppercase tracking-wider text-charcoal/70">
+                  Trust Packages Per Month
+                </label>
+                <span className="text-3xl font-bold text-navy">{trustsPerMonth}</span>
+              </div>
+              <input
+                type="range"
+                min={1}
+                max={30}
+                step={1}
+                value={trustsPerMonth}
+                onChange={(e) => setTrustsPerMonth(Number(e.target.value))}
+                className="w-full accent-gold cursor-pointer h-2"
+              />
+              <div className="flex justify-between text-xs text-charcoal/40 mt-1.5">
+                <span>1</span>
+                <span>30</span>
+              </div>
             </div>
-            <p className="mt-2 text-lg font-semibold text-navy">
-              {clients} clients
-            </p>
-          </div>
 
-          {/* Percentage slider */}
-          <div className="mt-10">
-            <label className="block text-sm font-medium text-charcoal mb-3">
-              What percentage might need estate planning?
-            </label>
-            <input
-              type="range"
-              min={0}
-              max={PERCENT_STOPS.length - 1}
-              step={1}
-              value={pctIdx}
-              onChange={(e) => setPctIdx(Number(e.target.value))}
-              className="w-full accent-gold cursor-pointer"
-            />
-            <div className="flex justify-between text-xs text-charcoal/60 mt-1">
-              {PERCENT_STOPS.map((p) => (
-                <span key={p}>{p}%</span>
-              ))}
+            {/* Line items */}
+            <div className="mt-8 space-y-0">
+              {/* Trust earnings line */}
+              <div className="flex items-center justify-between py-5 border-t border-gray-200">
+                <div className="text-left">
+                  <p className="text-base font-bold text-charcoal">
+                    Trust Package &times; {trustsPerMonth} client{trustsPerMonth !== 1 ? "s" : ""}
+                  </p>
+                  <p className="text-sm text-charcoal/40 mt-0.5">
+                    ${config.trustEarning.toLocaleString()} per trust package
+                  </p>
+                </div>
+                <p className="text-2xl font-bold text-navy">
+                  ${monthlyEarnings.toLocaleString()}
+                </p>
+              </div>
             </div>
-            <p className="mt-2 text-lg font-semibold text-navy">{pct}%</p>
+
+            {/* Summary */}
+            <div className="mt-4 rounded-xl bg-navy p-8 text-center">
+              <p className="text-5xl sm:text-6xl font-bold text-white">
+                ${monthlyEarnings.toLocaleString()}
+              </p>
+              <p className="text-white/60 mt-1">/month</p>
+
+              <p className="mt-5 text-sm text-gold font-semibold italic">
+                {paybackMonths <= 1
+                  ? "At this rate, your platform pays for itself in less than 1 month."
+                  : `At this rate, your platform pays for itself in ${paybackMonths} month${paybackMonths !== 1 ? "s" : ""}.`}
+              </p>
+            </div>
           </div>
 
-          {/* Result */}
-          <div className="mt-12 rounded-xl bg-navy p-8">
-            <p className="text-sm text-gray-300">
-              Estimated annual earnings at $400/trust
-            </p>
-            <p className="mt-2 text-4xl sm:text-5xl font-bold text-gold">
-              ${earnings.toLocaleString()}
-            </p>
-            <p className="mt-1 text-sm text-gray-400">
-              {trustsSold} trust packages
+          {/* Disclaimer */}
+          <div className="px-8 pb-6">
+            <p className="text-xs text-charcoal/40 leading-relaxed text-center">
+              Earnings shown are estimates based on your selected volume.
+              EstateVault does not set, approve, or regulate partner earnings.
             </p>
           </div>
-
-          <p className="mt-6 text-sm text-charcoal/70">
-            Your platform pays for itself with just{" "}
-            <span className="font-semibold text-navy">{paybackTrusts} trust packages</span>.
-          </p>
         </div>
       </div>
     </section>
