@@ -283,18 +283,21 @@ function PricingSection() {
 
 type TierKey = "standard" | "professional";
 
-const TIER_CONFIG: Record<TierKey, { label: string; price: string; trustEarning: number; platformFee: number }> = {
-  standard: { label: "Standard", price: "$1,200 one-time", trustEarning: 400, platformFee: 1200 },
-  professional: { label: "Professional", price: "$6,000 one-time", trustEarning: 450, platformFee: 6000 },
+const TIER_CONFIG: Record<TierKey, { label: string; price: string; trustEarning: number; willEarning: number; platformFee: number }> = {
+  standard: { label: "Standard", price: "$1,200 one-time", trustEarning: 400, willEarning: 300, platformFee: 1200 },
+  professional: { label: "Professional", price: "$6,000 one-time", trustEarning: 450, willEarning: 350, platformFee: 6000 },
 };
 
 function EarningsCalculator() {
   const [tier, setTier] = useState<TierKey>("standard");
   const [trustsPerMonth, setTrustsPerMonth] = useState(5);
+  const [willsPerMonth, setWillsPerMonth] = useState(5);
 
   const config = TIER_CONFIG[tier];
-  const monthlyEarnings = trustsPerMonth * config.trustEarning;
-  const paybackMonths = monthlyEarnings > 0 ? Math.ceil(config.platformFee / monthlyEarnings) : 0;
+  const trustEarnings = trustsPerMonth * config.trustEarning;
+  const willEarnings = willsPerMonth * config.willEarning;
+  const totalMonthly = trustEarnings + willEarnings;
+  const paybackMonths = totalMonthly > 0 ? Math.ceil(config.platformFee / totalMonthly) : 0;
 
   return (
     <section className="py-20 md:py-24 px-6 bg-gold/10">
@@ -345,6 +348,29 @@ function EarningsCalculator() {
               </div>
             </div>
 
+            {/* Will packages slider */}
+            <div className="mt-8">
+              <div className="flex items-center justify-between mb-4">
+                <label className="text-xs font-bold uppercase tracking-wider text-charcoal/70">
+                  Will Packages Per Month
+                </label>
+                <span className="text-3xl font-bold text-navy">{willsPerMonth}</span>
+              </div>
+              <input
+                type="range"
+                min={1}
+                max={30}
+                step={1}
+                value={willsPerMonth}
+                onChange={(e) => setWillsPerMonth(Number(e.target.value))}
+                className="w-full accent-gold cursor-pointer h-2"
+              />
+              <div className="flex justify-between text-xs text-charcoal/40 mt-1.5">
+                <span>1</span>
+                <span>30</span>
+              </div>
+            </div>
+
             {/* Line items */}
             <div className="mt-8 space-y-0">
               {/* Trust earnings line */}
@@ -358,7 +384,22 @@ function EarningsCalculator() {
                   </p>
                 </div>
                 <p className="text-2xl font-bold text-navy">
-                  ${monthlyEarnings.toLocaleString()}
+                  ${trustEarnings.toLocaleString()}
+                </p>
+              </div>
+
+              {/* Will earnings line */}
+              <div className="flex items-center justify-between py-5 border-t border-gray-200">
+                <div className="text-left">
+                  <p className="text-base font-bold text-charcoal">
+                    Will Package &times; {willsPerMonth} client{willsPerMonth !== 1 ? "s" : ""}
+                  </p>
+                  <p className="text-sm text-charcoal/40 mt-0.5">
+                    ${config.willEarning.toLocaleString()} per will package
+                  </p>
+                </div>
+                <p className="text-2xl font-bold text-navy">
+                  ${willEarnings.toLocaleString()}
                 </p>
               </div>
             </div>
@@ -366,9 +407,15 @@ function EarningsCalculator() {
             {/* Summary */}
             <div className="mt-4 rounded-xl bg-navy p-8 text-center">
               <p className="text-5xl sm:text-6xl font-bold text-white">
-                ${monthlyEarnings.toLocaleString()}
+                ${totalMonthly.toLocaleString()}
               </p>
               <p className="text-white/60 mt-1">/month</p>
+
+              <div className="mt-4 flex justify-center gap-6 text-sm text-white/50">
+                <span>Trusts: ${trustEarnings.toLocaleString()}</span>
+                <span className="text-white/20">|</span>
+                <span>Wills: ${willEarnings.toLocaleString()}</span>
+              </div>
 
               <p className="mt-5 text-sm text-gold font-semibold italic">
                 {paybackMonths <= 1
