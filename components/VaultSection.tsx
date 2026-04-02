@@ -93,7 +93,7 @@ export default function VaultSection() {
         </div>
 
         <Link
-          href="/vault"
+          href="/quiz"
           className="mt-14 inline-flex items-center gap-2 rounded-full border border-gold/40 px-8 py-3.5 text-sm font-semibold text-gold hover:bg-gold hover:text-white transition-all duration-300 hover:shadow-gold group"
         >
           Learn More About the Vault

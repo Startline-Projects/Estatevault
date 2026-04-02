@@ -169,6 +169,9 @@ function AttorneySignupContent() {
       }
 
       if (data.url) {
+        // Store password in sessionStorage so the verify endpoint can use it
+        // instead of storing it in Stripe metadata
+        sessionStorage.setItem("ev_attorney_pwd", formData.password);
         window.location.href = data.url;
       }
     } catch (err) {
@@ -401,7 +404,7 @@ function AttorneySignupContent() {
                 />
                 <span className="text-sm text-charcoal/70">
                   I agree to the{' '}
-                  <a href="/partners/agreement" className="text-navy underline underline-offset-2">
+                  <a href="/terms" className="text-navy underline underline-offset-2">
                     Partner Agreement
                   </a>{' '}
                   and confirm that I am a licensed attorney in good standing with the State Bar of Michigan. *
