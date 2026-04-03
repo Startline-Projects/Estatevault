@@ -33,7 +33,7 @@ export default function PasswordSetup({ email, userId }: PasswordSetupProps) {
     try {
       const supabase = createClient();
 
-      // If user has a session (auto-created account), update password directly
+      // If user has a session (already logged in), update password directly
       const { data: { session } } = await supabase.auth.getSession();
 
       if (session) {
@@ -43,22 +43,21 @@ export default function PasswordSetup({ email, userId }: PasswordSetupProps) {
           setLoading(false);
           return;
         }
-      } else if (userId) {
-        // Sign in with the auto-created account first, then update
-        // The webhook created the account — try signing in with the temp/invite flow
+      } else {
+        // Call set-password API — it handles userId lookup by email with retry
         const res = await fetch("/api/auth/set-password", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ userId, email, password }),
+          body: JSON.stringify({ userId: userId || undefined, email, password }),
         });
         const data = await res.json();
         if (!res.ok) {
-          setError(data.error || "Failed to set password");
+          setError(data.error || "Failed to set password. Please try again.");
           setLoading(false);
           return;
         }
 
-        // Sign in with new password
+        // Sign in with the new password
         const { error: signInErr } = await supabase.auth.signInWithPassword({ email, password });
         if (signInErr) {
           setError(signInErr.message);

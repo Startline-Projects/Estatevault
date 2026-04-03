@@ -21,7 +21,7 @@ export default function OnboardingLayout({ children }: { children: React.ReactNo
             EstateVault <span className="text-gold">Pro</span>
           </Link>
           <span className="text-sm text-charcoal/60">Step {currentStep} of 7</span>
-          <button onClick={() => router.push("/pro/dashboard")} className="text-sm text-navy/60 hover:text-navy transition-colors">
+          <button onClick={() => { window.location.href = "/pro/dashboard"; }} className="text-sm text-navy/60 hover:text-navy transition-colors">
             Save & Exit
           </button>
         </div>

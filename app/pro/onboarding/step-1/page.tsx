@@ -9,6 +9,7 @@ export default function Step1Page() {
   const [selectedTier, setSelectedTier] = useState<"standard" | "enterprise">("standard");
   const [agreed, setAgreed] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [showAgreement, setShowAgreement] = useState(false);
   const [error, setError] = useState("");
   const [sliderValue, setSliderValue] = useState(5);
   const [partnerId, setPartnerId] = useState("");
@@ -112,7 +113,7 @@ export default function Step1Page() {
           <input type="checkbox" checked={agreed} onChange={(e) => setAgreed(e.target.checked)} className="mt-0.5 h-5 w-5 rounded accent-gold" />
           <span className="text-sm text-charcoal">I have read and agree to the Partner Agreement</span>
         </label>
-        <a href="/legal/partner-agreement" className="mt-2 block text-xs text-navy/60 hover:text-gold">View full Partner Agreement</a>
+        <button onClick={() => setShowAgreement(true)} className="mt-2 block text-xs text-navy/60 hover:text-gold">View full Partner Agreement</button>
       </div>
 
       {error && <div className="mt-4 rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">{error}</div>}
@@ -120,6 +121,52 @@ export default function Step1Page() {
       <button onClick={handleGetStarted} disabled={!agreed || loading} className="mt-8 w-full min-h-[44px] rounded-full bg-gold py-3.5 text-sm font-semibold text-white hover:bg-gold/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
         {loading ? "Redirecting to payment..." : `Get Started — ${selectedTier === "enterprise" ? "$6,000" : "$1,200"} one-time`}
       </button>
+
+      {showAgreement && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setShowAgreement(false)}>
+          <div className="relative mx-4 max-h-[80vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-white p-8 shadow-xl" onClick={(e) => e.stopPropagation()}>
+            <button onClick={() => setShowAgreement(false)} className="absolute right-4 top-4 text-gray-400 hover:text-gray-600 text-xl">&times;</button>
+            <h2 className="text-xl font-bold text-navy">EstateVault Partner Agreement</h2>
+            <p className="mt-1 text-xs text-charcoal/40">Last updated: April 2026</p>
+
+            <div className="mt-6 space-y-6 text-sm text-charcoal/80 leading-relaxed">
+              <section>
+                <h3 className="font-semibold text-navy">1. Scope of Services</h3>
+                <p className="mt-2">EstateVault provides a white-label estate planning document preparation platform. Partners are authorized to offer this platform to their clients under their own branding. This platform generates documents based on client-provided information and does not constitute legal advice.</p>
+              </section>
+
+              <section>
+                <h3 className="font-semibold text-navy">2. Partner Responsibilities</h3>
+                <p className="mt-2">Partners agree to: (a) complete platform certification before facilitating client sessions; (b) not provide legal advice through the platform; (c) ensure clients sign the required acknowledgment form before document generation; (d) maintain accurate business and contact information.</p>
+              </section>
+
+              <section>
+                <h3 className="font-semibold text-navy">3. Fees & Revenue</h3>
+                <p className="mt-2">Partners pay a one-time platform fee upon enrollment. Revenue from client document purchases is split between EstateVault and the Partner according to the selected tier (Standard or Enterprise). Detailed revenue splits are provided during onboarding.</p>
+              </section>
+
+              <section>
+                <h3 className="font-semibold text-navy">4. Client Data & Privacy</h3>
+                <p className="mt-2">All client data is stored securely and encrypted. Partners may only access client data for clients they have directly onboarded. Partners must not share, export, or misuse client information outside the platform.</p>
+              </section>
+
+              <section>
+                <h3 className="font-semibold text-navy">5. Termination</h3>
+                <p className="mt-2">Either party may terminate this agreement with 30 days written notice. Upon termination, the Partner's access to the platform will be revoked. Existing client accounts and documents will remain accessible to the clients directly.</p>
+              </section>
+
+              <section>
+                <h3 className="font-semibold text-navy">6. Limitation of Liability</h3>
+                <p className="mt-2">EstateVault is not responsible for any legal outcomes arising from documents generated through the platform. The platform provides document preparation services only. Partners and clients are advised to seek independent legal counsel for complex estate planning needs.</p>
+              </section>
+
+              <p className="mt-4 text-xs text-charcoal/40 italic">This is a summary of the Partner Agreement. The full legal terms will be provided upon enrollment.</p>
+            </div>
+
+            <button onClick={() => setShowAgreement(false)} className="mt-6 w-full rounded-full bg-navy py-3 text-sm font-semibold text-white hover:bg-navy/90 transition-colors">Close</button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
