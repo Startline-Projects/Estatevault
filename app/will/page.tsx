@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { type WillIntake, initialWillIntake } from "@/lib/will-types";
@@ -14,6 +14,8 @@ type Stage = "loading" | "acknowledgment" | "intake" | "redirecting";
 
 export default function WillPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const partnerParam = searchParams.get("partner") || "";
   const [stage, setStage] = useState<Stage>("loading");
   const [userId, setUserId] = useState<string | null>(null);
 
@@ -157,6 +159,7 @@ export default function WillPage() {
       // Save intake to sessionStorage and go to checkout
       sessionStorage.setItem("willIntake", JSON.stringify(intake));
       sessionStorage.setItem("willUserId", userId || "");
+      sessionStorage.setItem("willPartner", partnerParam);
       setStage("redirecting");
       router.push("/will/checkout");
       return;

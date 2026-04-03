@@ -25,6 +25,7 @@ export default function WillCheckoutPage() {
   const [promoEmail, setPromoEmail] = useState("");
   const [showAcknowledgment, setShowAcknowledgment] = useState(false);
   const [ackChecked, setAckChecked] = useState(false);
+  const [partnerId, setPartnerId] = useState("");
 
   const total = promoApplied ? 0 : (attorneyReview ? 700 : 400);
 
@@ -38,6 +39,7 @@ export default function WillCheckoutPage() {
       }
       const intake = sessionStorage.getItem("willIntake");
       if (!intake) router.push("/will");
+      setPartnerId(sessionStorage.getItem("willPartner") || "");
     }
     init();
   }, [router]);
@@ -109,6 +111,7 @@ export default function WillCheckoutPage() {
           intakeAnswers: JSON.parse(intake),
           promoCode,
           email: promoEmail,
+          partnerId: partnerId || null,
         }),
       });
 
@@ -141,6 +144,7 @@ export default function WillCheckoutPage() {
           userId: userId || null,
           attorneyReview,
           intakeAnswers: JSON.parse(intake),
+          partnerId: partnerId || null,
         }),
       });
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { type TrustIntake, initialTrustIntake, checkComplexity } from "@/lib/trust-types";
@@ -36,6 +36,8 @@ const execRelOptions = ["Spouse/Partner", "Adult Child", "Sibling", "Parent", "O
 
 export default function TrustPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const partnerParam = searchParams.get("partner") || "";
   const [stage, setStage] = useState<Stage>("loading");
   const [userId, setUserId] = useState<string | null>(null);
   const [intake, setIntake] = useState<TrustIntake>(initialTrustIntake);
@@ -138,6 +140,7 @@ export default function TrustPage() {
       sessionStorage.setItem("trustIntake", JSON.stringify(intake));
       sessionStorage.setItem("trustUserId", userId || "");
       sessionStorage.setItem("trustComplexity", JSON.stringify(complexity));
+      sessionStorage.setItem("trustPartner", partnerParam);
       setStage("redirecting");
       router.push("/trust/checkout");
       return;
