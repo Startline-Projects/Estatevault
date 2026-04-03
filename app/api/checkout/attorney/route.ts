@@ -170,7 +170,6 @@ export async function POST(request: Request) {
         first_name: first_name || "",
         last_name: last_name || "",
         phone: phone || "",
-        password: password || "",
         name: name || "",
       },
     });

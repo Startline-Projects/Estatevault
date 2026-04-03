@@ -26,6 +26,7 @@ export async function POST(request: Request) {
   try {
     const body = await request.json();
     const sessionId = body.session_id;
+    const clientPassword = body.password || "";
 
     if (!sessionId) {
       return NextResponse.json(
@@ -54,7 +55,7 @@ export async function POST(request: Request) {
     }
 
     const email = session.customer_email || "";
-    const password = meta.password || "";
+    const password = clientPassword || "";
     const tier = meta.tier || "standard";
     const barNumber = meta.bar_number || "";
     const reviewFee = parseInt(meta.review_fee || "300", 10);

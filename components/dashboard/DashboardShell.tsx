@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
@@ -40,8 +41,9 @@ export default function DashboardShell({ userName, children }: DashboardShellPro
       {/* Desktop sidebar */}
       <aside className="fixed left-0 top-0 z-40 hidden md:flex h-screen w-60 flex-col bg-navy">
         <div className="px-6 pt-6 pb-4">
-          <Link href="/" className="text-xl font-bold text-white">
-            EstateVault
+          <Link href="/" className="flex items-center gap-2.5">
+            <Image src="/logo.svg" alt="EstateVault" width={32} height={32} />
+            <span className="text-xl font-bold text-white">EstateVault</span>
           </Link>
           <div className="mt-4 h-px bg-gold/30" />
         </div>
@@ -76,8 +78,9 @@ export default function DashboardShell({ userName, children }: DashboardShellPro
 
       {/* Mobile header */}
       <header className="md:hidden fixed top-0 left-0 right-0 z-40 bg-navy px-4 py-3 flex items-center justify-between">
-        <Link href="/" className="text-lg font-bold text-white">
-          EstateVault
+        <Link href="/" className="flex items-center gap-2">
+          <Image src="/logo.svg" alt="EstateVault" width={28} height={28} />
+          <span className="text-lg font-bold text-white">EstateVault</span>
         </Link>
         <button
           onClick={() => setSidebarOpen(!sidebarOpen)}
@@ -94,7 +97,10 @@ export default function DashboardShell({ userName, children }: DashboardShellPro
           <div className="absolute inset-0 bg-black/50" onClick={() => setSidebarOpen(false)} />
           <div className="absolute left-0 top-0 h-full w-64 bg-navy p-6">
             <div className="flex items-center justify-between mb-6">
-              <span className="text-lg font-bold text-white">EstateVault</span>
+              <div className="flex items-center gap-2">
+                <Image src="/logo.svg" alt="EstateVault" width={28} height={28} />
+                <span className="text-lg font-bold text-white">EstateVault</span>
+              </div>
               <button onClick={() => setSidebarOpen(false)} className="text-white/60">✕</button>
             </div>
             <nav className="space-y-1">

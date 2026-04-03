@@ -77,17 +77,21 @@ Generate the personalized summary.`;
       messages: [{ role: "user", content: userPrompt }],
     });
 
-    const text = response.content[0].type === "text" ? response.content[0].text : "";
-    const parsed = JSON.parse(text);
+    const text = response.content.length > 0 && response.content[0].type === "text" ? response.content[0].text : "";
 
-    if (parsed.headline && Array.isArray(parsed.bullets) && parsed.bullets.length === 3) {
-      return NextResponse.json(parsed);
+    try {
+      const parsed = JSON.parse(text);
+      if (parsed.headline && Array.isArray(parsed.bullets) && parsed.bullets.length === 3) {
+        return NextResponse.json(parsed);
+      }
+    } catch {
+      // Claude returned non-JSON — fall through to fallback
     }
 
     return NextResponse.json(recommendation === "will" ? WILL_FALLBACK : TRUST_FALLBACK);
   } catch (error) {
     console.error("Quiz personalization error:", error);
-    const { recommendation } = await request.json().catch(() => ({ recommendation: "will" }));
-    return NextResponse.json(recommendation === "will" ? WILL_FALLBACK : TRUST_FALLBACK);
+    // Don't try to read request body again — it was already consumed above
+    return NextResponse.json(WILL_FALLBACK);
   }
 }

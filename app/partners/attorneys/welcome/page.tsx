@@ -49,10 +49,14 @@ function AttorneyWelcomeContent() {
 
     async function verify() {
       try {
+        // Retrieve password from sessionStorage (stored before Stripe redirect)
+        const storedPassword = sessionStorage.getItem("ev_attorney_pwd") || "";
+        sessionStorage.removeItem("ev_attorney_pwd");
+
         const res = await fetch('/api/checkout/attorney/verify', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ session_id: sessionId }),
+          body: JSON.stringify({ session_id: sessionId, password: storedPassword }),
         });
 
         const data = await res.json();

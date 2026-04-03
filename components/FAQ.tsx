@@ -29,40 +29,65 @@ const faqs = [
   },
 ];
 
-function AccordionItem({ q, a }: { q: string; a: string }) {
-  const [open, setOpen] = useState(false);
-
+function AccordionItem({ q, a, isOpen, onToggle }: { q: string; a: string; isOpen: boolean; onToggle: () => void }) {
   return (
-    <div className="border-b border-gray-200">
+    <div className={`border border-transparent rounded-xl transition-all duration-300 ${isOpen ? "bg-navy-50/50 border-navy-100" : "hover:bg-gray-50"}`}>
       <button
-        onClick={() => setOpen(!open)}
-        className="flex w-full items-center justify-between py-5 text-left"
+        onClick={onToggle}
+        className="flex w-full items-center justify-between px-6 py-5 text-left"
       >
-        <span className="text-base font-medium text-navy">{q}</span>
-        <span className="ml-4 text-xl text-gold shrink-0">
-          {open ? "\u2212" : "+"}
+        <span className={`text-base font-medium transition-colors duration-200 ${isOpen ? "text-navy" : "text-charcoal/80"}`}>
+          {q}
+        </span>
+        <span
+          className={`ml-4 flex h-7 w-7 shrink-0 items-center justify-center rounded-full transition-all duration-300 ${
+            isOpen ? "bg-navy text-white rotate-180" : "bg-gray-100 text-charcoal/40"
+          }`}
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+          </svg>
         </span>
       </button>
-      {open && (
-        <div className="pb-5 pr-8">
-          <p className="text-sm text-charcoal/70 leading-relaxed">{a}</p>
+      <div
+        className="accordion-content"
+        style={{ maxHeight: isOpen ? "200px" : "0px", opacity: isOpen ? 1 : 0 }}
+      >
+        <div className="px-6 pb-5">
+          <p className="text-sm text-charcoal/60 leading-relaxed">{a}</p>
         </div>
-      )}
+      </div>
     </div>
   );
 }
 
 export default function FAQ() {
-  return (
-    <section id="faq" className="bg-gray-50 py-20 px-6">
-      <div className="mx-auto max-w-3xl">
-        <h2 className="text-3xl md:text-4xl font-bold text-navy text-center">
-          Common Questions
-        </h2>
+  const [openIndex, setOpenIndex] = useState<number | null>(null);
 
-        <div className="mt-12">
-          {faqs.map((faq) => (
-            <AccordionItem key={faq.q} q={faq.q} a={faq.a} />
+  return (
+    <section id="faq" className="bg-gradient-to-b from-white to-gray-50 py-24 px-6">
+      <div className="mx-auto max-w-3xl">
+        <div className="text-center mb-14">
+          <div className="inline-flex items-center gap-2 rounded-full bg-navy-50 px-4 py-1.5 mb-4">
+            <span className="text-xs font-semibold text-navy tracking-wide uppercase">FAQ</span>
+          </div>
+          <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-navy tracking-tight">
+            Common Questions
+          </h2>
+          <p className="mt-4 text-lg text-charcoal/50">
+            Everything you need to know about protecting your family.
+          </p>
+        </div>
+
+        <div className="space-y-2">
+          {faqs.map((faq, index) => (
+            <AccordionItem
+              key={faq.q}
+              q={faq.q}
+              a={faq.a}
+              isOpen={openIndex === index}
+              onToggle={() => setOpenIndex(openIndex === index ? null : index)}
+            />
           ))}
         </div>
       </div>

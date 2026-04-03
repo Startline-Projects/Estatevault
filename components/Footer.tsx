@@ -1,40 +1,72 @@
 import Link from "next/link";
+import Image from "next/image";
 
 export default function Footer() {
   return (
-    <footer className="bg-navy/95 py-12 px-6">
+    <footer className="bg-navy-900 py-16 px-6">
       <div className="mx-auto max-w-6xl">
-        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-8">
+        <div className="flex flex-col md:flex-row items-start justify-between gap-10">
           {/* Logo + tagline */}
-          <div>
-            <p className="text-lg font-bold text-white">EstateVault</p>
-            <p className="mt-1 text-sm text-gray-400">
-              Protect Everything That Matters
+          <div className="flex flex-col gap-4">
+            <Link href="/" className="flex items-center gap-3">
+              <Image
+                src="/logo.svg"
+                alt="EstateVault"
+                width={36}
+                height={36}
+              />
+              <span className="text-lg font-bold text-white">EstateVault</span>
+            </Link>
+            <p className="text-sm text-white/40 max-w-xs">
+              Protect Everything That Matters. Attorney-reviewed estate planning for Michigan families.
             </p>
           </div>
 
-          {/* Links */}
-          <nav className="flex gap-6 text-sm">
-            <Link href="/privacy" className="text-gray-400 hover:text-white transition-colors">
-              Privacy Policy
-            </Link>
-            <Link href="/terms" className="text-gray-400 hover:text-white transition-colors">
-              Terms of Service
-            </Link>
-            <Link href="/contact" className="text-gray-400 hover:text-white transition-colors">
-              Contact
-            </Link>
-          </nav>
+          {/* Link groups */}
+          <div className="flex gap-16">
+            <div>
+              <h4 className="text-xs font-semibold text-white/60 uppercase tracking-wider mb-4">Company</h4>
+              <nav className="flex flex-col gap-3 text-sm">
+                <Link href="/privacy" className="text-white/40 hover:text-white transition-colors duration-200">
+                  Privacy Policy
+                </Link>
+                <Link href="/terms" className="text-white/40 hover:text-white transition-colors duration-200">
+                  Terms of Service
+                </Link>
+                <Link href="/contact" className="text-white/40 hover:text-white transition-colors duration-200">
+                  Contact
+                </Link>
+              </nav>
+            </div>
+            <div>
+              <h4 className="text-xs font-semibold text-white/60 uppercase tracking-wider mb-4">Product</h4>
+              <nav className="flex flex-col gap-3 text-sm">
+                <Link href="/quiz" className="text-white/40 hover:text-white transition-colors duration-200">
+                  Free Quiz
+                </Link>
+                <Link href="/will" className="text-white/40 hover:text-white transition-colors duration-200">
+                  Will Package
+                </Link>
+                <Link href="/trust" className="text-white/40 hover:text-white transition-colors duration-200">
+                  Trust Package
+                </Link>
+                <Link href="/professionals" className="text-white/40 hover:text-white transition-colors duration-200">
+                  For Professionals
+                </Link>
+              </nav>
+            </div>
+          </div>
+        </div>
 
-          {/* Copyright */}
-          <p className="text-sm text-gray-500">
-            &copy; 2025 EstateVault Technologies LLC
+        <div className="my-10 h-px bg-white/10" />
+
+        <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+          <p className="text-xs text-white/30">
+            &copy; 2025 EstateVault Technologies LLC. All rights reserved.
           </p>
         </div>
 
-        <hr className="my-8 border-white/10" />
-
-        <p className="text-xs text-gray-500 leading-relaxed max-w-4xl">
+        <p className="mt-6 text-xs text-white/20 leading-relaxed max-w-4xl">
           This platform provides document preparation services only. It does not
           provide legal advice. No attorney-client relationship is created by
           your use of this platform. Documents should be reviewed by a licensed
