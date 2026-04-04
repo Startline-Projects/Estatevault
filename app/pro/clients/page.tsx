@@ -138,7 +138,7 @@ export default function ProClientsPage() {
         <div className="mt-16 text-center">
           <span className="text-4xl">👥</span>
           <p className="mt-4 text-sm text-charcoal/50">No clients yet</p>
-          <p className="text-xs text-charcoal/40 mt-1">Create your first client session or send an invite link to get started.</p>
+          <p className="text-xs text-charcoal/60 mt-1">Create your first client session or send an invite link to get started.</p>
         </div>
       ) : (
         <div className="mt-4 rounded-xl bg-white border border-gray-200 overflow-hidden">
@@ -180,7 +180,7 @@ export default function ProClientsPage() {
           <div className="relative w-full max-w-lg bg-white rounded-t-2xl md:rounded-2xl p-6 shadow-xl max-h-[80vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-lg font-bold text-navy">New Client</h2>
-              <button onClick={() => setShowModal(false)} className="text-charcoal/40 hover:text-charcoal text-xl">×</button>
+              <button onClick={() => setShowModal(false)} className="text-charcoal/60 hover:text-charcoal text-xl">×</button>
             </div>
             <div className="flex gap-2 mb-6">
               <button onClick={() => setModalTab("start")} className={`rounded-full px-4 py-1.5 text-sm font-medium ${modalTab === "start" ? "bg-navy text-white" : "bg-gray-100 text-charcoal/60"}`}>Start With Client Now</button>

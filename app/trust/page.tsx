@@ -355,7 +355,7 @@ export default function TrustPage() {
             {intake.hasHealthcareWishes === "Yes" && (
               <div className="mt-5">
                 <textarea value={intake.healthcareWishesDescription} onChange={(e) => update({ healthcareWishesDescription: e.target.value })} placeholder="Example: I do not wish to be kept on life support if there is no reasonable chance of recovery." rows={4} className="w-full rounded-xl border-2 border-gray-200 bg-white px-4 py-3 text-sm text-charcoal placeholder:text-gray-400 focus:border-gold focus:outline-none focus:ring-1 focus:ring-gold/30 transition-colors resize-none" />
-                <p className="mt-2 text-xs text-charcoal/40">This is your personal instruction — it guides your advocate&apos;s decisions.</p>
+                <p className="mt-2 text-xs text-charcoal/60">This is your personal instruction — it guides your advocate&apos;s decisions.</p>
               </div>
             )}
           </>
@@ -371,7 +371,7 @@ export default function TrustPage() {
               <div className="mt-5">
                 <QuestionLabel>Describe your specific gifts</QuestionLabel>
                 <textarea value={intake.specificGiftsDescription} onChange={(e) => update({ specificGiftsDescription: e.target.value })} placeholder="Example: My 1967 Ford Mustang to my son James Smith" rows={4} className="w-full rounded-xl border-2 border-gray-200 bg-white px-4 py-3 text-sm text-charcoal placeholder:text-gray-400 focus:border-gold focus:outline-none focus:ring-1 focus:ring-gold/30 transition-colors resize-none" />
-                <p className="mt-2 text-xs text-charcoal/40">Specific gifts are distributed before the rest of your estate.</p>
+                <p className="mt-2 text-xs text-charcoal/60">Specific gifts are distributed before the rest of your estate.</p>
               </div>
             )}
           </>
@@ -422,7 +422,7 @@ export default function TrustPage() {
       <div className="fixed top-0 left-0 right-0 z-40 h-1.5 bg-navy/80"><div className="h-full bg-gold transition-all duration-500 ease-out" style={{ width: `${progress}%` }} /></div>
       <div className="fixed top-1.5 left-0 right-0 z-30 flex items-center justify-between px-6 py-3">
         <button onClick={handleBack} className="flex items-center gap-1 text-sm text-white/70 hover:text-white transition-colors"><span className="text-lg">&larr;</span> Back</button>
-        <span className="text-xs text-white/40">{safeIndex + 1} of {totalCards}</span>
+        <span className="text-xs text-white/60">{safeIndex + 1} of {totalCards}</span>
       </div>
       <div className="flex min-h-screen items-center justify-center px-6 pt-16 pb-8">
         <div className={`w-full max-w-lg transform transition-all duration-300 ease-out ${slideClass}`}>

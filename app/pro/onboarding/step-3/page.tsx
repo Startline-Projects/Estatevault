@@ -112,7 +112,7 @@ export default function Step3Page() {
               <div className="flex justify-between"><span className="text-charcoal/60">Client pays</span><span className="font-semibold text-navy">$300</span></div>
               <div className="flex justify-between"><span className="text-charcoal/60">Your earnings</span><span className="font-semibold text-green-600">$300</span></div>
             </div>
-            <p className="mt-3 text-xs text-charcoal/40">As a reviewing attorney, you earn 100% of the review fee when clients in your network request attorney review.</p>
+            <p className="mt-3 text-xs text-charcoal/60">As a reviewing attorney, you earn 100% of the review fee when clients in your network request attorney review.</p>
           </div>
         ) : (
           <div className="rounded-xl bg-white border border-gray-200 p-6">
@@ -121,7 +121,7 @@ export default function Step3Page() {
               <div className="flex justify-between"><span className="text-charcoal/60">Client pays</span><span className="font-semibold text-navy">$300</span></div>
               <div className="flex justify-between"><span className="text-charcoal/60">Goes to</span><span className="text-charcoal/50">Reviewing attorney</span></div>
             </div>
-            <p className="mt-3 text-xs text-charcoal/40">Attorney review fees go directly to the reviewing attorney. This protects you from any fee-splitting concerns.</p>
+            <p className="mt-3 text-xs text-charcoal/60">Attorney review fees go directly to the reviewing attorney. This protects you from any fee-splitting concerns.</p>
           </div>
         )}
         <div className="rounded-xl bg-white border border-gray-200 p-6">
@@ -136,7 +136,7 @@ export default function Step3Page() {
       <div className="mt-6 rounded-xl bg-gray-50 border border-gray-200 p-6 text-center">
         <p className="text-sm text-charcoal/60">If you facilitate 5 trust packages this month:</p>
         <p className="mt-2 text-3xl font-bold text-navy">{scenarioEarnings}</p>
-        <p className="text-xs text-charcoal/40">in monthly earnings, deposited weekly every Friday</p>
+        <p className="text-xs text-charcoal/60">in monthly earnings, deposited weekly every Friday</p>
       </div>
 
       {/* In-House Attorney Decision Card (attorneys only) */}
@@ -213,7 +213,7 @@ export default function Step3Page() {
                   className="w-full min-h-[40px] rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-gold focus:outline-none"
                 />
               </div>
-              <p className="text-xs text-charcoal/40">
+              <p className="text-xs text-charcoal/60">
                 This attorney will receive review assignments and must have an active bar membership.
                 You can change this later in Settings.
               </p>

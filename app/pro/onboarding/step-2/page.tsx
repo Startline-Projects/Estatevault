@@ -175,7 +175,7 @@ export default function Step2Page() {
                     </svg>
                   </div>
                   <p className="text-sm text-charcoal/60">Drag and drop or click to upload</p>
-                  <p className="text-xs text-charcoal/40 mt-1">PNG, SVG, JPG, WebP — max 5MB</p>
+                  <p className="text-xs text-charcoal/60 mt-1">PNG, SVG, JPG, WebP — max 5MB</p>
                 </>
               )}
             </div>

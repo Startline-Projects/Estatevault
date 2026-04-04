@@ -52,7 +52,7 @@ export default function Module3Page() {
 
       <div className="rounded-xl bg-white border border-gray-200 p-8">
         <div className="flex items-center justify-between">
-          <span className="text-xs font-semibold text-charcoal/40">Module {MODULE_ID}</span>
+          <span className="text-xs font-semibold text-charcoal/60">Module {MODULE_ID}</span>
           {completed && (
             <span className="rounded-full bg-green-100 px-3 py-1 text-xs font-medium text-green-700">
               Complete

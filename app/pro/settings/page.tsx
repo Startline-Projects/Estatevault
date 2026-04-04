@@ -252,7 +252,7 @@ export default function ProSettingsPage() {
             <label className="block text-sm font-medium text-navy mb-1">Logo</label>
             <div className="rounded-xl border-2 border-dashed border-gray-300 p-6 text-center">
               <p className="text-sm text-charcoal/50">Drag and drop or click to upload</p>
-              <p className="text-xs text-charcoal/40 mt-1">PNG, SVG, JPG - max 5MB</p>
+              <p className="text-xs text-charcoal/60 mt-1">PNG, SVG, JPG - max 5MB</p>
             </div>
           </div>
           <div>
@@ -497,7 +497,7 @@ export default function ProSettingsPage() {
                   </button>
                 </div>
                 <div className="rounded-lg bg-gray-50 p-4 text-center">
-                  <p className="text-xs text-charcoal/40">No team members added yet.</p>
+                  <p className="text-xs text-charcoal/60">No team members added yet.</p>
                 </div>
               </div>
             ),
@@ -583,7 +583,7 @@ export default function ProSettingsPage() {
               </ul>
             </div>
             {partner.professional_type === "attorney" && !partner.has_inhouse_estate_attorney && (
-              <p className="text-xs text-charcoal/40">
+              <p className="text-xs text-charcoal/60">
                 If your firm has a licensed estate planning attorney who can handle reviews,
                 contact support@estatevault.com to enable in-house attorney reviews.
               </p>
@@ -614,7 +614,7 @@ export default function ProSettingsPage() {
               disabled
               className="w-full min-h-[44px] rounded-xl border-2 border-gray-200 px-4 py-3 text-sm bg-gray-50 text-charcoal/50 cursor-not-allowed"
             />
-            <p className="mt-1 text-xs text-charcoal/40">
+            <p className="mt-1 text-xs text-charcoal/60">
               Contact support to change your email address.
             </p>
           </div>

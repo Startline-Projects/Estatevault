@@ -115,7 +115,7 @@ export default function PipelinePage() {
                       <p className="text-sm font-semibold text-navy truncate">{card.name}</p>
                       <p className="text-xs text-charcoal/50 mt-1 truncate">{card.sub}</p>
                       <div className="mt-2 flex items-center justify-between">
-                        <span className={`text-xs ${days > 7 ? "text-amber-600 font-medium" : "text-charcoal/40"}`}>{days}d</span>
+                        <span className={`text-xs ${days > 7 ? "text-amber-600 font-medium" : "text-charcoal/60"}`}>{days}d</span>
                         {card.type === "partner" && (
                           <a href={`/sales/partners/${card.id}`} className="text-xs text-gold hover:text-gold/80">View</a>
                         )}
@@ -124,7 +124,7 @@ export default function PipelinePage() {
                   );
                 })}
                 {cards.length === 0 && col.id !== "prospect" && (
-                  <p className="text-xs text-charcoal/40 text-center py-8">Empty</p>
+                  <p className="text-xs text-charcoal/60 text-center py-8">Empty</p>
                 )}
               </div>
             </div>

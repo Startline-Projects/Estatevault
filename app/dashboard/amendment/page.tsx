@@ -96,7 +96,7 @@ export default function AmendmentPage() {
             : (isSubscriber ? "Submit Amendment (Included with Subscription)" : "Proceed to Payment — $50")
           }
         </button>
-        {!isSubscriber && <p className="mt-2 text-center text-xs text-charcoal/40">Secure payment powered by Stripe</p>}
+        {!isSubscriber && <p className="mt-2 text-center text-xs text-charcoal/60">Secure payment powered by Stripe</p>}
       </div>
     </div>
   );

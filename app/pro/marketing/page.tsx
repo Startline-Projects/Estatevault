@@ -376,7 +376,7 @@ export default function MarketingPage() {
           <div className="relative w-full max-w-lg bg-white rounded-2xl shadow-xl max-h-[80vh] overflow-y-auto">
             <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
               <h3 className="text-base font-bold text-navy">{EMAIL_TEMPLATES[previewEmail].name}</h3>
-              <button onClick={() => setPreviewEmail(null)} className="text-charcoal/40 hover:text-charcoal text-xl">×</button>
+              <button onClick={() => setPreviewEmail(null)} className="text-charcoal/60 hover:text-charcoal text-xl">×</button>
             </div>
             <div className="p-6">
               <div className="rounded-lg border border-gray-200 overflow-hidden">

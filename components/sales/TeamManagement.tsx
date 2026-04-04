@@ -73,14 +73,14 @@ export default function TeamManagement() {
     <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
       <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <h2 className="text-sm font-semibold text-[#2D2D2D]">Team Management</h2>
-          <span className="inline-block px-2 py-0.5 rounded text-xs font-medium bg-[#1C3557]/10 text-[#1C3557]">
+          <h2 className="text-sm font-semibold text-charcoal">Team Management</h2>
+          <span className="inline-block px-2 py-0.5 rounded text-xs font-medium bg-navy/10 text-navy">
             Admin Only
           </span>
         </div>
         <button
           onClick={() => { setShowModal(true); setError(""); setSuccess(""); }}
-          className="inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-medium bg-[#C9A84C] text-white hover:bg-[#b8963f] transition-colors"
+          className="inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-medium bg-gold text-white hover:bg-gold-600 transition-colors"
         >
           + Add Sales Rep
         </button>
@@ -96,7 +96,7 @@ export default function TeamManagement() {
 
       {loading ? (
         <div className="px-5 py-10 text-center">
-          <div className="w-6 h-6 border-2 border-[#1C3557] border-t-transparent rounded-full animate-spin mx-auto" />
+          <div className="w-6 h-6 border-2 border-navy border-t-transparent rounded-full animate-spin mx-auto" />
         </div>
       ) : reps.length === 0 ? (
         <div className="px-5 py-10 text-center text-sm text-gray-400">
@@ -116,7 +116,7 @@ export default function TeamManagement() {
             <tbody>
               {reps.map((rep) => (
                 <tr key={rep.id} className="border-b border-gray-50 hover:bg-gray-50/50 transition-colors">
-                  <td className="px-5 py-3 font-medium text-[#2D2D2D]">{rep.full_name}</td>
+                  <td className="px-5 py-3 font-medium text-charcoal">{rep.full_name}</td>
                   <td className="px-5 py-3 text-gray-600">{rep.email}</td>
                   <td className="px-5 py-3 text-right text-gray-600">{rep.active_partners}</td>
                   <td className="px-5 py-3">
@@ -135,7 +135,7 @@ export default function TeamManagement() {
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-md mx-4 p-6">
-            <h3 className="text-lg font-bold text-[#1C3557]">Add Sales Rep</h3>
+            <h3 className="text-lg font-bold text-navy">Add Sales Rep</h3>
             <p className="text-sm text-gray-500 mt-1">
               They will receive a welcome email with login credentials.
             </p>
@@ -148,24 +148,24 @@ export default function TeamManagement() {
 
             <form onSubmit={handleCreate} className="mt-5 space-y-4">
               <div>
-                <label className="block text-sm font-medium text-[#2D2D2D] mb-1">Full Name</label>
+                <label className="block text-sm font-medium text-charcoal mb-1">Full Name</label>
                 <input
                   type="text"
                   required
                   value={formName}
                   onChange={(e) => setFormName(e.target.value)}
-                  className="w-full rounded-lg border border-gray-300 px-4 py-3 text-sm text-[#2D2D2D] focus:outline-none focus:ring-2 focus:ring-[#1C3557]/30 focus:border-[#1C3557]"
+                  className="w-full rounded-lg border border-gray-300 px-4 py-3 text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-navy/30 focus:border-navy"
                   placeholder="John Smith"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-[#2D2D2D] mb-1">Email</label>
+                <label className="block text-sm font-medium text-charcoal mb-1">Email</label>
                 <input
                   type="email"
                   required
                   value={formEmail}
                   onChange={(e) => setFormEmail(e.target.value)}
-                  className="w-full rounded-lg border border-gray-300 px-4 py-3 text-sm text-[#2D2D2D] focus:outline-none focus:ring-2 focus:ring-[#1C3557]/30 focus:border-[#1C3557]"
+                  className="w-full rounded-lg border border-gray-300 px-4 py-3 text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-navy/30 focus:border-navy"
                   placeholder="john@company.com"
                 />
               </div>
@@ -173,14 +173,14 @@ export default function TeamManagement() {
                 <button
                   type="button"
                   onClick={() => setShowModal(false)}
-                  className="flex-1 px-4 py-3 rounded-lg border border-gray-300 text-sm font-medium text-[#2D2D2D] hover:bg-gray-50 transition-colors"
+                  className="flex-1 px-4 py-3 rounded-lg border border-gray-300 text-sm font-medium text-charcoal hover:bg-gray-50 transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={creating}
-                  className="flex-1 px-4 py-3 rounded-lg bg-[#1C3557] text-sm font-medium text-white hover:bg-[#1C3557]/90 transition-colors disabled:opacity-50"
+                  className="flex-1 px-4 py-3 rounded-lg bg-navy text-sm font-medium text-white hover:bg-navy/90 transition-colors disabled:opacity-50"
                 >
                   {creating ? "Creating..." : "Create Account"}
                 </button>

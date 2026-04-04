@@ -30,13 +30,13 @@ export default function SocialProof() {
         <div className="flex flex-col items-center">
           <div className="inline-flex items-center gap-2 rounded-full bg-emerald-50 px-4 py-1.5 mb-6">
             <div className="h-2 w-2 rounded-full bg-emerald-500" />
-            <span className="text-xs font-semibold text-emerald-700 tracking-wide uppercase">Trusted Platform</span>
+            <span className="text-xs font-semibold text-emerald-700 tracking-wide uppercase">Families Protected</span>
           </div>
           <p className="text-6xl md:text-7xl font-bold text-navy tracking-tight">
             2,847
           </p>
-          <p className="mt-2 text-lg text-charcoal/50">
-            Michigan families protected
+          <p className="mt-2 text-lg text-charcoal/60">
+            Michigan families protected and counting
           </p>
         </div>
 
@@ -66,7 +66,7 @@ export default function SocialProof() {
                 </div>
                 <div>
                   <p className="text-sm font-semibold text-navy">{t.name}</p>
-                  <p className="text-xs text-charcoal/40">{t.city}</p>
+                  <p className="text-xs text-charcoal/50">{t.city}</p>
                 </div>
               </div>
             </div>

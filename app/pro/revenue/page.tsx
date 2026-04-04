@@ -296,7 +296,7 @@ export default function ProRevenuePage() {
           who earned $600 or more.
         </p>
         <div className="mt-4 rounded-lg bg-gray-50 p-4 text-center">
-          <p className="text-xs text-charcoal/40">No tax documents available yet.</p>
+          <p className="text-xs text-charcoal/60">No tax documents available yet.</p>
         </div>
       </div>
     </div>

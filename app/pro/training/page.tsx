@@ -144,7 +144,7 @@ export default function ProTrainingPage() {
               }`}
             >
               <div className="flex items-start justify-between">
-                <span className="text-xs font-semibold text-charcoal/40">
+                <span className="text-xs font-semibold text-charcoal/60">
                   Module {mod.id}
                 </span>
                 {isComplete ? (
@@ -152,7 +152,7 @@ export default function ProTrainingPage() {
                     Complete
                   </span>
                 ) : (
-                  <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-charcoal/40">
+                  <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-charcoal/60">
                     {mod.duration}
                   </span>
                 )}

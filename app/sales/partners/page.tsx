@@ -31,7 +31,7 @@ const STATUS_STYLES: Record<PartnerStatus, { label: string; cls: string }> = {
 
 const TIER_STYLES: Record<PlanTier, { label: string; cls: string }> = {
   standard: { label: "Standard", cls: "bg-gray-100 text-gray-700" },
-  enterprise: { label: "Enterprise", cls: "bg-[#C9A84C]/10 text-[#C9A84C]" },
+  enterprise: { label: "Enterprise", cls: "bg-gold/10 text-gold" },
 };
 
 export default function PartnersListPage() {
@@ -121,14 +121,14 @@ export default function PartnersListPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-[#2D2D2D]">
+          <h1 className="text-2xl font-bold text-charcoal">
             My Partners{" "}
             <span className="text-base font-normal text-gray-400">({partners.length})</span>
           </h1>
         </div>
         <Link
           href="/sales/new-partner"
-          className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[#C9A84C] text-white text-sm font-semibold hover:bg-[#b89740] transition"
+          className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-gold text-white text-sm font-semibold hover:bg-gold-600 transition"
         >
           <span className="text-base leading-none">+</span> New Partner
         </Link>
@@ -141,12 +141,12 @@ export default function PartnersListPage() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search by name or email..."
-            className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C9A84C]/40 focus:border-[#C9A84C]"
+            className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gold/40 focus:border-gold"
           />
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#C9A84C]/40"
+            className="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-gold/40"
           >
             <option value="all">All Statuses</option>
             <option value="onboarding">Onboarding</option>
@@ -157,7 +157,7 @@ export default function PartnersListPage() {
           <select
             value={tierFilter}
             onChange={(e) => setTierFilter(e.target.value)}
-            className="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#C9A84C]/40"
+            className="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-gold/40"
           >
             <option value="all">All Tiers</option>
             <option value="standard">Standard</option>
@@ -169,7 +169,7 @@ export default function PartnersListPage() {
       {/* Table */}
       {loading ? (
         <div className="bg-white rounded-xl border border-gray-200 p-16 text-center">
-          <div className="w-8 h-8 border-2 border-[#C9A84C] border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+          <div className="w-8 h-8 border-2 border-gold border-t-transparent rounded-full animate-spin mx-auto mb-3" />
           <p className="text-sm text-gray-400">Loading partners...</p>
         </div>
       ) : filtered.length === 0 ? (
@@ -179,7 +179,7 @@ export default function PartnersListPage() {
               <path strokeLinecap="round" strokeLinejoin="round" d="M18 18.72a9.094 9.094 0 003.741-.479 3 3 0 00-4.682-2.72m.94 3.198l.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0112 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 016 18.719m12 0a5.971 5.971 0 00-.941-3.197m0 0A5.995 5.995 0 0012 12.75a5.995 5.995 0 00-5.058 2.772m0 0a3 3 0 00-4.681 2.72 8.986 8.986 0 003.74.477m.94-3.197a5.971 5.971 0 00-.94 3.197M15 6.75a3 3 0 11-6 0 3 3 0 016 0zm6 3a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0zm-13.5 0a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z" />
             </svg>
           </div>
-          <h3 className="text-base font-semibold text-[#2D2D2D] mb-1">No partners found</h3>
+          <h3 className="text-base font-semibold text-charcoal mb-1">No partners found</h3>
           <p className="text-sm text-gray-400 mb-4">
             {search || statusFilter !== "all" || tierFilter !== "all"
               ? "Try adjusting your search or filters."
@@ -188,7 +188,7 @@ export default function PartnersListPage() {
           {!search && statusFilter === "all" && tierFilter === "all" && (
             <Link
               href="/sales/new-partner"
-              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[#C9A84C] text-white text-sm font-semibold hover:bg-[#b89740] transition"
+              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-gold text-white text-sm font-semibold hover:bg-gold-600 transition"
             >
               <span className="text-base leading-none">+</span> New Partner
             </Link>
@@ -223,7 +223,7 @@ export default function PartnersListPage() {
                       className={`border-b border-gray-50 hover:bg-gray-50/50 transition ${stuck ? "bg-amber-50/60" : ""}`}
                     >
                       <td className="px-4 py-3">
-                        <p className="font-medium text-[#2D2D2D]">{p.company_name}</p>
+                        <p className="font-medium text-charcoal">{p.company_name}</p>
                         <p className="text-xs text-gray-400">{p.email}</p>
                       </td>
                       <td className="px-4 py-3">
@@ -252,7 +252,7 @@ export default function PartnersListPage() {
                             <span className="text-xs text-gray-500">Step {p.onboarding_step} of 7</span>
                             <div className="w-16 h-1.5 bg-gray-200 rounded-full overflow-hidden">
                               <div
-                                className="h-full bg-[#C9A84C] rounded-full transition-all"
+                                className="h-full bg-gold rounded-full transition-all"
                                 style={{ width: `${(p.onboarding_step / 7) * 100}%` }}
                               />
                             </div>
@@ -271,14 +271,14 @@ export default function PartnersListPage() {
                           <span className="text-xs text-gray-400">No</span>
                         )}
                       </td>
-                      <td className="px-4 py-3 text-right font-medium text-[#2D2D2D]">{p.mtd_docs}</td>
-                      <td className="px-4 py-3 text-right font-medium text-[#2D2D2D]">
+                      <td className="px-4 py-3 text-right font-medium text-charcoal">{p.mtd_docs}</td>
+                      <td className="px-4 py-3 text-right font-medium text-charcoal">
                         ${p.mtd_revenue.toLocaleString()}
                       </td>
                       <td className="px-4 py-3 text-right">
                         <Link
                           href={`/sales/partners/${p.id}`}
-                          className="text-[#C9A84C] hover:text-[#b89740] text-xs font-semibold transition"
+                          className="text-gold hover:text-gold-600 text-xs font-semibold transition"
                         >
                           View
                         </Link>

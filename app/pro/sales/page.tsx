@@ -351,7 +351,7 @@ export default function SalesDashboardPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
-        <div className="w-8 h-8 border-4 border-[#1C3557] border-t-transparent rounded-full animate-spin" />
+        <div className="w-8 h-8 border-4 border-navy border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
@@ -367,7 +367,7 @@ export default function SalesDashboardPage() {
     <div className="max-w-6xl mx-auto space-y-8">
       {/* Greeting */}
       <div>
-        <h1 className="text-2xl font-bold text-[#2D2D2D]">
+        <h1 className="text-2xl font-bold text-charcoal">
           {getGreeting()}, {repName}
         </h1>
         <p className="text-sm text-gray-500 mt-1">
@@ -383,7 +383,7 @@ export default function SalesDashboardPage() {
             className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm"
           >
             <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">{card.label}</p>
-            <p className="text-2xl font-bold text-[#1C3557] mt-2">{card.value}</p>
+            <p className="text-2xl font-bold text-navy mt-2">{card.value}</p>
           </div>
         ))}
       </div>
@@ -391,7 +391,7 @@ export default function SalesDashboardPage() {
       {/* Pending Bar Verification */}
       <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
         <div className="px-5 py-4 border-b border-gray-100 flex items-center gap-3">
-          <h2 className="text-sm font-semibold text-[#2D2D2D]">Pending Bar Verification</h2>
+          <h2 className="text-sm font-semibold text-charcoal">Pending Bar Verification</h2>
           {pendingAttorneys.length > 0 && (
             <span className="inline-flex items-center justify-center px-2 py-0.5 rounded-full text-xs font-bold bg-red-500 text-white min-w-[20px]">
               {pendingAttorneys.length}
@@ -429,15 +429,15 @@ export default function SalesDashboardPage() {
                 {pendingAttorneys.map((attorney) => (
                   <tr key={attorney.id} className="border-b border-gray-50 hover:bg-gray-50/50 transition-colors">
                     <td className="px-5 py-3">
-                      <p className="font-medium text-[#2D2D2D]">{attorney.profile_name}</p>
+                      <p className="font-medium text-charcoal">{attorney.profile_name}</p>
                       {attorney.profile_email && (
                         <p className="text-xs text-gray-400">{attorney.profile_email}</p>
                       )}
                     </td>
                     <td className="px-5 py-3 text-gray-600 whitespace-nowrap">{attorney.company_name}</td>
-                    <td className="px-5 py-3 font-mono text-[#1C3557] whitespace-nowrap">{attorney.bar_number}</td>
+                    <td className="px-5 py-3 font-mono text-navy whitespace-nowrap">{attorney.bar_number}</td>
                     <td className="px-5 py-3">
-                      <span className="inline-block px-2 py-0.5 rounded text-xs font-medium bg-[#1C3557]/10 text-[#1C3557] capitalize">
+                      <span className="inline-block px-2 py-0.5 rounded text-xs font-medium bg-navy/10 text-navy capitalize">
                         {attorney.tier}
                       </span>
                     </td>
@@ -492,7 +492,7 @@ export default function SalesDashboardPage() {
                 className="flex items-center justify-between bg-white rounded-lg px-4 py-3 border border-amber-100"
               >
                 <div>
-                  <p className="text-sm font-medium text-[#2D2D2D]">{p.company_name}</p>
+                  <p className="text-sm font-medium text-charcoal">{p.company_name}</p>
                   <p className="text-xs text-gray-500">
                     Stuck on Step {p.current_onboarding_step} for {p.daysSinceUpdate} days
                   </p>
@@ -513,9 +513,9 @@ export default function SalesDashboardPage() {
       {/* New Leads */}
       <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
         <div className="px-5 py-4 border-b border-gray-100 flex items-center gap-3">
-          <h2 className="text-sm font-semibold text-[#2D2D2D]">New Leads</h2>
+          <h2 className="text-sm font-semibold text-charcoal">New Leads</h2>
           {leads.filter((l) => l.status === "new").length > 0 && (
-            <span className="inline-flex items-center justify-center px-2 py-0.5 rounded-full text-xs font-bold bg-[#C9A84C] text-white min-w-[20px]">
+            <span className="inline-flex items-center justify-center px-2 py-0.5 rounded-full text-xs font-bold bg-gold text-white min-w-[20px]">
               {leads.filter((l) => l.status === "new").length}
             </span>
           )}
@@ -523,7 +523,7 @@ export default function SalesDashboardPage() {
         {leads.length === 0 ? (
           <div className="px-5 py-10 text-center text-sm text-gray-400">
             No new leads. Share{" "}
-            <span className="font-medium text-[#C9A84C]">estatevault.us/professionals</span>{" "}
+            <span className="font-medium text-gold">estatevault.us/professionals</span>{" "}
             to generate interest.
           </div>
         ) : (
@@ -563,7 +563,7 @@ export default function SalesDashboardPage() {
                     key={lead.id}
                     className="border-b border-gray-50 hover:bg-gray-50/50 transition-colors"
                   >
-                    <td className="px-5 py-3 font-medium text-[#2D2D2D] whitespace-nowrap">
+                    <td className="px-5 py-3 font-medium text-charcoal whitespace-nowrap">
                       {lead.first_name} {lead.last_name}
                     </td>
                     <td className="px-5 py-3 text-gray-600 whitespace-nowrap">
@@ -585,7 +585,7 @@ export default function SalesDashboardPage() {
                       <span
                         className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${
                           lead.status === "new"
-                            ? "bg-[#C9A84C]/15 text-[#C9A84C]"
+                            ? "bg-gold/15 text-gold"
                             : "bg-blue-100 text-blue-700"
                         }`}
                       >
@@ -604,7 +604,7 @@ export default function SalesDashboardPage() {
                           )}&type=${encodeURIComponent(
                             lead.professional_type
                           )}`}
-                          className="inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-medium bg-[#C9A84C] text-white hover:bg-[#b8963f] transition-colors"
+                          className="inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-medium bg-gold text-white hover:bg-gold-600 transition-colors"
                         >
                           Create Account →
                         </Link>
@@ -630,10 +630,10 @@ export default function SalesDashboardPage() {
       {/* Recent Partners Table */}
       <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
         <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-[#2D2D2D]">Recent Partners</h2>
+          <h2 className="text-sm font-semibold text-charcoal">Recent Partners</h2>
           <Link
             href="/pro/sales/partners"
-            className="text-xs font-medium text-[#C9A84C] hover:underline"
+            className="text-xs font-medium text-gold hover:underline"
           >
             View All
           </Link>
@@ -667,9 +667,9 @@ export default function SalesDashboardPage() {
               <tbody>
                 {recentPartners.map((p) => (
                   <tr key={p.id} className="border-b border-gray-50 hover:bg-gray-50/50 transition-colors">
-                    <td className="px-5 py-3 font-medium text-[#2D2D2D]">{p.company_name}</td>
+                    <td className="px-5 py-3 font-medium text-charcoal">{p.company_name}</td>
                     <td className="px-5 py-3">
-                      <span className="inline-block px-2 py-0.5 rounded text-xs font-medium bg-[#1C3557]/10 text-[#1C3557] capitalize">
+                      <span className="inline-block px-2 py-0.5 rounded text-xs font-medium bg-navy/10 text-navy capitalize">
                         {p.tier}
                       </span>
                     </td>
@@ -687,7 +687,7 @@ export default function SalesDashboardPage() {
                       </span>
                     </td>
                     <td className="px-5 py-3 text-right text-gray-600">{p.mtdDocs}</td>
-                    <td className="px-5 py-3 text-right font-medium text-[#2D2D2D]">
+                    <td className="px-5 py-3 text-right font-medium text-charcoal">
                       {formatCurrency(p.mtdRevenue)}
                     </td>
                   </tr>

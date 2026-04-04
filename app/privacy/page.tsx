@@ -7,14 +7,14 @@ export default function PrivacyPage() {
       <Header />
       <main className="py-20 px-6">
         <div className="mx-auto max-w-4xl">
-          <h1 className="text-4xl font-bold text-[#1C3557] mb-2">
+          <h1 className="text-4xl font-bold text-navy mb-2">
             Privacy Policy
           </h1>
-          <p className="text-[#2D2D2D]/60 mb-12">Last updated: April 1, 2026</p>
+          <p className="text-charcoal/60 mb-12">Last updated: April 1, 2026</p>
 
-          <div className="space-y-10 text-[#2D2D2D] leading-relaxed">
+          <div className="space-y-10 text-charcoal leading-relaxed">
             <section>
-              <h2 className="text-2xl font-semibold text-[#1C3557] mb-4">
+              <h2 className="text-2xl font-semibold text-navy mb-4">
                 Information We Collect
               </h2>
               <p className="mb-3">
@@ -34,7 +34,7 @@ export default function PrivacyPage() {
             </section>
 
             <section>
-              <h2 className="text-2xl font-semibold text-[#1C3557] mb-4">
+              <h2 className="text-2xl font-semibold text-navy mb-4">
                 How We Use Your Information
               </h2>
               <p className="mb-3">
@@ -53,7 +53,7 @@ export default function PrivacyPage() {
             </section>
 
             <section>
-              <h2 className="text-2xl font-semibold text-[#1C3557] mb-4">
+              <h2 className="text-2xl font-semibold text-navy mb-4">
                 Data Security
               </h2>
               <p className="mb-3">
@@ -71,7 +71,7 @@ export default function PrivacyPage() {
             </section>
 
             <section>
-              <h2 className="text-2xl font-semibold text-[#1C3557] mb-4">
+              <h2 className="text-2xl font-semibold text-navy mb-4">
                 Your Rights
               </h2>
               <p className="mb-3">
@@ -88,7 +88,7 @@ export default function PrivacyPage() {
             </section>
 
             <section>
-              <h2 className="text-2xl font-semibold text-[#1C3557] mb-4">
+              <h2 className="text-2xl font-semibold text-navy mb-4">
                 Contact Us
               </h2>
               <p>
@@ -96,7 +96,7 @@ export default function PrivacyPage() {
                 your information, please contact us at{" "}
                 <a
                   href="mailto:support@estatevault.us"
-                  className="text-[#C9A84C] hover:underline"
+                  className="text-gold hover:underline"
                 >
                   support@estatevault.us
                 </a>

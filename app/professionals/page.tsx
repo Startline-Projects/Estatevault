@@ -241,7 +241,7 @@ function PricingSection() {
               href="#request-access"
               className="mt-8 block text-center rounded-full border-2 border-navy px-6 py-3 text-sm font-semibold text-navy hover:bg-navy hover:text-white transition-colors"
             >
-              Get Started
+              Request Standard Access
             </a>
           </div>
 
@@ -268,7 +268,7 @@ function PricingSection() {
               href="#request-access"
               className="mt-8 block text-center rounded-full bg-gold px-6 py-3 text-sm font-semibold text-white hover:bg-gold/90 transition-colors"
             >
-              Get Started
+              Request Enterprise Access
             </a>
           </div>
         </div>
@@ -342,7 +342,7 @@ function EarningsCalculator() {
                 onChange={(e) => setTrustsPerMonth(Number(e.target.value))}
                 className="w-full accent-gold cursor-pointer h-2"
               />
-              <div className="flex justify-between text-xs text-charcoal/40 mt-1.5">
+              <div className="flex justify-between text-xs text-charcoal/50 mt-1.5">
                 <span>1</span>
                 <span>30</span>
               </div>
@@ -365,7 +365,7 @@ function EarningsCalculator() {
                 onChange={(e) => setWillsPerMonth(Number(e.target.value))}
                 className="w-full accent-gold cursor-pointer h-2"
               />
-              <div className="flex justify-between text-xs text-charcoal/40 mt-1.5">
+              <div className="flex justify-between text-xs text-charcoal/50 mt-1.5">
                 <span>1</span>
                 <span>30</span>
               </div>
@@ -379,7 +379,7 @@ function EarningsCalculator() {
                   <p className="text-base font-bold text-charcoal">
                     Trust Package &times; {trustsPerMonth} client{trustsPerMonth !== 1 ? "s" : ""}
                   </p>
-                  <p className="text-sm text-charcoal/40 mt-0.5">
+                  <p className="text-sm text-charcoal/50 mt-0.5">
                     ${config.trustEarning.toLocaleString()} per trust package
                   </p>
                 </div>
@@ -394,7 +394,7 @@ function EarningsCalculator() {
                   <p className="text-base font-bold text-charcoal">
                     Will Package &times; {willsPerMonth} client{willsPerMonth !== 1 ? "s" : ""}
                   </p>
-                  <p className="text-sm text-charcoal/40 mt-0.5">
+                  <p className="text-sm text-charcoal/50 mt-0.5">
                     ${config.willEarning.toLocaleString()} per will package
                   </p>
                 </div>
@@ -427,7 +427,7 @@ function EarningsCalculator() {
 
           {/* Disclaimer */}
           <div className="px-8 pb-6">
-            <p className="text-xs text-charcoal/40 leading-relaxed text-center">
+            <p className="text-xs text-charcoal/50 leading-relaxed text-center">
               Earnings shown are estimates based on your selected volume.
               EstateVault does not set, approve, or regulate partner earnings.
             </p>
@@ -526,11 +526,11 @@ function RequestAccessForm() {
             </svg>
           </div>
           <h2 className="mt-6 text-2xl sm:text-3xl font-bold text-white">
-            Request received!
+            We&rsquo;ve received your request.
           </h2>
           <p className="mt-4 text-gray-300">
-            Our team will be in touch within one business day. We&rsquo;re
-            excited to partner with you.
+            Our partnerships team will reach out within one business day to
+            walk you through everything. We look forward to working with you.
           </p>
         </div>
       </section>
@@ -541,10 +541,10 @@ function RequestAccessForm() {
     <section id="request-access" className="py-20 md:py-24 px-6 bg-navy">
       <div className="mx-auto max-w-2xl">
         <h2 className="text-2xl sm:text-3xl font-bold text-white text-center">
-          Ready to get started?
+          Let&rsquo;s build your platform.
         </h2>
         <p className="mt-4 text-gray-300 text-center text-sm">
-          Fill out the form below and our partnerships team will be in touch
+          Tell us about your practice and our partnerships team will reach out
           within one business day.
         </p>
 

@@ -27,31 +27,30 @@ export default function ContactPage() {
       <Header />
       <main className="py-20 px-6">
         <div className="mx-auto max-w-4xl">
-          <h1 className="text-4xl font-bold text-[#1C3557] mb-4">
-            Contact Us
+          <h1 className="text-4xl font-bold text-navy mb-4">
+            We&apos;re Here to Help
           </h1>
-          <p className="text-[#2D2D2D]/70 mb-4 text-lg">
-            Have a question or need assistance? We are here to help.
+          <p className="text-charcoal/70 mb-4 text-lg">
+            Have a question about your estate plan or your account? Reach out anytime.
           </p>
-          <p className="text-[#2D2D2D] mb-12">
+          <p className="text-charcoal mb-12">
             Email us directly at{" "}
             <a
               href="mailto:support@estatevault.us"
-              className="text-[#C9A84C] hover:underline font-medium"
+              className="text-gold hover:underline font-medium"
             >
               support@estatevault.us
             </a>
           </p>
 
           {submitted ? (
-            <div className="rounded-2xl border border-[#C9A84C]/30 bg-[#C9A84C]/5 p-10 text-center">
+            <div className="rounded-2xl border border-gold/30 bg-gold/5 p-10 text-center">
               <div className="text-3xl mb-4">&#10003;</div>
-              <h2 className="text-2xl font-semibold text-[#1C3557] mb-2">
-                Message Sent
+              <h2 className="text-2xl font-semibold text-navy mb-2">
+                Your message has been sent.
               </h2>
-              <p className="text-[#2D2D2D]/70">
-                Thank you for reaching out. We will get back to you within one
-                business day.
+              <p className="text-charcoal/70">
+                Our team will respond within one business day. Thank you for reaching out.
               </p>
             </div>
           ) : (
@@ -62,7 +61,7 @@ export default function ContactPage() {
               <div>
                 <label
                   htmlFor="name"
-                  className="block text-sm font-medium text-[#2D2D2D] mb-1.5"
+                  className="block text-sm font-medium text-charcoal mb-1.5"
                 >
                   Name
                 </label>
@@ -72,7 +71,7 @@ export default function ContactPage() {
                   required
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  className="w-full rounded-lg border border-gray-300 px-4 py-3 text-[#2D2D2D] placeholder:text-gray-400 focus:border-[#C9A84C] focus:outline-none focus:ring-1 focus:ring-[#C9A84C]"
+                  className="w-full rounded-lg border border-gray-300 px-4 py-3 text-charcoal placeholder:text-gray-400 focus:border-gold focus:outline-none focus:ring-1 focus:ring-gold/30"
                   placeholder="Your name"
                 />
               </div>
@@ -80,7 +79,7 @@ export default function ContactPage() {
               <div>
                 <label
                   htmlFor="email"
-                  className="block text-sm font-medium text-[#2D2D2D] mb-1.5"
+                  className="block text-sm font-medium text-charcoal mb-1.5"
                 >
                   Email
                 </label>
@@ -90,7 +89,7 @@ export default function ContactPage() {
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="w-full rounded-lg border border-gray-300 px-4 py-3 text-[#2D2D2D] placeholder:text-gray-400 focus:border-[#C9A84C] focus:outline-none focus:ring-1 focus:ring-[#C9A84C]"
+                  className="w-full rounded-lg border border-gray-300 px-4 py-3 text-charcoal placeholder:text-gray-400 focus:border-gold focus:outline-none focus:ring-1 focus:ring-gold/30"
                   placeholder="you@example.com"
                 />
               </div>
@@ -98,7 +97,7 @@ export default function ContactPage() {
               <div>
                 <label
                   htmlFor="message"
-                  className="block text-sm font-medium text-[#2D2D2D] mb-1.5"
+                  className="block text-sm font-medium text-charcoal mb-1.5"
                 >
                   Message
                 </label>
@@ -108,7 +107,7 @@ export default function ContactPage() {
                   rows={5}
                   value={message}
                   onChange={(e) => setMessage(e.target.value)}
-                  className="w-full rounded-lg border border-gray-300 px-4 py-3 text-[#2D2D2D] placeholder:text-gray-400 focus:border-[#C9A84C] focus:outline-none focus:ring-1 focus:ring-[#C9A84C] resize-vertical"
+                  className="w-full rounded-lg border border-gray-300 px-4 py-3 text-charcoal placeholder:text-gray-400 focus:border-gold focus:outline-none focus:ring-1 focus:ring-gold/30 resize-vertical"
                   placeholder="How can we help you?"
                 />
               </div>
@@ -116,7 +115,7 @@ export default function ContactPage() {
               <button
                 type="submit"
                 disabled={loading}
-                className="rounded-lg bg-[#1C3557] px-8 py-3 text-white font-medium hover:bg-[#1C3557]/90 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                className="rounded-lg bg-navy px-8 py-3 text-white font-medium hover:bg-navy-800 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
               >
                 {loading ? "Sending..." : "Send Message"}
               </button>

@@ -81,7 +81,7 @@ export default function Header() {
             href="/quiz"
             className="rounded-full bg-navy px-5 py-2.5 text-sm font-semibold text-white hover:bg-navy-800 transition-all duration-200 shadow-sm hover:shadow-premium"
           >
-            Get Started
+            Protect Your Family
           </Link>
         </div>
 
@@ -143,7 +143,7 @@ export default function Header() {
                 href="/quiz"
                 className="text-center rounded-full bg-navy px-4 py-2.5 text-sm font-semibold text-white hover:bg-navy-800 transition-colors"
               >
-                Get Started
+                Protect Your Family
               </Link>
             </div>
           </nav>

@@ -16,7 +16,7 @@ export default function AdminToolsPage() {
             <span className="text-2xl">{t.icon}</span>
             <h3 className="mt-3 text-sm font-bold text-navy">{t.title}</h3>
             <p className="mt-1 text-xs text-charcoal/50">{t.desc}</p>
-            <span className="mt-3 inline-block rounded-full bg-gray-100 px-3 py-1 text-xs text-charcoal/40">Coming Soon</span>
+            <span className="mt-3 inline-block rounded-full bg-gray-100 px-3 py-1 text-xs text-charcoal/60">Coming Soon</span>
           </div>
         ))}
       </div>

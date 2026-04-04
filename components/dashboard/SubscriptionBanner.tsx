@@ -78,10 +78,10 @@ export default function SubscriptionBanner({ onStatusLoaded }: { onStatusLoaded?
     return (
       <div className="rounded-xl bg-gray-50 border border-gray-200 p-4 flex items-center justify-between">
         <div>
-          <p className="text-sm font-semibold text-[#2D2D2D]">Subscription Cancelled</p>
+          <p className="text-sm font-semibold text-charcoal">Subscription Cancelled</p>
           {expiryDate && <p className="text-xs text-gray-500">Access continues until {expiryDate}</p>}
         </div>
-        <button onClick={handleSubscribe} disabled={subscribing} className="text-xs font-medium px-3 py-1.5 rounded-lg bg-[#C9A84C] text-white hover:bg-[#b8963f] transition-colors disabled:opacity-50">
+        <button onClick={handleSubscribe} disabled={subscribing} className="text-xs font-medium px-3 py-1.5 rounded-lg bg-gold text-white hover:bg-gold-600 transition-colors disabled:opacity-50">
           {subscribing ? "Loading..." : "Resubscribe"}
         </button>
       </div>
@@ -90,26 +90,26 @@ export default function SubscriptionBanner({ onStatusLoaded }: { onStatusLoaded?
 
   // status === "none" — promotional
   return (
-    <div className="rounded-xl bg-[#1C3557]/5 border border-[#1C3557]/10 p-5">
+    <div className="rounded-xl bg-navy/5 border border-navy/10 p-5">
       <div className="flex items-start justify-between">
         <div>
-          <p className="text-sm font-bold text-[#1C3557]">Upgrade to Vault Plan — $99/year</p>
+          <p className="text-sm font-bold text-navy">Upgrade to Vault Plan — $99/year</p>
           <ul className="mt-2 space-y-1">
-            <li className="flex items-center gap-2 text-xs text-[#2D2D2D]/70">
-              <span className="text-[#C9A84C]">&#10003;</span> Unlimited free document amendments
+            <li className="flex items-center gap-2 text-xs text-charcoal/70">
+              <span className="text-gold">&#10003;</span> Unlimited free document amendments
             </li>
-            <li className="flex items-center gap-2 text-xs text-[#2D2D2D]/70">
-              <span className="text-[#C9A84C]">&#10003;</span> Record farewell video messages for loved ones
+            <li className="flex items-center gap-2 text-xs text-charcoal/70">
+              <span className="text-gold">&#10003;</span> Record farewell video messages for loved ones
             </li>
-            <li className="flex items-center gap-2 text-xs text-[#2D2D2D]/70">
-              <span className="text-[#C9A84C]">&#10003;</span> Annual review reminders
+            <li className="flex items-center gap-2 text-xs text-charcoal/70">
+              <span className="text-gold">&#10003;</span> Annual review reminders
             </li>
-            <li className="flex items-center gap-2 text-xs text-[#2D2D2D]/70">
-              <span className="text-[#C9A84C]">&#10003;</span> Priority document processing
+            <li className="flex items-center gap-2 text-xs text-charcoal/70">
+              <span className="text-gold">&#10003;</span> Priority document processing
             </li>
           </ul>
         </div>
-        <button onClick={handleSubscribe} disabled={subscribing} className="flex-shrink-0 px-4 py-2 rounded-full bg-[#C9A84C] text-sm font-semibold text-white hover:bg-[#b8963f] transition-colors disabled:opacity-50">
+        <button onClick={handleSubscribe} disabled={subscribing} className="flex-shrink-0 px-4 py-2 rounded-full bg-gold text-sm font-semibold text-white hover:bg-gold-600 transition-colors disabled:opacity-50">
           {subscribing ? "Loading..." : "Subscribe"}
         </button>
       </div>

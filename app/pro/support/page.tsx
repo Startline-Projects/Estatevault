@@ -79,7 +79,7 @@ export default function ProSupportPage() {
             <h3 className="mt-3 text-sm font-bold text-navy">{card.title}</h3>
             <p className="mt-1 text-xs text-charcoal/60">{card.description}</p>
             <p className="mt-3 text-sm font-semibold text-gold">{card.action}</p>
-            <p className="mt-1 text-xs text-charcoal/40">{card.detail}</p>
+            <p className="mt-1 text-xs text-charcoal/60">{card.detail}</p>
           </div>
         ))}
       </div>

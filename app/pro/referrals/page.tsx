@@ -121,7 +121,7 @@ export default function ProReferralsPage() {
         <div className="mt-16 text-center">
           <span className="text-4xl">🔗</span>
           <p className="mt-4 text-sm text-charcoal/50">No referrals yet</p>
-          <p className="text-xs text-charcoal/40 mt-1 max-w-md mx-auto">
+          <p className="text-xs text-charcoal/60 mt-1 max-w-md mx-auto">
             When a client triggers a hard stop (e.g., special needs dependent or irrevocable trust),
             they are automatically routed to an attorney. You earn a $75 referral fee for each
             case that converts.
@@ -167,7 +167,7 @@ export default function ProReferralsPage() {
                     {r.referral_fee_paid ? (
                       <span className="font-semibold text-green-600">$75</span>
                     ) : (
-                      <span className="text-charcoal/40 text-xs">Pending</span>
+                      <span className="text-charcoal/60 text-xs">Pending</span>
                     )}
                   </td>
                 </tr>

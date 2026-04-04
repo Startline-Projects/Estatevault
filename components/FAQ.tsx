@@ -72,10 +72,10 @@ export default function FAQ() {
             <span className="text-xs font-semibold text-navy tracking-wide uppercase">FAQ</span>
           </div>
           <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-navy tracking-tight">
-            Common Questions
+            Questions We Hear Most
           </h2>
-          <p className="mt-4 text-lg text-charcoal/50">
-            Everything you need to know about protecting your family.
+          <p className="mt-4 text-lg text-charcoal/60">
+            Honest answers about how EstateVault works.
           </p>
         </div>
 

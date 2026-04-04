@@ -151,13 +151,13 @@ export default function NewPartnerPage() {
             <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
           </svg>
         </div>
-        <h1 className="text-2xl font-bold text-[#2D2D2D] mb-2">Partner Account Created</h1>
+        <h1 className="text-2xl font-bold text-charcoal mb-2">Partner Account Created</h1>
         <p className="text-gray-500 mb-8">The new partner account is ready to go.</p>
 
         <div className="bg-white rounded-xl border border-gray-200 p-6 text-left space-y-4 mb-8">
           <div>
             <p className="text-xs text-gray-400 uppercase tracking-wider mb-1">Email</p>
-            <p className="font-medium text-[#2D2D2D]">{success.email}</p>
+            <p className="font-medium text-charcoal">{success.email}</p>
           </div>
           <div>
             <p className="text-xs text-gray-400 uppercase tracking-wider mb-1">Temporary Password</p>
@@ -176,7 +176,7 @@ export default function NewPartnerPage() {
         <div className="flex flex-col sm:flex-row gap-3 justify-center">
           <button
             onClick={handleSendWelcome}
-            className="px-5 py-2.5 rounded-lg bg-[#1C3557] text-white text-sm font-medium hover:bg-[#15294a] transition"
+            className="px-5 py-2.5 rounded-lg bg-navy text-white text-sm font-medium hover:bg-navy/90 transition"
           >
             Send Welcome Email
           </button>
@@ -184,7 +184,7 @@ export default function NewPartnerPage() {
             href="/pro/preview"
             target="_blank"
             rel="noopener noreferrer"
-            className="px-5 py-2.5 rounded-lg bg-[#C9A84C] text-white text-sm font-medium hover:bg-[#b89740] transition text-center"
+            className="px-5 py-2.5 rounded-lg bg-gold text-white text-sm font-medium hover:bg-gold-600 transition text-center"
           >
             Open Their Preview
           </a>
@@ -204,7 +204,7 @@ export default function NewPartnerPage() {
   /* =========================================== */
   return (
     <div>
-      <h1 className="text-2xl font-bold text-[#2D2D2D] mb-1">Create New Partner</h1>
+      <h1 className="text-2xl font-bold text-charcoal mb-1">Create New Partner</h1>
       <p className="text-gray-500 text-sm mb-8">Set up a new professional partner account and preview their white-label site.</p>
 
       <div className="flex flex-col lg:flex-row gap-8">
@@ -216,14 +216,14 @@ export default function NewPartnerPage() {
 
           {/* Company & Owner */}
           <div className="bg-white rounded-xl border border-gray-200 p-6 space-y-4">
-            <h2 className="text-sm font-semibold text-[#1C3557] uppercase tracking-wider">Business Information</h2>
+            <h2 className="text-sm font-semibold text-navy uppercase tracking-wider">Business Information</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs font-medium text-gray-600 mb-1">Company Name *</label>
                 <input
                   value={form.companyName}
                   onChange={(e) => set("companyName", e.target.value)}
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C9A84C]/40 focus:border-[#C9A84C]"
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gold/40 focus:border-gold"
                   placeholder="Acme Financial Group"
                 />
               </div>
@@ -232,7 +232,7 @@ export default function NewPartnerPage() {
                 <input
                   value={form.ownerName}
                   onChange={(e) => set("ownerName", e.target.value)}
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C9A84C]/40 focus:border-[#C9A84C]"
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gold/40 focus:border-gold"
                   placeholder="Jane Smith"
                 />
               </div>
@@ -244,7 +244,7 @@ export default function NewPartnerPage() {
                   type="email"
                   value={form.email}
                   onChange={(e) => set("email", e.target.value)}
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C9A84C]/40 focus:border-[#C9A84C]"
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gold/40 focus:border-gold"
                   placeholder="jane@acmefinancial.com"
                 />
               </div>
@@ -254,7 +254,7 @@ export default function NewPartnerPage() {
                   type="tel"
                   value={form.phone}
                   onChange={(e) => set("phone", e.target.value)}
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C9A84C]/40 focus:border-[#C9A84C]"
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gold/40 focus:border-gold"
                   placeholder="(555) 123-4567"
                 />
               </div>
@@ -265,7 +265,7 @@ export default function NewPartnerPage() {
                 <input
                   value={form.businessUrl}
                   onChange={(e) => set("businessUrl", e.target.value)}
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C9A84C]/40 focus:border-[#C9A84C]"
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gold/40 focus:border-gold"
                   placeholder="acmefinancial.com"
                 />
               </div>
@@ -274,7 +274,7 @@ export default function NewPartnerPage() {
                 <select
                   value={form.state}
                   onChange={(e) => set("state", e.target.value)}
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#C9A84C]/40 focus:border-[#C9A84C]"
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-gold/40 focus:border-gold"
                 >
                   {US_STATES.map((s) => (
                     <option key={s} value={s}>{s}</option>
@@ -286,7 +286,7 @@ export default function NewPartnerPage() {
 
           {/* Professional Type */}
           <div className="bg-white rounded-xl border border-gray-200 p-6 space-y-3">
-            <h2 className="text-sm font-semibold text-[#1C3557] uppercase tracking-wider">Professional Type</h2>
+            <h2 className="text-sm font-semibold text-navy uppercase tracking-wider">Professional Type</h2>
             <div className="flex flex-wrap gap-2">
               {PROFESSIONAL_TYPES.map((t) => (
                 <button
@@ -295,7 +295,7 @@ export default function NewPartnerPage() {
                   onClick={() => set("professionalType", t)}
                   className={`px-4 py-2 rounded-lg text-sm font-medium border transition ${
                     form.professionalType === t
-                      ? "border-[#C9A84C] bg-[#C9A84C]/10 text-[#1C3557]"
+                      ? "border-gold bg-gold/10 text-navy"
                       : "border-gray-200 text-gray-500 hover:border-gray-300"
                   }`}
                 >
@@ -307,7 +307,7 @@ export default function NewPartnerPage() {
 
           {/* Plan Tier */}
           <div className="bg-white rounded-xl border border-gray-200 p-6 space-y-3">
-            <h2 className="text-sm font-semibold text-[#1C3557] uppercase tracking-wider">Plan Tier</h2>
+            <h2 className="text-sm font-semibold text-navy uppercase tracking-wider">Plan Tier</h2>
             <div className="grid grid-cols-2 gap-3">
               {PLAN_TIERS.map((tier) => (
                 <button
@@ -316,11 +316,11 @@ export default function NewPartnerPage() {
                   onClick={() => set("planTier", tier.value)}
                   className={`rounded-xl border-2 p-4 text-left transition ${
                     form.planTier === tier.value
-                      ? "border-[#C9A84C] bg-[#C9A84C]/5"
+                      ? "border-gold bg-gold/5"
                       : "border-gray-200 hover:border-gray-300"
                   }`}
                 >
-                  <p className="font-semibold text-[#2D2D2D]">{tier.label}</p>
+                  <p className="font-semibold text-charcoal">{tier.label}</p>
                   <p className="text-sm text-gray-500 mt-0.5">{tier.price}</p>
                 </button>
               ))}
@@ -329,13 +329,13 @@ export default function NewPartnerPage() {
 
           {/* Lead Source + Notes */}
           <div className="bg-white rounded-xl border border-gray-200 p-6 space-y-4">
-            <h2 className="text-sm font-semibold text-[#1C3557] uppercase tracking-wider">Additional Details</h2>
+            <h2 className="text-sm font-semibold text-navy uppercase tracking-wider">Additional Details</h2>
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">Lead Source</label>
               <select
                 value={form.leadSource}
                 onChange={(e) => set("leadSource", e.target.value)}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#C9A84C]/40 focus:border-[#C9A84C]"
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-gold/40 focus:border-gold"
               >
                 <option value="">Select a source...</option>
                 {LEAD_SOURCES.map((s) => (
@@ -349,7 +349,7 @@ export default function NewPartnerPage() {
                 value={form.notes}
                 onChange={(e) => set("notes", e.target.value)}
                 rows={3}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C9A84C]/40 focus:border-[#C9A84C] resize-none"
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gold/40 focus:border-gold resize-none"
                 placeholder="Anything relevant about this partner..."
               />
             </div>
@@ -359,7 +359,7 @@ export default function NewPartnerPage() {
           <button
             onClick={handleSubmit}
             disabled={submitting}
-            className="w-full py-3 rounded-xl bg-[#C9A84C] text-white font-semibold text-sm hover:bg-[#b89740] transition disabled:opacity-50"
+            className="w-full py-3 rounded-xl bg-gold text-white font-semibold text-sm hover:bg-gold-600 transition disabled:opacity-50"
           >
             {submitting ? "Creating Account..." : "Generate Preview & Create Account"}
           </button>
@@ -389,13 +389,13 @@ export default function NewPartnerPage() {
                   <div>
                     {/* Header */}
                     <div className="bg-white px-4 py-3 border-b border-gray-100 flex items-center justify-between">
-                      <span className="text-sm font-bold text-[#1C3557]">
+                      <span className="text-sm font-bold text-navy">
                         {form.companyName || "Company Name"}
                       </span>
                       <span className="text-[10px] text-gray-400">Powered by EstateVault</span>
                     </div>
                     {/* Hero */}
-                    <div className="bg-[#1C3557] px-6 py-10 text-center">
+                    <div className="bg-navy px-6 py-10 text-center">
                       <h2 className="text-white text-lg font-bold mb-2">
                         Protect What Matters Most
                       </h2>
@@ -404,7 +404,7 @@ export default function NewPartnerPage() {
                           ? `${form.companyName} has partnered with EstateVault to bring you simple, affordable estate planning.`
                           : "Your trusted partner for simple, affordable estate planning."}
                       </p>
-                      <div className="inline-block bg-[#C9A84C] text-white text-xs font-semibold rounded-lg px-5 py-2">
+                      <div className="inline-block bg-gold text-white text-xs font-semibold rounded-lg px-5 py-2">
                         Get Started
                       </div>
                     </div>
@@ -412,7 +412,7 @@ export default function NewPartnerPage() {
                     <div className="grid grid-cols-3 gap-2 p-4">
                       {["Will Package", "Trust Package", "Secure Vault"].map((f) => (
                         <div key={f} className="bg-gray-50 rounded-lg p-2 text-center">
-                          <p className="text-[10px] font-medium text-[#2D2D2D]">{f}</p>
+                          <p className="text-[10px] font-medium text-charcoal">{f}</p>
                         </div>
                       ))}
                     </div>
@@ -433,11 +433,11 @@ export default function NewPartnerPage() {
                 <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Welcome Email Preview</h3>
                 <div className="rounded-xl border border-gray-200 bg-white p-4 space-y-2">
                   <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-full bg-[#1C3557] flex items-center justify-center text-white text-xs font-bold">
+                    <div className="w-8 h-8 rounded-full bg-navy flex items-center justify-center text-white text-xs font-bold">
                       {(form.ownerName || "?")[0]?.toUpperCase()}
                     </div>
                     <div className="min-w-0">
-                      <p className="text-sm font-medium text-[#2D2D2D] truncate">
+                      <p className="text-sm font-medium text-charcoal truncate">
                         EstateVault for {form.companyName || "Partner"}
                       </p>
                       <p className="text-xs text-gray-400 truncate">
@@ -446,12 +446,12 @@ export default function NewPartnerPage() {
                     </div>
                   </div>
                   <div className="border-t border-gray-100 pt-2">
-                    <p className="text-xs font-semibold text-[#2D2D2D]">
+                    <p className="text-xs font-semibold text-charcoal">
                       Subject: Welcome to EstateVault, {form.ownerName ? form.ownerName.split(" ")[0] : "Partner"}!
                     </p>
                     <p className="text-xs text-gray-400 mt-1">
                       Your white-label estate planning portal is ready at{" "}
-                      <span className="text-[#C9A84C] font-medium">{previewUrl}</span>
+                      <span className="text-gold font-medium">{previewUrl}</span>
                     </p>
                   </div>
                 </div>
@@ -463,7 +463,7 @@ export default function NewPartnerPage() {
               <div>
                 <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Partner URL</h3>
                 <div className="rounded-xl border border-gray-200 bg-white px-4 py-3">
-                  <p className="text-sm font-mono text-[#1C3557]">https://{previewUrl}</p>
+                  <p className="text-sm font-mono text-navy">https://{previewUrl}</p>
                 </div>
               </div>
             )}

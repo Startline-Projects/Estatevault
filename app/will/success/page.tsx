@@ -234,9 +234,9 @@ function SuccessContent() {
                 ) : step.status === "active" ? (
                   <span className="mt-0.5 animate-pulse">&#9203;</span>
                 ) : (
-                  <span className="mt-0.5 text-white/30">&#11036;</span>
+                  <span className="mt-0.5 text-white/50">&#11036;</span>
                 )}
-                <span className={`text-sm ${step.status === "done" ? "text-white" : step.status === "active" ? "text-gold font-medium" : "text-white/40"}`}>
+                <span className={`text-sm ${step.status === "done" ? "text-white" : step.status === "active" ? "text-gold font-medium" : "text-white/60"}`}>
                   {step.label}
                 </span>
               </div>
@@ -284,7 +284,7 @@ function SuccessContent() {
                 URL.revokeObjectURL(url);
               }}
               disabled={!docsReady || documents.filter((d) => d.storage_path).length === 0}
-              className="w-full min-h-[48px] rounded-full bg-[#C9A84C] py-3.5 text-base font-semibold text-white hover:bg-[#C9A84C]/90 transition-colors shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full min-h-[48px] rounded-full bg-gold py-3.5 text-base font-semibold text-white hover:bg-gold/90 transition-colors shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {docsReady && documents.filter((d) => d.storage_path).length > 0 ? "Download Documents" : "Preparing your documents..."}
             </button>
@@ -293,7 +293,7 @@ function SuccessContent() {
 
         {/* Test mode label */}
         {isTest && (
-          <p className="mt-6 text-center text-xs text-white/30">Test Mode — Documents will not be saved</p>
+          <p className="mt-6 text-center text-xs text-white/50">Test Mode — Documents will not be saved</p>
         )}
 
         {/* Password setup — not shown in test mode or for existing accounts */}
