@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { type WillIntake, initialWillIntake } from "@/lib/will-types";
@@ -14,8 +14,7 @@ type Stage = "loading" | "acknowledgment" | "intake" | "redirecting";
 
 export default function WillPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const partnerParam = searchParams.get("partner") || "";
+  const [partnerParam, setPartnerParam] = useState("");
   const [stage, setStage] = useState<Stage>("loading");
   const [userId, setUserId] = useState<string | null>(null);
 
@@ -38,6 +37,7 @@ export default function WillPage() {
 
   useEffect(() => {
     async function init() {
+      setPartnerParam(new URLSearchParams(window.location.search).get("partner") || "");
       const supabase = createClient();
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {

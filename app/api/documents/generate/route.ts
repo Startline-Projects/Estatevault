@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import { NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { addJob, type DocumentJob } from "@/lib/queue/document-queue";
