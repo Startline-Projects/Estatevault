@@ -147,13 +147,13 @@ export default function DocumentsPage() {
 
   async function handleDownload(doc: Document) {
     if (!doc.storage_path) return;
-    const supabase = createClient();
-    const { data, error } = await supabase.storage.from("documents").createSignedUrl(doc.storage_path, 3600);
-    if (error) { console.error("Signed URL error:", error); return; }
-    if (!data?.signedUrl) return;
 
-    // Fetch as blob so the download attribute works cross-origin
-    const response = await fetch(data.signedUrl);
+    const res = await fetch(`/api/documents/download?id=${doc.id}`);
+    if (!res.ok) return;
+    const { url } = await res.json();
+    if (!url) return;
+
+    const response = await fetch(url);
     const blob = await response.blob();
     const blobUrl = URL.createObjectURL(blob);
 
