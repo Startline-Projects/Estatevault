@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
+import SubscriptionBanner from "@/components/dashboard/SubscriptionBanner";
 
 interface VaultItem {
   id: string;
@@ -96,38 +97,13 @@ export default function VaultPage() {
   const [pinExpiry, setPinExpiry] = useState(0);
   const [isSubscribed, setIsSubscribed] = useState(false);
   const [showUpgradePrompt, setShowUpgradePrompt] = useState(false);
-  const [subscribing, setSubscribing] = useState(false);
-  const [subscribeError, setSubscribeError] = useState("");
 
-  async function handleSubscribe() {
-    setSubscribing(true);
-    setSubscribeError("");
-    try {
-      const res = await fetch("/api/checkout/vault-subscription", { method: "POST" });
-      const data = await res.json();
-      if (data.url) {
-        window.location.href = data.url;
-      } else {
-        setSubscribeError(data.error || "Something went wrong. Please try again.");
-        setSubscribing(false);
-      }
-    } catch {
-      setSubscribeError("Network error. Please try again.");
-      setSubscribing(false);
-    }
-  }
-
-  // Check PIN + subscription status in parallel
+  // Check PIN only — subscription status comes from SubscriptionBanner
   useEffect(() => {
     async function check() {
-      const [pinRes, subRes] = await Promise.all([
-        fetch("/api/vault/pin", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "check" }) }),
-        fetch("/api/subscription/status"),
-      ]);
-      const pinData = await pinRes.json();
-      const subData = await subRes.json();
-      setIsSubscribed(subData.status === "active");
-      setScreen(pinData.hasPin ? "pin-enter" : "pin-create");
+      const res = await fetch("/api/vault/pin", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "check" }) });
+      const data = await res.json();
+      setScreen(data.hasPin ? "pin-enter" : "pin-create");
     }
     check();
   }, []);
@@ -301,18 +277,10 @@ export default function VaultPage() {
         </Link>
       </div>
 
-      {/* Vault Plan upsell banner — shown to non-subscribers */}
-      {!isSubscribed && (
-        <div className="mt-6 rounded-xl bg-gold/10 border border-gold/30 p-5 flex items-center justify-between gap-4">
-          <div>
-            <p className="text-sm font-semibold text-navy">Unlock the Full Vault — $99/year</p>
-            <p className="text-xs text-charcoal/60 mt-1">Store financial accounts, insurance policies, digital accounts, contacts, and more. Your family will thank you.</p>
-          </div>
-          <button onClick={handleSubscribe} disabled={subscribing} className="flex-shrink-0 rounded-full bg-gold px-5 py-2 text-sm font-semibold text-white hover:bg-gold/90 transition-colors disabled:opacity-50">
-            {subscribing ? "Loading..." : "Upgrade"}
-          </button>
-        </div>
-      )}
+      {/* Subscription banner — shows active status or upsell */}
+      <div className="mt-6">
+        <SubscriptionBanner onStatusLoaded={(s) => setIsSubscribed(s.status === "active")} />
+      </div>
 
       {/* Upgrade prompt modal */}
       {showUpgradePrompt && (
@@ -322,10 +290,17 @@ export default function VaultPage() {
             <h2 className="mt-4 text-lg font-bold text-navy">Vault Plan Required</h2>
             <p className="mt-2 text-sm text-charcoal/60">This section is part of the EstateVault Plan ($99/year). Upgrade to store and protect all your important information.</p>
             <div className="mt-6 flex flex-col gap-3">
-              <button onClick={handleSubscribe} disabled={subscribing} className="w-full min-h-[44px] flex items-center justify-center rounded-full bg-gold text-sm font-semibold text-white hover:bg-gold/90 transition-colors disabled:opacity-50">
-                {subscribing ? "Loading..." : "Upgrade — $99/year"}
+              <button
+                onClick={async () => {
+                  setShowUpgradePrompt(false);
+                  const res = await fetch("/api/checkout/vault-subscription", { method: "POST" });
+                  const data = await res.json();
+                  if (data.url) window.location.href = data.url;
+                }}
+                className="w-full min-h-[44px] flex items-center justify-center rounded-full bg-gold text-sm font-semibold text-white hover:bg-gold/90 transition-colors"
+              >
+                Upgrade — $99/year
               </button>
-              {subscribeError && <p className="text-xs text-red-600">{subscribeError}</p>}
               <button onClick={() => setShowUpgradePrompt(false)} className="text-sm text-charcoal/50 hover:text-charcoal transition-colors">
                 Maybe later
               </button>
