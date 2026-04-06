@@ -150,15 +150,20 @@ export default function DocumentsPage() {
     const supabase = createClient();
     const { data, error } = await supabase.storage.from("documents").createSignedUrl(doc.storage_path, 3600);
     if (error) { console.error("Signed URL error:", error); return; }
-    if (data?.signedUrl) {
-      const a = document.createElement("a");
-      a.href = data.signedUrl;
-      a.download = `${doc.document_type}.pdf`;
-      a.target = "_blank";
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-    }
+    if (!data?.signedUrl) return;
+
+    // Fetch as blob so the download attribute works cross-origin
+    const response = await fetch(data.signedUrl);
+    const blob = await response.blob();
+    const blobUrl = URL.createObjectURL(blob);
+
+    const a = document.createElement("a");
+    a.href = blobUrl;
+    a.download = `${doc.document_type.replace(/_/g, "-")}.pdf`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(blobUrl);
   }
 
   if (loading) {
