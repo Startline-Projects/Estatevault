@@ -29,11 +29,17 @@ export async function POST(request: Request) {
   }
 
   const body = await request.json();
-  const { fullName, email } = body;
+  const { fullName, email, commissionRate } = body;
 
   if (!fullName || !email) {
     return NextResponse.json({ error: "Full name and email are required" }, { status: 400 });
   }
+
+  const parsedRate = parseFloat(commissionRate);
+  if (isNaN(parsedRate) || parsedRate < 0 || parsedRate > 100) {
+    return NextResponse.json({ error: "Commission rate must be between 0 and 100" }, { status: 400 });
+  }
+  const rateDecimal = parsedRate / 100;
 
   const tempPassword = generateTempPassword();
 
@@ -58,6 +64,7 @@ export async function POST(request: Request) {
     email,
     full_name: fullName,
     user_type: "sales_rep",
+    commission_rate: rateDecimal,
   });
 
   // Audit log

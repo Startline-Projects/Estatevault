@@ -8,6 +8,7 @@ interface SalesRep {
   email: string;
   active_partners: number;
   created_at: string;
+  commission_rate: number;
 }
 
 export default function TeamManagement() {
@@ -16,9 +17,13 @@ export default function TeamManagement() {
   const [showModal, setShowModal] = useState(false);
   const [formName, setFormName] = useState("");
   const [formEmail, setFormEmail] = useState("");
+  const [formCommission, setFormCommission] = useState("5");
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [editingRateId, setEditingRateId] = useState<string | null>(null);
+  const [editingRateValue, setEditingRateValue] = useState("");
+  const [savingRate, setSavingRate] = useState(false);
 
   async function fetchReps() {
     try {
@@ -46,7 +51,7 @@ export default function TeamManagement() {
       const res = await fetch("/api/sales/create-rep", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ fullName: formName, email: formEmail }),
+        body: JSON.stringify({ fullName: formName, email: formEmail, commissionRate: formCommission }),
       });
 
       const data = await res.json();
@@ -60,12 +65,39 @@ export default function TeamManagement() {
       setSuccess(`Account created for ${formName}. Temporary password: ${data.tempPassword}`);
       setFormName("");
       setFormEmail("");
+      setFormCommission("5");
       setShowModal(false);
       fetchReps();
     } catch {
       setError("Something went wrong.");
     } finally {
       setCreating(false);
+    }
+  }
+
+  async function handleSaveRate(repId: string) {
+    setSavingRate(true);
+    try {
+      const res = await fetch("/api/sales/reps", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ repId, commissionRate: editingRateValue }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        alert(data.error || "Failed to update commission rate.");
+        return;
+      }
+      setReps((prev) =>
+        prev.map((r) =>
+          r.id === repId ? { ...r, commission_rate: parseFloat(editingRateValue) / 100 } : r
+        )
+      );
+      setEditingRateId(null);
+    } catch {
+      alert("Something went wrong.");
+    } finally {
+      setSavingRate(false);
     }
   }
 
@@ -110,6 +142,7 @@ export default function TeamManagement() {
                 <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Name</th>
                 <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Email</th>
                 <th className="text-right px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Active Partners</th>
+                <th className="text-center px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Commission Rate</th>
                 <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Status</th>
               </tr>
             </thead>
@@ -119,6 +152,46 @@ export default function TeamManagement() {
                   <td className="px-5 py-3 font-medium text-charcoal">{rep.full_name}</td>
                   <td className="px-5 py-3 text-gray-600">{rep.email}</td>
                   <td className="px-5 py-3 text-right text-gray-600">{rep.active_partners}</td>
+                  <td className="px-5 py-3 text-center">
+                    {editingRateId === rep.id ? (
+                      <div className="flex items-center justify-center gap-1">
+                        <input
+                          type="number"
+                          min="0"
+                          max="100"
+                          step="0.5"
+                          value={editingRateValue}
+                          onChange={(e) => setEditingRateValue(e.target.value)}
+                          className="w-16 rounded border border-gray-300 px-2 py-1 text-xs text-center focus:outline-none focus:ring-1 focus:ring-navy/30"
+                        />
+                        <span className="text-xs text-gray-500">%</span>
+                        <button
+                          onClick={() => handleSaveRate(rep.id)}
+                          disabled={savingRate}
+                          className="px-2 py-1 rounded bg-navy text-white text-xs font-medium hover:bg-navy/90 disabled:opacity-50"
+                        >
+                          {savingRate ? "..." : "Save"}
+                        </button>
+                        <button
+                          onClick={() => setEditingRateId(null)}
+                          className="px-2 py-1 rounded border border-gray-300 text-xs text-gray-600 hover:bg-gray-50"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => {
+                          setEditingRateId(rep.id);
+                          setEditingRateValue(((rep.commission_rate ?? 0.05) * 100).toFixed(1));
+                        }}
+                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-navy/10 text-navy hover:bg-navy/20 transition-colors"
+                      >
+                        {((rep.commission_rate ?? 0.05) * 100).toFixed(1)}%
+                        <span className="text-navy/50 text-[10px]">edit</span>
+                      </button>
+                    )}
+                  </td>
                   <td className="px-5 py-3">
                     <span className="inline-block px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-700">
                       Active
@@ -168,6 +241,24 @@ export default function TeamManagement() {
                   className="w-full rounded-lg border border-gray-300 px-4 py-3 text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-navy/30 focus:border-navy"
                   placeholder="john@company.com"
                 />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-charcoal mb-1">Commission Rate (%)</label>
+                <div className="relative">
+                  <input
+                    type="number"
+                    required
+                    min="0"
+                    max="100"
+                    step="0.5"
+                    value={formCommission}
+                    onChange={(e) => setFormCommission(e.target.value)}
+                    className="w-full rounded-lg border border-gray-300 px-4 py-3 text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-navy/30 focus:border-navy pr-10"
+                    placeholder="5"
+                  />
+                  <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm text-gray-400">%</span>
+                </div>
+                <p className="text-xs text-gray-400 mt-1">Percentage of partner&apos;s white-label platform fee (e.g. 5 = 5%)</p>
               </div>
               <div className="flex gap-3 pt-2">
                 <button

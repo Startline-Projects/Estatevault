@@ -6,29 +6,24 @@ import { createClient } from "@/lib/supabase/client";
 interface PartnerRow {
   id: string;
   company_name: string;
-}
-
-interface OrderRow {
-  amount_total: number;
-  ev_cut: number;
-  partner_id: string;
+  platform_fee_amount: number;
+  one_time_fee_paid: boolean;
   created_at: string;
 }
 
 interface BreakdownRow {
   partnerName: string;
-  mtdRevenue: number;
+  platformFee: number;
   commission: number;
+  paidAt: string;
 }
 
 interface HistoryRow {
   month: string;
-  partnerRevenue: number;
+  platformFees: number;
   commission: number;
   status: "Paid" | "Pending";
 }
-
-const COMMISSION_RATE = 0.05;
 
 function formatCurrency(amount: number): string {
   return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(amount);
@@ -40,6 +35,7 @@ function getMonthLabel(date: Date): string {
 
 export default function SalesCommissionPage() {
   const [loading, setLoading] = useState(true);
+  const [commissionRate, setCommissionRate] = useState(0.05);
   const [mtdCommission, setMtdCommission] = useState(0);
   const [breakdown, setBreakdown] = useState<BreakdownRow[]>([]);
   const [history, setHistory] = useState<HistoryRow[]>([]);
@@ -47,23 +43,27 @@ export default function SalesCommissionPage() {
   useEffect(() => {
     async function load() {
       const supabase = createClient();
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+      const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      // Fetch user type for admin bypass
+      // Fetch profile for user_type + commission_rate
       const { data: profileData } = await supabase
         .from("profiles")
-        .select("user_type")
+        .select("user_type, commission_rate")
         .eq("id", user.id)
         .single();
-      const isAdmin = profileData?.user_type === "admin";
 
-      // Fetch partners — admin sees all, reps see only their own
-      let partnersQuery = supabase.from("partners").select("id, company_name");
+      const isAdmin = profileData?.user_type === "admin";
+      const rate = profileData?.commission_rate ?? 0.05;
+      setCommissionRate(rate);
+
+      // Fetch partners with platform fee info
+      let partnersQuery = supabase
+        .from("partners")
+        .select("id, company_name, platform_fee_amount, one_time_fee_paid, created_at")
+        .eq("one_time_fee_paid", true);
       if (!isAdmin) partnersQuery = partnersQuery.eq("created_by", user.id);
-      const { data: partners } = await partnersQuery;
+      const { data: partners } = await partnersQuery.order("created_at", { ascending: false });
 
       if (!partners || partners.length === 0) {
         setLoading(false);
@@ -71,75 +71,43 @@ export default function SalesCommissionPage() {
       }
 
       const typedPartners = partners as PartnerRow[];
-      const partnerIds = typedPartners.map((p) => p.id);
-      const partnerMap = new Map(typedPartners.map((p) => [p.id, p.company_name]));
 
-      // Fetch orders from last 6 months
-      const sixMonthsAgo = new Date();
-      sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
-      sixMonthsAgo.setDate(1);
-      sixMonthsAgo.setHours(0, 0, 0, 0);
-
-      const { data: orders } = await supabase
-        .from("orders")
-        .select("amount_total, ev_cut, partner_id, created_at")
-        .in("partner_id", partnerIds)
-        .gte("created_at", sixMonthsAgo.toISOString());
-
-      const typedOrders = (orders || []) as OrderRow[];
-
-      // MTD breakdown
+      // MTD = partners who paid their platform fee this month
       const now = new Date();
       const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-      const mtdOrders = typedOrders.filter((o) => new Date(o.created_at) >= monthStart);
 
-      const revenueByPartner = new Map<string, number>();
-      for (const o of mtdOrders) {
-        const prev = revenueByPartner.get(o.partner_id) || 0;
-        revenueByPartner.set(o.partner_id, prev + (o.ev_cut || 0));
-      }
+      const mtdPartners = typedPartners.filter((p) => new Date(p.created_at) >= monthStart);
+      const mtdFees = mtdPartners.reduce((sum, p) => sum + (p.platform_fee_amount || 0), 0) / 100;
+      setMtdCommission(mtdFees * rate);
 
-      const breakdownRows: BreakdownRow[] = [];
-      let totalMtdRevenue = 0;
-      revenueByPartner.forEach((totalCents, partnerId) => {
-        const dollars = totalCents / 100;
-        totalMtdRevenue += dollars;
-        breakdownRows.push({
-          partnerName: partnerMap.get(partnerId) || "Unknown",
-          mtdRevenue: dollars,
-          commission: dollars * COMMISSION_RATE,
-        });
+      // MTD breakdown per partner
+      const breakdownRows: BreakdownRow[] = mtdPartners.map((p) => {
+        const fee = (p.platform_fee_amount || 0) / 100;
+        return {
+          partnerName: p.company_name,
+          platformFee: fee,
+          commission: fee * rate,
+          paidAt: new Date(p.created_at).toLocaleDateString(),
+        };
       });
-      // Include partners with no revenue this month
-      for (const p of typedPartners) {
-        if (!revenueByPartner.has(p.id)) {
-          breakdownRows.push({
-            partnerName: p.company_name,
-            mtdRevenue: 0,
-            commission: 0,
-          });
-        }
-      }
-      breakdownRows.sort((a, b) => b.mtdRevenue - a.mtdRevenue);
+      breakdownRows.sort((a, b) => b.platformFee - a.platformFee);
       setBreakdown(breakdownRows);
-      setMtdCommission(totalMtdRevenue * COMMISSION_RATE);
 
       // History: last 6 months
       const historyRows: HistoryRow[] = [];
       for (let i = 0; i < 6; i++) {
         const mDate = new Date(now.getFullYear(), now.getMonth() - i, 1);
         const mEnd = new Date(now.getFullYear(), now.getMonth() - i + 1, 1);
-        const monthOrders = typedOrders.filter((o) => {
-          const d = new Date(o.created_at);
+        const monthPartners = typedPartners.filter((p) => {
+          const d = new Date(p.created_at);
           return d >= mDate && d < mEnd;
         });
-        const partnerRevenue = monthOrders.reduce((sum, o) => sum + (o.ev_cut || 0), 0) / 100;
-        const isCurrentMonth = i === 0;
+        const fees = monthPartners.reduce((sum, p) => sum + (p.platform_fee_amount || 0), 0) / 100;
         historyRows.push({
           month: getMonthLabel(mDate),
-          partnerRevenue,
-          commission: partnerRevenue * COMMISSION_RATE,
-          status: isCurrentMonth ? "Pending" : "Paid",
+          platformFees: fees,
+          commission: fees * rate,
+          status: i === 0 ? "Pending" : "Paid",
         });
       }
       setHistory(historyRows);
@@ -160,9 +128,7 @@ export default function SalesCommissionPage() {
     <div className="max-w-4xl mx-auto space-y-8">
       {/* MTD Commission Header */}
       <div className="bg-navy rounded-xl p-6 text-white">
-        <p className="text-sm font-medium text-white/60 uppercase tracking-wide">
-          My MTD Commission
-        </p>
+        <p className="text-sm font-medium text-white/60 uppercase tracking-wide">My MTD Commission</p>
         <p className="text-4xl font-bold mt-2">{formatCurrency(mtdCommission)}</p>
         <p className="text-sm text-white/50 mt-1">
           {new Date().toLocaleDateString("en-US", { month: "long", year: "numeric" })}
@@ -173,61 +139,45 @@ export default function SalesCommissionPage() {
       <div className="bg-gold/10 border border-gold/30 rounded-xl p-5">
         <h3 className="text-sm font-semibold text-navy mb-1">How Commission Works</h3>
         <p className="text-sm text-charcoal leading-relaxed">
-          You earn a <span className="font-semibold">5% commission</span> on EstateVault&apos;s net revenue from partners you
-          recruit. Commission is calculated on EstateVault&apos;s cut per order (after partner earnings are deducted). Commissions
-          are processed and paid monthly.
+          You earn a <span className="font-semibold">{(commissionRate * 100).toFixed(0)}% commission</span> on
+          the white-label platform fee paid by partners you recruit. Commission is earned when a partner
+          completes their signup payment — not on document sales. Commissions are processed and paid monthly.
         </p>
       </div>
 
-      {/* Commission Breakdown */}
+      {/* MTD Breakdown */}
       <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
         <div className="px-5 py-4 border-b border-gray-100">
-          <h2 className="text-sm font-semibold text-charcoal">MTD Commission Breakdown</h2>
+          <h2 className="text-sm font-semibold text-charcoal">MTD Partner Signups</h2>
         </div>
         {breakdown.length === 0 ? (
           <div className="px-5 py-10 text-center text-sm text-gray-400">
-            No partner data available yet.
+            No partner signups this month yet.
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-gray-100 bg-gray-50/50">
-                  <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">
-                    Partner
-                  </th>
-                  <th className="text-right px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">
-                    EstateVault Revenue
-                  </th>
-                  <th className="text-right px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">
-                    Your Commission
-                  </th>
+                  <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Partner</th>
+                  <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Signed Up</th>
+                  <th className="text-right px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Platform Fee</th>
+                  <th className="text-right px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Your Commission</th>
                 </tr>
               </thead>
               <tbody>
                 {breakdown.map((row) => (
-                  <tr
-                    key={row.partnerName}
-                    className="border-b border-gray-50 hover:bg-gray-50/50 transition-colors"
-                  >
+                  <tr key={row.partnerName} className="border-b border-gray-50 hover:bg-gray-50/50 transition-colors">
                     <td className="px-5 py-3 font-medium text-charcoal">{row.partnerName}</td>
-                    <td className="px-5 py-3 text-right text-gray-600">
-                      {formatCurrency(row.mtdRevenue)}
-                    </td>
-                    <td className="px-5 py-3 text-right font-medium text-navy">
-                      {formatCurrency(row.commission)}
-                    </td>
+                    <td className="px-5 py-3 text-gray-600">{row.paidAt}</td>
+                    <td className="px-5 py-3 text-right text-gray-600">{formatCurrency(row.platformFee)}</td>
+                    <td className="px-5 py-3 text-right font-medium text-navy">{formatCurrency(row.commission)}</td>
                   </tr>
                 ))}
-                {/* Totals row */}
                 <tr className="bg-gray-50 font-semibold">
-                  <td className="px-5 py-3 text-charcoal">Total</td>
-                  <td className="px-5 py-3 text-right text-charcoal">
-                    {formatCurrency(breakdown.reduce((s, r) => s + r.mtdRevenue, 0))}
-                  </td>
-                  <td className="px-5 py-3 text-right text-navy">
-                    {formatCurrency(mtdCommission)}
-                  </td>
+                  <td className="px-5 py-3 text-charcoal" colSpan={2}>Total</td>
+                  <td className="px-5 py-3 text-right text-charcoal">{formatCurrency(breakdown.reduce((s, r) => s + r.platformFee, 0))}</td>
+                  <td className="px-5 py-3 text-right text-navy">{formatCurrency(mtdCommission)}</td>
                 </tr>
               </tbody>
             </table>
@@ -235,7 +185,7 @@ export default function SalesCommissionPage() {
         )}
       </div>
 
-      {/* Commission History */}
+      {/* History */}
       <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
         <div className="px-5 py-4 border-b border-gray-100">
           <h2 className="text-sm font-semibold text-charcoal">Commission History (Last 6 Months)</h2>
@@ -244,41 +194,20 @@ export default function SalesCommissionPage() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-gray-100 bg-gray-50/50">
-                <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">
-                  Month
-                </th>
-                <th className="text-right px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">
-                  EstateVault Revenue
-                </th>
-                <th className="text-right px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">
-                  My Commission
-                </th>
-                <th className="text-center px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">
-                  Status
-                </th>
+                <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Month</th>
+                <th className="text-right px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Platform Fees</th>
+                <th className="text-right px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">My Commission</th>
+                <th className="text-center px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Status</th>
               </tr>
             </thead>
             <tbody>
               {history.map((row) => (
-                <tr
-                  key={row.month}
-                  className="border-b border-gray-50 hover:bg-gray-50/50 transition-colors"
-                >
+                <tr key={row.month} className="border-b border-gray-50 hover:bg-gray-50/50 transition-colors">
                   <td className="px-5 py-3 font-medium text-charcoal">{row.month}</td>
-                  <td className="px-5 py-3 text-right text-gray-600">
-                    {formatCurrency(row.partnerRevenue)}
-                  </td>
-                  <td className="px-5 py-3 text-right font-medium text-navy">
-                    {formatCurrency(row.commission)}
-                  </td>
+                  <td className="px-5 py-3 text-right text-gray-600">{formatCurrency(row.platformFees)}</td>
+                  <td className="px-5 py-3 text-right font-medium text-navy">{formatCurrency(row.commission)}</td>
                   <td className="px-5 py-3 text-center">
-                    <span
-                      className={`inline-block px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                        row.status === "Paid"
-                          ? "bg-green-100 text-green-700"
-                          : "bg-amber-100 text-amber-700"
-                      }`}
-                    >
+                    <span className={`inline-block px-2.5 py-0.5 rounded-full text-xs font-medium ${row.status === "Paid" ? "bg-green-100 text-green-700" : "bg-amber-100 text-amber-700"}`}>
                       {row.status}
                     </span>
                   </td>
@@ -289,10 +218,8 @@ export default function SalesCommissionPage() {
         </div>
       </div>
 
-      {/* Processing Note */}
       <p className="text-xs text-gray-400 text-center">
-        Commissions are calculated on partner order totals and processed on the 1st of each month. Payments are
-        deposited within 5 business days of processing.
+        Commissions are earned on partner platform fees only and processed on the 1st of each month.
       </p>
     </div>
   );

@@ -116,6 +116,7 @@ export async function POST(request: Request) {
         await supabase.from("partners").update({
           one_time_fee_paid: true,
           onboarding_step: 2,
+          platform_fee_amount: session.amount_total || 0,
         }).eq("id", partnerId);
         await supabase.from("audit_log").insert({
           action: "partner.platform_fee_paid",
