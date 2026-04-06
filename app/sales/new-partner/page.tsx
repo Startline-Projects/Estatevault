@@ -120,14 +120,24 @@ export default function NewPartnerPage() {
 
   async function handleSendWelcome() {
     try {
-      await fetch("/api/sales/send-welcome-email", {
+      const res = await fetch("/api/sales/send-welcome-email", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: success?.email }),
+        body: JSON.stringify({
+          email: success?.email,
+          tempPassword: success?.tempPassword,
+          ownerName: form.ownerName,
+          companyName: form.companyName,
+        }),
       });
-      alert("Welcome email sent to " + success?.email);
+      if (res.ok) {
+        alert("Welcome email sent to " + success?.email);
+      } else {
+        const data = await res.json();
+        alert("Failed to send email: " + (data.error || "Unknown error"));
+      }
     } catch {
-      alert("Welcome email sending is not yet connected.");
+      alert("Something went wrong sending the email.");
     }
   }
 
