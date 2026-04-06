@@ -108,5 +108,41 @@ export async function POST(request: Request) {
     metadata: { company_name: companyName, tier, source, professional_type: professionalType },
   });
 
+  // Send welcome email to partner
+  try {
+    const { Resend } = await import("resend");
+    const resend = new Resend(process.env.RESEND_API_KEY);
+    await resend.emails.send({
+      from: "EstateVault <info@estatevault.us>",
+      to: email,
+      subject: "Welcome to EstateVault — Your Partner Account",
+      html: `
+        <div style="font-family: Inter, sans-serif; max-width: 500px; margin: 0 auto; padding: 32px;">
+          <h1 style="color: #1C3557; font-size: 24px;">Welcome to EstateVault</h1>
+          <p style="color: #2D2D2D; line-height: 1.6;">Hi ${ownerName},</p>
+          <p style="color: #2D2D2D; line-height: 1.6;">
+            Your partner account for <strong>${companyName}</strong> has been created.
+            Use the credentials below to sign in and complete your onboarding:
+          </p>
+          <div style="background: #f8f9fa; border-radius: 12px; padding: 20px; margin: 24px 0;">
+            <p style="margin: 0 0 8px 0; color: #666; font-size: 13px;">Email</p>
+            <p style="margin: 0 0 16px 0; color: #1C3557; font-weight: 600;">${email}</p>
+            <p style="margin: 0 0 8px 0; color: #666; font-size: 13px;">Temporary Password</p>
+            <p style="margin: 0; color: #1C3557; font-weight: 600; font-family: monospace; font-size: 18px;">${tempPassword}</p>
+          </div>
+          <a href="https://www.estatevault.us/pro/login"
+             style="display: block; text-align: center; background: #C9A84C; color: white; text-decoration: none; padding: 14px 24px; border-radius: 999px; font-weight: 600; font-size: 14px;">
+            Sign In to Your Partner Account
+          </a>
+          <p style="color: #999; font-size: 12px; margin-top: 24px; text-align: center;">
+            Please change your password after signing in.
+          </p>
+        </div>
+      `,
+    });
+  } catch (emailErr) {
+    console.error("Partner welcome email failed:", emailErr);
+  }
+
   return NextResponse.json({ partnerId: partner.id, email, tempPassword, slug });
 }
