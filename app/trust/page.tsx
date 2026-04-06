@@ -36,6 +36,7 @@ const execRelOptions = ["Spouse/Partner", "Adult Child", "Sibling", "Parent", "O
 
 export default function TrustPage() {
   const router = useRouter();
+  const [partnerParam, setPartnerParam] = useState("");
   const [stage, setStage] = useState<Stage>("loading");
   const [userId, setUserId] = useState<string | null>(null);
   const [intake, setIntake] = useState<TrustIntake>(initialTrustIntake);
@@ -51,6 +52,7 @@ export default function TrustPage() {
 
   useEffect(() => {
     async function init() {
+      setPartnerParam(new URLSearchParams(window.location.search).get("partner") || "");
       const supabase = createClient();
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
@@ -138,6 +140,7 @@ export default function TrustPage() {
       sessionStorage.setItem("trustIntake", JSON.stringify(intake));
       sessionStorage.setItem("trustUserId", userId || "");
       sessionStorage.setItem("trustComplexity", JSON.stringify(complexity));
+      sessionStorage.setItem("trustPartner", partnerParam);
       setStage("redirecting");
       router.push("/trust/checkout");
       return;

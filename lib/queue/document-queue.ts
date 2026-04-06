@@ -61,8 +61,12 @@ export async function getJob(jobId: string): Promise<DocumentJob | null> {
   const raw = data as Record<string, string>;
   return {
     ...raw,
-    document_types: raw.document_types ? JSON.parse(raw.document_types) : [],
-    intake_answers: raw.intake_answers ? JSON.parse(raw.intake_answers) : {},
+    document_types: raw.document_types
+      ? (Array.isArray(raw.document_types) ? raw.document_types : JSON.parse(raw.document_types as string))
+      : [],
+    intake_answers: raw.intake_answers
+      ? (typeof raw.intake_answers === "object" && !Array.isArray(raw.intake_answers) ? raw.intake_answers as Record<string, unknown> : JSON.parse(raw.intake_answers as string))
+      : {},
     partner_id: raw.partner_id || undefined,
     attorney_review: raw.attorney_review === "true",
     started_at: raw.started_at || null,

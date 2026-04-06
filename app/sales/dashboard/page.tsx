@@ -26,13 +26,14 @@ interface PartnerRow {
   tier: string;
   status: string;
   created_at: string;
+  updated_at: string;
   onboarding_completed: boolean;
-  current_onboarding_step: number;
-  onboarding_step_updated_at: string;
+  onboarding_step: number;
 }
 
 interface OrderRow {
   amount_total: number;
+  ev_cut: number;
   partner_id: string;
 }
 
@@ -50,7 +51,7 @@ interface PendingAttorney {
 interface StuckPartner {
   id: string;
   company_name: string;
-  current_onboarding_step: number;
+  onboarding_step: number;
   daysSinceUpdate: number;
 }
 
@@ -129,13 +130,13 @@ export default function SalesDashboardPage() {
       setRepName(name);
       if (profileData?.user_type) setUserType(profileData.user_type);
 
-      // Fetch all partners created by this rep
-      const { data: partners } = await supabase
+      // Fetch partners — admin sees all, reps see only their own
+      const isAdmin = profileData?.user_type === "admin";
+      let partnersQuery = supabase
         .from("partners")
-        .select(
-          "id, company_name, tier, status, created_at, onboarding_completed, current_onboarding_step, onboarding_step_updated_at"
-        )
-        .eq("created_by", user.id);
+        .select("id, company_name, tier, status, created_at, updated_at, onboarding_completed, onboarding_step");
+      if (!isAdmin) partnersQuery = partnersQuery.eq("created_by", user.id);
+      const { data: partners } = await partnersQuery;
 
       const typedPartners = (partners || []) as PartnerRow[];
 
@@ -152,14 +153,15 @@ export default function SalesDashboardPage() {
 
       const { data: orders } = await supabase
         .from("orders")
-        .select("amount_total, partner_id")
+        .select("amount_total, ev_cut, partner_id")
         .in("partner_id", partnerIds)
         .gte("created_at", monthStart);
 
       const typedOrders = (orders || []) as OrderRow[];
       const revenue = typedOrders.reduce((sum, o) => sum + (o.amount_total || 0), 0) / 100;
+      const evRevenue = typedOrders.reduce((sum, o) => sum + (o.ev_cut || 0), 0) / 100;
       setMtdRevenue(revenue);
-      setMtdCommission(revenue * 0.05);
+      setMtdCommission(evRevenue * 0.05);
 
       // Stuck partners: on same onboarding step 3+ days
       const threeDaysAgo = new Date();
@@ -168,15 +170,15 @@ export default function SalesDashboardPage() {
         .filter(
           (p) =>
             !p.onboarding_completed &&
-            p.onboarding_step_updated_at &&
-            new Date(p.onboarding_step_updated_at) < threeDaysAgo
+            p.updated_at &&
+            new Date(p.updated_at) < threeDaysAgo
         )
         .map((p) => ({
           id: p.id,
           company_name: p.company_name,
-          current_onboarding_step: p.current_onboarding_step,
+          onboarding_step: p.onboarding_step,
           daysSinceUpdate: Math.floor(
-            (Date.now() - new Date(p.onboarding_step_updated_at).getTime()) / (1000 * 60 * 60 * 24)
+            (Date.now() - new Date(p.updated_at).getTime()) / (1000 * 60 * 60 * 24)
           ),
         }));
       setStuckPartners(stuck);
@@ -531,7 +533,7 @@ export default function SalesDashboardPage() {
                 <div>
                   <p className="text-sm font-medium text-charcoal">{p.company_name}</p>
                   <p className="text-xs text-gray-500">
-                    Stuck on Step {p.current_onboarding_step} for {p.daysSinceUpdate} days
+                    Stuck on Step {p.onboarding_step} for {p.daysSinceUpdate} days
                   </p>
                 </div>
                 <button

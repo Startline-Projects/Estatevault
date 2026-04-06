@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { stripe } from "@/lib/stripe";
 import { createServerClient } from "@supabase/ssr";
+import { calculateSplit } from "@/lib/stripe-payouts";
 
 function createAdminClient() {
   return createServerClient(
@@ -13,7 +14,7 @@ function createAdminClient() {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { userId, attorneyReview, intakeAnswers, complexityFlag, complexityReasons, declinedAttorneyReview, promoCode, email: promoEmail } = body;
+    const { userId, attorneyReview, intakeAnswers, complexityFlag, complexityReasons, declinedAttorneyReview, promoCode, email: promoEmail, partnerId } = body;
 
     if (!intakeAnswers) {
       return NextResponse.json({ error: "Missing intake answers" }, { status: 400 });
@@ -102,7 +103,7 @@ export async function POST(request: Request) {
       } else {
         const { data: newClient, error: clientError } = await supabase
           .from("clients")
-          .insert({ profile_id: userId, source: "direct", state: "Michigan" })
+          .insert({ profile_id: userId, source: partnerId ? "partner" : "direct", state: "Michigan", partner_id: partnerId || null })
           .select("id")
           .single();
 
@@ -116,7 +117,7 @@ export async function POST(request: Request) {
       // Anonymous user — create client record without profile_id
       const { data: newClient, error: clientError } = await supabase
         .from("clients")
-        .insert({ source: "direct", state: "Michigan" })
+        .insert({ source: partnerId ? "partner" : "direct", state: "Michigan", partner_id: partnerId || null })
         .select("id")
         .single();
 
@@ -130,7 +131,21 @@ export async function POST(request: Request) {
     const trustAmount = 60000; // $600
     const attorneyAmount = attorneyReview ? 30000 : 0;
     const totalAmount = trustAmount + attorneyAmount;
-    const evCut = 20000; // EstateVault keeps $200 from trust
+
+    // Calculate ev/partner split based on partner tier
+    let evCut = 20000; // Default: direct sale, EV keeps $200
+    let partnerCut = 0;
+    if (partnerId) {
+      const { data: partnerData } = await supabase
+        .from("partners")
+        .select("tier")
+        .eq("id", partnerId)
+        .single();
+      const tier = (partnerData?.tier || "standard") as "standard" | "enterprise";
+      const split = calculateSplit("trust", tier);
+      evCut = split.evCut;
+      partnerCut = split.partnerCut;
+    }
 
     const { data: order, error: orderError } = await supabase
       .from("orders")
@@ -140,7 +155,8 @@ export async function POST(request: Request) {
         status: "pending",
         amount_total: totalAmount,
         ev_cut: evCut,
-        partner_cut: 0,
+        partner_cut: partnerCut,
+        partner_id: partnerId || null,
         attorney_review_requested: attorneyReview,
         attorney_cut: attorneyAmount,
         complexity_flag: complexityFlag || false,
@@ -295,6 +311,7 @@ export async function POST(request: Request) {
         client_id: clientId,
         product_type: "trust",
         attorney_review: attorneyReview ? "true" : "false",
+        partner_id: partnerId || "",
       },
     });
 

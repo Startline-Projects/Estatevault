@@ -14,6 +14,7 @@ type Stage = "loading" | "acknowledgment" | "intake" | "redirecting";
 
 export default function WillPage() {
   const router = useRouter();
+  const [partnerParam, setPartnerParam] = useState("");
   const [stage, setStage] = useState<Stage>("loading");
   const [userId, setUserId] = useState<string | null>(null);
 
@@ -36,6 +37,7 @@ export default function WillPage() {
 
   useEffect(() => {
     async function init() {
+      setPartnerParam(new URLSearchParams(window.location.search).get("partner") || "");
       const supabase = createClient();
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
@@ -157,6 +159,7 @@ export default function WillPage() {
       // Save intake to sessionStorage and go to checkout
       sessionStorage.setItem("willIntake", JSON.stringify(intake));
       sessionStorage.setItem("willUserId", userId || "");
+      sessionStorage.setItem("willPartner", partnerParam);
       setStage("redirecting");
       router.push("/will/checkout");
       return;

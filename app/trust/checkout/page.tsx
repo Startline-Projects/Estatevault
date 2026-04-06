@@ -29,6 +29,7 @@ export default function TrustCheckoutPage() {
   const [promoEmail, setPromoEmail] = useState("");
   const [showAcknowledgment, setShowAcknowledgment] = useState(false);
   const [ackChecked, setAckChecked] = useState(false);
+  const [partnerId, setPartnerId] = useState("");
 
   const total = promoApplied ? 0 : (attorneyReview ? 900 : 600);
 
@@ -39,6 +40,7 @@ export default function TrustCheckoutPage() {
       if (user) { setUserId(user.id); setPromoEmail(user.email || ""); }
       const intake = sessionStorage.getItem("trustIntake");
       if (!intake) { router.push("/trust"); return; }
+      setPartnerId(sessionStorage.getItem("trustPartner") || "");
       const comp = sessionStorage.getItem("trustComplexity");
       if (comp) {
         const parsed = JSON.parse(comp) as ComplexityResult;
@@ -83,7 +85,7 @@ export default function TrustCheckoutPage() {
       const res = await fetch("/api/checkout/trust", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId: null, attorneyReview: false, intakeAnswers: JSON.parse(intake), promoCode, complexityFlag: false, complexityReasons: [], declinedAttorneyReview: true }),
+        body: JSON.stringify({ userId: null, attorneyReview: false, intakeAnswers: JSON.parse(intake), promoCode, complexityFlag: false, complexityReasons: [], declinedAttorneyReview: true, partnerId: partnerId || null }),
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error || "Something went wrong."); setLoading(false); return; }
@@ -104,7 +106,7 @@ export default function TrustCheckoutPage() {
           userId: userId || null, attorneyReview: false,
           intakeAnswers: JSON.parse(intake), promoCode, email: promoEmail,
           complexityFlag: complexity.flagged, complexityReasons: complexity.reasons,
-          declinedAttorneyReview: false,
+          declinedAttorneyReview: false, partnerId: partnerId || null,
         }),
       });
       const data = await res.json();
@@ -134,7 +136,7 @@ export default function TrustCheckoutPage() {
           userId: userId || null, attorneyReview,
           intakeAnswers: JSON.parse(intake),
           complexityFlag: complexity.flagged, complexityReasons: complexity.reasons,
-          declinedAttorneyReview: complexity.flagged && !attorneyReview,
+          declinedAttorneyReview: complexity.flagged && !attorneyReview, partnerId: partnerId || null,
         }),
       });
       const data = await res.json();

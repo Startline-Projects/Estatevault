@@ -54,7 +54,7 @@ export default function ProSettingsPage() {
       const { data } = await supabase
         .from("partners")
         .select(
-          "id, tier, company_name, product_name, accent_color, logo_url, business_url, partner_slug, sender_name, sender_email, stripe_account_id, professional_type, has_inhouse_estate_attorney, inhouse_review_attorney_id, custom_review_fee, profiles(full_name, email)"
+          "id, tier, company_name, product_name, accent_color, logo_url, business_url, partner_slug, sender_name, sender_email, stripe_account_id, professional_type, has_inhouse_estate_attorney, inhouse_review_attorney_id, custom_review_fee, profiles!profile_id(full_name, email)"
         )
         .eq("profile_id", user.id)
         .single();

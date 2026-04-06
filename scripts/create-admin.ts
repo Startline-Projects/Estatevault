@@ -15,7 +15,7 @@ import { createClient } from "@supabase/supabase-js";
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 require("dotenv").config({ path: ".env.local" });
 
-const ADMIN_EMAIL = "ockmedk@gmail.com";
+const ADMIN_EMAIL = "admin@estatevault.us";
 const ADMIN_NAME = "Admin";
 
 async function main() {

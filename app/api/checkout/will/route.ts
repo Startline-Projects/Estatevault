@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { stripe } from "@/lib/stripe";
 import { createServerClient } from "@supabase/ssr";
+import { calculateSplit } from "@/lib/stripe-payouts";
 
 function createAdminClient() {
   return createServerClient(
@@ -18,7 +19,7 @@ function createAdminClient() {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { userId, attorneyReview, intakeAnswers, promoCode, email: promoEmail } = body;
+    const { userId, attorneyReview, intakeAnswers, promoCode, email: promoEmail, partnerId } = body;
 
     if (!intakeAnswers) {
       return NextResponse.json(
@@ -121,7 +122,7 @@ export async function POST(request: Request) {
       } else {
         const { data: newClient, error: clientError } = await supabase
           .from("clients")
-          .insert({ profile_id: userId, source: "direct", state: "Michigan" })
+          .insert({ profile_id: userId, source: partnerId ? "partner" : "direct", state: "Michigan", partner_id: partnerId || null })
           .select("id")
           .single();
 
@@ -138,7 +139,7 @@ export async function POST(request: Request) {
       // Anonymous user — create client record without profile_id
       const { data: newClient, error: clientError } = await supabase
         .from("clients")
-        .insert({ source: "direct", state: "Michigan" })
+        .insert({ source: partnerId ? "partner" : "direct", state: "Michigan", partner_id: partnerId || null })
         .select("id")
         .single();
 
@@ -156,8 +157,21 @@ export async function POST(request: Request) {
     const willAmount = 40000; // $400
     const attorneyAmount = attorneyReview ? 30000 : 0; // $300
     const totalAmount = willAmount + attorneyAmount;
-    const evCut = 10000; // EstateVault keeps $100 from will
-    const partnerCut = 0; // Direct sale — no partner
+
+    // Calculate ev/partner split based on partner tier
+    let evCut = 10000; // Default: direct sale, EV keeps $100
+    let partnerCut = 0;
+    if (partnerId) {
+      const { data: partnerData } = await supabase
+        .from("partners")
+        .select("tier")
+        .eq("id", partnerId)
+        .single();
+      const tier = (partnerData?.tier || "standard") as "standard" | "enterprise";
+      const split = calculateSplit("will", tier);
+      evCut = split.evCut;
+      partnerCut = split.partnerCut;
+    }
 
     // Create order
     const { data: order, error: orderError } = await supabase
@@ -169,6 +183,7 @@ export async function POST(request: Request) {
         amount_total: totalAmount,
         ev_cut: evCut,
         partner_cut: partnerCut,
+        partner_id: partnerId || null,
         attorney_review_requested: attorneyReview,
         attorney_cut: attorneyAmount,
         acknowledgment_signed: true,
@@ -333,6 +348,7 @@ export async function POST(request: Request) {
         client_id: clientId,
         product_type: "will",
         attorney_review: attorneyReview ? "true" : "false",
+        partner_id: partnerId || "",
       },
     });
 

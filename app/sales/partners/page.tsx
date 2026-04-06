@@ -47,11 +47,19 @@ export default function PartnersListPage() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { setLoading(false); return; }
 
-      const { data } = await supabase
+      const { data: profileData } = await supabase
+        .from("profiles")
+        .select("user_type")
+        .eq("id", user.id)
+        .single();
+      const isAdmin = profileData?.user_type === "admin";
+
+      let partnersQuery = supabase
         .from("partners")
         .select("id, company_name, tier, status, onboarding_step, onboarding_completed, created_at, updated_at, profiles!profile_id(full_name, email)")
-        .eq("created_by", user.id)
         .order("created_at", { ascending: false });
+      if (!isAdmin) partnersQuery = partnersQuery.eq("created_by", user.id);
+      const { data } = await partnersQuery;
 
       if (data) {
         // Fetch MTD stats for each partner
