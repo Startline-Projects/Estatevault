@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import { NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 
@@ -29,8 +31,8 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    // Verify email matches
-    if (user.user.email !== email) {
+    // Verify email matches (case-insensitive)
+    if (user.user.email?.toLowerCase() !== email.toLowerCase()) {
       return NextResponse.json({ error: "Email mismatch" }, { status: 403 });
     }
 
