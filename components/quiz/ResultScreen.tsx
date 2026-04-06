@@ -109,7 +109,7 @@ export default function ResultScreen({
             href={href}
             className="mt-8 block w-full min-h-[44px] rounded-full bg-gold py-3.5 text-center text-sm font-semibold text-white hover:bg-gold/90 transition-colors"
           >
-            Get Started — {price}
+            Continue With {isWill ? "Will" : "Trust"} Package — {price}
           </Link>
 
           <Link
@@ -156,7 +156,7 @@ export default function ResultScreen({
                   Yes, I&apos;d like to share this with my advisor
                 </span>
               </label>
-              <p className="mt-2 text-xs text-blue-100/40">
+              <p className="mt-2 text-xs text-blue-100/60">
                 We&apos;ll ask for their name and firm — your explicit opt-in only
               </p>
             </div>

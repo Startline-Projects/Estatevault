@@ -489,7 +489,7 @@ export default function QuizPage() {
             <span className="text-lg">&larr;</span> Exit
           </Link>
         )}
-        <span className="text-xs text-white/40">
+        <span className="text-xs text-white/60">
           {safeIndex + 1} of {totalCards}
         </span>
       </div>

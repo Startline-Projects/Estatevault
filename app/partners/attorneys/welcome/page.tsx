@@ -157,12 +157,12 @@ function AttorneyWelcomeContent() {
                 <div className="flex items-center gap-3">
                   <span className="text-yellow-500 text-xl">&#9203;</span>
                   <span className="text-charcoal font-medium">Bar verification in progress</span>
-                  <span className="text-xs text-charcoal/40 ml-auto">24-48 hours</span>
+                  <span className="text-xs text-charcoal/60 ml-auto">24-48 hours</span>
                 </div>
                 <div className="flex items-center gap-3">
                   <span className="text-gray-300 text-xl">&#9634;</span>
                   <span className="text-charcoal/50 font-medium">Platform activated</span>
-                  <span className="text-xs text-charcoal/40 ml-auto">After bar verification</span>
+                  <span className="text-xs text-charcoal/60 ml-auto">After bar verification</span>
                 </div>
               </div>
             </div>

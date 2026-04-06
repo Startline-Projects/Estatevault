@@ -305,7 +305,7 @@ export default function DocumentsPage() {
             <Link href="/dashboard/amendment" className="mt-4 inline-flex items-center rounded-full bg-navy px-6 py-2.5 text-sm font-semibold text-white hover:bg-navy/90 transition-colors">
               Request an Amendment
             </Link>
-            <p className="mt-2 text-xs text-charcoal/40">Common updates: new beneficiary, new executor, address change, new assets</p>
+            <p className="mt-2 text-xs text-charcoal/60">Common updates: new beneficiary, new executor, address change, new assets</p>
           </div>
         </>
       )}

@@ -300,7 +300,7 @@ export default function WillCheckoutPage() {
             : `Proceed to Payment — $${total}`
           }
         </button>
-        {!promoApplied && <p className="mt-3 text-center text-xs text-charcoal/40">Secure payment powered by Stripe</p>}
+        {!promoApplied && <p className="mt-3 text-center text-xs text-charcoal/60">Secure payment powered by Stripe</p>}
       </div>
     </div>
   );

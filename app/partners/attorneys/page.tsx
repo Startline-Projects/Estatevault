@@ -378,7 +378,7 @@ export default function AttorneyPartnerPage() {
                 {promoActive ? (
                   <>
                     <span className="text-4xl font-extrabold text-green-600">FREE</span>
-                    <span className="text-charcoal/40 text-sm ml-2 line-through">$1,200</span>
+                    <span className="text-charcoal/60 text-sm ml-2 line-through">$1,200</span>
                   </>
                 ) : (
                   <>
@@ -415,7 +415,7 @@ export default function AttorneyPartnerPage() {
                 {promoActive ? (
                   <>
                     <span className="text-4xl font-extrabold text-green-600">FREE</span>
-                    <span className="text-charcoal/40 text-sm ml-2 line-through">$6,000</span>
+                    <span className="text-charcoal/60 text-sm ml-2 line-through">$6,000</span>
                   </>
                 ) : (
                   <>
@@ -553,7 +553,7 @@ export default function AttorneyPartnerPage() {
                   onChange={(e) => setCalcVolume(parseInt(e.target.value, 10))}
                   className="w-full accent-gold"
                 />
-                <div className="flex justify-between text-xs text-charcoal/40 mt-1">
+                <div className="flex justify-between text-xs text-charcoal/60 mt-1">
                   <span>1</span>
                   <span>30</span>
                 </div>
@@ -576,11 +576,11 @@ export default function AttorneyPartnerPage() {
                   onChange={(e) => setCalcReviewFee(parseInt(e.target.value, 10))}
                   className="w-full accent-gold"
                 />
-                <div className="flex justify-between text-xs text-charcoal/40 mt-1">
+                <div className="flex justify-between text-xs text-charcoal/60 mt-1">
                   <span>$0</span>
                   <span>$1,500</span>
                 </div>
-                <p className="text-xs text-charcoal/40 mt-1">
+                <p className="text-xs text-charcoal/60 mt-1">
                   Set to $0 if you don&apos;t want to offer attorney review
                 </p>
               </div>
@@ -642,7 +642,7 @@ export default function AttorneyPartnerPage() {
           </div>
 
           {/* Disclaimer */}
-          <p className="mt-6 text-xs text-charcoal/40 text-center leading-relaxed max-w-2xl mx-auto">
+          <p className="mt-6 text-xs text-charcoal/60 text-center leading-relaxed max-w-2xl mx-auto">
             Earnings shown are estimates based on your selected volume and review fee.
             Attorney review fees are set by you and must comply with applicable bar rules
             on reasonableness of fees. EstateVault does not set, approve, or regulate attorney review fees.

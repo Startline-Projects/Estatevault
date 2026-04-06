@@ -151,7 +151,7 @@ export default function SalesCommissionPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
-        <div className="w-8 h-8 border-4 border-[#1C3557] border-t-transparent rounded-full animate-spin" />
+        <div className="w-8 h-8 border-4 border-navy border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
@@ -159,7 +159,7 @@ export default function SalesCommissionPage() {
   return (
     <div className="max-w-4xl mx-auto space-y-8">
       {/* MTD Commission Header */}
-      <div className="bg-[#1C3557] rounded-xl p-6 text-white">
+      <div className="bg-navy rounded-xl p-6 text-white">
         <p className="text-sm font-medium text-white/60 uppercase tracking-wide">
           My MTD Commission
         </p>
@@ -170,9 +170,9 @@ export default function SalesCommissionPage() {
       </div>
 
       {/* Info Box */}
-      <div className="bg-[#C9A84C]/10 border border-[#C9A84C]/30 rounded-xl p-5">
-        <h3 className="text-sm font-semibold text-[#1C3557] mb-1">How Commission Works</h3>
-        <p className="text-sm text-[#2D2D2D] leading-relaxed">
+      <div className="bg-gold/10 border border-gold/30 rounded-xl p-5">
+        <h3 className="text-sm font-semibold text-navy mb-1">How Commission Works</h3>
+        <p className="text-sm text-charcoal leading-relaxed">
           You earn a <span className="font-semibold">5% commission</span> on EstateVault&apos;s net revenue from partners you
           recruit. Commission is calculated on EstateVault&apos;s cut per order (after partner earnings are deducted). Commissions
           are processed and paid monthly.
@@ -182,7 +182,7 @@ export default function SalesCommissionPage() {
       {/* Commission Breakdown */}
       <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
         <div className="px-5 py-4 border-b border-gray-100">
-          <h2 className="text-sm font-semibold text-[#2D2D2D]">MTD Commission Breakdown</h2>
+          <h2 className="text-sm font-semibold text-charcoal">MTD Commission Breakdown</h2>
         </div>
         {breakdown.length === 0 ? (
           <div className="px-5 py-10 text-center text-sm text-gray-400">
@@ -210,22 +210,22 @@ export default function SalesCommissionPage() {
                     key={row.partnerName}
                     className="border-b border-gray-50 hover:bg-gray-50/50 transition-colors"
                   >
-                    <td className="px-5 py-3 font-medium text-[#2D2D2D]">{row.partnerName}</td>
+                    <td className="px-5 py-3 font-medium text-charcoal">{row.partnerName}</td>
                     <td className="px-5 py-3 text-right text-gray-600">
                       {formatCurrency(row.mtdRevenue)}
                     </td>
-                    <td className="px-5 py-3 text-right font-medium text-[#1C3557]">
+                    <td className="px-5 py-3 text-right font-medium text-navy">
                       {formatCurrency(row.commission)}
                     </td>
                   </tr>
                 ))}
                 {/* Totals row */}
                 <tr className="bg-gray-50 font-semibold">
-                  <td className="px-5 py-3 text-[#2D2D2D]">Total</td>
-                  <td className="px-5 py-3 text-right text-[#2D2D2D]">
+                  <td className="px-5 py-3 text-charcoal">Total</td>
+                  <td className="px-5 py-3 text-right text-charcoal">
                     {formatCurrency(breakdown.reduce((s, r) => s + r.mtdRevenue, 0))}
                   </td>
-                  <td className="px-5 py-3 text-right text-[#1C3557]">
+                  <td className="px-5 py-3 text-right text-navy">
                     {formatCurrency(mtdCommission)}
                   </td>
                 </tr>
@@ -238,7 +238,7 @@ export default function SalesCommissionPage() {
       {/* Commission History */}
       <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
         <div className="px-5 py-4 border-b border-gray-100">
-          <h2 className="text-sm font-semibold text-[#2D2D2D]">Commission History (Last 6 Months)</h2>
+          <h2 className="text-sm font-semibold text-charcoal">Commission History (Last 6 Months)</h2>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
@@ -264,11 +264,11 @@ export default function SalesCommissionPage() {
                   key={row.month}
                   className="border-b border-gray-50 hover:bg-gray-50/50 transition-colors"
                 >
-                  <td className="px-5 py-3 font-medium text-[#2D2D2D]">{row.month}</td>
+                  <td className="px-5 py-3 font-medium text-charcoal">{row.month}</td>
                   <td className="px-5 py-3 text-right text-gray-600">
                     {formatCurrency(row.partnerRevenue)}
                   </td>
-                  <td className="px-5 py-3 text-right font-medium text-[#1C3557]">
+                  <td className="px-5 py-3 text-right font-medium text-navy">
                     {formatCurrency(row.commission)}
                   </td>
                   <td className="px-5 py-3 text-center">

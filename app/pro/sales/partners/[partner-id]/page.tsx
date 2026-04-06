@@ -76,7 +76,7 @@ const STATUS_STYLES: Record<string, { label: string; cls: string }> = {
 
 const TIER_STYLES: Record<string, { label: string; cls: string }> = {
   standard: { label: "Standard", cls: "bg-gray-100 text-gray-700" },
-  enterprise: { label: "Enterprise", cls: "bg-[#C9A84C]/10 text-[#C9A84C]" },
+  enterprise: { label: "Enterprise", cls: "bg-gold/10 text-gold" },
 };
 
 export default function PartnerDetailPage() {
@@ -258,7 +258,7 @@ export default function PartnerDetailPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-32">
-        <div className="w-8 h-8 border-2 border-[#C9A84C] border-t-transparent rounded-full animate-spin" />
+        <div className="w-8 h-8 border-2 border-gold border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
@@ -266,8 +266,8 @@ export default function PartnerDetailPage() {
   if (!partner) {
     return (
       <div className="py-16 text-center">
-        <h2 className="text-lg font-semibold text-[#2D2D2D]">Partner not found</h2>
-        <Link href="/pro/sales/partners" className="text-[#C9A84C] text-sm mt-2 inline-block">Back to partners</Link>
+        <h2 className="text-lg font-semibold text-charcoal">Partner not found</h2>
+        <Link href="/pro/sales/partners" className="text-gold text-sm mt-2 inline-block">Back to partners</Link>
       </div>
     );
   }
@@ -288,9 +288,9 @@ export default function PartnerDetailPage() {
     <div>
       {/* Breadcrumb */}
       <nav className="flex items-center gap-2 text-sm text-gray-400 mb-4">
-        <Link href="/pro/sales/partners" className="hover:text-[#C9A84C] transition">Partners</Link>
+        <Link href="/pro/sales/partners" className="hover:text-gold transition">Partners</Link>
         <span>/</span>
-        <span className="text-[#2D2D2D] font-medium">{partner.company_name}</span>
+        <span className="text-charcoal font-medium">{partner.company_name}</span>
       </nav>
 
       {/* Header Card */}
@@ -298,7 +298,7 @@ export default function PartnerDetailPage() {
         <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
           <div className="space-y-1.5">
             <div className="flex items-center gap-3 flex-wrap">
-              <h1 className="text-2xl font-bold text-[#2D2D2D]">{partner.company_name}</h1>
+              <h1 className="text-2xl font-bold text-charcoal">{partner.company_name}</h1>
               <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${sTier.cls}`}>{sTier.label}</span>
               <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${sStatus.cls}`}>{sStatus.label}</span>
             </div>
@@ -306,7 +306,7 @@ export default function PartnerDetailPage() {
               <span>{partner.owner_name}</span>
               <span>{partner.email}</span>
               {(partner.white_label_url || partner.business_url) && (
-                <span className="text-[#C9A84C]">{partner.white_label_url || partner.business_url}</span>
+                <span className="text-gold">{partner.white_label_url || partner.business_url}</span>
               )}
             </div>
           </div>
@@ -347,7 +347,7 @@ export default function PartnerDetailPage() {
               onClick={() => setTab(t.key)}
               className={`px-5 py-2.5 text-sm font-medium border-b-2 transition ${
                 tab === t.key
-                  ? "border-[#C9A84C] text-[#1C3557]"
+                  ? "border-gold text-navy"
                   : "border-transparent text-gray-400 hover:text-gray-600"
               }`}
             >
@@ -362,7 +362,7 @@ export default function PartnerDetailPage() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Onboarding Checklist */}
           <div className="bg-white rounded-xl border border-gray-200 p-6">
-            <h3 className="text-sm font-semibold text-[#1C3557] uppercase tracking-wider mb-4">Onboarding Progress</h3>
+            <h3 className="text-sm font-semibold text-navy uppercase tracking-wider mb-4">Onboarding Progress</h3>
             <div className="space-y-3">
               {onboardingSteps.map((s) => (
                 <div key={s.step} className="flex items-center gap-3">
@@ -371,7 +371,7 @@ export default function PartnerDetailPage() {
                       s.completed
                         ? "bg-green-100"
                         : s.step === partner.onboarding_step
-                        ? "bg-[#C9A84C]/10"
+                        ? "bg-gold/10"
                         : "bg-gray-100"
                     }`}
                   >
@@ -380,12 +380,12 @@ export default function PartnerDetailPage() {
                         <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                       </svg>
                     ) : (
-                      <span className={`text-xs font-semibold ${s.step === partner.onboarding_step ? "text-[#C9A84C]" : "text-gray-400"}`}>
+                      <span className={`text-xs font-semibold ${s.step === partner.onboarding_step ? "text-gold" : "text-gray-400"}`}>
                         {s.step}
                       </span>
                     )}
                   </div>
-                  <span className={`text-sm ${s.completed ? "text-green-700 font-medium" : s.step === partner.onboarding_step ? "text-[#2D2D2D] font-medium" : "text-gray-400"}`}>
+                  <span className={`text-sm ${s.completed ? "text-green-700 font-medium" : s.step === partner.onboarding_step ? "text-charcoal font-medium" : "text-gray-400"}`}>
                     {s.label}
                   </span>
                 </div>
@@ -395,7 +395,7 @@ export default function PartnerDetailPage() {
 
           {/* Status Summary */}
           <div className="bg-white rounded-xl border border-gray-200 p-6 space-y-4">
-            <h3 className="text-sm font-semibold text-[#1C3557] uppercase tracking-wider mb-2">Status</h3>
+            <h3 className="text-sm font-semibold text-navy uppercase tracking-wider mb-2">Status</h3>
             <div className="space-y-3">
               <div className="flex justify-between items-center">
                 <span className="text-sm text-gray-500">Certification</span>
@@ -406,7 +406,7 @@ export default function PartnerDetailPage() {
               <div className="h-px bg-gray-100" />
               <div className="flex justify-between items-center">
                 <span className="text-sm text-gray-500">Last Login</span>
-                <span className="text-sm text-[#2D2D2D]">
+                <span className="text-sm text-charcoal">
                   {partner.last_login
                     ? new Date(partner.last_login).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
                     : "Never"}
@@ -415,32 +415,32 @@ export default function PartnerDetailPage() {
               <div className="h-px bg-gray-100" />
               <div className="flex justify-between items-center">
                 <span className="text-sm text-gray-500">Created</span>
-                <span className="text-sm text-[#2D2D2D]">
+                <span className="text-sm text-charcoal">
                   {new Date(partner.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
                 </span>
               </div>
               <div className="h-px bg-gray-100" />
               <div className="flex justify-between items-center">
                 <span className="text-sm text-gray-500">Plan Tier</span>
-                <span className="text-sm font-medium text-[#2D2D2D] capitalize">{partner.plan_tier || "standard"}</span>
+                <span className="text-sm font-medium text-charcoal capitalize">{partner.plan_tier || "standard"}</span>
               </div>
             </div>
           </div>
 
           {/* Promo Code */}
           <div className="bg-white rounded-xl border border-gray-200 p-6 lg:col-span-2">
-            <h3 className="text-sm font-semibold text-[#1C3557] uppercase tracking-wider mb-3">Promo Code</h3>
+            <h3 className="text-sm font-semibold text-navy uppercase tracking-wider mb-3">Promo Code</h3>
             <div className="flex items-center gap-3">
               <input
                 value={promoInput}
                 onChange={(e) => { setPromoInput(e.target.value); setPromoSaved(false); }}
                 placeholder="Enter promo code (e.g. Free676)"
-                className="flex-1 max-w-xs border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C9A84C]/40 focus:border-[#C9A84C]"
+                className="flex-1 max-w-xs border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gold/40 focus:border-gold"
               />
               <button
                 onClick={handleApplyPromo}
                 disabled={promoSaving || !promoInput.trim()}
-                className="px-5 py-2 rounded-lg bg-[#C9A84C] text-white text-sm font-semibold hover:bg-[#b89740] transition disabled:opacity-50"
+                className="px-5 py-2 rounded-lg bg-gold text-white text-sm font-semibold hover:bg-gold-600 transition disabled:opacity-50"
               >
                 {promoSaving ? "Applying..." : "Apply"}
               </button>
@@ -464,11 +464,11 @@ export default function PartnerDetailPage() {
                 <p className="text-xs text-gray-400 uppercase tracking-wider mb-3">{s.label}</p>
                 <div className="flex items-end justify-between">
                   <div>
-                    <p className="text-2xl font-bold text-[#2D2D2D]">{s.docs}</p>
+                    <p className="text-2xl font-bold text-charcoal">{s.docs}</p>
                     <p className="text-xs text-gray-400 mt-0.5">documents</p>
                   </div>
                   <div className="text-right">
-                    <p className="text-2xl font-bold text-[#1C3557]">${s.revenue.toLocaleString()}</p>
+                    <p className="text-2xl font-bold text-navy">${s.revenue.toLocaleString()}</p>
                     <p className="text-xs text-gray-400 mt-0.5">revenue</p>
                   </div>
                 </div>
@@ -478,14 +478,14 @@ export default function PartnerDetailPage() {
 
           {/* Bar Chart */}
           <div className="bg-white rounded-xl border border-gray-200 p-6">
-            <h3 className="text-sm font-semibold text-[#1C3557] uppercase tracking-wider mb-6">Revenue (Last 6 Months)</h3>
+            <h3 className="text-sm font-semibold text-navy uppercase tracking-wider mb-6">Revenue (Last 6 Months)</h3>
             <div className="flex items-end gap-3 h-48">
               {monthlyStats.map((m) => (
                 <div key={m.month} className="flex-1 flex flex-col items-center gap-2">
-                  <span className="text-xs font-medium text-[#2D2D2D]">${m.revenue.toLocaleString()}</span>
+                  <span className="text-xs font-medium text-charcoal">${m.revenue.toLocaleString()}</span>
                   <div className="w-full flex justify-center">
                     <div
-                      className="w-10 rounded-t-md bg-[#1C3557] transition-all"
+                      className="w-10 rounded-t-md bg-navy transition-all"
                       style={{
                         height: `${Math.max((m.revenue / maxRevenue) * 140, 4)}px`,
                       }}
@@ -510,9 +510,9 @@ export default function PartnerDetailPage() {
             <div className="divide-y divide-gray-100">
               {activity.map((a) => (
                 <div key={a.id} className="px-6 py-4 flex items-start gap-4">
-                  <div className="w-2 h-2 rounded-full bg-[#C9A84C] mt-2 shrink-0" />
+                  <div className="w-2 h-2 rounded-full bg-gold mt-2 shrink-0" />
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm text-[#2D2D2D] font-medium">{a.action}</p>
+                    <p className="text-sm text-charcoal font-medium">{a.action}</p>
                     {a.details && <p className="text-xs text-gray-400 mt-0.5">{a.details}</p>}
                   </div>
                   <span className="text-xs text-gray-400 shrink-0">
@@ -535,19 +535,19 @@ export default function PartnerDetailPage() {
         <div className="space-y-4">
           {/* Add Note */}
           <div className="bg-white rounded-xl border border-gray-200 p-5">
-            <h3 className="text-sm font-semibold text-[#1C3557] uppercase tracking-wider mb-3">Add Internal Note</h3>
+            <h3 className="text-sm font-semibold text-navy uppercase tracking-wider mb-3">Add Internal Note</h3>
             <div className="flex gap-3">
               <input
                 value={newNote}
                 onChange={(e) => setNewNote(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && handleAddNote()}
                 placeholder="Type a note..."
-                className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C9A84C]/40 focus:border-[#C9A84C]"
+                className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gold/40 focus:border-gold"
               />
               <button
                 onClick={handleAddNote}
                 disabled={savingNote || !newNote.trim()}
-                className="px-5 py-2 rounded-lg bg-[#C9A84C] text-white text-sm font-semibold hover:bg-[#b89740] transition disabled:opacity-50"
+                className="px-5 py-2 rounded-lg bg-gold text-white text-sm font-semibold hover:bg-gold-600 transition disabled:opacity-50"
               >
                 {savingNote ? "Saving..." : "Add Note"}
               </button>
@@ -564,7 +564,7 @@ export default function PartnerDetailPage() {
               {notes.map((n) => (
                 <div key={n.id} className="bg-white rounded-xl border border-gray-200 px-5 py-4">
                   <div className="flex items-start justify-between gap-3">
-                    <p className="text-sm text-[#2D2D2D] flex-1">{n.content}</p>
+                    <p className="text-sm text-charcoal flex-1">{n.content}</p>
                     <span className="text-xs text-gray-400 shrink-0">
                       {new Date(n.created_at).toLocaleDateString("en-US", {
                         month: "short",

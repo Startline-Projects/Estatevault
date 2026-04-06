@@ -26,7 +26,7 @@ export default function Step7Page() {
   async function handleGoToDashboard() {
     const supabase = createClient();
     await supabase.from("partners").update({ onboarding_completed: true, onboarding_step: 7, status: "active" }).eq("id", partnerId);
-    router.push("/pro/dashboard");
+    window.location.href = "/pro/dashboard";
   }
 
   async function handleInvite() {
@@ -91,7 +91,7 @@ export default function Step7Page() {
           <span className="text-xl">👤</span>
           <h4 className="mt-2 text-sm font-bold text-navy">Invite Your First Client</h4>
           <p className="mt-1 text-xs text-charcoal/60">Add a client now so they&apos;re ready when your platform goes live.</p>
-          <div className="mt-3 flex gap-2">
+          <div className="mt-3 flex items-center gap-2">
             <input type="email" value={inviteEmail} onChange={(e) => setInviteEmail(e.target.value)} placeholder="client@email.com" className="flex-1 rounded-lg border border-gray-200 px-3 py-1.5 text-xs focus:border-gold focus:outline-none" />
             <button onClick={handleInvite} className="rounded-full bg-teal-500 px-3 py-1.5 text-xs font-semibold text-white hover:bg-teal-600">{inviteSent ? "Sent!" : "Invite"}</button>
           </div>

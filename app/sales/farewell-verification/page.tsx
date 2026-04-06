@@ -55,7 +55,7 @@ export default function FarewellVerificationPage() {
   return (
     <div className="max-w-4xl mx-auto space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-[#2D2D2D]">Farewell Verification Queue</h1>
+        <h1 className="text-2xl font-bold text-charcoal">Farewell Verification Queue</h1>
         <p className="text-sm text-gray-500 mt-1">Review death certificate submissions and approve or reject access to farewell messages.</p>
       </div>
 
@@ -67,7 +67,7 @@ export default function FarewellVerificationPage() {
 
       {loading ? (
         <div className="flex justify-center py-12">
-          <div className="w-6 h-6 border-2 border-[#1C3557] border-t-transparent rounded-full animate-spin" />
+          <div className="w-6 h-6 border-2 border-navy border-t-transparent rounded-full animate-spin" />
         </div>
       ) : requests.length === 0 ? (
         <div className="rounded-xl bg-white border border-gray-200 p-12 text-center">
@@ -79,7 +79,7 @@ export default function FarewellVerificationPage() {
             <div key={req.id} className="rounded-xl bg-white border border-gray-200 p-6">
               <div className="flex items-start justify-between">
                 <div>
-                  <p className="text-sm font-semibold text-[#1C3557]">Client: {req.client_name}</p>
+                  <p className="text-sm font-semibold text-navy">Client: {req.client_name}</p>
                   <p className="text-sm text-gray-600 mt-1">Trustee: {req.trustee_name} ({req.trustee_email})</p>
                   <p className="text-xs text-gray-400 mt-1">Submitted {new Date(req.submitted_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" })}</p>
                 </div>
@@ -114,13 +114,13 @@ export default function FarewellVerificationPage() {
       {showRejectModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-md mx-4 p-6">
-            <h3 className="text-lg font-bold text-[#1C3557]">Reject Verification</h3>
+            <h3 className="text-lg font-bold text-navy">Reject Verification</h3>
             <p className="text-sm text-gray-500 mt-1">Provide a reason for rejection (optional).</p>
             <textarea
               value={rejectNotes}
               onChange={(e) => setRejectNotes(e.target.value)}
               placeholder="e.g., Certificate could not be verified, image unclear..."
-              className="mt-4 w-full rounded-lg border border-gray-300 px-4 py-3 text-sm h-24 resize-none focus:outline-none focus:ring-2 focus:ring-[#1C3557]/20"
+              className="mt-4 w-full rounded-lg border border-gray-300 px-4 py-3 text-sm h-24 resize-none focus:outline-none focus:ring-2 focus:ring-navy/20"
             />
             <div className="mt-4 flex gap-3">
               <button onClick={() => setShowRejectModal(null)} className="flex-1 px-4 py-2.5 rounded-lg border border-gray-300 text-sm font-medium hover:bg-gray-50">Cancel</button>

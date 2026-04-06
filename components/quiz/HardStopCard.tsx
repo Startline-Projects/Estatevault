@@ -8,12 +8,12 @@ export default function HardStopCard() {
           <span className="text-3xl">⚠</span>
         </div>
         <h2 className="mt-6 text-xl font-bold text-navy">
-          Your family&apos;s situation includes a special needs dependent.
+          Your family deserves specialized attention.
         </h2>
         <p className="mt-4 text-sm text-charcoal/70 leading-relaxed">
-          This requires a specialized legal trust that our platform cannot
-          generate. We&apos;ll connect you with a licensed Michigan estate
-          planning attorney.
+          Caring for a loved one with special needs requires a specialized trust
+          that should be drafted by a licensed attorney. We&apos;ll connect you
+          with an experienced Michigan estate planning attorney who can help.
         </p>
         <Link
           href="/attorney-referral"

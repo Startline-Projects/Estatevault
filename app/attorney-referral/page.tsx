@@ -8,16 +8,16 @@ export default function AttorneyReferralPage() {
       <Header />
       <main className="py-20 px-6">
         <div className="mx-auto max-w-4xl">
-          <h1 className="text-4xl font-bold text-[#1C3557] mb-4">
-            Connect With a Licensed Attorney
+          <h1 className="text-4xl font-bold text-navy mb-4">
+            We&apos;ll Connect You With the Right Attorney
           </h1>
-          <p className="text-lg text-[#2D2D2D]/70 mb-12">
-            Your situation may require personalized guidance from a qualified
-            legal professional in Michigan.
+          <p className="text-lg text-charcoal/70 mb-12">
+            Some situations benefit from personalized guidance from a licensed
+            attorney. We&apos;re here to help you find the right one.
           </p>
 
-          <div className="rounded-2xl border border-[#C9A84C]/30 bg-[#C9A84C]/5 p-10 mb-10">
-            <p className="text-lg text-[#2D2D2D] leading-relaxed mb-6">
+          <div className="rounded-2xl border border-gold/30 bg-gold/5 p-10 mb-10">
+            <p className="text-lg text-charcoal leading-relaxed mb-6">
               Based on your answers, your situation may require personalized
               legal guidance from a licensed attorney. EstateVault provides
               document preparation services and is not a substitute for legal
@@ -28,23 +28,23 @@ export default function AttorneyReferralPage() {
 
             <div className="space-y-4">
               <div>
-                <h3 className="text-sm font-semibold text-[#1C3557] uppercase tracking-wide mb-1">
+                <h3 className="text-sm font-semibold text-navy uppercase tracking-wide mb-1">
                   Get in Touch
                 </h3>
-                <p className="text-[#2D2D2D]">
+                <p className="text-charcoal">
                   Email:{" "}
                   <a
                     href="mailto:attorneys@estatevault.us"
-                    className="text-[#C9A84C] hover:underline font-medium"
+                    className="text-gold hover:underline font-medium"
                   >
                     attorneys@estatevault.us
                   </a>
                 </p>
-                <p className="text-[#2D2D2D]">
+                <p className="text-charcoal">
                   Phone:{" "}
                   <a
                     href="tel:+18005551234"
-                    className="text-[#C9A84C] hover:underline font-medium"
+                    className="text-gold hover:underline font-medium"
                   >
                     (800) 555-1234
                   </a>
@@ -53,7 +53,7 @@ export default function AttorneyReferralPage() {
             </div>
           </div>
 
-          <p className="text-[#2D2D2D]/60 text-sm mb-8">
+          <p className="text-charcoal/60 text-sm mb-8">
             EstateVault is a document preparation platform and does not provide
             legal advice. Contacting an attorney through this page does not
             create an attorney-client relationship with EstateVault.
@@ -61,7 +61,7 @@ export default function AttorneyReferralPage() {
 
           <Link
             href="/"
-            className="inline-block rounded-lg bg-[#1C3557] px-8 py-3 text-white font-medium hover:bg-[#1C3557]/90 transition-colors"
+            className="inline-block rounded-lg bg-navy px-8 py-3 text-white font-medium hover:bg-navy-800 transition-colors"
           >
             Return Home
           </Link>

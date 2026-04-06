@@ -34,7 +34,7 @@ export async function POST(request: Request) {
     const admin = createAdminClient();
     const { data: partner, error: partnerError } = await admin
       .from("partners")
-      .select("id, stripe_account_id, contact_email")
+      .select("id, stripe_account_id, sender_email")
       .eq("profile_id", user.id)
       .single();
 
@@ -63,7 +63,7 @@ export async function POST(request: Request) {
     }
 
     // Create a new Stripe Express account
-    const email = partner.contact_email || user.email || "";
+    const email = partner.sender_email || user.email || "";
     const account = await createStripeConnectAccount(email, partner.id);
 
     // Save the Stripe account ID to the partners table

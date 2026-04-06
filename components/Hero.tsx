@@ -33,18 +33,13 @@ export default function Hero() {
           <h1 className="text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-bold text-white leading-[1.1] tracking-tight">
             Protect Your Family.
             <br />
-            <span className="text-gradient">It Takes 15 Minutes.</span>
+            <span className="text-gradient">Peace of Mind in Minutes.</span>
           </h1>
 
-          <p className="mt-6 text-lg md:text-xl text-white/60 max-w-2xl mx-auto leading-relaxed">
-            Attorney-reviewed wills and trusts, built for Michigan.
-            Secure, simple, complete with your family&apos;s vault.
+          <p className="mt-6 text-lg md:text-xl text-white/70 max-w-2xl mx-auto leading-relaxed">
+            Attorney-reviewed wills and trusts built for Michigan families.
+            Your documents and a secure family vault — all in one place.
           </p>
-
-          <div className="mt-4 flex flex-col items-center gap-1 text-sm text-white/40">
-            <p>A will gives instructions for the judge</p>
-            <p>A trust avoids court and a judge</p>
-          </div>
 
           <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
             <Link
@@ -54,24 +49,16 @@ export default function Hero() {
               <span className="relative z-10">Take the Free Quiz</span>
               <div className="absolute inset-0 rounded-full bg-gradient-to-r from-gold to-gold-400 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
             </Link>
-            <div className="flex gap-3">
-              <Link
-                href="/will"
-                className="rounded-full border border-white/20 px-6 py-3.5 text-sm font-medium text-white hover:bg-white/10 hover:border-white/30 transition-all duration-200"
-              >
-                Create a Will
-              </Link>
-              <Link
-                href="/trust"
-                className="rounded-full border border-white/20 px-6 py-3.5 text-sm font-medium text-white hover:bg-white/10 hover:border-white/30 transition-all duration-200"
-              >
-                Create a Trust
-              </Link>
-            </div>
+            <Link
+              href="#pricing"
+              className="rounded-full border border-white/20 px-8 py-3.5 text-sm font-medium text-white hover:bg-white/10 hover:border-white/30 transition-all duration-200"
+            >
+              View Packages
+            </Link>
           </div>
 
           {/* Trust signals */}
-          <div className="mt-12 flex flex-wrap items-center justify-center gap-6 text-sm text-white/40">
+          <div className="mt-12 flex flex-wrap items-center justify-center gap-6 text-sm text-white/50">
             <div className="flex items-center gap-2">
               <svg className="w-4 h-4 text-gold-300" fill="currentColor" viewBox="0 0 20 20">
                 <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />

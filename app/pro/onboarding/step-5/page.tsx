@@ -64,7 +64,7 @@ export default function Step5Page() {
                   <span className="text-xs font-semibold text-navy uppercase tracking-wider">SPF Record</span>
                   <button
                     onClick={() => copyToClipboard("v=spf1 include:estatevault.us ~all", "spf")}
-                    className="inline-flex items-center gap-1 px-3 py-1 rounded-lg text-xs font-medium bg-[#C9A84C]/10 text-[#C9A84C] hover:bg-[#C9A84C]/20 transition-colors"
+                    className="inline-flex items-center gap-1 px-3 py-1 rounded-lg text-xs font-medium bg-gold/10 text-gold hover:bg-gold/20 transition-colors"
                   >
                     {copied === "spf" ? "Copied!" : "Copy Value"}
                   </button>
@@ -80,7 +80,7 @@ export default function Step5Page() {
                   <span className="text-xs font-semibold text-navy uppercase tracking-wider">DKIM Record</span>
                   <button
                     onClick={() => copyToClipboard("ev-dkim-placeholder", "dkim")}
-                    className="inline-flex items-center gap-1 px-3 py-1 rounded-lg text-xs font-medium bg-[#C9A84C]/10 text-[#C9A84C] hover:bg-[#C9A84C]/20 transition-colors"
+                    className="inline-flex items-center gap-1 px-3 py-1 rounded-lg text-xs font-medium bg-gold/10 text-gold hover:bg-gold/20 transition-colors"
                   >
                     {copied === "dkim" ? "Copied!" : "Copy Value"}
                   </button>
@@ -103,7 +103,7 @@ export default function Step5Page() {
             <div className="bg-gray-50 px-4 py-3 border-b border-gray-200">
               <p className="text-sm font-semibold text-navy">{senderName || companyName} <span className="font-normal text-charcoal/50">&lt;{senderEmail || "plans@yourcompany.com"}&gt;</span></p>
               <p className="text-xs text-charcoal/60 mt-0.5">Your Last Will & Testament is ready to review</p>
-              <p className="text-xs text-charcoal/40 mt-0.5">2:34 PM</p>
+              <p className="text-xs text-charcoal/60 mt-0.5">2:34 PM</p>
             </div>
             <div className="p-4">
               <div className="h-8 w-20 bg-gray-100 rounded mb-4" />
@@ -113,7 +113,7 @@ export default function Step5Page() {
                 <p className="text-xs text-charcoal/70 mt-2">Your Will Package is ready to review and download.</p>
                 <div className="mt-3"><span className="rounded-full bg-gold px-4 py-1 text-xs text-white font-semibold">Download Your Documents</span></div>
               </div>
-              <div className="bg-gray-50 px-4 py-2 text-xs text-charcoal/40">{companyName} | Powered by EstateVault</div>
+              <div className="bg-gray-50 px-4 py-2 text-xs text-charcoal/60">{companyName} | Powered by EstateVault</div>
             </div>
           </div>
         </div>

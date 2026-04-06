@@ -135,7 +135,7 @@ export default function ClientDetailPage() {
             {activity.length === 0 ? <p className="text-sm text-charcoal/50">No activity recorded.</p> : activity.map((a, i) => (
               <div key={i} className="flex items-center justify-between text-sm">
                 <span className="text-charcoal/70">{a.action.replace(/\./g, " ").replace(/\b\w/g, (c) => c.toUpperCase())}</span>
-                <span className="text-xs text-charcoal/40">{new Date(a.created_at).toLocaleDateString()}</span>
+                <span className="text-xs text-charcoal/60">{new Date(a.created_at).toLocaleDateString()}</span>
               </div>
             ))}
           </div>
@@ -151,7 +151,7 @@ export default function ClientDetailPage() {
               {notes.map((n) => (
                 <div key={n.id} className="rounded-xl bg-white border border-gray-200 p-4">
                   <p className="text-sm text-charcoal/80">{n.note}</p>
-                  <p className="text-xs text-charcoal/40 mt-2">{new Date(n.created_at).toLocaleDateString()}</p>
+                  <p className="text-xs text-charcoal/60 mt-2">{new Date(n.created_at).toLocaleDateString()}</p>
                 </div>
               ))}
             </div>

@@ -11,16 +11,16 @@ export default function FinalCTA() {
 
       <div className="relative z-10 mx-auto max-w-3xl text-center">
         <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-white tracking-tight leading-tight">
-          Start protecting your<br />
-          family <span className="text-gradient">today.</span>
+          Your family is counting<br />
+          on <span className="text-gradient">you.</span>
         </h2>
-        <p className="mt-5 text-lg text-white/50">
-          Free quiz. No credit card needed until you choose a package.
+        <p className="mt-5 text-lg text-white/60">
+          Start with a free quiz. No commitment until you&apos;re ready.
         </p>
         <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
           <Link
             href="/quiz"
-            className="group relative rounded-full bg-gold px-10 py-4 text-base font-semibold text-white transition-all duration-300 shadow-gold hover:shadow-gold-lg hover:scale-[1.02] active:scale-[0.98] animate-glow"
+            className="group relative rounded-full bg-gold px-10 py-4 text-base font-semibold text-white transition-all duration-300 shadow-gold hover:shadow-gold-lg hover:scale-[1.02] active:scale-[0.98]"
           >
             <span className="relative z-10 flex items-center gap-2">
               Take the Free Quiz
@@ -32,7 +32,7 @@ export default function FinalCTA() {
         </div>
 
         {/* Micro trust */}
-        <div className="mt-10 flex flex-wrap items-center justify-center gap-6 text-sm text-white/30">
+        <div className="mt-10 flex flex-wrap items-center justify-center gap-6 text-sm text-white/50">
           <div className="flex items-center gap-2">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />

@@ -38,13 +38,13 @@ export default function TestControls() {
   return (
     <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
       <div className="px-5 py-4 border-b border-gray-100 flex items-center gap-3">
-        <h2 className="text-sm font-semibold text-[#2D2D2D]">Test Controls</h2>
-        <span className="inline-block px-2 py-0.5 rounded text-xs font-medium bg-[#1C3557]/10 text-[#1C3557]">Admin Only</span>
+        <h2 className="text-sm font-semibold text-charcoal">Test Controls</h2>
+        <span className="inline-block px-2 py-0.5 rounded text-xs font-medium bg-navy/10 text-navy">Admin Only</span>
       </div>
       <div className="px-5 py-4">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-sm font-medium text-[#2D2D2D]">Test Promo Code</p>
+            <p className="text-sm font-medium text-charcoal">Test Promo Code</p>
             <p className="text-xs text-gray-400 mt-0.5">Code &quot;Test&quot; for internal document review — no accounts created</p>
           </div>
           <button

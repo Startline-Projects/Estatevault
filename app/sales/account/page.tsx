@@ -75,7 +75,7 @@ export default function SalesAccountPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
-        <div className="w-8 h-8 border-4 border-[#1C3557] border-t-transparent rounded-full animate-spin" />
+        <div className="w-8 h-8 border-4 border-navy border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
@@ -83,7 +83,7 @@ export default function SalesAccountPage() {
   return (
     <div className="max-w-xl mx-auto space-y-8">
       <div>
-        <h1 className="text-2xl font-bold text-[#2D2D2D]">Account Settings</h1>
+        <h1 className="text-2xl font-bold text-charcoal">Account Settings</h1>
         <p className="text-sm text-gray-500 mt-1">Manage your sales rep profile.</p>
       </div>
 
@@ -91,7 +91,7 @@ export default function SalesAccountPage() {
       <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6 space-y-5">
         {/* Full Name */}
         <div>
-          <label htmlFor="fullName" className="block text-sm font-medium text-[#2D2D2D] mb-1.5">
+          <label htmlFor="fullName" className="block text-sm font-medium text-charcoal mb-1.5">
             Full Name
           </label>
           <input
@@ -99,14 +99,14 @@ export default function SalesAccountPage() {
             type="text"
             value={fullName}
             onChange={(e) => setFullName(e.target.value)}
-            className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm text-[#2D2D2D] focus:outline-none focus:ring-2 focus:ring-[#1C3557]/20 focus:border-[#1C3557] transition-colors"
+            className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-navy/20 focus:border-navy transition-colors"
             placeholder="Your full name"
           />
         </div>
 
         {/* Email */}
         <div>
-          <label htmlFor="email" className="block text-sm font-medium text-[#2D2D2D] mb-1.5">
+          <label htmlFor="email" className="block text-sm font-medium text-charcoal mb-1.5">
             Email
           </label>
           <input
@@ -114,14 +114,14 @@ export default function SalesAccountPage() {
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm text-[#2D2D2D] focus:outline-none focus:ring-2 focus:ring-[#1C3557]/20 focus:border-[#1C3557] transition-colors"
+            className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-navy/20 focus:border-navy transition-colors"
             placeholder="you@example.com"
           />
         </div>
 
         {/* Phone */}
         <div>
-          <label htmlFor="phone" className="block text-sm font-medium text-[#2D2D2D] mb-1.5">
+          <label htmlFor="phone" className="block text-sm font-medium text-charcoal mb-1.5">
             Phone
           </label>
           <input
@@ -129,14 +129,14 @@ export default function SalesAccountPage() {
             type="tel"
             value={phone}
             onChange={(e) => setPhone(e.target.value.replace(/[^\d\-\(\)\s+]/g, ""))}
-            className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm text-[#2D2D2D] focus:outline-none focus:ring-2 focus:ring-[#1C3557]/20 focus:border-[#1C3557] transition-colors"
+            className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-navy/20 focus:border-navy transition-colors"
             placeholder="(555) 123-4567"
           />
         </div>
 
         {/* Commission Rate (read only) */}
         <div>
-          <label className="block text-sm font-medium text-[#2D2D2D] mb-1.5">
+          <label className="block text-sm font-medium text-charcoal mb-1.5">
             Commission Rate
           </label>
           <div className="w-full rounded-lg border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm text-gray-600">
@@ -163,7 +163,7 @@ export default function SalesAccountPage() {
         <button
           onClick={handleSave}
           disabled={saving}
-          className="w-full rounded-lg bg-[#1C3557] py-2.5 text-sm font-semibold text-white hover:bg-[#1C3557]/90 transition-colors disabled:opacity-50"
+          className="w-full rounded-lg bg-navy py-2.5 text-sm font-semibold text-white hover:bg-navy/90 transition-colors disabled:opacity-50"
         >
           {saving ? "Saving..." : "Save Changes"}
         </button>
@@ -171,7 +171,7 @@ export default function SalesAccountPage() {
 
       {/* Password Section */}
       <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6 space-y-4">
-        <h2 className="text-sm font-semibold text-[#2D2D2D]">Password</h2>
+        <h2 className="text-sm font-semibold text-charcoal">Password</h2>
         <p className="text-sm text-gray-500">
           Click below to receive a password reset link at your email address.
         </p>
@@ -184,7 +184,7 @@ export default function SalesAccountPage() {
 
         <button
           onClick={handleResetPassword}
-          className="rounded-lg border border-[#1C3557] px-5 py-2.5 text-sm font-medium text-[#1C3557] hover:bg-[#1C3557]/5 transition-colors"
+          className="rounded-lg border border-navy px-5 py-2.5 text-sm font-medium text-navy hover:bg-navy/5 transition-colors"
         >
           Change Password
         </button>

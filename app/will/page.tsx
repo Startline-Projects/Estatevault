@@ -608,7 +608,7 @@ export default function WillPage() {
                   rows={4}
                   className="w-full rounded-xl border-2 border-gray-200 bg-white px-4 py-3 text-sm text-charcoal placeholder:text-gray-400 focus:border-gold focus:outline-none focus:ring-1 focus:ring-gold/30 transition-colors resize-none"
                 />
-                <p className="mt-2 text-xs text-charcoal/40">
+                <p className="mt-2 text-xs text-charcoal/60">
                   Specific gifts are distributed before the rest of your estate.
                 </p>
               </div>
@@ -713,7 +713,7 @@ export default function WillPage() {
         >
           <span className="text-lg">&larr;</span> Back
         </button>
-        <span className="text-xs text-white/40">
+        <span className="text-xs text-white/60">
           {safeIndex + 1} of {totalCards}
         </span>
       </div>

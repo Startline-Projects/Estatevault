@@ -7,14 +7,14 @@ export default function TermsPage() {
       <Header />
       <main className="py-20 px-6">
         <div className="mx-auto max-w-4xl">
-          <h1 className="text-4xl font-bold text-[#1C3557] mb-2">
+          <h1 className="text-4xl font-bold text-navy mb-2">
             Terms of Service
           </h1>
-          <p className="text-[#2D2D2D]/60 mb-12">Last updated: April 1, 2026</p>
+          <p className="text-charcoal/60 mb-12">Last updated: April 1, 2026</p>
 
-          <div className="space-y-10 text-[#2D2D2D] leading-relaxed">
+          <div className="space-y-10 text-charcoal leading-relaxed">
             <section>
-              <h2 className="text-2xl font-semibold text-[#1C3557] mb-4">
+              <h2 className="text-2xl font-semibold text-navy mb-4">
                 Acceptance of Terms
               </h2>
               <p>
@@ -28,7 +28,7 @@ export default function TermsPage() {
             </section>
 
             <section>
-              <h2 className="text-2xl font-semibold text-[#1C3557] mb-4">
+              <h2 className="text-2xl font-semibold text-navy mb-4">
                 Services Description
               </h2>
               <p className="mb-3 font-semibold">
@@ -46,7 +46,7 @@ export default function TermsPage() {
             </section>
 
             <section>
-              <h2 className="text-2xl font-semibold text-[#1C3557] mb-4">
+              <h2 className="text-2xl font-semibold text-navy mb-4">
                 User Accounts
               </h2>
               <p className="mb-3">
@@ -64,7 +64,7 @@ export default function TermsPage() {
             </section>
 
             <section>
-              <h2 className="text-2xl font-semibold text-[#1C3557] mb-4">
+              <h2 className="text-2xl font-semibold text-navy mb-4">
                 Payment Terms
               </h2>
               <p className="mb-3">
@@ -80,7 +80,7 @@ export default function TermsPage() {
             </section>
 
             <section>
-              <h2 className="text-2xl font-semibold text-[#1C3557] mb-4">
+              <h2 className="text-2xl font-semibold text-navy mb-4">
                 Limitation of Liability
               </h2>
               <p className="mb-3">
@@ -99,7 +99,7 @@ export default function TermsPage() {
             </section>
 
             <section>
-              <h2 className="text-2xl font-semibold text-[#1C3557] mb-4">
+              <h2 className="text-2xl font-semibold text-navy mb-4">
                 Governing Law
               </h2>
               <p>

@@ -197,7 +197,7 @@ export default function FarewellRecorder({ messageId, onComplete, onCancel }: Fa
           <div className="absolute inset-0 flex items-center justify-center">
             <button
               onClick={startCamera}
-              className="px-6 py-3 rounded-full bg-[#C9A84C] text-white font-semibold hover:bg-[#b8963f] transition-colors"
+              className="px-6 py-3 rounded-full bg-gold text-white font-semibold hover:bg-gold-600 transition-colors"
             >
               Start Camera
             </button>
@@ -208,7 +208,7 @@ export default function FarewellRecorder({ messageId, onComplete, onCancel }: Fa
         {status === "uploading" && (
           <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/70">
             <div className="w-48 h-2 rounded-full bg-white/20 overflow-hidden">
-              <div className="h-full bg-[#C9A84C] rounded-full transition-all" style={{ width: `${uploadProgress}%` }} />
+              <div className="h-full bg-gold rounded-full transition-all" style={{ width: `${uploadProgress}%` }} />
             </div>
             <p className="text-white text-sm mt-3">Uploading... {uploadProgress}%</p>
           </div>
@@ -219,7 +219,7 @@ export default function FarewellRecorder({ messageId, onComplete, onCancel }: Fa
       <div className="flex items-center justify-center gap-3">
         {status === "previewing" && (
           <>
-            <button onClick={onCancel} className="px-4 py-2.5 rounded-lg border border-gray-300 text-sm font-medium text-[#2D2D2D] hover:bg-gray-50 transition-colors">
+            <button onClick={onCancel} className="px-4 py-2.5 rounded-lg border border-gray-300 text-sm font-medium text-charcoal hover:bg-gray-50 transition-colors">
               Cancel
             </button>
             <button onClick={startRecording} className="px-6 py-2.5 rounded-lg bg-red-600 text-sm font-semibold text-white hover:bg-red-700 transition-colors">
@@ -235,13 +235,13 @@ export default function FarewellRecorder({ messageId, onComplete, onCancel }: Fa
         )}
         {status === "review" && (
           <>
-            <button onClick={onCancel} className="px-4 py-2.5 rounded-lg border border-gray-300 text-sm font-medium text-[#2D2D2D] hover:bg-gray-50 transition-colors">
+            <button onClick={onCancel} className="px-4 py-2.5 rounded-lg border border-gray-300 text-sm font-medium text-charcoal hover:bg-gray-50 transition-colors">
               Discard
             </button>
-            <button onClick={async () => { setRecordedBlob(null); setStatus("idle"); await startCamera(); }} className="px-4 py-2.5 rounded-lg border border-gray-300 text-sm font-medium text-[#2D2D2D] hover:bg-gray-50 transition-colors">
+            <button onClick={async () => { setRecordedBlob(null); setStatus("idle"); await startCamera(); }} className="px-4 py-2.5 rounded-lg border border-gray-300 text-sm font-medium text-charcoal hover:bg-gray-50 transition-colors">
               Re-record
             </button>
-            <button onClick={uploadRecording} className="px-6 py-2.5 rounded-lg bg-[#1C3557] text-sm font-semibold text-white hover:bg-[#1C3557]/90 transition-colors">
+            <button onClick={uploadRecording} className="px-6 py-2.5 rounded-lg bg-navy text-sm font-semibold text-white hover:bg-navy/90 transition-colors">
               Save & Upload
             </button>
           </>

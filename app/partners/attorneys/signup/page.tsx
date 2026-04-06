@@ -214,7 +214,7 @@ function AttorneySignupContent() {
                   className={`w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold transition-colors ${
                     step >= s.num
                       ? 'bg-navy text-white'
-                      : 'bg-gray-200 text-charcoal/40'
+                      : 'bg-gray-200 text-charcoal/60'
                   }`}
                 >
                   {step > s.num ? (
@@ -225,7 +225,7 @@ function AttorneySignupContent() {
                     s.num
                   )}
                 </div>
-                <span className={`text-sm font-medium hidden sm:inline ${step >= s.num ? 'text-navy' : 'text-charcoal/40'}`}>
+                <span className={`text-sm font-medium hidden sm:inline ${step >= s.num ? 'text-navy' : 'text-charcoal/60'}`}>
                   {s.label}
                 </span>
               </div>
@@ -461,7 +461,7 @@ function AttorneySignupContent() {
                 onChange={(e) => updateField('reviewFee', parseInt(e.target.value, 10))}
                 className="mt-6 w-full max-w-md mx-auto block accent-gold"
               />
-              <div className="flex justify-between text-xs text-charcoal/40 mt-1 max-w-md mx-auto">
+              <div className="flex justify-between text-xs text-charcoal/60 mt-1 max-w-md mx-auto">
                 <span>$150 min</span>
                 <span>$1,500 max</span>
               </div>
@@ -490,7 +490,7 @@ function AttorneySignupContent() {
                     <tr className="border-b border-gray-100">
                       <td className="py-3 px-4 text-charcoal">Will (no review)</td>
                       <td className="py-3 px-4 text-right text-charcoal/70">${config.willEarning}</td>
-                      <td className="py-3 px-4 text-right text-charcoal/40">-</td>
+                      <td className="py-3 px-4 text-right text-charcoal/60">-</td>
                       <td className="py-3 px-4 text-right font-bold text-charcoal/70">${config.willEarning}</td>
                     </tr>
                     <tr className="border-b border-gray-100">
@@ -502,7 +502,7 @@ function AttorneySignupContent() {
                     <tr className="border-b border-gray-100">
                       <td className="py-3 px-4 text-charcoal">Trust (no review)</td>
                       <td className="py-3 px-4 text-right text-charcoal/70">${config.trustEarning}</td>
-                      <td className="py-3 px-4 text-right text-charcoal/40">-</td>
+                      <td className="py-3 px-4 text-right text-charcoal/60">-</td>
                       <td className="py-3 px-4 text-right font-bold text-charcoal/70">${config.trustEarning}</td>
                     </tr>
                   </tbody>
@@ -517,7 +517,7 @@ function AttorneySignupContent() {
                 <p className="mt-2 text-4xl font-extrabold text-gold">
                   ${monthlyEstimate.toLocaleString()}
                 </p>
-                <p className="mt-1 text-xs text-charcoal/40">
+                <p className="mt-1 text-xs text-charcoal/60">
                   Based on 10 trust packages with review per month
                 </p>
               </div>
@@ -576,7 +576,7 @@ function AttorneySignupContent() {
                 <div className="flex justify-between">
                   <span className="font-bold text-charcoal">Total due today</span>
                   {isPromoFree ? (
-                    <span className="text-2xl font-extrabold text-green-600">FREE <span className="text-sm text-charcoal/40 line-through">${config.price.toLocaleString()}</span></span>
+                    <span className="text-2xl font-extrabold text-green-600">FREE <span className="text-sm text-charcoal/60 line-through">${config.price.toLocaleString()}</span></span>
                   ) : (
                     <span className="text-2xl font-extrabold text-navy">${config.price.toLocaleString()}</span>
                   )}
@@ -632,7 +632,7 @@ function AttorneySignupContent() {
               </button>
             </div>
 
-            <p className="mt-4 text-center text-xs text-charcoal/40">
+            <p className="mt-4 text-center text-xs text-charcoal/60">
               Secured by Stripe. Your payment information is never stored on our servers.
             </p>
           </div>

@@ -3,7 +3,7 @@ import Link from "next/link";
 const packages = [
   {
     title: "Will Package",
-    descriptor: "A will gives instructions for the judge",
+    descriptor: "Direct your wishes through the court",
     price: "$400",
     popular: false,
     features: [
@@ -13,12 +13,12 @@ const packages = [
       "Execution Guide",
       "Family Vault Access",
     ],
-    cta: "Get Started",
+    cta: "Begin Your Will",
     href: "/will",
   },
   {
     title: "Trust Package",
-    descriptor: "A trust avoids court and a judge",
+    descriptor: "Bypass probate and protect privately",
     price: "$600",
     popular: true,
     features: [
@@ -30,7 +30,7 @@ const packages = [
       "Family Vault Access",
       "Attorney Review Available",
     ],
-    cta: "Get Started",
+    cta: "Begin Your Trust",
     href: "/trust",
   },
 ];
@@ -40,13 +40,13 @@ export default function PackageCards() {
     <section id="pricing" className="relative bg-gradient-to-b from-gray-50 to-white py-24 px-6">
       <div className="mx-auto max-w-4xl text-center">
         <div className="inline-flex items-center gap-2 rounded-full bg-gold-50 px-4 py-1.5 mb-4">
-          <span className="text-xs font-semibold text-gold-700 tracking-wide uppercase">Transparent Pricing</span>
+          <span className="text-xs font-semibold text-gold-700 tracking-wide uppercase">One-Time Payment</span>
         </div>
         <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-navy tracking-tight">
-          Choose Your Plan
+          Simple, Honest Pricing
         </h2>
-        <p className="mt-4 text-lg text-charcoal/50 max-w-xl mx-auto">
-          One-time payment. No subscriptions. No hidden fees.
+        <p className="mt-4 text-lg text-charcoal/60 max-w-xl mx-auto">
+          Pay once. No subscriptions, no hidden fees, no surprises.
         </p>
 
         <div className="mt-16 grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -71,11 +71,11 @@ export default function PackageCards() {
               )}
 
               <h3 className="text-xl font-bold text-navy">{pkg.title}</h3>
-              <p className="mt-1 text-sm text-charcoal/40">{pkg.descriptor}</p>
+              <p className="mt-1 text-sm text-charcoal/50">{pkg.descriptor}</p>
 
               <div className="mt-4 flex items-baseline gap-1">
                 <span className="text-5xl font-bold text-navy tracking-tight">{pkg.price}</span>
-                <span className="text-sm text-charcoal/40 ml-1">one-time</span>
+                <span className="text-sm text-charcoal/50 ml-1">one-time</span>
               </div>
 
               <div className="mt-6 h-px bg-gradient-to-r from-transparent via-gray-200 to-transparent" />

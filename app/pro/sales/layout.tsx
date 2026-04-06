@@ -46,7 +46,7 @@ export default function SalesLayout({ children }: { children: React.ReactNode })
         ))}
       </nav>
       <div className="px-5 pb-5">
-        <button onClick={handleSignOut} className="text-xs text-white/30 hover:text-white/60">Sign Out</button>
+        <button onClick={handleSignOut} className="text-xs text-white/50 hover:text-white/60">Sign Out</button>
       </div>
     </>
   );

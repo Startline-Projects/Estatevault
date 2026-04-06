@@ -73,9 +73,9 @@ export default function VaultSection() {
           More Than Documents —<br className="hidden sm:block" />
           <span className="text-gradient">A Complete Family Vault</span>
         </h2>
-        <p className="mt-4 text-lg text-white/50 max-w-2xl mx-auto">
-          Everything your family needs to find when it matters most.
-          Secured with bank-grade encryption and a separate PIN.
+        <p className="mt-4 text-lg text-white/60 max-w-2xl mx-auto">
+          Everything your family needs, in one secure place.
+          Bank-grade encryption. A separate PIN. Accessible when it matters most.
         </p>
 
         <div className="mt-16 grid grid-cols-2 md:grid-cols-3 gap-4">
@@ -96,7 +96,7 @@ export default function VaultSection() {
           href="/quiz"
           className="mt-14 inline-flex items-center gap-2 rounded-full border border-gold/40 px-8 py-3.5 text-sm font-semibold text-gold hover:bg-gold hover:text-white transition-all duration-300 hover:shadow-gold group"
         >
-          Learn More About the Vault
+          Start With the Free Quiz
           <svg className="w-4 h-4 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
           </svg>

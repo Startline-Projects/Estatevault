@@ -78,7 +78,7 @@ export default function ProDashboardPage() {
             <h1 className="text-lg font-bold text-white">Welcome to your live platform, {companyName}!</h1>
             {businessUrl && <p className="mt-1 text-sm text-blue-100/60">Your white-label URL is live at legacy.{businessUrl}</p>}
           </div>
-          <button onClick={() => { setDismissed(true); localStorage.setItem("ev_welcome_dismissed", "1"); }} className="text-white/40 hover:text-white text-xl">×</button>
+          <button onClick={() => { setDismissed(true); localStorage.setItem("ev_welcome_dismissed", "1"); }} className="text-white/60 hover:text-white text-xl">×</button>
         </div>
       )}
 
@@ -117,7 +117,7 @@ export default function ProDashboardPage() {
                   <span className="h-2 w-2 rounded-full bg-green-400" />
                   <span className="text-charcoal/70">{a.action.replace(/\./g, " ").replace(/\b\w/g, (c) => c.toUpperCase())}</span>
                 </div>
-                <span className="text-xs text-charcoal/40">{timeAgo(a.created_at)}</span>
+                <span className="text-xs text-charcoal/60">{timeAgo(a.created_at)}</span>
               </div>
             ))}
           </div>

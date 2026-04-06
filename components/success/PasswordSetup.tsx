@@ -33,7 +33,7 @@ export default function PasswordSetup({ email, userId }: PasswordSetupProps) {
     try {
       const supabase = createClient();
 
-      // If user has a session (auto-created account), update password directly
+      // If user has a session (already logged in), update password directly
       const { data: { session } } = await supabase.auth.getSession();
 
       if (session) {
@@ -43,22 +43,21 @@ export default function PasswordSetup({ email, userId }: PasswordSetupProps) {
           setLoading(false);
           return;
         }
-      } else if (userId) {
-        // Sign in with the auto-created account first, then update
-        // The webhook created the account — try signing in with the temp/invite flow
+      } else {
+        // Call set-password API — it handles userId lookup by email with retry
         const res = await fetch("/api/auth/set-password", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ userId, email, password }),
+          body: JSON.stringify({ userId: userId || undefined, email, password }),
         });
         const data = await res.json();
         if (!res.ok) {
-          setError(data.error || "Failed to set password");
+          setError(data.error || "Failed to set password. Please try again.");
           setLoading(false);
           return;
         }
 
-        // Sign in with new password
+        // Sign in with the new password
         const { error: signInErr } = await supabase.auth.signInWithPassword({ email, password });
         if (signInErr) {
           setError(signInErr.message);
@@ -91,12 +90,12 @@ export default function PasswordSetup({ email, userId }: PasswordSetupProps) {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="Min 8 characters, 1 number"
-              className="w-full rounded-xl border-2 border-white/20 bg-white/5 px-4 py-3 pr-12 text-sm text-white placeholder-white/30 focus:border-[#C9A84C] focus:outline-none focus:ring-1 focus:ring-[#C9A84C]/30"
+              className="w-full rounded-xl border-2 border-white/20 bg-white/5 px-4 py-3 pr-12 text-sm text-white placeholder-white/50 focus:border-gold focus:outline-none focus:ring-1 focus:ring-gold/30"
             />
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 hover:text-white/70 text-sm"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-white/60 hover:text-white/70 text-sm"
             >
               {showPassword ? "Hide" : "Show"}
             </button>
@@ -105,10 +104,10 @@ export default function PasswordSetup({ email, userId }: PasswordSetupProps) {
           {/* Inline validation */}
           {password.length > 0 && (
             <div className="mt-2 space-y-1">
-              <div className={`flex items-center gap-2 text-xs ${hasMinLength ? "text-green-400" : "text-white/40"}`}>
+              <div className={`flex items-center gap-2 text-xs ${hasMinLength ? "text-green-400" : "text-white/60"}`}>
                 <span>{hasMinLength ? "&#10003;" : "&#9675;"}</span> At least 8 characters
               </div>
-              <div className={`flex items-center gap-2 text-xs ${hasNumber ? "text-green-400" : "text-white/40"}`}>
+              <div className={`flex items-center gap-2 text-xs ${hasNumber ? "text-green-400" : "text-white/60"}`}>
                 <span>{hasNumber ? "&#10003;" : "&#9675;"}</span> At least one number
               </div>
             </div>
@@ -124,12 +123,12 @@ export default function PasswordSetup({ email, userId }: PasswordSetupProps) {
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
               placeholder="Confirm your password"
-              className="w-full rounded-xl border-2 border-white/20 bg-white/5 px-4 py-3 pr-12 text-sm text-white placeholder-white/30 focus:border-[#C9A84C] focus:outline-none focus:ring-1 focus:ring-[#C9A84C]/30"
+              className="w-full rounded-xl border-2 border-white/20 bg-white/5 px-4 py-3 pr-12 text-sm text-white placeholder-white/50 focus:border-gold focus:outline-none focus:ring-1 focus:ring-gold/30"
             />
             <button
               type="button"
               onClick={() => setShowConfirm(!showConfirm)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 hover:text-white/70 text-sm"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-white/60 hover:text-white/70 text-sm"
             >
               {showConfirm ? "Hide" : "Show"}
             </button>
@@ -152,7 +151,7 @@ export default function PasswordSetup({ email, userId }: PasswordSetupProps) {
         <button
           type="submit"
           disabled={!isValid || loading}
-          className="w-full min-h-[48px] rounded-full bg-[#C9A84C] py-3.5 text-base font-semibold text-white hover:bg-[#C9A84C]/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
+          className="w-full min-h-[48px] rounded-full bg-gold py-3.5 text-base font-semibold text-white hover:bg-gold/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
         >
           {loading ? "Setting up your account..." : "Access My Documents"}
         </button>

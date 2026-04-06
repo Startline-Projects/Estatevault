@@ -51,7 +51,7 @@ export default function FarewellTrusteePage() {
                 <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
               </svg>
             </div>
-            <h1 className="text-xl font-bold text-[#1C3557]">Request Received</h1>
+            <h1 className="text-xl font-bold text-navy">Request Received</h1>
             <p className="text-sm text-gray-500 mt-3">
               Your request has been received. We will review the submitted documentation and notify you within 24-48 hours.
             </p>
@@ -65,11 +65,11 @@ export default function FarewellTrusteePage() {
     <div className="min-h-screen bg-gray-50 flex items-center justify-center px-6 py-12">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <p className="text-2xl font-bold text-[#1C3557]">EstateVault</p>
+          <p className="text-2xl font-bold text-navy">EstateVault</p>
         </div>
 
         <div className="rounded-2xl bg-white p-8 shadow-sm border border-gray-200">
-          <h1 className="text-xl font-bold text-[#1C3557]">Access Farewell Messages</h1>
+          <h1 className="text-xl font-bold text-navy">Access Farewell Messages</h1>
           <p className="text-sm text-gray-500 mt-2">
             Upload a death certificate to access farewell messages left for you.
           </p>
@@ -82,19 +82,19 @@ export default function FarewellTrusteePage() {
 
           <form onSubmit={handleSubmit} className="mt-6 space-y-4">
             <div>
-              <label className="block text-sm font-medium text-[#1C3557] mb-1">Your Email</label>
+              <label className="block text-sm font-medium text-navy mb-1">Your Email</label>
               <input
                 type="email"
                 required
                 value={trusteeEmail}
                 onChange={(e) => setTrusteeEmail(e.target.value)}
                 placeholder="Enter the email registered as trustee"
-                className="w-full rounded-xl border-2 border-gray-200 px-4 py-3 text-sm focus:border-[#C9A84C] focus:outline-none focus:ring-1 focus:ring-[#C9A84C]/30"
+                className="w-full rounded-xl border-2 border-gray-200 px-4 py-3 text-sm focus:border-gold focus:outline-none focus:ring-1 focus:ring-gold/30"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-[#1C3557] mb-1">Death Certificate</label>
+              <label className="block text-sm font-medium text-navy mb-1">Death Certificate</label>
               <input
                 ref={fileInputRef}
                 type="file"
@@ -104,11 +104,11 @@ export default function FarewellTrusteePage() {
               />
               <div
                 onClick={() => fileInputRef.current?.click()}
-                className="rounded-xl border-2 border-dashed border-gray-300 p-6 text-center cursor-pointer hover:border-[#C9A84C]/50 transition-colors"
+                className="rounded-xl border-2 border-dashed border-gray-300 p-6 text-center cursor-pointer hover:border-gold/50 transition-colors"
               >
                 {certificate ? (
                   <div>
-                    <p className="text-sm font-medium text-[#1C3557]">{certificate.name}</p>
+                    <p className="text-sm font-medium text-navy">{certificate.name}</p>
                     <p className="text-xs text-gray-400 mt-1">{(certificate.size / (1024 * 1024)).toFixed(1)} MB</p>
                   </div>
                 ) : (
@@ -123,7 +123,7 @@ export default function FarewellTrusteePage() {
             <button
               type="submit"
               disabled={submitting || !trusteeEmail || !certificate}
-              className="w-full rounded-full bg-[#C9A84C] py-3.5 text-sm font-semibold text-white hover:bg-[#C9A84C]/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full rounded-full bg-gold py-3.5 text-sm font-semibold text-white hover:bg-gold/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {submitting ? "Submitting..." : "Submit for Verification"}
             </button>

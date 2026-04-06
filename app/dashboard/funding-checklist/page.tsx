@@ -110,7 +110,7 @@ export default function FundingChecklistPage() {
               <div className="flex items-start gap-4 p-5">
                 <input type="checkbox" checked={!!checklist[asset]} onChange={() => toggleItem(asset)} className="mt-1 h-5 w-5 rounded accent-gold" />
                 <div className="flex-1">
-                  <p className={`text-sm font-semibold ${checklist[asset] ? "text-charcoal/40 line-through" : "text-navy"}`}>
+                  <p className={`text-sm font-semibold ${checklist[asset] ? "text-charcoal/60 line-through" : "text-navy"}`}>
                     {asset.split(" / ")[0]}
                   </p>
                   <p className="text-xs text-charcoal/50 mt-1">{detail?.instruction || "See instructions"}</p>

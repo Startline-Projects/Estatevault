@@ -63,7 +63,7 @@ export default function AttorneyReviewPage() {
                 <span className="text-sm font-medium text-navy">{d.document_type.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())}</span>
                 {d.storage_path ? (
                   <button onClick={async () => { const res = await fetch(`/api/documents/download?id=${d.id}`); const data = await res.json(); if (data.url) window.open(data.url, "_blank"); }} className="text-sm text-gold hover:text-gold/80 font-medium">Download</button>
-                ) : <span className="text-xs text-charcoal/40">Pending</span>}
+                ) : <span className="text-xs text-charcoal/60">Pending</span>}
               </div>
             ))}
           </div>

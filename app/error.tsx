@@ -9,18 +9,11 @@ interface ErrorPageProps {
 
 export default function ErrorPage({ error, reset }: ErrorPageProps) {
   return (
-    <div
-      className="min-h-screen flex items-center justify-center px-4"
-      style={{ backgroundColor: '#1C3557' }}
-    >
+    <div className="min-h-screen flex items-center justify-center px-4 bg-navy">
       <div className="max-w-md w-full text-center">
-        <div
-          className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-6"
-          style={{ backgroundColor: 'rgba(201, 168, 76, 0.15)' }}
-        >
+        <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-6 bg-gold/15">
           <svg
-            className="w-8 h-8"
-            style={{ color: '#C9A84C' }}
+            className="w-8 h-8 text-gold"
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"
@@ -35,11 +28,11 @@ export default function ErrorPage({ error, reset }: ErrorPageProps) {
         </div>
 
         <h1 className="text-2xl font-bold text-white mb-3">
-          Something went wrong
+          We hit a small snag
         </h1>
         <p className="text-gray-300 mb-8 text-sm leading-relaxed">
-          We encountered an unexpected error. Your information is safe — please
-          try again or return to the home page.
+          Something unexpected happened, but your information is completely
+          safe. Please try again or head back to the home page.
         </p>
 
         {process.env.NODE_ENV === 'development' && error.message && (
@@ -53,14 +46,7 @@ export default function ErrorPage({ error, reset }: ErrorPageProps) {
         <div className="flex flex-col sm:flex-row gap-3 justify-center">
           <button
             onClick={reset}
-            className="px-6 py-3 rounded-lg font-semibold text-sm transition-colors cursor-pointer"
-            style={{ backgroundColor: '#C9A84C', color: '#1C3557' }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = '#b8953f'
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = '#C9A84C'
-            }}
+            className="px-6 py-3 rounded-lg font-semibold text-sm transition-colors cursor-pointer bg-gold text-navy hover:bg-gold-600"
           >
             Try Again
           </button>

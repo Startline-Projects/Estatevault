@@ -33,6 +33,7 @@ function SuccessContent() {
   const [userId, setUserId] = useState(promoUserId || "");
   const [documents, setDocuments] = useState<DocumentRecord[]>([]);
   const [docsReady, setDocsReady] = useState(false);
+  const [hasExistingAccount, setHasExistingAccount] = useState(false);
 
   const pollDocuments = useCallback(async (oid: string) => {
     try {
@@ -127,6 +128,7 @@ function SuccessContent() {
         setAttorneyReview(data.attorneyReview);
         if (data.email) setEmail(data.email);
         if (data.userId) setUserId(data.userId);
+        if (data.hasExistingAccount) setHasExistingAccount(true);
 
         if (data.attorneyReview) {
           setSteps([
@@ -232,9 +234,9 @@ function SuccessContent() {
                 ) : step.status === "active" ? (
                   <span className="mt-0.5 animate-pulse">&#9203;</span>
                 ) : (
-                  <span className="mt-0.5 text-white/30">&#11036;</span>
+                  <span className="mt-0.5 text-white/50">&#11036;</span>
                 )}
-                <span className={`text-sm ${step.status === "done" ? "text-white" : step.status === "active" ? "text-gold font-medium" : "text-white/40"}`}>
+                <span className={`text-sm ${step.status === "done" ? "text-white" : step.status === "active" ? "text-gold font-medium" : "text-white/60"}`}>
                   {step.label}
                 </span>
               </div>
@@ -282,7 +284,7 @@ function SuccessContent() {
                 URL.revokeObjectURL(url);
               }}
               disabled={!docsReady || documents.filter((d) => d.storage_path).length === 0}
-              className="w-full min-h-[48px] rounded-full bg-[#C9A84C] py-3.5 text-base font-semibold text-white hover:bg-[#C9A84C]/90 transition-colors shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full min-h-[48px] rounded-full bg-gold py-3.5 text-base font-semibold text-white hover:bg-gold/90 transition-colors shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {docsReady && documents.filter((d) => d.storage_path).length > 0 ? "Download Documents" : "Preparing your documents..."}
             </button>
@@ -291,13 +293,28 @@ function SuccessContent() {
 
         {/* Test mode label */}
         {isTest && (
-          <p className="mt-6 text-center text-xs text-white/30">Test Mode — Documents will not be saved</p>
+          <p className="mt-6 text-center text-xs text-white/50">Test Mode — Documents will not be saved</p>
         )}
 
-        {/* Password setup — not shown in test mode */}
+        {/* Password setup — not shown in test mode or for existing accounts */}
         {email && !attorneyReview && !isTest && (
           <div className="mt-10">
-            <PasswordSetup email={email} userId={userId} />
+            {hasExistingAccount ? (
+              <div className="rounded-2xl bg-white/10 border border-white/10 p-8 text-center">
+                <h2 className="text-lg font-bold text-white">Welcome back!</h2>
+                <p className="mt-3 text-sm text-blue-100/60">
+                  We found an existing account with this email. Your new documents have been added to your account.
+                </p>
+                <a
+                  href="/login"
+                  className="mt-6 inline-flex min-h-[48px] items-center rounded-full bg-[#C9A84C] px-8 py-3.5 text-base font-semibold text-white hover:bg-[#C9A84C]/90 transition-colors shadow-lg"
+                >
+                  Log In to View Your Documents
+                </a>
+              </div>
+            ) : (
+              <PasswordSetup email={email} userId={userId} />
+            )}
           </div>
         )}
       </div>

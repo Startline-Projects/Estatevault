@@ -126,13 +126,13 @@ export default function FarewellMessagesPage() {
     return (
       <div className="space-y-6">
         <div>
-          <h1 className="text-2xl font-bold text-[#1C3557]">Farewell Messages</h1>
-          <p className="text-sm text-[#2D2D2D]/60 mt-1">Record personal video messages for your loved ones.</p>
+          <h1 className="text-2xl font-bold text-navy">Farewell Messages</h1>
+          <p className="text-sm text-charcoal/60 mt-1">Record personal video messages for your loved ones.</p>
         </div>
         <SubscriptionBanner onStatusLoaded={handleStatusLoaded} />
         <div className="rounded-xl bg-white border border-gray-200 p-12 text-center">
-          <div className="mx-auto w-16 h-16 rounded-full bg-[#1C3557]/5 flex items-center justify-center mb-4">
-            <svg className="w-8 h-8 text-[#1C3557]/30" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+          <div className="mx-auto w-16 h-16 rounded-full bg-navy/5 flex items-center justify-center mb-4">
+            <svg className="w-8 h-8 text-navy/30" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
             </svg>
           </div>
@@ -146,11 +146,11 @@ export default function FarewellMessagesPage() {
   if (previewUrl) {
     return (
       <div className="space-y-4">
-        <button onClick={() => { setPreviewUrl(null); setPreviewTitle(""); }} className="text-sm text-[#1C3557] hover:text-[#C9A84C] transition-colors">
+        <button onClick={() => { setPreviewUrl(null); setPreviewTitle(""); }} className="text-sm text-navy hover:text-gold transition-colors">
           &larr; Back to messages
         </button>
         <div className="rounded-xl bg-white border border-gray-200 p-6">
-          <h2 className="text-lg font-bold text-[#1C3557] mb-2">{previewTitle}</h2>
+          <h2 className="text-lg font-bold text-navy mb-2">{previewTitle}</h2>
           <p className="text-xs text-gray-400 mb-4">This is your recorded farewell message. This video will only be visible to your designated recipient after a death certificate is uploaded and verified.</p>
           <div className="rounded-lg overflow-hidden bg-black aspect-video">
             <video src={previewUrl} controls className="w-full h-full object-contain" />
@@ -164,8 +164,8 @@ export default function FarewellMessagesPage() {
   if (mode === "record" && activeMessageId) {
     return (
       <div className="space-y-4">
-        <button onClick={() => setMode("list")} className="text-sm text-[#1C3557] hover:text-[#C9A84C]">&larr; Back</button>
-        <h2 className="text-lg font-bold text-[#1C3557]">Record Your Message</h2>
+        <button onClick={() => setMode("list")} className="text-sm text-navy hover:text-gold">&larr; Back</button>
+        <h2 className="text-lg font-bold text-navy">Record Your Message</h2>
         <FarewellRecorder messageId={activeMessageId} onComplete={handleUploadComplete} onCancel={() => setMode("list")} />
       </div>
     );
@@ -174,8 +174,8 @@ export default function FarewellMessagesPage() {
   if (mode === "upload" && activeMessageId) {
     return (
       <div className="space-y-4">
-        <button onClick={() => setMode("list")} className="text-sm text-[#1C3557] hover:text-[#C9A84C]">&larr; Back</button>
-        <h2 className="text-lg font-bold text-[#1C3557]">Upload Your Video</h2>
+        <button onClick={() => setMode("list")} className="text-sm text-navy hover:text-gold">&larr; Back</button>
+        <h2 className="text-lg font-bold text-navy">Upload Your Video</h2>
         <FarewellUploader messageId={activeMessageId} onComplete={handleUploadComplete} onCancel={() => setMode("list")} />
       </div>
     );
@@ -185,23 +185,23 @@ export default function FarewellMessagesPage() {
   if (mode === "new" && activeMessageId) {
     return (
       <div className="space-y-4">
-        <button onClick={() => { setMode("list"); setActiveMessageId(null); }} className="text-sm text-[#1C3557] hover:text-[#C9A84C]">&larr; Back</button>
-        <h2 className="text-lg font-bold text-[#1C3557]">How would you like to add your video?</h2>
+        <button onClick={() => { setMode("list"); setActiveMessageId(null); }} className="text-sm text-navy hover:text-gold">&larr; Back</button>
+        <h2 className="text-lg font-bold text-navy">How would you like to add your video?</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <button onClick={() => setMode("record")} className="rounded-xl border-2 border-gray-200 hover:border-[#C9A84C] p-8 text-center transition-colors">
+          <button onClick={() => setMode("record")} className="rounded-xl border-2 border-gray-200 hover:border-gold p-8 text-center transition-colors">
             <div className="mx-auto w-12 h-12 rounded-full bg-red-50 flex items-center justify-center mb-3">
               <div className="w-4 h-4 rounded-full bg-red-500" />
             </div>
-            <p className="font-semibold text-[#1C3557]">Record Now</p>
+            <p className="font-semibold text-navy">Record Now</p>
             <p className="text-xs text-gray-400 mt-1">Use your camera to record</p>
           </button>
-          <button onClick={() => setMode("upload")} className="rounded-xl border-2 border-gray-200 hover:border-[#C9A84C] p-8 text-center transition-colors">
+          <button onClick={() => setMode("upload")} className="rounded-xl border-2 border-gray-200 hover:border-gold p-8 text-center transition-colors">
             <div className="mx-auto w-12 h-12 rounded-full bg-blue-50 flex items-center justify-center mb-3">
               <svg className="w-5 h-5 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
               </svg>
             </div>
-            <p className="font-semibold text-[#1C3557]">Upload Video</p>
+            <p className="font-semibold text-navy">Upload Video</p>
             <p className="text-xs text-gray-400 mt-1">MP4, MOV, WebM — max 500MB</p>
           </button>
         </div>
@@ -214,8 +214,8 @@ export default function FarewellMessagesPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-[#1C3557]">Farewell Messages</h1>
-          <p className="text-sm text-[#2D2D2D]/60 mt-1">Personal video messages for your loved ones.</p>
+          <h1 className="text-2xl font-bold text-navy">Farewell Messages</h1>
+          <p className="text-sm text-charcoal/60 mt-1">Personal video messages for your loved ones.</p>
         </div>
         <button
           onClick={() => {
@@ -224,7 +224,7 @@ export default function FarewellMessagesPage() {
             setError("");
             setMode("list");
           }}
-          className="px-4 py-2 rounded-lg bg-[#C9A84C] text-sm font-semibold text-white hover:bg-[#b8963f] transition-colors"
+          className="px-4 py-2 rounded-lg bg-gold text-sm font-semibold text-white hover:bg-gold-600 transition-colors"
         >
           + New Message
         </button>
@@ -241,19 +241,19 @@ export default function FarewellMessagesPage() {
 
       {/* Create message form */}
       <div className="rounded-xl bg-white border border-gray-200 p-5">
-        <h3 className="text-sm font-semibold text-[#1C3557] mb-3">Create a New Farewell Message</h3>
+        <h3 className="text-sm font-semibold text-navy mb-3">Create a New Farewell Message</h3>
         {error && <div className="mb-3 rounded-lg bg-red-50 border border-red-200 px-4 py-2 text-sm text-red-700">{error}</div>}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
-            <label className="block text-xs font-medium text-[#2D2D2D] mb-1">Title</label>
-            <input type="text" value={newTitle} onChange={(e) => setNewTitle(e.target.value)} placeholder='e.g., "For Sarah"' className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#1C3557]/20 focus:border-[#1C3557]" />
+            <label className="block text-xs font-medium text-charcoal mb-1">Title</label>
+            <input type="text" value={newTitle} onChange={(e) => setNewTitle(e.target.value)} placeholder='e.g., "For Sarah"' className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-navy/20 focus:border-navy" />
           </div>
           <div>
-            <label className="block text-xs font-medium text-[#2D2D2D] mb-1">Recipient Email</label>
-            <input type="email" value={newRecipient} onChange={(e) => setNewRecipient(e.target.value)} placeholder="recipient@email.com" className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#1C3557]/20 focus:border-[#1C3557]" />
+            <label className="block text-xs font-medium text-charcoal mb-1">Recipient Email</label>
+            <input type="email" value={newRecipient} onChange={(e) => setNewRecipient(e.target.value)} placeholder="recipient@email.com" className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-navy/20 focus:border-navy" />
           </div>
         </div>
-        <button onClick={handleCreateMessage} disabled={creating || !newTitle.trim() || !newRecipient.trim()} className="mt-3 px-4 py-2 rounded-lg bg-[#1C3557] text-sm font-medium text-white hover:bg-[#1C3557]/90 transition-colors disabled:opacity-50">
+        <button onClick={handleCreateMessage} disabled={creating || !newTitle.trim() || !newRecipient.trim()} className="mt-3 px-4 py-2 rounded-lg bg-navy text-sm font-medium text-white hover:bg-navy/90 transition-colors disabled:opacity-50">
           {creating ? "Creating..." : "Continue"}
         </button>
       </div>
@@ -261,7 +261,7 @@ export default function FarewellMessagesPage() {
       {/* Messages list */}
       {loading ? (
         <div className="flex justify-center py-12">
-          <div className="w-6 h-6 border-2 border-[#1C3557] border-t-transparent rounded-full animate-spin" />
+          <div className="w-6 h-6 border-2 border-navy border-t-transparent rounded-full animate-spin" />
         </div>
       ) : messages.length === 0 ? (
         <div className="rounded-xl bg-white border border-gray-200 p-12 text-center">
@@ -273,7 +273,7 @@ export default function FarewellMessagesPage() {
             <div key={msg.id} className="rounded-xl bg-white border border-gray-200 p-5 flex items-center justify-between">
               <div>
                 <div className="flex items-center gap-2">
-                  <p className="text-sm font-semibold text-[#1C3557]">{msg.title}</p>
+                  <p className="text-sm font-semibold text-navy">{msg.title}</p>
                   {statusBadge(msg.vault_farewell_status)}
                 </div>
                 <p className="text-xs text-gray-400 mt-1">
@@ -282,7 +282,7 @@ export default function FarewellMessagesPage() {
               </div>
               <div className="flex items-center gap-2">
                 {msg.file_size_mb && (
-                  <button onClick={() => handlePreview(msg.id, msg.title)} className="text-xs font-medium px-3 py-1.5 rounded-lg bg-[#1C3557]/10 text-[#1C3557] hover:bg-[#1C3557]/20 transition-colors">
+                  <button onClick={() => handlePreview(msg.id, msg.title)} className="text-xs font-medium px-3 py-1.5 rounded-lg bg-navy/10 text-navy hover:bg-navy/20 transition-colors">
                     Preview
                   </button>
                 )}

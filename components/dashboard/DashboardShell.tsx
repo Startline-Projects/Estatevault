@@ -69,7 +69,7 @@ export default function DashboardShell({ userName, children }: DashboardShellPro
           <p className="text-sm text-white/80 truncate">{userName}</p>
           <button
             onClick={handleSignOut}
-            className="mt-2 text-xs text-white/40 hover:text-white/70 transition-colors"
+            className="mt-2 text-xs text-white/60 hover:text-white/70 transition-colors"
           >
             Sign Out
           </button>
@@ -119,7 +119,7 @@ export default function DashboardShell({ userName, children }: DashboardShellPro
             </nav>
             <div className="absolute bottom-6 left-6">
               <p className="text-sm text-white/80">{userName}</p>
-              <button onClick={handleSignOut} className="mt-2 text-xs text-white/40 hover:text-white/70">Sign Out</button>
+              <button onClick={handleSignOut} className="mt-2 text-xs text-white/60 hover:text-white/70">Sign Out</button>
             </div>
           </div>
         </div>

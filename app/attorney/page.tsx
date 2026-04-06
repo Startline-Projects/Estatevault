@@ -185,7 +185,7 @@ export default function AttorneyQueuePage() {
         </h2>
 
         {completed.length === 0 ? (
-          <p className="mt-4 text-sm text-charcoal/40">No completed reviews yet.</p>
+          <p className="mt-4 text-sm text-charcoal/60">No completed reviews yet.</p>
         ) : (
           <div className="mt-4 space-y-2">
             {completed.map((r) => (
@@ -195,7 +195,7 @@ export default function AttorneyQueuePage() {
                     <p className="text-sm font-medium text-navy">
                       {getClientName(r)} — {r.orders?.product_type === "trust" ? "Trust" : "Will"}
                     </p>
-                    <p className="text-xs text-charcoal/40 mt-0.5">
+                    <p className="text-xs text-charcoal/60 mt-0.5">
                       {getPartnerName(r) ? `via ${getPartnerName(r)}` : "Direct client"} &middot; {new Date(r.created_at).toLocaleDateString()}
                     </p>
                   </div>

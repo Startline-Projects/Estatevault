@@ -147,7 +147,7 @@ export default function ProDocumentsPage() {
         <div className="mt-16 text-center">
           <span className="text-4xl">📄</span>
           <p className="mt-4 text-sm text-charcoal/50">No documents found</p>
-          <p className="text-xs text-charcoal/40 mt-1">
+          <p className="text-xs text-charcoal/60 mt-1">
             Documents will appear here as your clients complete their estate planning packages.
           </p>
         </div>

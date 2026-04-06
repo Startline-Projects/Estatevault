@@ -131,21 +131,21 @@ export default function FarewellUploader({ messageId, onComplete, onCancel }: Fa
       {!selectedFile ? (
         <div
           onClick={() => fileInputRef.current?.click()}
-          className="rounded-xl border-2 border-dashed border-gray-300 p-12 text-center cursor-pointer hover:border-[#C9A84C]/50 transition-colors"
+          className="rounded-xl border-2 border-dashed border-gray-300 p-12 text-center cursor-pointer hover:border-gold/50 transition-colors"
         >
           <div className="mx-auto w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center mb-3">
             <svg className="w-6 h-6 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
             </svg>
           </div>
-          <p className="text-sm font-medium text-[#2D2D2D]">Click to select a video file</p>
+          <p className="text-sm font-medium text-charcoal">Click to select a video file</p>
           <p className="text-xs text-gray-400 mt-1">MP4, MOV, WebM — max 500MB, 30 minutes</p>
         </div>
       ) : (
         <div className="rounded-xl border border-gray-200 p-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-[#2D2D2D]">{selectedFile.name}</p>
+              <p className="text-sm font-medium text-charcoal">{selectedFile.name}</p>
               <p className="text-xs text-gray-400 mt-0.5">{formatSize(selectedFile.size)}</p>
             </div>
             {!uploading && (
@@ -158,7 +158,7 @@ export default function FarewellUploader({ messageId, onComplete, onCancel }: Fa
           {uploading && (
             <div className="mt-3">
               <div className="w-full h-2 rounded-full bg-gray-100 overflow-hidden">
-                <div className="h-full bg-[#C9A84C] rounded-full transition-all" style={{ width: `${progress}%` }} />
+                <div className="h-full bg-gold rounded-full transition-all" style={{ width: `${progress}%` }} />
               </div>
               <p className="text-xs text-gray-400 mt-1">{progress}% uploaded</p>
             </div>
@@ -167,11 +167,11 @@ export default function FarewellUploader({ messageId, onComplete, onCancel }: Fa
       )}
 
       <div className="flex items-center justify-end gap-3">
-        <button onClick={onCancel} disabled={uploading} className="px-4 py-2.5 rounded-lg border border-gray-300 text-sm font-medium text-[#2D2D2D] hover:bg-gray-50 transition-colors disabled:opacity-50">
+        <button onClick={onCancel} disabled={uploading} className="px-4 py-2.5 rounded-lg border border-gray-300 text-sm font-medium text-charcoal hover:bg-gray-50 transition-colors disabled:opacity-50">
           Cancel
         </button>
         {selectedFile && (
-          <button onClick={handleUpload} disabled={uploading} className="px-6 py-2.5 rounded-lg bg-[#1C3557] text-sm font-semibold text-white hover:bg-[#1C3557]/90 transition-colors disabled:opacity-50">
+          <button onClick={handleUpload} disabled={uploading} className="px-6 py-2.5 rounded-lg bg-navy text-sm font-semibold text-white hover:bg-navy/90 transition-colors disabled:opacity-50">
             {uploading ? "Uploading..." : "Upload Video"}
           </button>
         )}

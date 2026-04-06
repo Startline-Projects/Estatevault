@@ -27,10 +27,11 @@ interface ProShellProps {
   logoUrl: string | null;
   onboardingComplete: boolean;
   certificationComplete: boolean;
+  onboardingStep: number;
   children: React.ReactNode;
 }
 
-export default function ProShell({ companyName, userName, tier, logoUrl, onboardingComplete, certificationComplete, children }: ProShellProps) {
+export default function ProShell({ companyName, userName, tier, logoUrl, onboardingComplete, certificationComplete, onboardingStep, children }: ProShellProps) {
   const pathname = usePathname();
   const router = useRouter();
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -65,7 +66,7 @@ export default function ProShell({ companyName, userName, tier, logoUrl, onboard
           {logoUrl ? <img src={logoUrl} alt="" className="h-8 w-8 rounded object-cover" /> : <div className="h-8 w-8 rounded-full bg-gold/20 flex items-center justify-center text-xs font-bold text-gold">{initials}</div>}
           <div className="min-w-0">
             <p className="text-sm font-bold text-white truncate">{companyName}</p>
-            <span className={`text-xs font-medium ${tier === "enterprise" ? "text-gold" : "text-white/40"}`}>{tier === "enterprise" ? "Enterprise" : "Standard"}</span>
+            <span className={`text-xs font-medium ${tier === "enterprise" ? "text-gold" : "text-white/60"}`}>{tier === "enterprise" ? "Enterprise" : "Standard"}</span>
           </div>
         </div>
         <div className="mt-4 h-px bg-white/10" />
@@ -77,7 +78,7 @@ export default function ProShell({ companyName, userName, tier, logoUrl, onboard
       </nav>
       <div className="px-5 pb-5">
         <p className="text-xs text-white/50 truncate">{userName}</p>
-        <button onClick={handleSignOut} className="mt-1 text-xs text-white/30 hover:text-white/60">Sign Out</button>
+        <button onClick={handleSignOut} className="mt-1 text-xs text-white/50 hover:text-white/60">Sign Out</button>
       </div>
     </>
   );
@@ -109,7 +110,7 @@ export default function ProShell({ companyName, userName, tier, logoUrl, onboard
           <div className="bg-amber-50 border-b border-amber-200 px-6 py-3 flex items-center gap-4 text-sm">
             <span className="text-amber-700">⚠</span>
             <span className="text-amber-800">{!onboardingComplete ? "Your setup is incomplete." : "Certification required to unlock client features."}</span>
-            {!onboardingComplete && <Link href="/pro/onboarding/step-1" className="font-semibold text-amber-900 underline">Complete Setup →</Link>}
+            {!onboardingComplete && <Link href={`/pro/onboarding/step-${onboardingStep}`} className="font-semibold text-amber-900 underline">Complete Setup →</Link>}
             {onboardingComplete && !certificationComplete && <Link href="/pro/training" className="font-semibold text-amber-900 underline">Complete Certification →</Link>}
           </div>
         )}
