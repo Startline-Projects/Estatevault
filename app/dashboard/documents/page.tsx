@@ -148,8 +148,17 @@ export default function DocumentsPage() {
   async function handleDownload(doc: Document) {
     if (!doc.storage_path) return;
     const supabase = createClient();
-    const { data } = await supabase.storage.from("documents").createSignedUrl(doc.storage_path, 3600);
-    if (data?.signedUrl) window.open(data.signedUrl, "_blank");
+    const { data, error } = await supabase.storage.from("documents").createSignedUrl(doc.storage_path, 3600);
+    if (error) { console.error("Signed URL error:", error); return; }
+    if (data?.signedUrl) {
+      const a = document.createElement("a");
+      a.href = data.signedUrl;
+      a.download = `${doc.document_type}.pdf`;
+      a.target = "_blank";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    }
   }
 
   if (loading) {
