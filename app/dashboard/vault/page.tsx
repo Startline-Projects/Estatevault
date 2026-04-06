@@ -12,14 +12,14 @@ interface VaultItem {
 }
 
 const CATEGORIES = [
-  { key: "estate_document", icon: "📄", label: "Estate Documents" },
-  { key: "financial_account", icon: "🏦", label: "Financial Accounts" },
-  { key: "insurance", icon: "🛡", label: "Insurance Policies" },
-  { key: "digital_account", icon: "🔑", label: "Digital Accounts" },
-  { key: "physical_location", icon: "📍", label: "Physical Locations" },
-  { key: "contact", icon: "👤", label: "Important Contacts" },
-  { key: "business", icon: "💼", label: "Business Interests" },
-  { key: "final_wishes", icon: "📝", label: "Final Wishes" },
+  { key: "estate_document", icon: "📄", label: "Estate Documents", vaultOnly: false },
+  { key: "financial_account", icon: "🏦", label: "Financial Accounts", vaultOnly: true },
+  { key: "insurance", icon: "🛡", label: "Insurance Policies", vaultOnly: true },
+  { key: "digital_account", icon: "🔑", label: "Digital Accounts", vaultOnly: true },
+  { key: "physical_location", icon: "📍", label: "Physical Locations", vaultOnly: true },
+  { key: "contact", icon: "👤", label: "Important Contacts", vaultOnly: true },
+  { key: "business", icon: "💼", label: "Business Interests", vaultOnly: true },
+  { key: "final_wishes", icon: "📝", label: "Final Wishes", vaultOnly: true },
 ];
 
 const CATEGORY_FIELDS: Record<string, Array<{ name: string; label: string; type: string; options?: string[] }>> = {
@@ -94,13 +94,40 @@ export default function VaultPage() {
   const [addForm, setAddForm] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
   const [pinExpiry, setPinExpiry] = useState(0);
+  const [isSubscribed, setIsSubscribed] = useState(false);
+  const [showUpgradePrompt, setShowUpgradePrompt] = useState(false);
+  const [subscribing, setSubscribing] = useState(false);
+  const [subscribeError, setSubscribeError] = useState("");
 
-  // Check if PIN exists
+  async function handleSubscribe() {
+    setSubscribing(true);
+    setSubscribeError("");
+    try {
+      const res = await fetch("/api/checkout/vault-subscription", { method: "POST" });
+      const data = await res.json();
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        setSubscribeError(data.error || "Something went wrong. Please try again.");
+        setSubscribing(false);
+      }
+    } catch {
+      setSubscribeError("Network error. Please try again.");
+      setSubscribing(false);
+    }
+  }
+
+  // Check PIN + subscription status in parallel
   useEffect(() => {
     async function check() {
-      const res = await fetch("/api/vault/pin", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "check" }) });
-      const data = await res.json();
-      setScreen(data.hasPin ? "pin-enter" : "pin-create");
+      const [pinRes, subRes] = await Promise.all([
+        fetch("/api/vault/pin", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "check" }) }),
+        fetch("/api/subscription/status"),
+      ]);
+      const pinData = await pinRes.json();
+      const subData = await subRes.json();
+      setIsSubscribed(subData.status === "active");
+      setScreen(pinData.hasPin ? "pin-enter" : "pin-create");
     }
     check();
   }, []);
@@ -274,12 +301,55 @@ export default function VaultPage() {
         </Link>
       </div>
 
+      {/* Vault Plan upsell banner — shown to non-subscribers */}
+      {!isSubscribed && (
+        <div className="mt-6 rounded-xl bg-gold/10 border border-gold/30 p-5 flex items-center justify-between gap-4">
+          <div>
+            <p className="text-sm font-semibold text-navy">Unlock the Full Vault — $99/year</p>
+            <p className="text-xs text-charcoal/60 mt-1">Store financial accounts, insurance policies, digital accounts, contacts, and more. Your family will thank you.</p>
+          </div>
+          <button onClick={handleSubscribe} disabled={subscribing} className="flex-shrink-0 rounded-full bg-gold px-5 py-2 text-sm font-semibold text-white hover:bg-gold/90 transition-colors disabled:opacity-50">
+            {subscribing ? "Loading..." : "Upgrade"}
+          </button>
+        </div>
+      )}
+
+      {/* Upgrade prompt modal */}
+      {showUpgradePrompt && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-6">
+          <div className="w-full max-w-sm rounded-2xl bg-white p-8 shadow-2xl text-center">
+            <span className="text-4xl">🔒</span>
+            <h2 className="mt-4 text-lg font-bold text-navy">Vault Plan Required</h2>
+            <p className="mt-2 text-sm text-charcoal/60">This section is part of the EstateVault Plan ($99/year). Upgrade to store and protect all your important information.</p>
+            <div className="mt-6 flex flex-col gap-3">
+              <button onClick={handleSubscribe} disabled={subscribing} className="w-full min-h-[44px] flex items-center justify-center rounded-full bg-gold text-sm font-semibold text-white hover:bg-gold/90 transition-colors disabled:opacity-50">
+                {subscribing ? "Loading..." : "Upgrade — $99/year"}
+              </button>
+              {subscribeError && <p className="text-xs text-red-600">{subscribeError}</p>}
+              <button onClick={() => setShowUpgradePrompt(false)} className="text-sm text-charcoal/50 hover:text-charcoal transition-colors">
+                Maybe later
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="mt-8 grid grid-cols-2 md:grid-cols-4 gap-4">
         {CATEGORIES.map((cat) => {
           const count = getCategoryCount(cat.key);
+          const requiresUpgrade = cat.vaultOnly && !isSubscribed;
           return (
-            <button key={cat.key} onClick={() => { setSelectedCategory(cat.key); setScreen("category"); }}
-              className={`rounded-xl p-5 text-left transition-all hover:shadow-md ${count > 0 ? "bg-navy text-white" : "bg-navy/5 border border-gray-200 text-navy"}`}>
+            <button
+              key={cat.key}
+              onClick={() => {
+                if (requiresUpgrade) { setShowUpgradePrompt(true); return; }
+                setSelectedCategory(cat.key);
+                setScreen("category");
+              }}
+              className={`rounded-xl p-5 text-left transition-all hover:shadow-md ${
+                count > 0 ? "bg-navy text-white" : "bg-navy/5 border border-gray-200 text-navy"
+              }`}
+            >
               <span className="text-2xl">{cat.icon}</span>
               <p className="mt-3 text-sm font-semibold">{cat.label}</p>
               <p className={`mt-1 text-xs ${count > 0 ? "text-white/60" : "text-charcoal/50"}`}>
