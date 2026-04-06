@@ -152,7 +152,7 @@ export default function Step1Page() {
 
               <section>
                 <h3 className="font-semibold text-navy">5. Termination</h3>
-                <p className="mt-2">Either party may terminate this agreement with 30 days written notice. Upon termination, the Partner's access to the platform will be revoked. Existing client accounts and documents will remain accessible to the clients directly.</p>
+                <p className="mt-2">Either party may terminate this agreement with 30 days written notice. Upon termination, the Partner&apos;s access to the platform will be revoked. Existing client accounts and documents will remain accessible to the clients directly.</p>
               </section>
 
               <section>
