@@ -250,7 +250,8 @@ export default function PartnerDetailPage() {
   }
 
   const sStatus = STATUS_STYLES[partner.status] || STATUS_STYLES.onboarding;
-  const sTier = TIER_STYLES[partner.plan_tier] || TIER_STYLES.standard;
+  const tierKey = (partner.plan_tier || (partner as unknown as Record<string, string>).tier || "standard") as keyof typeof TIER_STYLES;
+  const sTier = TIER_STYLES[tierKey] || TIER_STYLES.standard;
 
   const onboardingSteps: OnboardingStep[] = ONBOARDING_LABELS.map((label, i) => ({
     step: i + 1,
@@ -399,7 +400,7 @@ export default function PartnerDetailPage() {
               <div className="h-px bg-gray-100" />
               <div className="flex justify-between items-center">
                 <span className="text-sm text-gray-500">Plan Tier</span>
-                <span className="text-sm font-medium text-charcoal capitalize">{partner.plan_tier || "standard"}</span>
+                <span className="text-sm font-medium text-charcoal capitalize">{partner.plan_tier || (partner as unknown as Record<string, string>).tier || "standard"}</span>
               </div>
             </div>
           </div>

@@ -281,7 +281,7 @@ export default function PartnersListPage() {
                       </td>
                       <td className="px-4 py-3 text-right font-medium text-charcoal">{p.mtd_docs}</td>
                       <td className="px-4 py-3 text-right font-medium text-charcoal">
-                        ${p.mtd_revenue.toLocaleString()}
+                        ${(p.mtd_revenue / 100).toLocaleString()}
                       </td>
                       <td className="px-4 py-3 text-right">
                         <Link
