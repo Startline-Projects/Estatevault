@@ -136,20 +136,22 @@ export default function PartnerDetailPage() {
     const lmStart = new Date(now.getFullYear(), now.getMonth() - 1, 1).toISOString();
     const lmEnd = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59).toISOString();
 
+    const PAID_STATUSES = ["paid", "delivered", "generating", "review"];
+
     // MTD
-    const { data: mtdData } = await supabase.from("orders").select("partner_cut").eq("partner_id", pid).gte("created_at", mtdStart);
+    const { data: mtdData } = await supabase.from("orders").select("partner_cut").eq("partner_id", pid).in("status", PAID_STATUSES).gte("created_at", mtdStart);
     setMtdDocs((mtdData || []).length);
-    setMtdRevenue((mtdData || []).reduce((s, o) => s + (o.partner_cut || 0), 0));
+    setMtdRevenue((mtdData || []).reduce((s, o) => s + (o.partner_cut || 0), 0) / 100);
 
     // Last month
-    const { data: lmData } = await supabase.from("orders").select("partner_cut").eq("partner_id", pid).gte("created_at", lmStart).lte("created_at", lmEnd);
+    const { data: lmData } = await supabase.from("orders").select("partner_cut").eq("partner_id", pid).in("status", PAID_STATUSES).gte("created_at", lmStart).lte("created_at", lmEnd);
     setLmDocs((lmData || []).length);
-    setLmRevenue((lmData || []).reduce((s, o) => s + (o.partner_cut || 0), 0));
+    setLmRevenue((lmData || []).reduce((s, o) => s + (o.partner_cut || 0), 0) / 100);
 
     // All time
-    const { data: allData } = await supabase.from("orders").select("partner_cut").eq("partner_id", pid);
+    const { data: allData } = await supabase.from("orders").select("partner_cut").eq("partner_id", pid).in("status", PAID_STATUSES);
     setAllDocs((allData || []).length);
-    setAllRevenue((allData || []).reduce((s, o) => s + (o.partner_cut || 0), 0));
+    setAllRevenue((allData || []).reduce((s, o) => s + (o.partner_cut || 0), 0) / 100);
 
     // Monthly chart (6 months)
     const months: MonthlyStats[] = [];
@@ -160,12 +162,13 @@ export default function PartnerDetailPage() {
         .from("orders")
         .select("partner_cut")
         .eq("partner_id", pid)
+        .in("status", PAID_STATUSES)
         .gte("created_at", mStart.toISOString())
         .lte("created_at", mEnd.toISOString());
       months.push({
         month: mStart.toLocaleString("default", { month: "short" }),
         docs: (mData || []).length,
-        revenue: (mData || []).reduce((s, o) => s + (o.partner_cut || 0), 0),
+        revenue: (mData || []).reduce((s, o) => s + (o.partner_cut || 0), 0) / 100,
       });
     }
     setMonthlyStats(months);
@@ -422,7 +425,7 @@ export default function PartnerDetailPage() {
                   </div>
                   <div className="text-right">
                     <p className="text-2xl font-bold text-navy">${s.revenue.toLocaleString()}</p>
-                    <p className="text-xs text-gray-400 mt-0.5">revenue</p>
+                    <p className="text-xs text-gray-400 mt-0.5">partner earnings</p>
                   </div>
                 </div>
               </div>
@@ -431,7 +434,7 @@ export default function PartnerDetailPage() {
 
           {/* Bar Chart */}
           <div className="bg-white rounded-xl border border-gray-200 p-6">
-            <h3 className="text-sm font-semibold text-navy uppercase tracking-wider mb-6">Revenue (Last 6 Months)</h3>
+            <h3 className="text-sm font-semibold text-navy uppercase tracking-wider mb-6">Partner Earnings (Last 6 Months)</h3>
             <div className="flex items-end gap-3 h-48">
               {monthlyStats.map((m) => (
                 <div key={m.month} className="flex-1 flex flex-col items-center gap-2">

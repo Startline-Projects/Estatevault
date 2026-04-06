@@ -326,7 +326,7 @@ export async function POST(request: Request) {
           // Store pending earnings — no Stripe account yet
           const { evCut, partnerCut } = calculateSplit(
             productType,
-            "standard"
+            (partner?.tier as "standard" | "enterprise") || "standard"
           );
           await supabase
             .from("orders")

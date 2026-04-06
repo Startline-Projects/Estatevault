@@ -29,12 +29,15 @@ interface PartnerRow {
   updated_at: string;
   onboarding_completed: boolean;
   onboarding_step: number;
+  platform_fee_amount: number;
+  one_time_fee_paid: boolean;
 }
 
 interface OrderRow {
-  amount_total: number;
   ev_cut: number;
+  partner_cut: number;
   partner_id: string;
+  status: string;
 }
 
 interface PendingAttorney {
@@ -96,8 +99,8 @@ export default function SalesDashboardPage() {
   const [loading, setLoading] = useState(true);
   const [activePartners, setActivePartners] = useState(0);
   const [onboardingPartners, setOnboardingPartners] = useState(0);
-  const [mtdRevenue, setMtdRevenue] = useState(0);
-  const [mtdCommission, setMtdCommission] = useState(0);
+  const [mtdEvRevenue, setMtdEvRevenue] = useState(0);
+  const [mtdPlatformFees, setMtdPlatformFees] = useState(0);
   const [stuckPartners, setStuckPartners] = useState<StuckPartner[]>([]);
   const [recentPartners, setRecentPartners] = useState<RecentPartnerDisplay[]>([]);
   const [nudgingId, setNudgingId] = useState<string | null>(null);
@@ -134,7 +137,7 @@ export default function SalesDashboardPage() {
       const isAdmin = profileData?.user_type === "admin";
       let partnersQuery = supabase
         .from("partners")
-        .select("id, company_name, tier, status, created_at, updated_at, onboarding_completed, onboarding_step");
+        .select("id, company_name, tier, status, created_at, updated_at, onboarding_completed, onboarding_step, platform_fee_amount, one_time_fee_paid");
       if (!isAdmin) partnersQuery = partnersQuery.eq("created_by", user.id);
       const { data: partners } = await partnersQuery;
 
@@ -151,17 +154,26 @@ export default function SalesDashboardPage() {
       const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
       const partnerIds = typedPartners.map((p) => p.id);
 
-      const { data: orders } = await supabase
-        .from("orders")
-        .select("amount_total, ev_cut, partner_id")
-        .in("partner_id", partnerIds)
-        .gte("created_at", monthStart);
+      const { data: orders } = partnerIds.length > 0
+        ? await supabase
+            .from("orders")
+            .select("ev_cut, partner_cut, partner_id, status")
+            .in("partner_id", partnerIds)
+            .in("status", ["paid", "delivered", "generating", "review"])
+            .gte("created_at", monthStart)
+        : { data: [] };
 
       const typedOrders = (orders || []) as OrderRow[];
-      const revenue = typedOrders.reduce((sum, o) => sum + (o.amount_total || 0), 0) / 100;
+
+      // MTD EstateVault revenue = sum of ev_cut (EV's share from document sales)
       const evRevenue = typedOrders.reduce((sum, o) => sum + (o.ev_cut || 0), 0) / 100;
-      setMtdRevenue(revenue);
-      setMtdCommission(evRevenue * 0.05);
+      setMtdEvRevenue(evRevenue);
+
+      // MTD Platform Fees = sum of platform_fee_amount from partners who paid their fee this month
+      const platformFees = typedPartners
+        .filter((p) => p.one_time_fee_paid && new Date(p.created_at) >= new Date(monthStart))
+        .reduce((sum, p) => sum + (p.platform_fee_amount || 0), 0) / 100;
+      setMtdPlatformFees(platformFees);
 
       // Stuck partners: on same onboarding step 3+ days
       const threeDaysAgo = new Date();
@@ -191,14 +203,15 @@ export default function SalesDashboardPage() {
 
       const recentDisplay: RecentPartnerDisplay[] = recent5.map((p) => {
         const partnerOrders = typedOrders.filter((o) => o.partner_id === p.id);
-        const partnerRevenue = partnerOrders.reduce((sum, o) => sum + (o.amount_total || 0), 0) / 100;
+        // partner_cut = what the partner earned from document sales this month
+        const partnerEarnings = partnerOrders.reduce((sum, o) => sum + (o.partner_cut || 0), 0) / 100;
         return {
           id: p.id,
           company_name: p.company_name,
           tier: p.tier,
           status: p.status,
           mtdDocs: partnerOrders.length,
-          mtdRevenue: partnerRevenue,
+          mtdRevenue: partnerEarnings,
         };
       });
       setRecentPartners(recentDisplay);
@@ -367,8 +380,8 @@ export default function SalesDashboardPage() {
   const statCards = [
     { label: "Active Partners", value: activePartners.toString() },
     { label: "Partners in Onboarding", value: onboardingPartners.toString() },
-    { label: "MTD Partner Revenue", value: formatCurrency(mtdRevenue) },
-    { label: "My MTD Commission", value: formatCurrency(mtdCommission) },
+    { label: "MTD EstateVault Revenue", value: formatCurrency(mtdEvRevenue) },
+    { label: "MTD Platform Fees Collected", value: formatCurrency(mtdPlatformFees) },
   ];
 
   return (
@@ -699,7 +712,7 @@ export default function SalesDashboardPage() {
                     MTD Docs
                   </th>
                   <th className="text-right px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">
-                    MTD Revenue
+                    MTD Partner Earnings
                   </th>
                 </tr>
               </thead>
