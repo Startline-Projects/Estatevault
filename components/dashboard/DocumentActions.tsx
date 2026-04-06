@@ -16,13 +16,6 @@ interface DocumentActionsProps {
   orderStatus: string;
 }
 
-const DOC_LABELS: Record<string, string> = {
-  will: "Last Will & Testament",
-  trust: "Revocable Living Trust",
-  pour_over_will: "Pour-Over Will",
-  poa: "Durable Power of Attorney",
-  healthcare_directive: "Healthcare Directive",
-};
 
 export default function DocumentActions({ orderId, productType, orderStatus }: DocumentActionsProps) {
   const [documents, setDocuments] = useState<DocumentRecord[]>([]);
@@ -76,13 +69,6 @@ export default function DocumentActions({ orderId, productType, orderStatus }: D
     return () => { clearInterval(interval); clearTimeout(timeout); };
   }, [polling, fetchDocs]);
 
-  async function handleDownload(doc: DocumentRecord) {
-    if (!doc.storage_path) return;
-    const supabase = createClient();
-    const { data } = await supabase.storage.from("documents").createSignedUrl(doc.storage_path, 3600);
-    if (data?.signedUrl) window.open(data.signedUrl, "_blank");
-  }
-
   async function handleSendEmail() {
     setEmailSending(true);
     setEmailError("");
@@ -118,19 +104,14 @@ export default function DocumentActions({ orderId, productType, orderStatus }: D
       {/* Download buttons */}
       {docsReady && documents.filter((d) => d.storage_path).length > 0 && (
         <div className="rounded-xl bg-white border border-gray-200 p-5">
-          <h3 className="text-sm font-bold text-navy mb-3">Download Your Documents</h3>
-          <div className="space-y-2">
-            {documents.filter((d) => d.storage_path).map((doc) => (
-              <button
-                key={doc.id}
-                onClick={() => handleDownload(doc)}
-                className="w-full flex items-center justify-between rounded-lg bg-gray-50 hover:bg-gray-100 px-4 py-3 text-sm transition-colors"
-              >
-                <span className="text-charcoal font-medium">{DOC_LABELS[doc.document_type] || doc.document_type}</span>
-                <span className="text-navy font-semibold text-xs">Download PDF &darr;</span>
-              </button>
-            ))}
-          </div>
+          <h3 className="text-sm font-bold text-navy mb-3">Your Documents Are Ready</h3>
+          <a
+            href="/dashboard/documents"
+            className="w-full flex items-center justify-between rounded-lg bg-navy px-4 py-3 text-sm transition-colors hover:bg-navy/90"
+          >
+            <span className="text-white font-medium">Download Your {packageName} Package</span>
+            <span className="text-gold font-semibold text-xs">View &amp; Download &rarr;</span>
+          </a>
         </div>
       )}
 
