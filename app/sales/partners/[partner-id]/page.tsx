@@ -120,7 +120,11 @@ export default function PartnerDetailPage() {
       .single();
 
     if (data) {
-      setPartner(data as unknown as PartnerDetail);
+      // Fetch real last login from auth
+      const loginRes = await fetch(`/api/sales/partner-last-login?partnerId=${partnerId}`);
+      const loginData = loginRes.ok ? await loginRes.json() : { last_login: null };
+
+      setPartner({ ...(data as unknown as PartnerDetail), last_login: loginData.last_login });
       await Promise.all([
         loadPerformance(supabase, partnerId),
         loadActivity(supabase, partnerId),
