@@ -338,9 +338,12 @@ export async function POST(request: Request) {
     // Create Stripe Checkout Session
     const origin = request.headers.get("origin") || "https://www.estatevault.us";
 
+    const clientName = `${intakeAnswers.firstName || ""} ${intakeAnswers.lastName || ""}`.trim();
+
     const session = await stripe.checkout.sessions.create({
       mode: "payment",
       line_items: lineItems,
+      customer_email: intakeAnswers.email || undefined,
       success_url: `${origin}/will/success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${origin}/will/checkout`,
       metadata: {
@@ -349,6 +352,7 @@ export async function POST(request: Request) {
         product_type: "will",
         attorney_review: attorneyReview ? "true" : "false",
         partner_id: partnerId || "",
+        client_name: clientName,
       },
     });
 

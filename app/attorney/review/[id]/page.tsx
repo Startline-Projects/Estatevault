@@ -3,7 +3,6 @@
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/client";
 
 const DOC_LABELS: Record<string, string> = {
   will: "Last Will & Testament",
@@ -79,32 +78,18 @@ export default function AttorneyReviewPage() {
     setSubmitting(true);
 
     try {
-      const supabase = createClient();
-      const { data: { user } } = await supabase.auth.getUser();
-
-      await supabase
-        .from("attorney_reviews")
-        .update({ status: decision, notes, reviewed_at: new Date().toISOString() })
-        .eq("id", reviewId);
-
-      if (decision === "approved" || decision === "approved_with_notes") {
-        await supabase.from("orders").update({ status: "delivered" }).eq("id", data.review.order_id);
-        await supabase.from("documents").update({ status: "delivered", delivered_at: new Date().toISOString() }).eq("order_id", data.review.order_id);
-
-        await fetch("/api/attorney/notify-client", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ reviewId }),
-        });
-      }
-
-      await supabase.from("audit_log").insert({
-        actor_id: user?.id,
-        action: `attorney_review.${decision}`,
-        resource_type: "attorney_review",
-        resource_id: reviewId,
-        metadata: { notes },
+      const res = await fetch("/api/attorney/approve", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ reviewId, decision, notes }),
       });
+
+      if (!res.ok) {
+        const json = await res.json().catch(() => ({}));
+        alert(json.error || "Failed to submit review. Please try again.");
+        setSubmitting(false);
+        return;
+      }
 
       setSubmitted(true);
       setTimeout(() => router.push("/attorney"), 2000);

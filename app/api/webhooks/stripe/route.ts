@@ -165,27 +165,34 @@ export async function POST(request: Request) {
 
     // ── 1. Ensure user account exists ──────────────────────────
     let profileId: string | null = null;
+    // Name comes from checkout metadata (set from intakeAnswers), fallback to Stripe customer name
+    const clientFullName = metadata.client_name || session.customer_details?.name || "";
 
     if (customerEmail) {
       // Check if profile already exists for this email
       const { data: existingProfile } = await supabase
         .from("profiles")
-        .select("id")
+        .select("id, full_name")
         .eq("email", customerEmail)
         .single();
 
       if (existingProfile) {
         profileId = existingProfile.id;
+        // Update name if we have one and it's not already set
+        if (clientFullName && !existingProfile.full_name) {
+          await supabase.from("profiles").update({ full_name: clientFullName }).eq("id", profileId);
+        }
       } else {
         // Check if auth user exists but no profile (signup happened before DB)
         const { data: authUsers } = await supabase.auth.admin.listUsers();
         const existingAuthUser = authUsers?.users?.find((u) => u.email === customerEmail);
 
         if (existingAuthUser) {
-          // Create missing profile
+          // Create missing profile with name
           await supabase.from("profiles").insert({
             id: existingAuthUser.id,
             email: customerEmail,
+            full_name: clientFullName || null,
             user_type: "client",
           });
           profileId = existingAuthUser.id;
@@ -194,7 +201,7 @@ export async function POST(request: Request) {
           const { data: newUser, error: createError } = await supabase.auth.admin.createUser({
             email: customerEmail,
             email_confirm: true,
-            user_metadata: { user_type: "client" },
+            user_metadata: { user_type: "client", full_name: clientFullName },
           });
 
           if (createError || !newUser.user) {
@@ -202,7 +209,7 @@ export async function POST(request: Request) {
           } else {
             profileId = newUser.user.id;
 
-            // The trigger should create the profile, but ensure it exists
+            // The trigger should create the profile, but ensure it exists with name
             const { data: profileCheck } = await supabase
               .from("profiles")
               .select("id")
@@ -213,8 +220,11 @@ export async function POST(request: Request) {
               await supabase.from("profiles").insert({
                 id: profileId,
                 email: customerEmail,
+                full_name: clientFullName || null,
                 user_type: "client",
               });
+            } else if (clientFullName) {
+              await supabase.from("profiles").update({ full_name: clientFullName }).eq("id", profileId);
             }
           }
         }

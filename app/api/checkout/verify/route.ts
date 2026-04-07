@@ -44,23 +44,10 @@ export async function GET(request: Request) {
     if (email) {
       const supabase = createAdminClient();
 
-      // Get name from intake data first (most reliable — quiz always captures it)
-      if (orderId) {
-        const { data: order } = await supabase
-          .from("orders")
-          .select("intake_data")
-          .eq("id", orderId)
-          .single();
-        const intake = order?.intake_data as Record<string, unknown> | null;
-        if (intake) {
-          const first = String(intake.firstName || "").trim();
-          const last = String(intake.lastName || "").trim();
-          if (first || last) clientName = `${first} ${last}`.trim();
-        }
-      }
-
-      // Fallback: Stripe customer name
-      if (!clientName && session.customer_details?.name) {
+      // Name comes directly from Stripe metadata (set at checkout from intakeAnswers)
+      if (session.metadata?.client_name) {
+        clientName = session.metadata.client_name;
+      } else if (session.customer_details?.name) {
         clientName = session.customer_details.name;
       }
 
