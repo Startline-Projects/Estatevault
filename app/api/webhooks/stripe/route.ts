@@ -255,7 +255,7 @@ export async function POST(request: Request) {
       .single();
 
     const updatePayload: Record<string, unknown> = {
-      status: attorneyReview ? "review" : "generating",
+      status: "generating",
       stripe_payment_intent_id:
         typeof session.payment_intent === "string" ? session.payment_intent : null,
     };

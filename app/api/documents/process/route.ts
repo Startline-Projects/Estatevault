@@ -46,12 +46,36 @@ export async function GET() {
     const supabase = createAdminClient();
 
     if (!jobId) {
-      // Fallback: find orders with status 'generating' that have pending documents
-      const { data: pendingOrders } = await supabase
+      // Fallback: find orders with status 'generating' OR 'review' that have pending/ungenerated documents
+      const { data: generatingOrders } = await supabase
         .from("orders")
         .select("id, client_id, product_type, attorney_review_requested, order_type, quiz_session_id, intake_data")
         .eq("status", "generating")
         .limit(1);
+
+      // Also check for attorney-review orders stuck in 'review' with pending documents
+      let pendingOrders = generatingOrders;
+      if (!pendingOrders || pendingOrders.length === 0) {
+        const { data: reviewOrders } = await supabase
+          .from("orders")
+          .select("id, client_id, product_type, attorney_review_requested, order_type, quiz_session_id, intake_data")
+          .eq("status", "review")
+          .eq("attorney_review_requested", true)
+          .limit(1);
+
+        // Only process if documents are still pending (storage_path is null)
+        if (reviewOrders && reviewOrders.length > 0) {
+          const { data: pendingDocs } = await supabase
+            .from("documents")
+            .select("id")
+            .eq("order_id", reviewOrders[0].id)
+            .is("storage_path", null)
+            .limit(1);
+          if (pendingDocs && pendingDocs.length > 0) {
+            pendingOrders = reviewOrders;
+          }
+        }
+      }
 
       if (!pendingOrders || pendingOrders.length === 0) {
         return NextResponse.json({ message: "No jobs in queue and no pending orders" });
@@ -117,6 +141,7 @@ export async function GET() {
       // Update order status
       if (order.attorney_review_requested) {
         await supabase.from("orders").update({ status: "review" }).eq("id", order.id);
+        await supabase.from("documents").update({ status: "review" }).eq("order_id", order.id);
       } else {
         await supabase.from("orders").update({ status: "delivered" }).eq("id", order.id);
         await supabase.from("documents").update({ status: "delivered", delivered_at: new Date().toISOString() }).eq("order_id", order.id);
@@ -182,6 +207,7 @@ export async function GET() {
     // Update order status
     if (job.attorney_review) {
       await supabase.from("orders").update({ status: "review" }).eq("id", job.order_id);
+      await supabase.from("documents").update({ status: "review" }).eq("order_id", job.order_id);
     } else {
       await supabase.from("orders").update({ status: "delivered" }).eq("id", job.order_id);
 
