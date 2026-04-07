@@ -31,6 +31,7 @@ function SuccessContent() {
   const [error, setError] = useState("");
   const [email, setEmail] = useState(promoEmail || "");
   const [userId, setUserId] = useState(promoUserId || "");
+  const [clientName, setClientName] = useState("");
   const [documents, setDocuments] = useState<DocumentRecord[]>([]);
   const [docsReady, setDocsReady] = useState(false);
   const [hasExistingAccount, setHasExistingAccount] = useState(false);
@@ -128,6 +129,7 @@ function SuccessContent() {
         setAttorneyReview(data.attorneyReview);
         if (data.email) setEmail(data.email);
         if (data.userId) setUserId(data.userId);
+        if (data.clientName) setClientName(data.clientName);
         if (data.hasExistingAccount) setHasExistingAccount(true);
 
         if (data.attorneyReview) {
@@ -319,7 +321,7 @@ function SuccessContent() {
                     <p className="mt-1 text-xs text-blue-100/60">Your documents will be unlocked and available to download once the attorney approves them — up to 4 days.</p>
                   </div>
                 )}
-                <PasswordSetup email={email} userId={userId} />
+                <PasswordSetup email={email} userId={userId} defaultName={clientName} />
               </div>
             )}
           </div>

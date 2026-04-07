@@ -7,10 +7,12 @@ import { createClient } from "@/lib/supabase/client";
 interface PasswordSetupProps {
   email: string;
   userId?: string;
+  defaultName?: string;
 }
 
-export default function PasswordSetup({ email, userId }: PasswordSetupProps) {
+export default function PasswordSetup({ email, userId, defaultName = "" }: PasswordSetupProps) {
   const router = useRouter();
+  const [fullName, setFullName] = useState(defaultName);
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -43,12 +45,16 @@ export default function PasswordSetup({ email, userId }: PasswordSetupProps) {
           setLoading(false);
           return;
         }
+        // Save name even if already logged in
+        if (fullName.trim()) {
+          await supabase.from("profiles").update({ full_name: fullName.trim() }).eq("id", session.user.id);
+        }
       } else {
         // Call set-password API — it handles userId lookup by email with retry
         const res = await fetch("/api/auth/set-password", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ userId: userId || undefined, email, password }),
+          body: JSON.stringify({ userId: userId || undefined, email, password, fullName: fullName.trim() }),
         });
         const data = await res.json();
         if (!res.ok) {
@@ -81,6 +87,18 @@ export default function PasswordSetup({ email, userId }: PasswordSetupProps) {
       </h2>
 
       <form onSubmit={handleSubmit} className="mt-6 space-y-4">
+        {/* Full name field */}
+        <div>
+          <label className="block text-sm font-medium text-white/70 mb-1.5">Full Name</label>
+          <input
+            type="text"
+            value={fullName}
+            onChange={(e) => setFullName(e.target.value)}
+            placeholder="Your full name"
+            className="w-full rounded-xl border-2 border-white/20 bg-white/5 px-4 py-3 text-sm text-white placeholder-white/50 focus:border-gold focus:outline-none focus:ring-1 focus:ring-gold/30"
+          />
+        </div>
+
         {/* Password field */}
         <div>
           <label className="block text-sm font-medium text-white/70 mb-1.5">Password</label>
@@ -105,10 +123,10 @@ export default function PasswordSetup({ email, userId }: PasswordSetupProps) {
           {password.length > 0 && (
             <div className="mt-2 space-y-1">
               <div className={`flex items-center gap-2 text-xs ${hasMinLength ? "text-green-400" : "text-white/60"}`}>
-                <span>{hasMinLength ? "&#10003;" : "&#9675;"}</span> At least 8 characters
+                <span>{hasMinLength ? "✓" : "○"}</span> At least 8 characters
               </div>
               <div className={`flex items-center gap-2 text-xs ${hasNumber ? "text-green-400" : "text-white/60"}`}>
-                <span>{hasNumber ? "&#10003;" : "&#9675;"}</span> At least one number
+                <span>{hasNumber ? "✓" : "○"}</span> At least one number
               </div>
             </div>
           )}
@@ -138,7 +156,7 @@ export default function PasswordSetup({ email, userId }: PasswordSetupProps) {
             <p className="mt-1.5 text-xs text-red-400">Passwords do not match</p>
           )}
           {passwordsMatch && (
-            <p className="mt-1.5 text-xs text-green-400">&#10003; Passwords match</p>
+            <p className="mt-1.5 text-xs text-green-400">✓ Passwords match</p>
           )}
         </div>
 

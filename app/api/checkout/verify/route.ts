@@ -38,16 +38,18 @@ export async function GET(request: Request) {
     // Look up the userId from profiles table — retry in case webhook is still processing
     let userId = "";
     let hasExistingAccount = false;
+    let clientName = "";
     if (email) {
       const supabase = createAdminClient();
       for (let attempt = 0; attempt < 3; attempt++) {
         const { data: profile } = await supabase
           .from("profiles")
-          .select("id")
+          .select("id, full_name")
           .eq("email", email)
           .single();
         if (profile) {
           userId = profile.id;
+          clientName = profile.full_name || "";
 
           // Check if this user has ever signed in (i.e., has a password set)
           const { data: authUser } = await supabase.auth.admin.getUserById(profile.id);
@@ -62,6 +64,27 @@ export async function GET(request: Request) {
           await new Promise((resolve) => setTimeout(resolve, 1000));
         }
       }
+
+      // If name not on profile yet, try to get it from intake data
+      if (!clientName && session.metadata?.order_id) {
+        const supabase = createAdminClient();
+        const { data: order } = await supabase
+          .from("orders")
+          .select("intake_data")
+          .eq("id", session.metadata.order_id)
+          .single();
+        const intake = order?.intake_data as Record<string, unknown> | null;
+        if (intake) {
+          const first = String(intake.firstName || "").trim();
+          const last = String(intake.lastName || "").trim();
+          if (first || last) clientName = `${first} ${last}`.trim();
+        }
+      }
+
+      // Fallback: Stripe customer name
+      if (!clientName && session.customer_details?.name) {
+        clientName = session.customer_details.name;
+      }
     }
 
     return NextResponse.json({
@@ -72,6 +95,7 @@ export async function GET(request: Request) {
       email,
       userId,
       hasExistingAccount,
+      clientName,
     });
   } catch {
     return NextResponse.json(

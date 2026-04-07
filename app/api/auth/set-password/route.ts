@@ -33,7 +33,7 @@ function checkRateLimit(email: string): boolean {
 
 export async function POST(request: Request) {
   try {
-    const { userId, email, password } = await request.json();
+    const { userId, email, password, fullName } = await request.json();
 
     if (!email || !password) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
@@ -102,6 +102,14 @@ export async function POST(request: Request) {
 
     if (updateErr) {
       return NextResponse.json({ error: updateErr.message }, { status: 500 });
+    }
+
+    // Save full_name to profile if provided
+    if (fullName && typeof fullName === "string" && fullName.trim()) {
+      await supabase
+        .from("profiles")
+        .update({ full_name: fullName.trim() })
+        .eq("id", resolvedUserId);
     }
 
     // Audit log
