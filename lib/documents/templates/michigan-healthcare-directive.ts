@@ -48,6 +48,10 @@ DOCUMENT REQUIREMENTS:
 9. HIPAA authorization clause permitting the advocate to access protected health information.
 10. Governing law: This document shall be governed by the laws of the State of Michigan.
 
+NOTARY RULES:
+- Do NOT include any county name (such as "Wayne County," "Oakland County," etc.) anywhere in the document body, notary acknowledgment, or witness sections. Leave county fields blank.
+- Do NOT write out full notary acknowledgment language — use [NOTARY BLOCK] placeholder only.
+
 OUTPUT FORMAT:
 - Return PLAIN TEXT only. Do NOT use any markdown formatting. No pound signs (#), no asterisks (**), no dashes for rules (---), no backticks. Use ALL CAPS for section headers.
 - Use numbered sections (Section 1, Section 2, etc.) for major provisions.
@@ -68,6 +72,7 @@ export function buildHCDPrompt(intake: Record<string, unknown>): string {
   const advocate_relationship = (i.advocate_relationship || i.patientAdvocateRelationship || "") as string;
   const successor_advocate = (i.successor_advocate || i.successorPatientAdvocateName || "") as string;
   const healthcare_wishes = (i.healthcare_wishes || (i.hasHealthcareWishes === "Yes" ? i.healthcareWishesDescription : "") || "") as string;
+  const organ_donation = (i.organ_donation || i.organDonation || "") as string;
 
   let prompt = `Draft a Michigan Patient Advocate Designation with the following client intake data:
 
@@ -79,13 +84,15 @@ PATIENT ADVOCATE APPOINTMENT:
 - Primary Patient Advocate: ${advocate_name} (${advocate_relationship})
 - Successor Patient Advocate: ${successor_advocate}
 
+ORGAN DONATION:
+${organ_donation === "Yes" ? "- The patient WISHES to be an organ and tissue donor with no specific limitations." : organ_donation === "No" ? "- The patient does NOT wish to be an organ or tissue donor." : "- The patient has not specified an organ donation preference. Do not include any organ donation language."}
+
 HEALTHCARE WISHES:`;
 
   if (healthcare_wishes && healthcare_wishes.trim().length > 0) {
     prompt += `\n${healthcare_wishes}`;
   } else {
-    prompt += `\n- The patient wishes to grant full authority to the patient advocate to make healthcare decisions, including decisions regarding life-sustaining treatment, in accordance with what the advocate believes the patient would have wanted.
-- The patient wishes to be an organ and tissue donor with no specific limitations.`;
+    prompt += `\n- The patient wishes to grant full authority to the patient advocate to make healthcare decisions, including decisions regarding life-sustaining treatment, in accordance with what the advocate believes the patient would have wanted.`;
   }
 
   prompt += `\n\nGenerate the complete Patient Advocate Designation document text now. Include all required sections, signature blocks, two witness attestation blocks with disqualification statements, advocate acceptance, HIPAA authorization, and notary block.`;

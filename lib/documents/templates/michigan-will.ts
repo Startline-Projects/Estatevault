@@ -34,6 +34,11 @@ DOCUMENT REQUIREMENTS:
 11. Severability clause: If any provision of this Will is found to be invalid or unenforceable, the remaining provisions shall continue in full force and effect.
 12. Attestation clause for witnesses affirming the testator signed willingly and appeared of sound mind.
 13. If guardian information is provided, include a Guardian Designation article: "If my spouse does not survive me, I nominate [Guardian Name] as guardian of the person and estate of my minor children. If [Guardian Name] is unable or unwilling to serve, I nominate [Successor Guardian] as successor guardian. I request that no bond be required of any guardian named herein."
+14. Execution Instructions article (ALWAYS include at the end before the signature block): "EXECUTION INSTRUCTIONS: To make this Will legally valid under Michigan law (MCL 700.2502), you must sign this document in the presence of two (2) adult witnesses who are present at the same time. Your witnesses must then sign the Will in your presence. Your witnesses should not be named beneficiaries in this Will. Signing before a notary is required for the self-proving affidavit but does not replace the witness requirement. All three parties (you and both witnesses) should sign at the same time, in the same location."
+
+NOTARY RULES:
+- Do NOT include any county name (such as "Wayne County," "Oakland County," etc.) anywhere in the document body, notary acknowledgment, or witness sections. Leave county fields blank.
+- Do NOT write out full notary acknowledgment language — use [NOTARY BLOCK] placeholder only.
 
 OUTPUT FORMAT:
 - Return PLAIN TEXT only. Do NOT use any markdown formatting. No pound signs (#), no asterisks (**), no dashes for rules (---), no backticks. Use ALL CAPS for section headers and article titles.

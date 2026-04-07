@@ -117,7 +117,7 @@ export default function TrustPage() {
       case "poa":
         return intake.poaAgentName.trim() !== "" && intake.poaAgentRelationship !== "" && intake.poaSuccessorAgentName.trim() !== "" && intake.poaPowers.length > 0;
       case "healthcare":
-        return intake.patientAdvocateName.trim() !== "" && intake.patientAdvocateRelationship !== "" && intake.successorPatientAdvocateName.trim() !== "" && intake.hasHealthcareWishes !== "" && (intake.hasHealthcareWishes === "No" || intake.healthcareWishesDescription.trim() !== "");
+        return intake.patientAdvocateName.trim() !== "" && intake.patientAdvocateRelationship !== "" && intake.successorPatientAdvocateName.trim() !== "" && intake.organDonation !== "" && intake.hasHealthcareWishes !== "" && (intake.hasHealthcareWishes === "No" || intake.healthcareWishesDescription.trim() !== "");
       case "gifts":
         return intake.hasSpecificGifts !== "" && (intake.hasSpecificGifts === "No" || intake.specificGiftsDescription.trim() !== "");
       case "review":
@@ -209,20 +209,31 @@ export default function TrustPage() {
             <div className="mt-5"><QuestionLabel>Last name</QuestionLabel><TextInput value={intake.lastName} onChange={(v) => update({ lastName: v })} placeholder="Last name" /></div>
             <div className="mt-5"><QuestionLabel>Date of birth</QuestionLabel><input type="date" value={intake.dateOfBirth} onChange={(e) => update({ dateOfBirth: e.target.value })} className="min-h-[44px] w-full rounded-xl border-2 border-gray-200 bg-white px-4 py-3 text-sm text-charcoal focus:border-gold focus:outline-none focus:ring-1 focus:ring-gold/30 transition-colors" /></div>
             <div className="mt-5"><QuestionLabel>City of residence</QuestionLabel><TextInput value={intake.city} onChange={(v) => update({ city: v })} placeholder="e.g. Grand Rapids" /></div>
+            <div className="mt-5">
+              <QuestionLabel>Trust name (optional)</QuestionLabel>
+              <p className="mb-2 text-xs text-charcoal/50">Leave blank to use the default: &quot;The [Your Name] Revocable Living Trust&quot;</p>
+              <TextInput value={intake.trustName} onChange={(v) => update({ trustName: v })} placeholder={`e.g. The ${intake.firstName || "Smith"} Family Revocable Living Trust`} />
+            </div>
           </>
         );
 
       case "trustee":
         return (
           <>
-            <p className="mb-2 text-xs text-charcoal/60 leading-relaxed">Your trustee manages the trust during your lifetime and distributes assets after you pass.</p>
-            <p className="mb-5 text-xs text-charcoal/50">Most people name themselves as the primary trustee — you stay in full control while you&apos;re alive.</p>
-            <QuestionLabel>Primary trustee</QuestionLabel>
+            <p className="mb-2 text-xs text-charcoal/60 leading-relaxed">Your trustee is responsible for managing the assets inside your trust. While you are alive and capable, you remain in full control as your own trustee.</p>
+            <p className="mb-5 text-xs text-charcoal/50">Most people name <strong>Myself</strong> as the primary trustee. Your successor trustee automatically takes over only if you become incapacitated or pass away — they have no control during your lifetime.</p>
+            <QuestionLabel>Who should serve as primary trustee?</QuestionLabel>
             <div className="grid grid-cols-2 gap-3">
               {["Myself", "Someone else"].map((opt) => (<ChoiceTile key={opt} label={opt} selected={intake.primaryTrustee === opt} onClick={() => update({ primaryTrustee: opt, ...(opt === "Myself" ? { trusteeName: "" } : {}) })} />))}
             </div>
             {intake.primaryTrustee === "Someone else" && (
-              <div className="mt-5"><QuestionLabel>Trustee full name</QuestionLabel><TextInput value={intake.trusteeName} onChange={(v) => update({ trusteeName: v })} placeholder="Full name" /></div>
+              <div className="mt-5">
+                <div className="mb-4 rounded-lg bg-amber-50 border border-amber-200 px-4 py-3 text-xs text-amber-800 leading-relaxed">
+                  <strong>Note:</strong> Naming someone other than yourself as primary trustee means they will manage trust assets immediately. Most people name themselves and rely on the successor trustee for continuity. Consider carefully before selecting this option.
+                </div>
+                <QuestionLabel>Trustee full name</QuestionLabel>
+                <TextInput value={intake.trusteeName} onChange={(v) => update({ trusteeName: v })} placeholder="Full name" />
+              </div>
             )}
             <div className="mt-5"><QuestionLabel>Successor trustee full name</QuestionLabel><p className="mb-2 text-xs text-charcoal/50">Who takes over if you are unable to serve?</p><TextInput value={intake.successorTrusteeName} onChange={(v) => update({ successorTrusteeName: v })} placeholder="Full name" /></div>
             <div className="mt-5"><QuestionLabel>Successor trustee relationship</QuestionLabel>
@@ -243,13 +254,13 @@ export default function TrustPage() {
               <>
                 <div className="mt-5"><QuestionLabel>Second beneficiary full name</QuestionLabel><TextInput value={intake.secondBeneficiaryName} onChange={(v) => update({ secondBeneficiaryName: v })} placeholder="Full name" /></div>
                 <div className="mt-5"><QuestionLabel>Relationship</QuestionLabel><div className="grid grid-cols-2 gap-3">{benRelOptions.map((opt) => (<ChoiceTile key={opt} label={opt} selected={intake.secondBeneficiaryRelationship === opt} onClick={() => update({ secondBeneficiaryRelationship: opt })} />))}</div></div>
-                <div className="mt-5"><QuestionLabel>How would you like to split your estate?</QuestionLabel><div className="grid grid-cols-3 gap-3">{["50/50", "75/25", "Other"].map((opt) => (<ChoiceTile key={opt} label={opt} selected={intake.estateSplit === opt} onClick={() => update({ estateSplit: opt })} />))}</div>
-                  {intake.estateSplit === "Other" && <div className="mt-3"><TextInput value={intake.customSplit} onChange={(v) => update({ customSplit: v })} placeholder="e.g. 60/40" /></div>}
+                <div className="mt-5"><QuestionLabel>Split equally between both beneficiaries?</QuestionLabel><div className="grid grid-cols-2 gap-3">{[{label: "Yes — equal split", val: "50/50"}, {label: "No — custom split", val: "Other"}].map(({label, val}) => (<ChoiceTile key={val} label={label} selected={val === "50/50" ? intake.estateSplit === "50/50" : intake.estateSplit !== "" && intake.estateSplit !== "50/50"} onClick={() => update({ estateSplit: val, ...(val === "50/50" ? { customSplit: "" } : {}) })} />))}</div>
+                  {intake.estateSplit !== "" && intake.estateSplit !== "50/50" && <div className="mt-3"><p className="mb-2 text-xs text-charcoal/50">Enter percentage for each beneficiary (e.g. 70/30, 60/40)</p><TextInput value={intake.customSplit} onChange={(v) => update({ customSplit: v, estateSplit: v || "Other" })} placeholder="e.g. 70/30" /></div>}
                 </div>
               </>
             )}
             {hasMinorChildren && (
-              <div className="mt-5"><QuestionLabel>If a beneficiary is under 25, at what age should they receive their full inheritance?</QuestionLabel><p className="mb-2 text-xs text-charcoal/50">Assets are held in trust until this age.</p><div className="grid grid-cols-4 gap-3">{["18", "21", "25", "30"].map((opt) => (<ChoiceTile key={opt} label={opt} selected={intake.distributionAge === opt} onClick={() => update({ distributionAge: opt })} />))}</div></div>
+              <div className="mt-5"><QuestionLabel>At what age should a minor beneficiary receive their full inheritance?</QuestionLabel><p className="mb-2 text-xs text-charcoal/50">Assets are held in trust until this age. Michigan law grants full rights at 18.</p><div className="grid grid-cols-4 gap-3">{["18", "21", "25", "30"].map((opt) => (<ChoiceTile key={opt} label={opt} selected={intake.distributionAge === opt} onClick={() => update({ distributionAge: opt })} />))}</div></div>
             )}
             {/* Contingent beneficiary */}
             <div className="mt-5">
@@ -354,6 +365,7 @@ export default function TrustPage() {
             <QuestionLabel>Patient advocate full name</QuestionLabel><TextInput value={intake.patientAdvocateName} onChange={(v) => update({ patientAdvocateName: v })} placeholder="Full name" />
             <div className="mt-5"><QuestionLabel>Relationship</QuestionLabel><div className="grid grid-cols-2 gap-3">{relOptions.map((opt) => (<ChoiceTile key={opt} label={opt} selected={intake.patientAdvocateRelationship === opt} onClick={() => update({ patientAdvocateRelationship: opt })} />))}</div></div>
             <div className="mt-5"><QuestionLabel>Successor patient advocate</QuestionLabel><TextInput value={intake.successorPatientAdvocateName} onChange={(v) => update({ successorPatientAdvocateName: v })} placeholder="Full name" /></div>
+            <div className="mt-5"><QuestionLabel>Do you wish to be an organ and tissue donor?</QuestionLabel><YesNoTiles value={intake.organDonation} onChange={(v) => update({ organDonation: v })} /></div>
             <div className="mt-5"><QuestionLabel>Do you have specific healthcare wishes to document?</QuestionLabel><YesNoTiles value={intake.hasHealthcareWishes} onChange={(v) => update({ hasHealthcareWishes: v, ...(v === "No" ? { healthcareWishesDescription: "" } : {}) })} /></div>
             {intake.hasHealthcareWishes === "Yes" && (
               <div className="mt-5">
@@ -386,6 +398,7 @@ export default function TrustPage() {
             <div><p className="font-medium text-navy">Personal Information</p><p className="text-charcoal/70">{intake.firstName} {intake.lastName} &middot; {intake.dateOfBirth} &middot; {intake.city}, Michigan</p></div>
             <hr className="border-gray-100" />
             <div><p className="font-medium text-navy">Trust Details</p>
+              <p className="text-charcoal/70">Name: {intake.trustName || `The ${intake.firstName} ${intake.lastName} Revocable Living Trust`}</p>
               <p className="text-charcoal/70">Trustee: {intake.primaryTrustee === "Myself" ? "Yourself" : intake.trusteeName}</p>
               <p className="text-charcoal/70">Successor: {intake.successorTrusteeName} ({intake.successorTrusteeRelationship})</p>
               {intake.secondSuccessorTrusteeName && <p className="text-charcoal/50 text-xs">2nd backup: {intake.secondSuccessorTrusteeName}</p>}
@@ -393,7 +406,7 @@ export default function TrustPage() {
             <hr className="border-gray-100" />
             <div><p className="font-medium text-navy">Beneficiaries</p>
               <p className="text-charcoal/70">{intake.primaryBeneficiaryName} ({intake.primaryBeneficiaryRelationship})</p>
-              {intake.hasSecondBeneficiary === "Yes" && <p className="text-charcoal/70">{intake.secondBeneficiaryName} ({intake.secondBeneficiaryRelationship}) &middot; Split: {intake.estateSplit === "Other" ? intake.customSplit : intake.estateSplit}</p>}
+              {intake.hasSecondBeneficiary === "Yes" && <p className="text-charcoal/70">{intake.secondBeneficiaryName} ({intake.secondBeneficiaryRelationship}) &middot; Split: {intake.estateSplit === "50/50" ? "50/50 (equal)" : intake.customSplit || intake.estateSplit}</p>}
               {hasMinorChildren && intake.distributionAge && <p className="text-charcoal/50 text-xs">Distribution age: {intake.distributionAge}</p>}
               {intake.hasContingentBeneficiary === "Yes" && intake.contingentBeneficiaries.length > 0 ? (
                 <p className="text-charcoal/50 text-xs mt-1">Contingent: {intake.contingentBeneficiaries.map((b) => `${b.name} (${b.relationship})`).join(", ")}</p>
@@ -407,6 +420,7 @@ export default function TrustPage() {
             <div><p className="font-medium text-navy">Power of Attorney</p><p className="text-charcoal/70">Agent: {intake.poaAgentName} ({intake.poaAgentRelationship})</p><p className="text-charcoal/50 text-xs">Backup: {intake.poaSuccessorAgentName}</p><p className="text-charcoal/50 text-xs">Powers: {intake.poaPowers.join(", ")}</p></div>
             <hr className="border-gray-100" />
             <div><p className="font-medium text-navy">Healthcare Directive</p><p className="text-charcoal/70">Advocate: {intake.patientAdvocateName} ({intake.patientAdvocateRelationship})</p><p className="text-charcoal/50 text-xs">Backup: {intake.successorPatientAdvocateName}</p>
+              <p className="text-charcoal/50 text-xs">Organ donation: {intake.organDonation || "Not specified"}</p>
               {intake.hasHealthcareWishes === "Yes" && <p className="text-charcoal/50 text-xs mt-1">Wishes: {intake.healthcareWishesDescription}</p>}
             </div>
             {hasMinorChildren && intake.guardianName && (<><hr className="border-gray-100" /><div><p className="font-medium text-navy">Guardian</p><p className="text-charcoal/70">{intake.guardianName} ({intake.guardianRelationship})</p><p className="text-charcoal/50 text-xs">Backup: {intake.successorGuardianName}</p></div></>)}

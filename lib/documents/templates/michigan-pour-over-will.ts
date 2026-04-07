@@ -32,6 +32,12 @@ DOCUMENT REQUIREMENTS:
 
 THIS IS A SHORTER DOCUMENT than a standard will. Do not include detailed distribution provisions, specific gifts, or extensive executor powers beyond what is needed to pour assets into the trust.
 
+NOTARY RULES:
+- Do NOT include any county name (such as "Wayne County," "Oakland County," etc.) anywhere in the document body, notary acknowledgment, or witness sections. Leave county fields blank.
+- Do NOT write out full notary acknowledgment language — use [NOTARY BLOCK] placeholder only.
+
+EXECUTION INSTRUCTIONS: Always include an Execution Instructions article before the signature block stating: Michigan law (MCL 700.2502) requires the testator to sign in the presence of two (2) adult witnesses who are present at the same time. Witnesses must sign in the testator's presence. Witnesses should not be named beneficiaries. All three parties should sign simultaneously in the same location.
+
 OUTPUT FORMAT:
 - Return PLAIN TEXT only. Do NOT use any markdown formatting. No pound signs (#), no asterisks (**), no dashes for rules (---), no backticks. Use ALL CAPS for section headers and article titles.
 - Use numbered articles (ARTICLE I, ARTICLE II, etc.) for major sections.
@@ -51,8 +57,7 @@ export function buildPourOverWillPrompt(intake: Record<string, unknown>): string
   const successor_executor = (i.successor_executor || i.successorExecutorName || "") as string;
   const guardian_name = (i.guardian_name || i.guardianName || "") as string;
   const successor_guardian = (i.successor_guardian || i.successorGuardianName || "") as string;
-
-  const resolvedTrustName = `The ${full_name} Revocable Living Trust`;
+  const resolvedTrustName = ((i.trust_name || i.trustName || "") as string).trim() || `The ${full_name} Revocable Living Trust`;
 
   let prompt = `Draft a Michigan Pour-Over Will with the following client intake data:
 

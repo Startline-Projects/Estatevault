@@ -14,7 +14,7 @@ const ASSET_INSTRUCTIONS: Record<string, string> = {
   "Real estate in another state": "Transfer deed in each applicable state",
   "Bank and investment accounts": "Contact your bank to retitle accounts",
   "Business interests": "See instructions for business entity retitling",
-  "Vehicles": "Michigan title transfer required",
+  "Vehicles": "Michigan title transfer required only for vehicles valued over $60,000",
   "Personal property and valuables": "Assignment of personal property to trust",
   "Digital assets and cryptocurrency": "See digital asset instructions",
 };

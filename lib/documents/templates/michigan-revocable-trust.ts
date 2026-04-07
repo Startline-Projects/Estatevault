@@ -41,6 +41,7 @@ DOCUMENT REQUIREMENTS:
    - Vote shares of stock and exercise other ownership rights
    - Settle or compromise claims
    - Continue any business or investment of the Grantor
+7a. BANKING POWERS (include as a dedicated article): The Trustee shall have full authority to: open, maintain, and close bank accounts and financial accounts in the name of the Trust; deposit and withdraw funds; write, endorse, and negotiate checks; make electronic transfers and wire transfers; access safe deposit boxes; conduct all banking and financial transactions on behalf of the Trust; execute any documents or agreements required by financial institutions; and exercise all banking powers with respect to any financial institution that the Grantor could exercise individually, as authorized under MCL 700.7815.
 8. Distribution standards: Specify how and when beneficiaries receive their shares, including any conditions or age restrictions.
 8a. Remainder beneficiaries (contingent): If remainder beneficiaries are provided, include an article specifying that if all primary beneficiaries predecease the Grantor or fail to survive by 30 days, the trust estate passes to the remainder beneficiaries in equal shares. Use the term "remainder beneficiaries" in the trust (not "contingent beneficiaries").
 9. Minor beneficiary protection: If a beneficiary is under the specified distribution age, the Trustee shall hold that beneficiary's share in a separate sub-trust, making distributions for health, education, maintenance, and support until the beneficiary reaches the distribution age.
@@ -50,6 +51,14 @@ DOCUMENT REQUIREMENTS:
 13. Specific gifts section if applicable.
 14. Residuary distribution clause for remaining trust assets.
 15. Assets schedule (Schedule A) listing assets to be transferred to the trust.
+
+NOTARY RULES:
+- Do NOT include any county name (such as "Wayne County," "Oakland County," etc.) anywhere in the document body, notary acknowledgment, or witness sections. Leave county fields blank.
+- Do NOT write out full notary acknowledgment language — use [NOTARY BLOCK] placeholder only.
+
+FUNDING GUIDANCE RULES:
+- Do NOT include any language about property tax reassessment, uncapping, or Proposal A in any funding instructions or Schedule A notes.
+- Vehicles valued under $60,000 do NOT need to be titled in the trust. Only note trust titling for vehicles over $60,000.
 
 OUTPUT FORMAT:
 - Return PLAIN TEXT only. Do NOT use any markdown formatting. No pound signs (#), no asterisks (**), no dashes for rules (---), no backticks. Use ALL CAPS for section headers and article titles.
@@ -68,6 +77,7 @@ export function buildTrustPrompt(intake: Record<string, unknown>): string {
   const full_name = (i.full_name || `${i.firstName || ""} ${i.lastName || ""}`.trim()) as string;
   const date_of_birth = (i.date_of_birth || i.dateOfBirth || "") as string;
   const city = (i.city || "") as string;
+  const trust_name = ((i.trust_name || i.trustName || "") as string).trim() || `The ${full_name} Revocable Living Trust`;
   const primary_trustee = (i.primary_trustee || i.primaryTrustee || "Myself") as string;
   const trustee_name = (i.trustee_name || i.trusteeName || "") as string;
   const successor_trustee = (i.successor_trustee || i.successorTrusteeName || "") as string;
@@ -76,7 +86,7 @@ export function buildTrustPrompt(intake: Record<string, unknown>): string {
   const primary_beneficiary_relationship = (i.primary_beneficiary_relationship || i.primaryBeneficiaryRelationship || "") as string;
   const secondary_beneficiary = (i.secondary_beneficiary || i.secondBeneficiaryName || "") as string;
   const estate_split = (i.estate_split || i.estateSplit || "100% to primary beneficiary") as string;
-  const distribution_age = (i.distribution_age || i.distributionAge || 25) as number;
+  const distribution_age = (i.distribution_age || i.distributionAge || 18) as number;
   const guardian_name = (i.guardian_name || i.guardianName || "") as string;
   const successor_guardian = (i.successor_guardian || i.successorGuardianName || "") as string;
   const specific_gifts = (i.specific_gifts || (i.hasSpecificGifts === "Yes" ? i.specificGiftsDescription : "") || "") as string;
@@ -89,7 +99,7 @@ GRANTOR INFORMATION:
 - Full Legal Name: ${full_name}
 - Date of Birth: ${date_of_birth}
 - City of Residence: ${city}, Michigan
-- Trust Name: The ${full_name} Revocable Living Trust
+- Trust Name: ${trust_name}
 
 TRUSTEE APPOINTMENTS:
 - Primary Trustee: ${primary_trustee}${trustee_name !== primary_trustee ? ` (also known as ${trustee_name})` : ''}

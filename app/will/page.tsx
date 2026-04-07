@@ -133,6 +133,7 @@ export default function WillPage() {
         );
       case "gifts":
         return (
+          intake.organDonation !== "" &&
           intake.hasSpecificGifts !== "" &&
           (intake.hasSpecificGifts === "No" ||
             intake.specificGiftsDescription.trim() !== "")
@@ -454,24 +455,34 @@ export default function WillPage() {
                 </div>
                 <div className="mt-5">
                   <QuestionLabel>
-                    How would you like to split your estate?
+                    Split equally between both beneficiaries?
                   </QuestionLabel>
-                  <div className="grid grid-cols-3 gap-3">
-                    {["50/50", "75/25", "Other"].map((opt) => (
+                  <div className="grid grid-cols-2 gap-3">
+                    {["Yes — equal split", "No — custom split"].map((opt) => (
                       <ChoiceTile
                         key={opt}
                         label={opt}
-                        selected={intake.estateSplit === opt}
-                        onClick={() => update({ estateSplit: opt })}
+                        selected={
+                          opt === "Yes — equal split"
+                            ? intake.estateSplit === "50/50"
+                            : intake.estateSplit !== "" && intake.estateSplit !== "50/50"
+                        }
+                        onClick={() =>
+                          update({
+                            estateSplit: opt === "Yes — equal split" ? "50/50" : "Other",
+                            customSplit: opt === "Yes — equal split" ? "" : intake.customSplit,
+                          })
+                        }
                       />
                     ))}
                   </div>
-                  {intake.estateSplit === "Other" && (
+                  {intake.estateSplit !== "" && intake.estateSplit !== "50/50" && (
                     <div className="mt-3">
+                      <p className="mb-2 text-xs text-charcoal/50">Enter percentage for each beneficiary (e.g. 70/30, 60/40)</p>
                       <TextInput
                         value={intake.customSplit}
-                        onChange={(v) => update({ customSplit: v })}
-                        placeholder="e.g. 60/40"
+                        onChange={(v) => update({ customSplit: v, estateSplit: v || "Other" })}
+                        placeholder="e.g. 70/30"
                       />
                     </div>
                   )}
@@ -580,22 +591,31 @@ export default function WillPage() {
       case "gifts":
         return (
           <>
-            <p className="mb-2 text-xs text-charcoal/60">
-              For example: &quot;My grandmother&apos;s ring to my daughter
-              Sarah&quot;
-            </p>
             <QuestionLabel>
-              Do you have any specific gifts you&apos;d like to leave?
+              Do you wish to be an organ and tissue donor?
             </QuestionLabel>
             <YesNoTiles
-              value={intake.hasSpecificGifts}
-              onChange={(v) =>
-                update({
-                  hasSpecificGifts: v,
-                  ...(v === "No" ? { specificGiftsDescription: "" } : {}),
-                })
-              }
+              value={intake.organDonation}
+              onChange={(v) => update({ organDonation: v })}
             />
+            <div className="mt-6">
+              <p className="mb-2 text-xs text-charcoal/60">
+                For example: &quot;My grandmother&apos;s ring to my daughter
+                Sarah&quot;
+              </p>
+              <QuestionLabel>
+                Do you have any specific gifts you&apos;d like to leave?
+              </QuestionLabel>
+              <YesNoTiles
+                value={intake.hasSpecificGifts}
+                onChange={(v) =>
+                  update({
+                    hasSpecificGifts: v,
+                    ...(v === "No" ? { specificGiftsDescription: "" } : {}),
+                  })
+                }
+              />
+            </div>
             {intake.hasSpecificGifts === "Yes" && (
               <div className="mt-5">
                 <QuestionLabel>Describe your specific gifts</QuestionLabel>
@@ -648,9 +668,7 @@ export default function WillPage() {
                   <p className="text-charcoal/70 mt-1">
                     {intake.secondBeneficiaryName} (
                     {intake.secondBeneficiaryRelationship}) &middot; Split:{" "}
-                    {intake.estateSplit === "Other"
-                      ? intake.customSplit
-                      : intake.estateSplit}
+                    {intake.estateSplit === "50/50" ? "50/50 (equal)" : intake.customSplit || intake.estateSplit}
                   </p>
                 </>
               )}
@@ -676,6 +694,11 @@ export default function WillPage() {
                 </div>
               </>
             )}
+            <hr className="border-gray-100" />
+            <div>
+              <p className="font-medium text-navy">Healthcare</p>
+              <p className="text-charcoal/50 text-xs">Organ donation: {intake.organDonation || "Not specified"}</p>
+            </div>
             {intake.hasSpecificGifts === "Yes" && (
               <>
                 <hr className="border-gray-100" />

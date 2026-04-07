@@ -423,7 +423,7 @@ export default function QuizPage() {
 
             <div className="mt-6">
               <QuestionLabel>
-                If you have minor children, who would raise them?
+                If you and your spouse both pass away, who would you like to serve as guardian of your minor children?
               </QuestionLabel>
               <TextInput
                 value={answers.childGuardian}

@@ -4,6 +4,7 @@ export interface TrustIntake {
   lastName: string;
   dateOfBirth: string;
   city: string;
+  trustName: string;
   // Trustee
   primaryTrustee: string;
   trusteeName: string;
@@ -38,6 +39,7 @@ export interface TrustIntake {
   patientAdvocateName: string;
   patientAdvocateRelationship: string;
   successorPatientAdvocateName: string;
+  organDonation: string;
   hasHealthcareWishes: string;
   healthcareWishesDescription: string;
   // Contingent beneficiaries
@@ -53,6 +55,7 @@ export const initialTrustIntake: TrustIntake = {
   lastName: "",
   dateOfBirth: "",
   city: "",
+  trustName: "",
   primaryTrustee: "",
   trusteeName: "",
   successorTrusteeName: "",
@@ -80,6 +83,7 @@ export const initialTrustIntake: TrustIntake = {
   patientAdvocateName: "",
   patientAdvocateRelationship: "",
   successorPatientAdvocateName: "",
+  organDonation: "",
   hasHealthcareWishes: "",
   healthcareWishesDescription: "",
   hasContingentBeneficiary: "",
