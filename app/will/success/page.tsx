@@ -135,10 +135,15 @@ function SuccessContent() {
         if (data.attorneyReview) {
           setSteps([
             { label: `Payment confirmed — $${data.amount}`, status: "done" },
-            { label: "Documents generated", status: "done" },
-            { label: "Attorney review in progress (48hr SLA)", status: "active" },
-            { label: "Delivery to your email", status: "pending" },
+            { label: "Generating your Will Package...", status: "active" },
+            { label: "Attorney review in progress (up to 4 days)", status: "pending" },
+            { label: "Documents unlocked after approval", status: "pending" },
           ]);
+
+          // Trigger generation for attorney review orders — docs must exist before attorney can review
+          if (data.orderId) {
+            fetch(`/api/documents/process-now?order_id=${data.orderId}`).catch(() => {});
+          }
         } else {
           setSteps([
             { label: "Payment confirmed", status: "done" },

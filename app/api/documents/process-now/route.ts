@@ -34,7 +34,6 @@ async function getTemplate(docType: string) {
   }
 }
 
-// TEMPORARY DEBUG ENDPOINT — remove after testing
 export async function GET(request: Request) {
   const log: string[] = [];
   try {
@@ -48,10 +47,10 @@ export async function GET(request: Request) {
     const supabase = createAdminClient();
     log.push("1. Connected to Supabase");
 
-    // Find the order
+    // Find the order — include attorney_review_requested
     const { data: order, error: orderErr } = await supabase
       .from("orders")
-      .select("id, client_id, product_type, status, order_type, quiz_session_id, intake_data")
+      .select("id, client_id, product_type, status, order_type, quiz_session_id, intake_data, attorney_review_requested")
       .eq("id", orderId)
       .single();
 
@@ -60,9 +59,10 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: "Order not found", log });
     }
 
-    log.push(`2. Order found: type=${order.product_type}, status=${order.status}, order_type=${order.order_type}, client_id=${order.client_id}, quiz_session_id=${order.quiz_session_id}, has_intake_data=${!!order.intake_data}`);
+    const isAttorneyReview = order.attorney_review_requested === true;
+    log.push(`2. Order found: type=${order.product_type}, status=${order.status}, attorney_review=${isAttorneyReview}, client_id=${order.client_id}`);
 
-    // Get quiz answers — prefer intake_data on the order, then quiz_session_id, then client_id
+    // Get quiz answers — prefer intake_data, then quiz_session_id, then client_id
     let quizAnswers: Record<string, unknown> = {};
     if (order.intake_data && typeof order.intake_data === "object") {
       quizAnswers = order.intake_data as Record<string, unknown>;
@@ -76,15 +76,14 @@ export async function GET(request: Request) {
       if (data) { quizAnswers = (data.answers as Record<string, unknown>) || {}; log.push("3. Quiz answers found via client_id"); }
       else log.push("3. No quiz session found for client_id");
     } else {
-      log.push("3. No intake_data, no quiz_session_id, and no client_id — cannot find intake answers");
+      log.push("3. No intake_data, no quiz_session_id, and no client_id");
       return NextResponse.json({ error: "No intake answers available", log });
     }
 
     log.push(`4. Intake has ${Object.keys(quizAnswers).length} fields. firstName=${quizAnswers.firstName}, lastName=${quizAnswers.lastName}`);
 
-    // Check API key
     if (!process.env.ANTHROPIC_API_KEY || process.env.ANTHROPIC_API_KEY === "placeholder") {
-      log.push("5. ANTHROPIC_API_KEY is missing or placeholder!");
+      log.push("5. ANTHROPIC_API_KEY is missing!");
       return NextResponse.json({ error: "Anthropic API key not configured", log });
     }
     log.push("5. ANTHROPIC_API_KEY is set");
@@ -95,6 +94,9 @@ export async function GET(request: Request) {
       : ["will", "poa", "healthcare_directive"];
 
     log.push(`6. Will generate ${documentTypes.length} documents: ${documentTypes.join(", ")}`);
+
+    // Mark order as generating so client dashboard shows spinner
+    await supabase.from("orders").update({ status: "generating" }).eq("id", orderId);
 
     const results: Array<{ docType: string; success: boolean; path?: string; error?: string }> = [];
 
@@ -113,7 +115,7 @@ export async function GET(request: Request) {
         });
 
         const documentText = response.content[0].type === "text" ? response.content[0].text : "";
-        log.push(`   ${docType}: generated ${documentText.length} chars, stop_reason=${response.stop_reason}`);
+        log.push(`   ${docType}: generated ${documentText.length} chars`);
 
         const { generatePDF } = await import("@/lib/documents/generate-pdf");
         const pdfBuffer = await generatePDF(
@@ -124,6 +126,7 @@ export async function GET(request: Request) {
 
         const storageClientId = isTestOrder ? "test" : (order.client_id || "unknown");
         const path = await uploadDocument(storageClientId, order.id, docType, pdfBuffer);
+        // uploadDocument sets doc status to "generated" — we will update below
         log.push(`   ${docType}: uploaded to ${path}`);
         results.push({ docType, success: true, path });
       } catch (docError) {
@@ -133,13 +136,23 @@ export async function GET(request: Request) {
       }
     }
 
-    // Update order status
-    await supabase.from("orders").update({ status: "delivered" }).eq("id", order.id);
-    log.push("8. Order status updated to delivered");
+    // Update order and document statuses based on attorney review
+    if (isAttorneyReview) {
+      // Order goes to "review" — attorney must approve before client can download
+      await supabase.from("orders").update({ status: "review" }).eq("id", orderId);
+      await supabase.from("documents").update({ status: "review" }).eq("order_id", orderId);
+      log.push("8. Order and documents set to 'review' (attorney review required)");
+    } else {
+      // No attorney review — deliver immediately
+      await supabase.from("orders").update({ status: "delivered" }).eq("id", orderId);
+      await supabase.from("documents").update({ status: "delivered", delivered_at: new Date().toISOString() }).eq("order_id", orderId);
+      log.push("8. Order and documents set to 'delivered'");
+    }
 
     return NextResponse.json({
       success: true,
       order_id: orderId,
+      attorney_review: isAttorneyReview,
       documents_generated: results.filter((r) => r.success).length,
       documents_failed: results.filter((r) => !r.success).length,
       results,

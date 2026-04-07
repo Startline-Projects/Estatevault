@@ -253,7 +253,7 @@ export default function DocumentsPage() {
       {visibleDocs.length > 0 && (
         <div className="mt-6 space-y-3">
           {visibleDocs.map((doc) => {
-            const isDelivered = doc.status === "delivered";
+            const isDelivered = doc.status === "delivered" || doc.status === "generated";
             const canDownload = isDelivered && !!doc.storage_path && !isUnderReview;
             const isDownloading = downloadingId === doc.id;
 

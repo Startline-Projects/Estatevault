@@ -39,39 +39,17 @@ export async function GET(request: Request) {
     let userId = "";
     let hasExistingAccount = false;
     let clientName = "";
+    const orderId = session.metadata?.order_id || "";
+
     if (email) {
       const supabase = createAdminClient();
-      for (let attempt = 0; attempt < 3; attempt++) {
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("id, full_name")
-          .eq("email", email)
-          .single();
-        if (profile) {
-          userId = profile.id;
-          clientName = profile.full_name || "";
 
-          // Check if this user has ever signed in (i.e., has a password set)
-          const { data: authUser } = await supabase.auth.admin.getUserById(profile.id);
-          if (authUser?.user?.last_sign_in_at) {
-            hasExistingAccount = true;
-          }
-
-          break;
-        }
-        // Wait 1 second before retrying
-        if (attempt < 2) {
-          await new Promise((resolve) => setTimeout(resolve, 1000));
-        }
-      }
-
-      // If name not on profile yet, try to get it from intake data
-      if (!clientName && session.metadata?.order_id) {
-        const supabase = createAdminClient();
+      // Get name from intake data first (most reliable — quiz always captures it)
+      if (orderId) {
         const { data: order } = await supabase
           .from("orders")
           .select("intake_data")
-          .eq("id", session.metadata.order_id)
+          .eq("id", orderId)
           .single();
         const intake = order?.intake_data as Record<string, unknown> | null;
         if (intake) {
@@ -85,13 +63,36 @@ export async function GET(request: Request) {
       if (!clientName && session.customer_details?.name) {
         clientName = session.customer_details.name;
       }
+
+      // Resolve userId — retry up to 3x in case webhook is still processing
+      for (let attempt = 0; attempt < 3; attempt++) {
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("id, full_name")
+          .eq("email", email)
+          .single();
+        if (profile) {
+          userId = profile.id;
+          // If name is already on profile (returning client), prefer that
+          if (profile.full_name) clientName = profile.full_name;
+
+          const { data: authUser } = await supabase.auth.admin.getUserById(profile.id);
+          if (authUser?.user?.last_sign_in_at) {
+            hasExistingAccount = true;
+          }
+          break;
+        }
+        if (attempt < 2) {
+          await new Promise((resolve) => setTimeout(resolve, 1000));
+        }
+      }
     }
 
     return NextResponse.json({
       success: true,
       attorneyReview,
       amount,
-      orderId: session.metadata?.order_id,
+      orderId,
       email,
       userId,
       hasExistingAccount,
