@@ -373,7 +373,7 @@ export async function POST(request: Request) {
       const { resolveReviewRouting, INHOUSE_ATTORNEY_EMAIL, ESTATEVAULT_ADMIN_EMAIL } = await import("@/lib/attorney-review/routing");
 
       const slaDeadline = new Date();
-      slaDeadline.setHours(slaDeadline.getHours() + 48);
+      slaDeadline.setHours(slaDeadline.getHours() + 96); // 4 days
 
       // Look up partner record for routing
       let partnerForRouting = null;

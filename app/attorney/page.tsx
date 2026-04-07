@@ -14,12 +14,10 @@ interface Review {
   fee_destination: string | null;
   fee_amount: number | null;
   partner_id: string | null;
-  orders: {
-    product_type: string;
-    client_id: string;
-    clients: { profiles: { full_name: string | null; email: string } | null } | null;
-  } | null;
-  partners: { company_name: string } | null;
+  product_type: string;
+  partner_company: string | null;
+  client_name: string | null;
+  client_email: string | null;
 }
 
 function SLABadge({ deadline }: { deadline: string }) {
@@ -82,31 +80,76 @@ export default function AttorneyQueuePage() {
       const { data: profile } = await supabase.from("profiles").select("full_name, email").eq("id", user.id).single();
       setUserName(profile?.full_name || profile?.email || "Attorney");
 
-      const { data } = await supabase
+      // Fetch raw review rows
+      const { data: rawReviews } = await supabase
         .from("attorney_reviews")
-        .select(`
-          id, order_id, status, sla_deadline, created_at,
-          reviewer_type, fee_destination, fee_amount, partner_id,
-          orders(product_type, client_id, clients(profiles(full_name, email))),
-          partners(company_name)
-        `)
+        .select("id, order_id, status, sla_deadline, created_at, reviewer_type, fee_destination, fee_amount, partner_id")
         .eq("attorney_id", user.id)
         .order("created_at", { ascending: false });
 
-      setReviews((data || []) as unknown as Review[]);
+      if (!rawReviews || rawReviews.length === 0) {
+        setLoading(false);
+        return;
+      }
+
+      // Fetch orders separately to get product_type and client_id
+      const orderIds = rawReviews.map((r) => r.order_id).filter(Boolean);
+      const { data: orders } = await supabase
+        .from("orders")
+        .select("id, product_type, client_id")
+        .in("id", orderIds);
+
+      const orderMap = Object.fromEntries((orders || []).map((o) => [o.id, o]));
+
+      // Fetch clients to get profile_id
+      const clientIds = (orders || []).map((o) => o.client_id).filter(Boolean);
+      const { data: clients } = await supabase
+        .from("clients")
+        .select("id, profile_id")
+        .in("id", clientIds);
+
+      const clientMap = Object.fromEntries((clients || []).map((c) => [c.id, c]));
+
+      // Fetch client profiles
+      const profileIds = (clients || []).map((c) => c.profile_id).filter(Boolean);
+      const { data: clientProfiles } = await supabase
+        .from("profiles")
+        .select("id, full_name, email")
+        .in("id", profileIds);
+
+      const profileMap = Object.fromEntries((clientProfiles || []).map((p) => [p.id, p]));
+
+      // Fetch partners
+      const partnerIds = rawReviews.map((r) => r.partner_id).filter(Boolean);
+      let partnerMap: Record<string, { company_name: string }> = {};
+      if (partnerIds.length > 0) {
+        const { data: partners } = await supabase
+          .from("partners")
+          .select("id, company_name")
+          .in("id", partnerIds);
+        partnerMap = Object.fromEntries((partners || []).map((p) => [p.id, p]));
+      }
+
+      // Assemble enriched reviews
+      const enriched: Review[] = rawReviews.map((r) => {
+        const order = orderMap[r.order_id] || null;
+        const client = order ? clientMap[order.client_id] : null;
+        const clientProfile = client ? profileMap[client.profile_id] : null;
+        const partner = r.partner_id ? partnerMap[r.partner_id] : null;
+        return {
+          ...r,
+          product_type: order?.product_type || "will",
+          partner_company: partner?.company_name || null,
+          client_name: clientProfile?.full_name || clientProfile?.email || null,
+          client_email: clientProfile?.email || null,
+        };
+      });
+
+      setReviews(enriched);
       setLoading(false);
     }
     load();
   }, []);
-
-  function getClientName(r: Review): string {
-    const p = r.orders?.clients?.profiles;
-    return p?.full_name || p?.email || "Client";
-  }
-
-  function getClientEmail(r: Review): string {
-    return r.orders?.clients?.profiles?.email || "";
-  }
 
   if (loading) {
     return (
@@ -193,16 +236,16 @@ export default function AttorneyQueuePage() {
                   {pending.map((r) => (
                     <tr key={r.id} className="border-b border-gray-50 last:border-0 hover:bg-gray-50/50 transition-colors">
                       <td className="px-5 py-4">
-                        <p className="font-medium text-navy">{getClientName(r)}</p>
-                        <p className="text-xs text-charcoal/40 mt-0.5">{getClientEmail(r)}</p>
+                        <p className="font-medium text-navy">{r.client_name || "Client"}</p>
+                        <p className="text-xs text-charcoal/40 mt-0.5">{r.client_email || ""}</p>
                       </td>
                       <td className="px-5 py-4">
                         <span className="inline-flex items-center rounded-full bg-navy/5 px-2.5 py-1 text-xs font-medium text-navy">
-                          {r.orders?.product_type === "trust" ? "Trust" : "Will"} Package
+                          {r.product_type === "trust" ? "Trust" : "Will"} Package
                         </span>
                       </td>
                       <td className="px-5 py-4">
-                        <p className="text-sm text-charcoal/60">{r.partners?.company_name || <span className="text-charcoal/30 italic">Direct</span>}</p>
+                        <p className="text-sm text-charcoal/60">{r.partner_company || <span className="text-charcoal/30 italic">Direct</span>}</p>
                       </td>
                       <td className="px-5 py-4">
                         <p className="text-sm text-charcoal/50">{new Date(r.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</p>
@@ -248,16 +291,16 @@ export default function AttorneyQueuePage() {
                   {completed.map((r) => (
                     <tr key={r.id} className="border-b border-gray-50 last:border-0">
                       <td className="px-5 py-4">
-                        <p className="font-medium text-navy">{getClientName(r)}</p>
-                        <p className="text-xs text-charcoal/40 mt-0.5">{getClientEmail(r)}</p>
+                        <p className="font-medium text-navy">{r.client_name || "Client"}</p>
+                        <p className="text-xs text-charcoal/40 mt-0.5">{r.client_email || ""}</p>
                       </td>
                       <td className="px-5 py-4">
                         <span className="inline-flex items-center rounded-full bg-navy/5 px-2.5 py-1 text-xs font-medium text-navy">
-                          {r.orders?.product_type === "trust" ? "Trust" : "Will"} Package
+                          {r.product_type === "trust" ? "Trust" : "Will"} Package
                         </span>
                       </td>
                       <td className="px-5 py-4">
-                        <p className="text-sm text-charcoal/60">{r.partners?.company_name || <span className="text-charcoal/30 italic">Direct</span>}</p>
+                        <p className="text-sm text-charcoal/60">{r.partner_company || <span className="text-charcoal/30 italic">Direct</span>}</p>
                       </td>
                       <td className="px-5 py-4">
                         <p className="text-sm text-charcoal/50">{new Date(r.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</p>
