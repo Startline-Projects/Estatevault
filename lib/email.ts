@@ -130,6 +130,49 @@ function buildEmailHtml({
 </html>`;
 }
 
+export async function sendApprovalEmail({ to, productType, dashboardUrl }: { to: string; productType: "will" | "trust"; dashboardUrl: string }) {
+  const packageName = productType === "will" ? "Will Package" : "Trust Package";
+  try {
+    await resend.emails.send({
+      from: "EstateVault <info@estatevault.us>",
+      to,
+      subject: `Your ${packageName} has been reviewed and is ready`,
+      html: `<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#f4f4f5;font-family:'Inter',Arial,sans-serif;">
+  <div style="max-width:600px;margin:0 auto;background:#ffffff;">
+    <div style="background:#1C3557;padding:24px 32px;">
+      <h1 style="margin:0;color:#ffffff;font-size:20px;font-weight:700;">EstateVault</h1>
+    </div>
+    <div style="padding:32px;">
+      <h2 style="margin:0 0 16px;font-size:22px;color:#1C3557;">Your ${packageName} is approved and ready.</h2>
+      <p style="margin:0 0 16px;font-size:14px;color:#2D2D2D;line-height:1.6;">
+        A licensed Michigan attorney has reviewed your documents and they are now ready for download.
+      </p>
+      <div style="text-align:center;margin:32px 0;">
+        <a href="${dashboardUrl}" style="display:inline-block;background:#C9A84C;color:#ffffff;text-decoration:none;padding:14px 32px;border-radius:50px;font-size:14px;font-weight:600;">
+          Download Your Documents
+        </a>
+      </div>
+      <p style="margin:24px 0 0;font-size:13px;color:#999;line-height:1.5;">
+        If you have any questions, contact <a href="mailto:support@estatevault.com" style="color:#1C3557;">support@estatevault.com</a>.
+      </p>
+    </div>
+    <div style="background:#f8f9fa;padding:24px 32px;border-top:1px solid #e5e5e5;">
+      <p style="margin:0;font-size:11px;color:#bbb;line-height:1.5;">
+        This platform provides document preparation services only. No attorney-client relationship is created.
+      </p>
+    </div>
+  </div>
+</body>
+</html>`,
+    });
+  } catch (e) {
+    console.error("Approval email failed:", e);
+  }
+}
+
 export async function sendDocumentEmail(params: SendDocumentEmailParams) {
   try {
     const packageName = params.productType === "will" ? "Will Package" : "Trust Package";

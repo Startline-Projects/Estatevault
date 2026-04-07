@@ -36,8 +36,32 @@ export async function GET(request: Request) {
   const { data: profile } = await admin.from("profiles").select("user_type").eq("id", user.id).single();
   const isAdmin = profile?.user_type === "admin";
 
-  if (!isClient && !isPartner && !isAdmin) {
+  // Check if user is a review attorney assigned to this order
+  let isReviewAttorney = false;
+  if (profile?.user_type === "review_attorney") {
+    const { data: ar } = await admin
+      .from("attorney_reviews")
+      .select("id")
+      .eq("order_id", doc.order_id)
+      .eq("attorney_id", user.id)
+      .single();
+    if (ar) isReviewAttorney = true;
+  }
+
+  if (!isClient && !isPartner && !isAdmin && !isReviewAttorney) {
     return NextResponse.json({ error: "Access denied" }, { status: 403 });
+  }
+
+  // Block client download while order is under attorney review
+  if (isClient && !isAdmin) {
+    const { data: order } = await admin
+      .from("orders")
+      .select("status")
+      .eq("id", doc.order_id)
+      .single();
+    if (order?.status === "review") {
+      return NextResponse.json({ error: "Documents are under attorney review and will be available once approved." }, { status: 403 });
+    }
   }
 
   const url = await getDocumentDownloadUrl(doc.storage_path);

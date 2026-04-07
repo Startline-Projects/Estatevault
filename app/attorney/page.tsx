@@ -22,6 +22,52 @@ interface Review {
   partners: { company_name: string } | null;
 }
 
+function SLABadge({ deadline }: { deadline: string }) {
+  const d = new Date(deadline);
+  const now = new Date();
+  const hoursLeft = (d.getTime() - now.getTime()) / (1000 * 60 * 60);
+
+  if (hoursLeft < 0) {
+    return (
+      <span className="inline-flex items-center gap-1 rounded-full bg-red-100 px-2.5 py-1 text-xs font-semibold text-red-700">
+        <span className="h-1.5 w-1.5 rounded-full bg-red-500" />
+        Overdue {Math.abs(Math.round(hoursLeft))}h
+      </span>
+    );
+  }
+  if (hoursLeft < 12) {
+    return (
+      <span className="inline-flex items-center gap-1 rounded-full bg-orange-100 px-2.5 py-1 text-xs font-semibold text-orange-700">
+        <span className="h-1.5 w-1.5 rounded-full bg-orange-500 animate-pulse" />
+        {Math.round(hoursLeft)}h left
+      </span>
+    );
+  }
+  const daysLeft = Math.floor(hoursLeft / 24);
+  const remainingHours = Math.round(hoursLeft % 24);
+  return (
+    <span className="inline-flex items-center gap-1 rounded-full bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-600">
+      {daysLeft > 0 ? `${daysLeft}d ${remainingHours}h` : `${Math.round(hoursLeft)}h`} left
+    </span>
+  );
+}
+
+const STATUS_STYLES: Record<string, string> = {
+  approved: "bg-green-100 text-green-700",
+  approved_with_notes: "bg-yellow-100 text-yellow-700",
+  flagged: "bg-red-100 text-red-700",
+  in_review: "bg-blue-100 text-blue-700",
+  pending: "bg-gray-100 text-gray-600",
+};
+
+const STATUS_LABELS: Record<string, string> = {
+  approved: "Approved",
+  approved_with_notes: "Approved w/ Notes",
+  flagged: "Flagged",
+  in_review: "In Review",
+  pending: "Pending",
+};
+
 export default function AttorneyQueuePage() {
   const [reviews, setReviews] = useState<Review[]>([]);
   const [loading, setLoading] = useState(true);
@@ -33,18 +79,9 @@ export default function AttorneyQueuePage() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      // Get user name
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("full_name, email")
-        .eq("id", user.id)
-        .single();
+      const { data: profile } = await supabase.from("profiles").select("full_name, email").eq("id", user.id).single();
       setUserName(profile?.full_name || profile?.email || "Attorney");
 
-      // Fetch reviews assigned to this attorney
-      // Mo sees: direct clients, non-attorney partner clients, attorney partners without in-house
-      // Partner in-house attorneys see: only reviews assigned to them
-      // RLS ensures attorney_id = auth.uid()
       const { data } = await supabase
         .from("attorney_reviews")
         .select(`
@@ -62,6 +99,15 @@ export default function AttorneyQueuePage() {
     load();
   }, []);
 
+  function getClientName(r: Review): string {
+    const p = r.orders?.clients?.profiles;
+    return p?.full_name || p?.email || "Client";
+  }
+
+  function getClientEmail(r: Review): string {
+    return r.orders?.clients?.profiles?.email || "";
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -76,141 +122,156 @@ export default function AttorneyQueuePage() {
   const pending = reviews.filter((r) => r.status === "pending" || r.status === "in_review");
   const completed = reviews.filter((r) => ["approved", "approved_with_notes", "flagged"].includes(r.status));
 
-  function getClientName(r: Review): string {
-    const profile = r.orders?.clients?.profiles;
-    return profile?.full_name || profile?.email || "Client";
-  }
-
-  function getPartnerName(r: Review): string | null {
-    return r.partners?.company_name || null;
-  }
-
-  function formatSLA(deadline: string): { text: string; isOverdue: boolean; isUrgent: boolean } {
-    const d = new Date(deadline);
-    const now = new Date();
-    const hoursLeft = (d.getTime() - now.getTime()) / (1000 * 60 * 60);
-
-    if (hoursLeft < 0) return { text: `Overdue by ${Math.abs(Math.round(hoursLeft))}h`, isOverdue: true, isUrgent: true };
-    if (hoursLeft < 12) return { text: `${Math.round(hoursLeft)}h remaining`, isOverdue: false, isUrgent: true };
-    return { text: `${Math.round(hoursLeft)}h remaining`, isOverdue: false, isUrgent: false };
-  }
-
   return (
-    <div className="min-h-screen bg-gray-50 px-6 py-8">
-      <div className="mx-auto max-w-5xl">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-navy">Attorney Review Queue</h1>
-            <p className="mt-1 text-sm text-charcoal/60">Welcome, {userName}</p>
-          </div>
+    <div className="min-h-screen bg-gray-50">
+      {/* Top bar */}
+      <div className="bg-white border-b border-gray-200 px-6 py-4">
+        <div className="mx-auto max-w-5xl flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <span className="rounded-full bg-gold/10 px-4 py-1.5 text-sm font-semibold text-gold">
-              {pending.length} pending
-            </span>
+            <div className="w-9 h-9 rounded-full bg-navy flex items-center justify-center">
+              <span className="text-sm font-bold text-white">{userName.charAt(0).toUpperCase()}</span>
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-navy">{userName}</p>
+              <p className="text-xs text-charcoal/50">Review Attorney</p>
+            </div>
+          </div>
+          <span className="text-lg font-bold text-navy tracking-tight">EstateVault</span>
+        </div>
+      </div>
+
+      <div className="mx-auto max-w-5xl px-6 py-8">
+        {/* Stats */}
+        <div className="grid grid-cols-3 gap-4 mb-8">
+          <div className="rounded-xl bg-white border border-gray-200 p-5">
+            <p className="text-xs font-semibold text-charcoal/50 uppercase tracking-wider">Pending Review</p>
+            <p className="mt-2 text-3xl font-bold text-navy">{pending.length}</p>
+          </div>
+          <div className="rounded-xl bg-white border border-gray-200 p-5">
+            <p className="text-xs font-semibold text-charcoal/50 uppercase tracking-wider">Completed</p>
+            <p className="mt-2 text-3xl font-bold text-navy">{completed.length}</p>
+          </div>
+          <div className="rounded-xl bg-white border border-gray-200 p-5">
+            <p className="text-xs font-semibold text-charcoal/50 uppercase tracking-wider">SLA</p>
+            <p className="mt-2 text-3xl font-bold text-navy">4 days</p>
           </div>
         </div>
 
-        {/* Pending Reviews */}
-        <h2 className="mt-8 text-lg font-bold text-navy">
-          Pending Reviews ({pending.length})
-        </h2>
+        {/* Pending queue */}
+        <div className="mb-8">
+          <h2 className="text-base font-bold text-navy mb-4">
+            Pending Reviews
+            {pending.length > 0 && (
+              <span className="ml-2 inline-flex items-center rounded-full bg-gold/10 px-2.5 py-0.5 text-sm font-semibold text-gold">{pending.length}</span>
+            )}
+          </h2>
 
-        {pending.length === 0 ? (
-          <div className="mt-4 rounded-xl bg-white border border-gray-200 p-10 text-center">
-            <svg className="mx-auto h-12 w-12 text-charcoal/20" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            <p className="mt-3 text-sm text-charcoal/50">No pending reviews. You&apos;re all caught up.</p>
-          </div>
-        ) : (
-          <div className="mt-4 overflow-hidden rounded-xl bg-white border border-gray-200">
-            {/* Table header */}
-            <div className="grid grid-cols-12 gap-4 border-b border-gray-100 bg-gray-50 px-6 py-3 text-xs font-semibold uppercase tracking-wider text-charcoal/50">
-              <div className="col-span-3">Client</div>
-              <div className="col-span-2">Partner</div>
-              <div className="col-span-2">Document</div>
-              <div className="col-span-2">Submitted</div>
-              <div className="col-span-2">SLA</div>
-              <div className="col-span-1">Action</div>
-            </div>
-
-            {pending.map((r) => {
-              const sla = formatSLA(r.sla_deadline);
-              const clientName = getClientName(r);
-              const partnerName = getPartnerName(r);
-
-              return (
-                <div key={r.id} className={`grid grid-cols-12 gap-4 items-center px-6 py-4 border-b border-gray-50 last:border-0 hover:bg-gray-50/50 transition-colors ${sla.isOverdue ? "bg-red-50/50" : ""}`}>
-                  <div className="col-span-3">
-                    <p className="text-sm font-medium text-navy truncate">{clientName}</p>
-                  </div>
-                  <div className="col-span-2">
-                    <p className="text-sm text-charcoal/60 truncate">
-                      {partnerName || <span className="text-charcoal/30">Direct</span>}
-                    </p>
-                  </div>
-                  <div className="col-span-2">
-                    <span className="inline-flex items-center rounded-full bg-navy/5 px-2.5 py-0.5 text-xs font-medium text-navy">
-                      {r.orders?.product_type === "trust" ? "Trust" : "Will"} Package
-                    </span>
-                  </div>
-                  <div className="col-span-2">
-                    <p className="text-sm text-charcoal/50">
-                      {new Date(r.created_at).toLocaleDateString()}
-                    </p>
-                  </div>
-                  <div className="col-span-2">
-                    <span className={`text-xs font-medium ${sla.isOverdue ? "text-red-600" : sla.isUrgent ? "text-orange-600" : "text-charcoal/50"}`}>
-                      {sla.text}
-                    </span>
-                  </div>
-                  <div className="col-span-1">
-                    <Link
-                      href={`/attorney/review/${r.id}`}
-                      className="rounded-full bg-gold px-4 py-1.5 text-xs font-semibold text-white hover:bg-gold/90 transition-colors"
-                    >
-                      Review
-                    </Link>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-
-        {/* Completed Reviews */}
-        <h2 className="mt-10 text-lg font-bold text-navy">
-          Completed ({completed.length})
-        </h2>
-
-        {completed.length === 0 ? (
-          <p className="mt-4 text-sm text-charcoal/60">No completed reviews yet.</p>
-        ) : (
-          <div className="mt-4 space-y-2">
-            {completed.map((r) => (
-              <div key={r.id} className="rounded-xl bg-white border border-gray-200 px-6 py-4 flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <div>
-                    <p className="text-sm font-medium text-navy">
-                      {getClientName(r)} — {r.orders?.product_type === "trust" ? "Trust" : "Will"}
-                    </p>
-                    <p className="text-xs text-charcoal/60 mt-0.5">
-                      {getPartnerName(r) ? `via ${getPartnerName(r)}` : "Direct client"} &middot; {new Date(r.created_at).toLocaleDateString()}
-                    </p>
-                  </div>
-                </div>
-                <span className={`rounded-full px-3 py-1 text-xs font-medium ${
-                  r.status === "flagged"
-                    ? "bg-red-100 text-red-700"
-                    : r.status === "approved_with_notes"
-                      ? "bg-yellow-100 text-yellow-700"
-                      : "bg-green-100 text-green-700"
-                }`}>
-                  {r.status === "flagged" ? "Flagged" : r.status === "approved_with_notes" ? "Approved w/ Notes" : "Approved"}
-                </span>
+          {pending.length === 0 ? (
+            <div className="rounded-xl bg-white border border-gray-200 p-12 text-center">
+              <div className="mx-auto w-12 h-12 rounded-full bg-green-50 flex items-center justify-center mb-3">
+                <svg className="w-6 h-6 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
               </div>
-            ))}
+              <p className="text-sm font-medium text-charcoal">All caught up</p>
+              <p className="text-xs text-charcoal/50 mt-1">No pending reviews.</p>
+            </div>
+          ) : (
+            <div className="rounded-xl bg-white border border-gray-200 overflow-hidden">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-gray-100 bg-gray-50/60">
+                    <th className="text-left px-5 py-3 text-xs font-semibold text-charcoal/50 uppercase tracking-wider">Client</th>
+                    <th className="text-left px-5 py-3 text-xs font-semibold text-charcoal/50 uppercase tracking-wider">Package</th>
+                    <th className="text-left px-5 py-3 text-xs font-semibold text-charcoal/50 uppercase tracking-wider">Partner</th>
+                    <th className="text-left px-5 py-3 text-xs font-semibold text-charcoal/50 uppercase tracking-wider">Submitted</th>
+                    <th className="text-left px-5 py-3 text-xs font-semibold text-charcoal/50 uppercase tracking-wider">SLA</th>
+                    <th className="px-5 py-3" />
+                  </tr>
+                </thead>
+                <tbody>
+                  {pending.map((r) => (
+                    <tr key={r.id} className="border-b border-gray-50 last:border-0 hover:bg-gray-50/50 transition-colors">
+                      <td className="px-5 py-4">
+                        <p className="font-medium text-navy">{getClientName(r)}</p>
+                        <p className="text-xs text-charcoal/40 mt-0.5">{getClientEmail(r)}</p>
+                      </td>
+                      <td className="px-5 py-4">
+                        <span className="inline-flex items-center rounded-full bg-navy/5 px-2.5 py-1 text-xs font-medium text-navy">
+                          {r.orders?.product_type === "trust" ? "Trust" : "Will"} Package
+                        </span>
+                      </td>
+                      <td className="px-5 py-4">
+                        <p className="text-sm text-charcoal/60">{r.partners?.company_name || <span className="text-charcoal/30 italic">Direct</span>}</p>
+                      </td>
+                      <td className="px-5 py-4">
+                        <p className="text-sm text-charcoal/50">{new Date(r.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</p>
+                      </td>
+                      <td className="px-5 py-4">
+                        <SLABadge deadline={r.sla_deadline} />
+                      </td>
+                      <td className="px-5 py-4 text-right">
+                        <Link
+                          href={`/attorney/review/${r.id}`}
+                          className="inline-flex items-center gap-1.5 rounded-lg bg-gold px-4 py-2 text-xs font-semibold text-white hover:bg-gold/90 transition-colors"
+                        >
+                          Review
+                          <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
+                          </svg>
+                        </Link>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+
+        {/* Completed */}
+        {completed.length > 0 && (
+          <div>
+            <h2 className="text-base font-bold text-navy mb-4">Completed ({completed.length})</h2>
+            <div className="rounded-xl bg-white border border-gray-200 overflow-hidden">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-gray-100 bg-gray-50/60">
+                    <th className="text-left px-5 py-3 text-xs font-semibold text-charcoal/50 uppercase tracking-wider">Client</th>
+                    <th className="text-left px-5 py-3 text-xs font-semibold text-charcoal/50 uppercase tracking-wider">Package</th>
+                    <th className="text-left px-5 py-3 text-xs font-semibold text-charcoal/50 uppercase tracking-wider">Partner</th>
+                    <th className="text-left px-5 py-3 text-xs font-semibold text-charcoal/50 uppercase tracking-wider">Date</th>
+                    <th className="text-left px-5 py-3 text-xs font-semibold text-charcoal/50 uppercase tracking-wider">Decision</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {completed.map((r) => (
+                    <tr key={r.id} className="border-b border-gray-50 last:border-0">
+                      <td className="px-5 py-4">
+                        <p className="font-medium text-navy">{getClientName(r)}</p>
+                        <p className="text-xs text-charcoal/40 mt-0.5">{getClientEmail(r)}</p>
+                      </td>
+                      <td className="px-5 py-4">
+                        <span className="inline-flex items-center rounded-full bg-navy/5 px-2.5 py-1 text-xs font-medium text-navy">
+                          {r.orders?.product_type === "trust" ? "Trust" : "Will"} Package
+                        </span>
+                      </td>
+                      <td className="px-5 py-4">
+                        <p className="text-sm text-charcoal/60">{r.partners?.company_name || <span className="text-charcoal/30 italic">Direct</span>}</p>
+                      </td>
+                      <td className="px-5 py-4">
+                        <p className="text-sm text-charcoal/50">{new Date(r.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</p>
+                      </td>
+                      <td className="px-5 py-4">
+                        <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium ${STATUS_STYLES[r.status] || "bg-gray-100 text-gray-600"}`}>
+                          {STATUS_LABELS[r.status] || r.status}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
       </div>

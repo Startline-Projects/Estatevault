@@ -296,24 +296,31 @@ function SuccessContent() {
           <p className="mt-6 text-center text-xs text-white/50">Test Mode — Documents will not be saved</p>
         )}
 
-        {/* Password setup — not shown in test mode or for existing accounts */}
-        {email && !attorneyReview && !isTest && (
+        {/* Password setup — always shown (even attorney review) unless test mode */}
+        {email && !isTest && (
           <div className="mt-10">
             {hasExistingAccount ? (
               <div className="rounded-2xl bg-white/10 border border-white/10 p-8 text-center">
                 <h2 className="text-lg font-bold text-white">Welcome back!</h2>
                 <p className="mt-3 text-sm text-blue-100/60">
-                  We found an existing account with this email. Your new documents have been added to your account.
+                  {attorneyReview
+                    ? "Log in to track your review status. Your documents will be available to download once the attorney review is complete."
+                    : "We found an existing account with this email. Your new documents have been added to your account."}
                 </p>
-                <a
-                  href="/login"
-                  className="mt-6 inline-flex min-h-[48px] items-center rounded-full bg-[#C9A84C] px-8 py-3.5 text-base font-semibold text-white hover:bg-[#C9A84C]/90 transition-colors shadow-lg"
-                >
-                  Log In to View Your Documents
+                <a href="/login" className="mt-6 inline-flex min-h-[48px] items-center rounded-full bg-[#C9A84C] px-8 py-3.5 text-base font-semibold text-white hover:bg-[#C9A84C]/90 transition-colors shadow-lg">
+                  Log In to Your Account
                 </a>
               </div>
             ) : (
-              <PasswordSetup email={email} userId={userId} />
+              <div>
+                {attorneyReview && (
+                  <div className="mb-6 rounded-2xl bg-white/10 border border-white/10 p-5 text-center">
+                    <p className="text-sm text-white font-medium">Set up your account to track your review status.</p>
+                    <p className="mt-1 text-xs text-blue-100/60">Your documents will be unlocked and available to download once the attorney approves them — up to 4 days.</p>
+                  </div>
+                )}
+                <PasswordSetup email={email} userId={userId} />
+              </div>
             )}
           </div>
         )}
