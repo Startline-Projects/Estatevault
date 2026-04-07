@@ -13,20 +13,19 @@ const DOC_LABELS: Record<string, string> = {
   healthcare_directive: "Healthcare Directive",
 };
 
-interface ReviewRecord {
+interface DocRecord {
   id: string;
-  order_id: string;
+  document_type: string;
+  storage_path: string | null;
   status: string;
-  sla_deadline: string;
-  created_at: string;
-  orders: {
-    product_type: string;
-    client_id: string;
-    amount_total: number;
-    clients: {
-      profiles: { full_name: string | null; email: string } | null;
-    } | null;
-  } | null;
+}
+
+interface ReviewData {
+  review: { id: string; order_id: string; status: string; sla_deadline: string; created_at: string };
+  order: { product_type: string; amount_total: number };
+  client: { name: string | null; email: string | null };
+  partner: { company: string | null };
+  documents: DocRecord[];
 }
 
 export default function AttorneyReviewPage() {
@@ -34,8 +33,9 @@ export default function AttorneyReviewPage() {
   const reviewId = params.id as string;
   const router = useRouter();
 
-  const [review, setReview] = useState<ReviewRecord | null>(null);
-  const [docs, setDocs] = useState<Array<{ id: string; document_type: string; storage_path: string | null }>>([]);
+  const [data, setData] = useState<ReviewData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
   const [decision, setDecision] = useState("");
   const [notes, setNotes] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -44,32 +44,27 @@ export default function AttorneyReviewPage() {
 
   useEffect(() => {
     async function load() {
-      const supabase = createClient();
-      const { data: r } = await supabase
-        .from("attorney_reviews")
-        .select("id, order_id, status, sla_deadline, created_at, orders(product_type, client_id, amount_total, clients(profiles(full_name, email)))")
-        .eq("id", reviewId)
-        .single();
-
-      if (r) {
-        setReview(r as unknown as ReviewRecord);
-        const { data: d } = await supabase
-          .from("documents")
-          .select("id, document_type, storage_path")
-          .eq("order_id", (r as Record<string, unknown>).order_id as string);
-        setDocs(d || []);
+      const res = await fetch(`/api/attorney/review?id=${reviewId}`);
+      if (!res.ok) {
+        setError("Unable to load review. You may not have access.");
+        setLoading(false);
+        return;
       }
+      const json = await res.json();
+      setData(json);
+      setLoading(false);
     }
     load();
   }, [reviewId]);
 
-  async function handleDownload(doc: { id: string; document_type: string; storage_path: string | null }) {
+  async function handleDownload(doc: DocRecord) {
     if (!doc.storage_path) return;
     setDownloadingId(doc.id);
     try {
       const res = await fetch(`/api/documents/download?id=${doc.id}`);
       if (!res.ok) {
-        alert("Unable to download document. Please try again.");
+        const json = await res.json().catch(() => ({}));
+        alert(json.error || "Unable to download document.");
         return;
       }
       const { url } = await res.json();
@@ -80,24 +75,22 @@ export default function AttorneyReviewPage() {
   }
 
   async function handleSubmit() {
-    if (!decision || !review) return;
+    if (!decision || !data) return;
     setSubmitting(true);
 
     try {
       const supabase = createClient();
       const { data: { user } } = await supabase.auth.getUser();
 
-      // Update review status
       await supabase
         .from("attorney_reviews")
         .update({ status: decision, notes, reviewed_at: new Date().toISOString() })
         .eq("id", reviewId);
 
       if (decision === "approved" || decision === "approved_with_notes") {
-        await supabase.from("orders").update({ status: "delivered" }).eq("id", review.order_id);
-        await supabase.from("documents").update({ status: "delivered", delivered_at: new Date().toISOString() }).eq("order_id", review.order_id);
+        await supabase.from("orders").update({ status: "delivered" }).eq("id", data.review.order_id);
+        await supabase.from("documents").update({ status: "delivered", delivered_at: new Date().toISOString() }).eq("order_id", data.review.order_id);
 
-        // Notify client by email
         await fetch("/api/attorney/notify-client", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -121,7 +114,7 @@ export default function AttorneyReviewPage() {
     }
   }
 
-  if (!review) {
+  if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
@@ -132,12 +125,19 @@ export default function AttorneyReviewPage() {
     );
   }
 
-  const clientProfile = review.orders?.clients?.profiles;
-  const clientName = clientProfile?.full_name || clientProfile?.email || "Client";
-  const clientEmail = clientProfile?.email || "";
-  const productType = review.orders?.product_type || "will";
-  const packageName = productType === "trust" ? "Trust Package" : "Will Package";
+  if (error || !data) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center px-6">
+        <div className="text-center">
+          <p className="text-sm text-red-600">{error || "Review not found."}</p>
+          <Link href="/attorney" className="mt-4 inline-flex text-sm text-navy hover:underline">← Back to Queue</Link>
+        </div>
+      </div>
+    );
+  }
 
+  const { review, order, client, partner, documents } = data;
+  const packageName = order.product_type === "trust" ? "Trust Package" : "Will Package";
   const slaDeadline = new Date(review.sla_deadline);
   const now = new Date();
   const hoursLeft = (slaDeadline.getTime() - now.getTime()) / (1000 * 60 * 60);
@@ -189,14 +189,22 @@ export default function AttorneyReviewPage() {
                   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
                   </svg>
-                  {clientName}
+                  {client.name || "Unknown Client"}
                 </span>
-                {clientEmail && (
+                {client.email && (
                   <span className="flex items-center gap-1.5">
                     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" />
                     </svg>
-                    {clientEmail}
+                    {client.email}
+                  </span>
+                )}
+                {partner.company && (
+                  <span className="flex items-center gap-1.5">
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 21h16.5M4.5 3h15M5.25 3v18m13.5-18v18M9 6.75h1.5m-1.5 3h1.5m-1.5 3h1.5m3-6H15m-1.5 3H15m-1.5 3H15M9 21v-3.375c0-.621.504-1.125 1.125-1.125h3.75c.621 0 1.125.504 1.125 1.125V21" />
+                    </svg>
+                    {partner.company}
                   </span>
                 )}
                 <span className="flex items-center gap-1.5">
@@ -230,10 +238,18 @@ export default function AttorneyReviewPage() {
                 <p className="text-xs text-charcoal/50 mt-0.5">Download and review each document before submitting your decision</p>
               </div>
               <div className="divide-y divide-gray-50">
-                {docs.length === 0 ? (
-                  <div className="px-6 py-8 text-center text-sm text-charcoal/50">No documents found for this order.</div>
+                {documents.length === 0 ? (
+                  <div className="px-6 py-10 text-center">
+                    <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-3">
+                      <svg className="w-5 h-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
+                      </svg>
+                    </div>
+                    <p className="text-sm text-charcoal/50">No documents found for this order.</p>
+                    <p className="text-xs text-charcoal/30 mt-1">Documents may still be generating.</p>
+                  </div>
                 ) : (
-                  docs.map((d) => (
+                  documents.map((d) => (
                     <div key={d.id} className="flex items-center justify-between px-6 py-4 hover:bg-gray-50/50 transition-colors">
                       <div className="flex items-center gap-3">
                         <div className="w-8 h-8 rounded-lg bg-navy/5 flex items-center justify-center flex-shrink-0">
@@ -241,9 +257,12 @@ export default function AttorneyReviewPage() {
                             <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
                           </svg>
                         </div>
-                        <span className="text-sm font-medium text-navy">
-                          {DOC_LABELS[d.document_type] || d.document_type.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())}
-                        </span>
+                        <div>
+                          <p className="text-sm font-medium text-navy">
+                            {DOC_LABELS[d.document_type] || d.document_type.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())}
+                          </p>
+                          <p className="text-xs text-charcoal/40 mt-0.5 capitalize">{d.status}</p>
+                        </div>
                       </div>
                       {d.storage_path ? (
                         <button
@@ -266,7 +285,7 @@ export default function AttorneyReviewPage() {
                           )}
                         </button>
                       ) : (
-                        <span className="text-xs text-charcoal/40 italic">Not yet generated</span>
+                        <span className="text-xs text-charcoal/40 italic">Generating...</span>
                       )}
                     </div>
                   ))
@@ -284,43 +303,16 @@ export default function AttorneyReviewPage() {
               </div>
               <div className="p-6 space-y-3">
                 {[
-                  {
-                    value: "approved",
-                    label: "Approve",
-                    desc: "Documents are complete and ready for delivery",
-                    color: "border-green-400 bg-green-50",
-                    dot: "bg-green-500",
-                  },
-                  {
-                    value: "approved_with_notes",
-                    label: "Approve with Notes",
-                    desc: "Acceptable with comments for the client",
-                    color: "border-yellow-400 bg-yellow-50",
-                    dot: "bg-yellow-500",
-                  },
-                  {
-                    value: "flagged",
-                    label: "Flag for Consultation",
-                    desc: "Hold delivery — client needs direct attorney consultation",
-                    color: "border-red-400 bg-red-50",
-                    dot: "bg-red-500",
-                  },
+                  { value: "approved", label: "Approve", desc: "Documents are complete and ready for delivery", color: "border-green-400 bg-green-50", dot: "bg-green-500" },
+                  { value: "approved_with_notes", label: "Approve with Notes", desc: "Acceptable with comments for the client", color: "border-yellow-400 bg-yellow-50", dot: "bg-yellow-500" },
+                  { value: "flagged", label: "Flag for Consultation", desc: "Hold delivery — client needs direct attorney consultation", color: "border-red-400 bg-red-50", dot: "bg-red-500" },
                 ].map((opt) => (
                   <label
                     key={opt.value}
-                    className={`flex items-start gap-3 p-4 rounded-xl border-2 cursor-pointer transition-all ${
-                      decision === opt.value ? opt.color : "border-gray-200 hover:border-gray-300 bg-white"
-                    }`}
+                    className={`flex items-start gap-3 p-4 rounded-xl border-2 cursor-pointer transition-all ${decision === opt.value ? opt.color : "border-gray-200 hover:border-gray-300 bg-white"}`}
                   >
-                    <input
-                      type="radio"
-                      name="decision"
-                      value={opt.value}
-                      checked={decision === opt.value}
-                      onChange={() => setDecision(opt.value)}
-                      className="sr-only"
-                    />
-                    <div className={`mt-1 w-3.5 h-3.5 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-colors ${decision === opt.value ? `border-current` : "border-gray-300"}`}>
+                    <input type="radio" name="decision" value={opt.value} checked={decision === opt.value} onChange={() => setDecision(opt.value)} className="sr-only" />
+                    <div className={`mt-1 w-3.5 h-3.5 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-colors ${decision === opt.value ? "border-current" : "border-gray-300"}`}>
                       {decision === opt.value && <div className={`w-1.5 h-1.5 rounded-full ${opt.dot}`} />}
                     </div>
                     <div>
@@ -342,7 +334,6 @@ export default function AttorneyReviewPage() {
                   className="w-full rounded-xl border-2 border-gray-200 px-4 py-3 text-sm text-charcoal placeholder:text-charcoal/30 focus:border-gold focus:outline-none resize-none transition-colors"
                   placeholder="Add any notes for the client or partner..."
                 />
-
                 <button
                   onClick={handleSubmit}
                   disabled={!decision || submitting}
@@ -353,14 +344,9 @@ export default function AttorneyReviewPage() {
                       <div className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
                       Submitting...
                     </span>
-                  ) : (
-                    "Submit Review"
-                  )}
+                  ) : "Submit Review"}
                 </button>
-
-                {!decision && (
-                  <p className="mt-2 text-center text-xs text-charcoal/40">Select a decision above to continue</p>
-                )}
+                {!decision && <p className="mt-2 text-center text-xs text-charcoal/40">Select a decision above to continue</p>}
               </div>
             </div>
           </div>
