@@ -53,6 +53,14 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Title and recipient email are required" }, { status: 400 });
     }
 
+    // Get sender's name for the notification email
+    const { data: senderProfile } = await admin
+      .from("profiles")
+      .select("full_name")
+      .eq("id", user.id)
+      .single();
+    const senderName = senderProfile?.full_name || "Someone you know";
+
     const { data: message, error: insertErr } = await admin
       .from("farewell_messages")
       .insert({
@@ -65,7 +73,51 @@ export async function POST(request: Request) {
       .single();
 
     if (insertErr || !message) {
+      console.error("Farewell insert error:", insertErr);
       return NextResponse.json({ error: "Failed to create message" }, { status: 500 });
+    }
+
+    // Send notification email to recipient so they know the link exists
+    const accessLink = `https://www.estatevault.us/farewell/${client.id}`;
+    try {
+      const { Resend } = await import("resend");
+      const resend = new Resend(process.env.RESEND_API_KEY);
+      await resend.emails.send({
+        from: "EstateVault <info@estatevault.us>",
+        to: recipientEmail,
+        subject: `${senderName} has left you a farewell message`,
+        html: `
+          <div style="font-family:Inter,sans-serif;max-width:520px;margin:0 auto;padding:32px;">
+            <h1 style="color:#1C3557;font-size:22px;margin-bottom:8px;">A Message Has Been Prepared for You</h1>
+            <p style="color:#2D2D2D;font-size:15px;line-height:1.6;">
+              <strong>${senderName}</strong> has recorded a personal farewell message titled
+              "<strong>${title}</strong>" and designated you as the recipient.
+            </p>
+            <p style="color:#2D2D2D;font-size:15px;line-height:1.6;">
+              This message is securely stored and <strong>locked</strong>. It will only become
+              accessible after a verified death certificate is submitted and reviewed by our team.
+            </p>
+            <p style="color:#2D2D2D;font-size:15px;line-height:1.6;margin-top:24px;">
+              <strong>Save this link</strong> — when the time comes, click it to request access:
+            </p>
+            <div style="margin:24px 0;">
+              <a href="${accessLink}"
+                style="display:inline-block;background:#C9A84C;color:white;text-decoration:none;
+                       padding:14px 28px;border-radius:999px;font-weight:600;font-size:14px;">
+                Access Farewell Messages
+              </a>
+            </div>
+            <p style="color:#999;font-size:12px;line-height:1.6;">
+              You will need to upload a death certificate to verify your request. Our team reviews
+              all submissions within 24-48 hours. You will be notified by email once access is granted.
+            </p>
+            <p style="color:#999;font-size:12px;margin-top:16px;">— EstateVault</p>
+          </div>
+        `,
+      });
+    } catch (emailErr) {
+      // Don't fail the request if email fails — message was already created
+      console.error("Farewell notification email failed:", emailErr);
     }
 
     await admin.from("audit_log").insert({
