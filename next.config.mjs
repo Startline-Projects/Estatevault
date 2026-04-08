@@ -22,6 +22,11 @@ const nextConfig = {
         hostname: '*.supabase.co',
         pathname: '/storage/v1/object/public/**',
       },
+      // Allow partner logos served from any hostname (custom domains)
+      {
+        protocol: 'https',
+        hostname: '**',
+      },
     ],
   },
   async headers() {

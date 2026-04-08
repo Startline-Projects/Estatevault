@@ -9,6 +9,52 @@ export async function updateSession(request: NextRequest) {
     return supabaseResponse;
   }
 
+  // ── Custom domain / subdomain routing ──────────────────────────────────────
+  // If the request comes from a partner's custom domain (e.g. legacy.thepeoplesfirm.com)
+  // look up the partner by that hostname and rewrite to their slug page internally.
+  const hostname = request.headers.get("host") || "";
+  const isMainDomain =
+    hostname === "estatevault.us" ||
+    hostname === "www.estatevault.us" ||
+    hostname.startsWith("localhost") ||
+    hostname.includes("vercel.app");
+
+  if (!isMainDomain && hostname.includes(".")) {
+    // Fetch partner by subdomain or custom_domain
+    const adminSupabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+      { cookies: { getAll: () => [], setAll: () => {} } }
+    );
+
+    const { data: partner } = await adminSupabase
+      .from("partners")
+      .select("partner_slug")
+      .or(`subdomain.eq.${hostname},custom_domain.eq.${hostname}`)
+      .eq("status", "active")
+      .single();
+
+    if (partner?.partner_slug) {
+      // Rewrite the request to the partner's slug page, preserving the path
+      const url = request.nextUrl.clone();
+      const originalPath = request.nextUrl.pathname;
+
+      // If root, rewrite to partner landing page
+      if (originalPath === "/" || originalPath === "") {
+        url.pathname = `/${partner.partner_slug}`;
+      } else {
+        // Preserve deeper paths (e.g. /quiz, /will) for the partner's flow
+        url.pathname = originalPath;
+      }
+      // Pass partner context via header so pages know which partner is active
+      const rewriteResponse = NextResponse.rewrite(url);
+      rewriteResponse.headers.set("x-partner-slug", partner.partner_slug);
+      rewriteResponse.headers.set("x-partner-hostname", hostname);
+      return rewriteResponse;
+    }
+  }
+  // ────────────────────────────────────────────────────────────────────────────
+
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,

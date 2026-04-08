@@ -42,6 +42,13 @@ export default function ProSettingsPage() {
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [reviewFee, setReviewFee] = useState(300);
+  const [domainSaving, setDomainSaving] = useState(false);
+  const [domainError, setDomainError] = useState("");
+  const [savedSubdomain, setSavedSubdomain] = useState("");
+  const [domainVerifying, setDomainVerifying] = useState(false);
+  const [domainVerifyStatus, setDomainVerifyStatus] = useState<"idle" | "verified" | "pending" | "wrong">("idle");
+  const [domainVerifyMessage, setDomainVerifyMessage] = useState("");
+  const [copiedDns, setCopiedDns] = useState(false);
 
   useEffect(() => {
     async function load() {
@@ -60,7 +67,7 @@ export default function ProSettingsPage() {
         .single();
 
       if (data) {
-        const p = data as unknown as PartnerData;
+        const p = data as unknown as PartnerData & { subdomain?: string; domain_verified?: boolean };
         setPartner(p);
         setCompanyName(p.company_name || "");
         setProductName(p.product_name || "Legacy Protection");
@@ -72,6 +79,10 @@ export default function ProSettingsPage() {
         setFullName(p.profiles?.full_name || "");
         setEmail(p.profiles?.email || "");
         setReviewFee(p.custom_review_fee ? p.custom_review_fee / 100 : 300);
+        if (p.subdomain) {
+          setSavedSubdomain(p.subdomain);
+          if (p.domain_verified) setDomainVerifyStatus("verified");
+        }
       }
       setLoading(false);
     }
@@ -113,16 +124,55 @@ export default function ProSettingsPage() {
 
   async function saveDomain() {
     if (!partner) return;
-    setSaving(true);
-    const supabase = createClient();
-    await supabase
-      .from("partners")
-      .update({ business_url: businessUrl, partner_slug: partnerSlug })
-      .eq("id", partner.id);
-    setPartner({ ...partner, business_url: businessUrl, partner_slug: partnerSlug });
-    setSaving(false);
-    setSaveSuccess("domain");
-    setTimeout(() => setSaveSuccess(""), 2000);
+    setDomainSaving(true);
+    setDomainError("");
+
+    const cleanUrl = businessUrl.replace(/^https?:\/\//, "").replace(/\/$/, "").toLowerCase();
+
+    try {
+      const res = await fetch("/api/partner/add-domain", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ businessUrl: cleanUrl, domainType: "subdomain" }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setDomainError(data.error || "Failed to register domain.");
+        setDomainSaving(false);
+        return;
+      }
+      setSavedSubdomain(data.domain);
+      setDomainVerifyStatus("idle");
+      setPartner({ ...partner, business_url: cleanUrl, partner_slug: partnerSlug });
+      setSaveSuccess("domain");
+      setTimeout(() => setSaveSuccess(""), 3000);
+    } catch {
+      setDomainError("Something went wrong. Please try again.");
+    }
+    setDomainSaving(false);
+  }
+
+  async function verifyDomain() {
+    if (!savedSubdomain) return;
+    setDomainVerifying(true);
+    setDomainVerifyMessage("");
+    try {
+      const res = await fetch(`/api/partner/verify-domain?domain=${savedSubdomain}`);
+      const data = await res.json();
+      if (data.verified) {
+        setDomainVerifyStatus("verified");
+        setDomainVerifyMessage("Your domain is verified and live!");
+      } else if (data.records?.length > 0) {
+        setDomainVerifyStatus("wrong");
+        setDomainVerifyMessage(data.message || "CNAME found but points to wrong destination.");
+      } else {
+        setDomainVerifyStatus("pending");
+        setDomainVerifyMessage(data.message || "No CNAME found yet. DNS can take up to 48 hours.");
+      }
+    } catch {
+      setDomainVerifyMessage("DNS check failed. Please try again.");
+    }
+    setDomainVerifying(false);
   }
 
   async function saveEmail() {
@@ -340,55 +390,120 @@ export default function ProSettingsPage() {
     {
       key: "domain",
       title: "Domain",
-      subtitle: businessUrl ? `legacy.${businessUrl}` : "Not configured",
+      subtitle: savedSubdomain
+        ? domainVerifyStatus === "verified"
+          ? `✓ ${savedSubdomain}`
+          : `⏳ ${savedSubdomain}`
+        : "Not configured",
       content: (
-        <div className="space-y-4">
+        <div className="space-y-5">
+          {/* Business domain input */}
           <div>
             <label className="block text-sm font-medium text-navy mb-1">Business Domain</label>
-            <input
-              type="text"
-              value={businessUrl}
-              onChange={(e) => setBusinessUrl(e.target.value)}
-              placeholder="yourcompany.com"
-              className="w-full min-h-[44px] rounded-xl border-2 border-gray-200 px-4 py-3 text-sm focus:border-gold focus:outline-none"
-            />
-            <p className="mt-1 text-xs text-charcoal/50">
-              Your platform will be accessible at legacy.{businessUrl || "yourcompany.com"}
+            <p className="text-xs text-charcoal/50 mb-2">
+              Enter your domain (e.g. <span className="font-mono">thepeoplesfirm.com</span>). Do not include www or https.
             </p>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-navy mb-1">Partner Slug</label>
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-charcoal/50">estatevault.com/</span>
+            <div className="flex gap-2">
               <input
                 type="text"
-                value={partnerSlug}
-                onChange={(e) => setPartnerSlug(e.target.value)}
-                className="flex-1 min-h-[44px] rounded-xl border-2 border-gray-200 px-4 py-3 text-sm focus:border-gold focus:outline-none"
+                value={businessUrl}
+                onChange={(e) => setBusinessUrl(e.target.value.replace(/^https?:\/\//, "").replace(/\/$/, ""))}
+                placeholder="yourcompany.com"
+                className="flex-1 min-h-[44px] rounded-xl border-2 border-gray-200 px-4 py-3 text-sm focus:border-gold focus:outline-none font-mono"
               />
+              <button
+                onClick={saveDomain}
+                disabled={domainSaving || !businessUrl}
+                className="px-5 py-3 rounded-xl bg-navy text-sm font-semibold text-white hover:bg-navy/90 disabled:opacity-50 transition-colors"
+              >
+                {domainSaving ? "Saving..." : saveSuccess === "domain" ? "Saved!" : savedSubdomain ? "Update" : "Save"}
+              </button>
             </div>
+            {domainError && <p className="mt-2 text-xs text-red-600">{domainError}</p>}
+            {businessUrl && (
+              <p className="mt-1 text-xs text-charcoal/50">
+                Your site will be at:{" "}
+                <span className="font-mono text-navy">legacy.{businessUrl.replace(/^https?:\/\//, "").replace(/\/$/, "")}</span>
+              </p>
+            )}
           </div>
-          <div className="rounded-lg bg-gray-50 p-4">
-            <p className="text-xs font-medium text-navy">DNS Records Required</p>
-            <p className="mt-1 text-xs text-charcoal/50">
-              CNAME: legacy → cname.estatevault.com
-            </p>
+
+          {/* DNS instructions */}
+          {savedSubdomain && (
+            <>
+              <div className="rounded-xl border border-gray-200 bg-gray-50 p-4">
+                <p className="text-xs font-semibold text-navy mb-2">Required DNS Record</p>
+                <div className="flex items-center justify-between bg-white rounded-lg border border-gray-200 px-4 py-3">
+                  <div className="text-xs font-mono">
+                    <span className="text-charcoal/40">CNAME</span>{" "}
+                    <span className="text-navy font-bold">legacy</span>{" "}
+                    <span className="text-charcoal/40">→</span>{" "}
+                    <span className="text-navy">cname.estatevault.us</span>
+                  </div>
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText("cname.estatevault.us");
+                      setCopiedDns(true);
+                      setTimeout(() => setCopiedDns(false), 2000);
+                    }}
+                    className="text-xs text-gold hover:text-gold/80 ml-4"
+                  >
+                    {copiedDns ? "Copied!" : "Copy"}
+                  </button>
+                </div>
+                <p className="text-xs text-charcoal/40 mt-2">
+                  Add this to your domain registrar DNS settings. Changes can take up to 48 hours.
+                </p>
+              </div>
+
+              {/* Verification status */}
+              <div className="rounded-xl border border-gray-200 bg-white p-4 flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-navy">DNS Status</p>
+                  <p className="text-xs font-mono text-charcoal/50 mt-0.5">{savedSubdomain}</p>
+                  {domainVerifyMessage && (
+                    <p className={`text-xs mt-1 ${domainVerifyStatus === "verified" ? "text-green-700" : "text-charcoal/50"}`}>
+                      {domainVerifyMessage}
+                    </p>
+                  )}
+                </div>
+                <div className="flex items-center gap-3">
+                  {domainVerifyStatus === "verified" && (
+                    <span className="rounded-full bg-green-100 px-3 py-1 text-xs font-semibold text-green-700">✓ Live</span>
+                  )}
+                  {domainVerifyStatus === "pending" && (
+                    <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-medium text-amber-700">⏳ Propagating</span>
+                  )}
+                  {domainVerifyStatus === "wrong" && (
+                    <span className="rounded-full bg-red-100 px-3 py-1 text-xs font-medium text-red-700">✗ Wrong Target</span>
+                  )}
+                  {domainVerifyStatus === "idle" && (
+                    <span className="rounded-full bg-gray-100 px-3 py-1 text-xs text-gray-500">Not checked</span>
+                  )}
+                  <button
+                    onClick={verifyDomain}
+                    disabled={domainVerifying}
+                    className="px-4 py-2 rounded-lg bg-navy text-xs font-semibold text-white hover:bg-navy/90 disabled:opacity-50 transition-colors"
+                  >
+                    {domainVerifying ? "Checking..." : "Check DNS"}
+                  </button>
+                </div>
+              </div>
+            </>
+          )}
+
+          {/* Fallback slug URL */}
+          <div className="rounded-lg bg-gray-50 border border-gray-200 p-4">
+            <p className="text-xs font-medium text-charcoal/60">Fallback URL (always works):</p>
+            <p className="mt-1 text-sm font-mono text-navy">estatevault.us/{partnerSlug || "your-slug"}</p>
           </div>
-          <div className="flex gap-3 pt-2">
-            <button
-              onClick={saveDomain}
-              disabled={saving}
-              className="rounded-full bg-gold px-6 py-2 text-sm font-semibold text-white hover:bg-gold/90 disabled:opacity-50"
-            >
-              {saving ? "Saving..." : saveSuccess === "domain" ? "Saved!" : "Save Changes"}
-            </button>
-            <button
-              onClick={cancelSection}
-              className="rounded-full border border-gray-300 px-6 py-2 text-sm font-medium text-charcoal/60 hover:bg-gray-50"
-            >
-              Cancel
-            </button>
-          </div>
+
+          <button
+            onClick={cancelSection}
+            className="rounded-full border border-gray-300 px-6 py-2 text-sm font-medium text-charcoal/60 hover:bg-gray-50"
+          >
+            Close
+          </button>
         </div>
       ),
     },
