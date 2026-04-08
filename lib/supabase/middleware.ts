@@ -19,7 +19,10 @@ export async function updateSession(request: NextRequest) {
     hostname.startsWith("localhost") ||
     hostname.includes("vercel.app");
 
-  if (!isMainDomain && hostname.includes(".")) {
+  const pathname = request.nextUrl.pathname;
+  const skipRewrite = pathname.startsWith("/api") || pathname.startsWith("/_next") || pathname.startsWith("/favicon");
+
+  if (!isMainDomain && hostname.includes(".") && !skipRewrite) {
     // Fetch partner by subdomain or custom_domain
     const adminSupabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -30,7 +33,7 @@ export async function updateSession(request: NextRequest) {
     const { data: partner } = await adminSupabase
       .from("partners")
       .select("partner_slug")
-      .or(`subdomain.eq.${hostname},custom_domain.eq.${hostname}`)
+      .or(`subdomain.eq."${hostname}",custom_domain.eq."${hostname}"`)
       .eq("status", "active")
       .single();
 
@@ -80,8 +83,6 @@ export async function updateSession(request: NextRequest) {
   const {
     data: { user },
   } = await supabase.auth.getUser();
-
-  const pathname = request.nextUrl.pathname;
 
   // Public routes — no auth required
   const publicPaths = ["/", "/quiz", "/will", "/trust", "/auth", "/attorney-referral", "/pro-partners", "/partners", "/professionals", "/farewell", "/api/webhooks", "/api/documents/process", "/api/documents/cleanup-test-orders", "/api/documents/process-now", "/api/documents/check-status", "/api/attorney/check-sla", "/api/checkout", "/api/quiz", "/api/professionals", "/api/farewell", "/api/admin/test-promo", "/api/documents/download-zip", "/api/auth/set-password"];
