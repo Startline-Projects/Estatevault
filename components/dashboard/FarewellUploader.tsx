@@ -51,17 +51,7 @@ export default function FarewellUploader({ messageId, onComplete, onCancel }: Fa
       const ext = selectedFile.name.split(".").pop() || "mp4";
       const filePath = `${client.id}/${messageId}/upload.${ext}`;
 
-      setProgress(20);
-
-      const { error: uploadErr } = await supabase.storage
-        .from("farewell-videos")
-        .upload(filePath, selectedFile, { contentType: selectedFile.type, upsert: true });
-
-      if (uploadErr) throw new Error("Upload failed");
-
-      setProgress(80);
-
-      // Get video duration via HTML5 video element
+      // Get video duration via HTML5 video element BEFORE uploading
       let duration = 0;
       try {
         const url = URL.createObjectURL(selectedFile);
@@ -76,10 +66,20 @@ export default function FarewellUploader({ messageId, onComplete, onCancel }: Fa
       } catch { /* ignore duration detection failure */ }
 
       if (duration > 1800) {
-        setError("Video exceeds 30-minute limit.");
+        setError("Video exceeds 30-minute limit. Please trim it before uploading.");
         setUploading(false);
         return;
       }
+
+      setProgress(20);
+
+      const { error: uploadErr } = await supabase.storage
+        .from("farewell-videos")
+        .upload(filePath, selectedFile, { contentType: selectedFile.type, upsert: true });
+
+      if (uploadErr) throw new Error("Upload failed");
+
+      setProgress(80);
 
       const res = await fetch("/api/vault/farewell/upload-complete", {
         method: "POST",

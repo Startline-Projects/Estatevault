@@ -23,6 +23,7 @@ export default function FarewellMessagesPage() {
   const [messages, setMessages] = useState<FarewellMessage[]>([]);
   const [loading, setLoading] = useState(true);
   const [mode, setMode] = useState<Mode>("list");
+  const [showCreateForm, setShowCreateForm] = useState(false);
   const [activeMessageId, setActiveMessageId] = useState<string | null>(null);
   const [newTitle, setNewTitle] = useState("");
   const [newRecipient, setNewRecipient] = useState("");
@@ -64,6 +65,7 @@ export default function FarewellMessagesPage() {
       if (!res.ok) { setError(data.error || "Failed to create"); setCreating(false); return; }
 
       setActiveMessageId(data.messageId);
+      setShowCreateForm(false);
       // Ask user to choose record or upload
       setMode("new");
     } catch {
@@ -222,41 +224,36 @@ export default function FarewellMessagesPage() {
             setNewTitle("");
             setNewRecipient("");
             setError("");
-            setMode("list");
+            setShowCreateForm((v) => !v);
           }}
-          className="px-4 py-2 rounded-lg bg-gold text-sm font-semibold text-white hover:bg-gold-600 transition-colors"
+          className="px-4 py-2 rounded-lg bg-gold text-sm font-semibold text-white hover:bg-gold/90 transition-colors"
         >
-          + New Message
+          {showCreateForm ? "Cancel" : "+ New Message"}
         </button>
       </div>
 
       <SubscriptionBanner onStatusLoaded={handleStatusLoaded} />
 
-      {/* New message form (inline) */}
-      {mode === "list" && !activeMessageId && (
-        <div className="rounded-xl bg-white border border-gray-200 p-5 space-y-4" id="new-form" style={{ display: "none" }}>
-          {/* Hidden by default, shown via JS */}
+      {/* Create message form — shown when user clicks "+ New Message" */}
+      {showCreateForm && (
+        <div className="rounded-xl bg-white border border-gray-200 p-5">
+          <h3 className="text-sm font-semibold text-navy mb-3">Create a New Farewell Message</h3>
+          {error && <div className="mb-3 rounded-lg bg-red-50 border border-red-200 px-4 py-2 text-sm text-red-700">{error}</div>}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-medium text-charcoal mb-1">Title</label>
+              <input type="text" value={newTitle} onChange={(e) => setNewTitle(e.target.value)} placeholder='e.g., "For Sarah"' className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-navy/20 focus:border-navy" />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-charcoal mb-1">Recipient Email</label>
+              <input type="email" value={newRecipient} onChange={(e) => setNewRecipient(e.target.value)} placeholder="recipient@email.com" className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-navy/20 focus:border-navy" />
+            </div>
+          </div>
+          <button onClick={handleCreateMessage} disabled={creating || !newTitle.trim() || !newRecipient.trim()} className="mt-3 px-4 py-2 rounded-lg bg-navy text-sm font-medium text-white hover:bg-navy/90 transition-colors disabled:opacity-50">
+            {creating ? "Creating..." : "Continue"}
+          </button>
         </div>
       )}
-
-      {/* Create message form */}
-      <div className="rounded-xl bg-white border border-gray-200 p-5">
-        <h3 className="text-sm font-semibold text-navy mb-3">Create a New Farewell Message</h3>
-        {error && <div className="mb-3 rounded-lg bg-red-50 border border-red-200 px-4 py-2 text-sm text-red-700">{error}</div>}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <div>
-            <label className="block text-xs font-medium text-charcoal mb-1">Title</label>
-            <input type="text" value={newTitle} onChange={(e) => setNewTitle(e.target.value)} placeholder='e.g., "For Sarah"' className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-navy/20 focus:border-navy" />
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-charcoal mb-1">Recipient Email</label>
-            <input type="email" value={newRecipient} onChange={(e) => setNewRecipient(e.target.value)} placeholder="recipient@email.com" className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-navy/20 focus:border-navy" />
-          </div>
-        </div>
-        <button onClick={handleCreateMessage} disabled={creating || !newTitle.trim() || !newRecipient.trim()} className="mt-3 px-4 py-2 rounded-lg bg-navy text-sm font-medium text-white hover:bg-navy/90 transition-colors disabled:opacity-50">
-          {creating ? "Creating..." : "Continue"}
-        </button>
-      </div>
 
       {/* Messages list */}
       {loading ? (
