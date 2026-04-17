@@ -3,6 +3,7 @@ export interface WillIntake {
   lastName: string;
   dateOfBirth: string;
   city: string;
+  hasMinorChildren: string;
   executorName: string;
   executorRelationship: string;
   successorExecutorName: string;
@@ -17,7 +18,8 @@ export interface WillIntake {
   guardianRelationship: string;
   successorGuardianName: string;
   hasContingentBeneficiary: string;
-  contingentBeneficiaries: Array<{ name: string; relationship: string }>;
+  contingentBeneficiaries: Array<{ name: string; relationship: string; share: string }>;
+  contingentEqualShares: string;
   organDonation: string;
   hasSpecificGifts: string;
   specificGiftsDescription: string;
@@ -28,6 +30,7 @@ export const initialWillIntake: WillIntake = {
   lastName: "",
   dateOfBirth: "",
   city: "",
+  hasMinorChildren: "",
   executorName: "",
   executorRelationship: "",
   successorExecutorName: "",
@@ -43,6 +46,7 @@ export const initialWillIntake: WillIntake = {
   successorGuardianName: "",
   hasContingentBeneficiary: "",
   contingentBeneficiaries: [],
+  contingentEqualShares: "",
   organDonation: "",
   hasSpecificGifts: "",
   specificGiftsDescription: "",

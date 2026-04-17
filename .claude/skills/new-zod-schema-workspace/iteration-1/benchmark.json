@@ -1,0 +1,373 @@
+{
+  "metadata": {
+    "skill_name": "new-zod-schema",
+    "skill_path": "<path/to/skill>",
+    "executor_model": "<model-name>",
+    "analyzer_model": "<model-name>",
+    "timestamp": "2026-04-15T10:47:12Z",
+    "evals_run": [
+      0,
+      1,
+      2
+    ],
+    "runs_per_configuration": 3
+  },
+  "runs": [
+    {
+      "eval_id": 0,
+      "configuration": "with_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 1.0,
+        "passed": 7,
+        "failed": 0,
+        "total": 7,
+        "time_seconds": 20.8,
+        "tokens": 15834,
+        "tool_calls": 0,
+        "errors": 0
+      },
+      "expectations": [
+        {
+          "text": "Schema is named partnerOnboardingStep1Schema",
+          "passed": true,
+          "evidence": "export const partnerOnboardingStep1Schema = z.object({"
+        },
+        {
+          "text": "Exported type is PartnerOnboardingStep1 using z.infer<typeof ...>",
+          "passed": true,
+          "evidence": "export type PartnerOnboardingStep1 = z.infer<typeof partnerOnboardingStep1Schema>;"
+        },
+        {
+          "text": "company_name uses .string().min(1, ...) \u2014 required string pattern",
+          "passed": true,
+          "evidence": "company_name: z.string().min(1, \"Company name is required\")"
+        },
+        {
+          "text": "website is optional with no extra validators (no .url(), no .email())",
+          "passed": true,
+          "evidence": "website: z.string().optional() \u2014 no .url() or .email() present"
+        },
+        {
+          "text": "business_type uses z.enum with all 4 correct values",
+          "passed": true,
+          "evidence": "business_type: z.enum([\"law_firm\", \"financial_advisor\", \"insurance\", \"other\"])"
+        },
+        {
+          "text": "No spurious import statement added",
+          "passed": true,
+          "evidence": "No import statement present in the output"
+        },
+        {
+          "text": "No acknowledgment_signed field present",
+          "passed": true,
+          "evidence": "No acknowledgment_signed field found anywhere in the schema"
+        }
+      ],
+      "notes": []
+    },
+    {
+      "eval_id": 1,
+      "configuration": "with_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 1.0,
+        "passed": 6,
+        "failed": 0,
+        "total": 6,
+        "time_seconds": 23.5,
+        "tokens": 15822,
+        "tool_calls": 0,
+        "errors": 0
+      },
+      "expectations": [
+        {
+          "text": "Schema named vaultItemSchema",
+          "passed": true,
+          "evidence": "export const vaultItemSchema = z.object({"
+        },
+        {
+          "text": "Type exported as VaultItem",
+          "passed": true,
+          "evidence": "export type VaultItem = z.infer<typeof vaultItemSchema>;"
+        },
+        {
+          "text": "item_name uses .string().min(1, ...) \u2014 required",
+          "passed": true,
+          "evidence": "item_name: z.string().min(1, \"Item name is required\")"
+        },
+        {
+          "text": "category uses z.enum with all 6 correct values (insurance, financial, digital, physical, contact, wishes)",
+          "passed": true,
+          "evidence": "category: z.enum([\"insurance\",\"financial\",\"digital\",\"physical\",\"contact\",\"wishes\"])"
+        },
+        {
+          "text": "url uses plain .string().optional() \u2014 no extra validators (no .url(), no .or())",
+          "passed": true,
+          "evidence": "url: z.string().optional() \u2014 no .url() or .or() present"
+        },
+        {
+          "text": "No acknowledgment_signed field",
+          "passed": true,
+          "evidence": "No acknowledgment_signed field found anywhere in the schema"
+        }
+      ],
+      "notes": []
+    },
+    {
+      "eval_id": 2,
+      "configuration": "with_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 1.0,
+        "passed": 7,
+        "failed": 0,
+        "total": 7,
+        "time_seconds": 25.6,
+        "tokens": 15841,
+        "tool_calls": 0,
+        "errors": 0
+      },
+      "expectations": [
+        {
+          "text": "Schema named attorneyReviewRequestSchema",
+          "passed": true,
+          "evidence": "export const attorneyReviewRequestSchema = z.object({"
+        },
+        {
+          "text": "Type exported as AttorneyReviewRequest",
+          "passed": true,
+          "evidence": "export type AttorneyReviewRequest = z.infer<typeof attorneyReviewRequestSchema>;"
+        },
+        {
+          "text": "acknowledgment_signed uses .boolean().refine(val => val === true, ...) pattern",
+          "passed": true,
+          "evidence": "acknowledgment_signed: z.boolean().refine((val) => val === true, { message: \"...\" })"
+        },
+        {
+          "text": "acknowledgment_signed is the LAST field in the schema",
+          "passed": true,
+          "evidence": "acknowledgment_signed is the final field before the closing }); of z.object"
+        },
+        {
+          "text": "Acknowledgment message is exactly: \"You must sign the acknowledgment before proceeding\"",
+          "passed": true,
+          "evidence": "message: \"You must sign the acknowledgment before proceeding\""
+        },
+        {
+          "text": "urgency uses z.enum([\"standard\", \"urgent\"])",
+          "passed": true,
+          "evidence": "urgency: z.enum([\"standard\", \"urgent\"])"
+        },
+        {
+          "text": "No spurious import statement",
+          "passed": true,
+          "evidence": "No import statement present in the output"
+        }
+      ],
+      "notes": []
+    },
+    {
+      "eval_id": 0,
+      "configuration": "without_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 0.7143,
+        "passed": 5,
+        "failed": 2,
+        "total": 7,
+        "time_seconds": 25.4,
+        "tokens": 14249,
+        "tool_calls": 0,
+        "errors": 0
+      },
+      "expectations": [
+        {
+          "text": "Schema is named partnerOnboardingStep1Schema",
+          "passed": true,
+          "evidence": "export const partnerOnboardingStep1Schema = z.object({"
+        },
+        {
+          "text": "Exported type is PartnerOnboardingStep1 using z.infer<typeof ...>",
+          "passed": true,
+          "evidence": "export type PartnerOnboardingStep1 = z.infer<typeof partnerOnboardingStep1Schema>;"
+        },
+        {
+          "text": "company_name uses .string().min(1, ...) \u2014 required string pattern",
+          "passed": true,
+          "evidence": "company_name: z.string().min(1, \"Company name is required\")"
+        },
+        {
+          "text": "website is optional with no extra validators (no .url(), no .email())",
+          "passed": false,
+          "evidence": "website: z.string().url(\"Please enter a valid URL\").optional() \u2014 adds .url() validator which is not allowed"
+        },
+        {
+          "text": "business_type uses z.enum with all 4 correct values",
+          "passed": true,
+          "evidence": "business_type: z.enum([\"law_firm\", \"financial_advisor\", \"insurance\", \"other\"])"
+        },
+        {
+          "text": "No spurious import statement added",
+          "passed": false,
+          "evidence": "import { z } from \"zod\"; is present at the top of the output"
+        },
+        {
+          "text": "No acknowledgment_signed field present",
+          "passed": true,
+          "evidence": "No acknowledgment_signed field found anywhere in the schema"
+        }
+      ],
+      "notes": []
+    },
+    {
+      "eval_id": 1,
+      "configuration": "without_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 0.8333,
+        "passed": 5,
+        "failed": 1,
+        "total": 6,
+        "time_seconds": 28.6,
+        "tokens": 14754,
+        "tool_calls": 0,
+        "errors": 0
+      },
+      "expectations": [
+        {
+          "text": "Schema named vaultItemSchema",
+          "passed": true,
+          "evidence": "export const vaultItemSchema = z.object({"
+        },
+        {
+          "text": "Type exported as VaultItem",
+          "passed": true,
+          "evidence": "export type VaultItem = z.infer<typeof vaultItemSchema>;"
+        },
+        {
+          "text": "item_name uses .string().min(1, ...) \u2014 required",
+          "passed": true,
+          "evidence": "item_name: z.string().min(1, \"Item name is required\")"
+        },
+        {
+          "text": "category uses z.enum with all 6 correct values (insurance, financial, digital, physical, contact, wishes)",
+          "passed": true,
+          "evidence": "category: z.enum([\"insurance\",\"financial\",\"digital\",\"physical\",\"contact\",\"wishes\"])"
+        },
+        {
+          "text": "url uses plain .string().optional() \u2014 no extra validators (no .url(), no .or())",
+          "passed": false,
+          "evidence": "url: z.string().url(\"Must be a valid URL\").optional().or(z.literal(\"\")) \u2014 adds .url() and .or(z.literal(\"\")) which are not allowed"
+        },
+        {
+          "text": "No acknowledgment_signed field",
+          "passed": true,
+          "evidence": "No acknowledgment_signed field found anywhere in the schema"
+        }
+      ],
+      "notes": []
+    },
+    {
+      "eval_id": 2,
+      "configuration": "without_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 0.7143,
+        "passed": 5,
+        "failed": 2,
+        "total": 7,
+        "time_seconds": 22.0,
+        "tokens": 14282,
+        "tool_calls": 0,
+        "errors": 0
+      },
+      "expectations": [
+        {
+          "text": "Schema named attorneyReviewRequestSchema",
+          "passed": true,
+          "evidence": "export const attorneyReviewRequestSchema = z.object({"
+        },
+        {
+          "text": "Type exported as AttorneyReviewRequest",
+          "passed": true,
+          "evidence": "export type AttorneyReviewRequest = z.infer<typeof attorneyReviewRequestSchema>;"
+        },
+        {
+          "text": "acknowledgment_signed uses .boolean().refine(val => val === true, ...) pattern",
+          "passed": true,
+          "evidence": "acknowledgment_signed: z.boolean().refine((val) => val === true, { message: \"...\" })"
+        },
+        {
+          "text": "acknowledgment_signed is the LAST field in the schema",
+          "passed": true,
+          "evidence": "acknowledgment_signed is the final field before the closing }); of z.object"
+        },
+        {
+          "text": "Acknowledgment message is exactly: \"You must sign the acknowledgment before proceeding\"",
+          "passed": false,
+          "evidence": "message: \"You must check the acknowledgment box before submitting\" \u2014 does not match required exact text"
+        },
+        {
+          "text": "urgency uses z.enum([\"standard\", \"urgent\"])",
+          "passed": true,
+          "evidence": "urgency: z.enum([\"standard\", \"urgent\"])"
+        },
+        {
+          "text": "No spurious import statement",
+          "passed": false,
+          "evidence": "import { z } from \"zod\"; is present at the top of the output"
+        }
+      ],
+      "notes": []
+    }
+  ],
+  "run_summary": {
+    "with_skill": {
+      "pass_rate": {
+        "mean": 1.0,
+        "stddev": 0.0,
+        "min": 1.0,
+        "max": 1.0
+      },
+      "time_seconds": {
+        "mean": 23.3,
+        "stddev": 2.4062,
+        "min": 20.8,
+        "max": 25.6
+      },
+      "tokens": {
+        "mean": 15832.3333,
+        "stddev": 9.609,
+        "min": 15822,
+        "max": 15841
+      }
+    },
+    "without_skill": {
+      "pass_rate": {
+        "mean": 0.754,
+        "stddev": 0.0687,
+        "min": 0.7143,
+        "max": 0.8333
+      },
+      "time_seconds": {
+        "mean": 25.3333,
+        "stddev": 3.3005,
+        "min": 22.0,
+        "max": 28.6
+      },
+      "tokens": {
+        "mean": 14428.3333,
+        "stddev": 282.5178,
+        "min": 14249,
+        "max": 14754
+      }
+    },
+    "delta": {
+      "pass_rate": "+0.25",
+      "time_seconds": "-2.0",
+      "tokens": "+1404"
+    }
+  },
+  "notes": []
+}

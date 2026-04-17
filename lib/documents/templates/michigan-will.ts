@@ -67,7 +67,8 @@ export function buildWillPrompt(intake: Record<string, unknown>): string {
   const guardian_relationship = (i.guardian_relationship || i.guardianRelationship || "") as string;
   const successor_guardian = (i.successor_guardian || i.successorGuardianName || "") as string;
   const specific_gifts = (i.specific_gifts || (i.hasSpecificGifts === "Yes" ? i.specificGiftsDescription : "") || "") as string;
-  const contingent_beneficiaries = (i.contingent_beneficiaries || i.contingentBeneficiaries || []) as Array<{ name: string; relationship: string }>;
+  const contingent_beneficiaries = (i.contingent_beneficiaries || i.contingentBeneficiaries || []) as Array<{ name: string; relationship: string; share?: string }>;
+  const contingent_equal_shares = (i.contingentEqualShares ?? "Yes") as string;
 
   let prompt = `Draft a Michigan Last Will and Testament with the following client intake data:
 
@@ -85,7 +86,17 @@ BENEFICIARY DESIGNATIONS:
 
   if (secondary_beneficiary) {
     prompt += `\n- Secondary Beneficiary: ${secondary_beneficiary}`;
-    prompt += `\n- Estate Distribution: ${estate_split}`;
+    if (estate_split === "50/50") {
+      prompt += `\n- Estate Distribution: Equal split — ${primary_beneficiary} 50%, ${secondary_beneficiary} 50%`;
+    } else {
+      const customSplitStr = (i.customSplit || i.custom_split || "") as string;
+      const sp = customSplitStr.split("/");
+      const pPct = sp[0]?.trim();
+      const sPct = sp[1]?.trim();
+      prompt += pPct && sPct
+        ? `\n- Estate Distribution: ${primary_beneficiary} receives ${pPct}%, ${secondary_beneficiary} receives ${sPct}%`
+        : `\n- Estate Distribution: ${estate_split}`;
+    }
     prompt += `\n\nRESIDUARY CLAUSE INSTRUCTIONS:
 If the primary beneficiary does not survive the testator by thirty (30) days, the entire residuary estate shall pass to the secondary beneficiary, ${secondary_beneficiary}. If neither the primary nor secondary beneficiary survives the testator by thirty (30) days, then the estate shall pass to the testator's heirs at law under Michigan intestate succession.`;
   } else {
@@ -97,9 +108,14 @@ If the primary beneficiary does not survive the testator by thirty (30) days, th
   if (contingent_beneficiaries.length > 0) {
     prompt += `\n\nCONTINGENT BENEFICIARIES:`;
     contingent_beneficiaries.forEach((b, idx) => {
-      prompt += `\nContingent Beneficiary ${idx + 1}: ${b.name} (${b.relationship})`;
+      const shareLabel = contingent_equal_shares === "No" && b.share ? ` — ${b.share}%` : "";
+      prompt += `\nContingent Beneficiary ${idx + 1}: ${b.name} (${b.relationship})${shareLabel}`;
     });
-    prompt += `\n\nContingent beneficiaries inherit only if ALL primary beneficiaries predecease the testator or fail to survive by 30 days. If multiple contingent beneficiaries, they share equally. If any contingent beneficiary predeceases the testator, their share passes to the surviving contingent beneficiaries.`;
+    if (contingent_equal_shares === "No") {
+      prompt += `\n\nContingent beneficiaries inherit only if ALL primary beneficiaries predecease the testator or fail to survive by 30 days. Distribute the estate among the contingent beneficiaries at the percentages specified above. If any contingent beneficiary predeceases the testator, their share passes to the surviving contingent beneficiaries proportionally.`;
+    } else {
+      prompt += `\n\nContingent beneficiaries inherit only if ALL primary beneficiaries predecease the testator or fail to survive by 30 days. If multiple contingent beneficiaries, they share equally. If any contingent beneficiary predeceases the testator, their share passes to the surviving contingent beneficiaries in equal shares.`;
+    }
   } else {
     prompt += `\n\nCONTINGENT BENEFICIARIES: None designated. If primary beneficiary does not survive, estate passes to heirs under Michigan intestate succession.`;
   }

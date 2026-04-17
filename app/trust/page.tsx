@@ -43,7 +43,9 @@ export default function TrustPage() {
   const [currentCard, setCurrentCard] = useState(0);
   const [animating, setAnimating] = useState(false);
   const [direction, setDirection] = useState<"forward" | "back">("forward");
-  const [hasMinorChildren, setHasMinorChildren] = useState(false);
+  const [customAgeMode, setCustomAgeMode] = useState(false);
+  const [customAgeError, setCustomAgeError] = useState("");
+  const hasMinorChildren = intake.hasMinorChildren === "Yes";
 
   const update = useCallback(
     (updates: Partial<TrustIntake>) => setIntake((prev) => ({ ...prev, ...updates })),
@@ -66,10 +68,9 @@ export default function TrustPage() {
               if (a.financeManager) update({ poaAgentName: a.financeManager });
               if (a.medicalDecisionMaker) update({ patientAdvocateName: a.medicalDecisionMaker });
               if (a.childGuardian && a.childGuardian !== "N/A") {
-                update({ guardianName: a.childGuardian });
-                setHasMinorChildren(true);
+                update({ guardianName: a.childGuardian, hasMinorChildren: "Yes" });
               }
-              if (a.hasChildren === "Yes") setHasMinorChildren(true);
+              if (a.hasChildren === "Yes") update({ hasMinorChildren: "Yes" });
             }
           }
         } catch { /* no quiz data */ }
@@ -94,7 +95,7 @@ export default function TrustPage() {
   function isCardComplete(): boolean {
     switch (activeCardId) {
       case "about":
-        return intake.firstName.trim() !== "" && intake.lastName.trim() !== "" && intake.dateOfBirth !== "" && intake.city.trim() !== "";
+        return intake.firstName.trim() !== "" && intake.lastName.trim() !== "" && intake.dateOfBirth !== "" && intake.city.trim() !== "" && intake.hasMinorChildren !== "";
       case "trustee":
         return intake.primaryTrustee !== "" && (intake.primaryTrustee === "Myself" || intake.trusteeName.trim() !== "") && intake.successorTrusteeName.trim() !== "" && intake.successorTrusteeRelationship !== "";
       case "beneficiaries": {
@@ -102,9 +103,21 @@ export default function TrustPage() {
         if (!base) return false;
         if (intake.hasSecondBeneficiary === "Yes") {
           if (!intake.secondBeneficiaryName.trim() || !intake.secondBeneficiaryRelationship || !intake.estateSplit) return false;
-          if (intake.estateSplit === "Other" && !intake.customSplit.trim()) return false;
+          if (intake.estateSplit === "Other") {
+            if (!intake.customSplit.trim()) return false;
+            const sp = intake.customSplit.split("/");
+            if (Math.round((parseFloat(sp[0]) || 0) + (parseFloat(sp[1]) || 0)) !== 100) return false;
+          }
         }
         if (intake.hasContingentBeneficiary === "Yes" && (intake.contingentBeneficiaries.length === 0 || intake.contingentBeneficiaries.some((b) => !b.name.trim() || !b.relationship))) return false;
+        if (intake.hasContingentBeneficiary === "Yes" && intake.contingentBeneficiaries.length > 1) {
+          if (!intake.contingentEqualShares) return false;
+          if (intake.contingentEqualShares === "No") {
+            if (intake.contingentBeneficiaries.some((b) => !b.share?.trim())) return false;
+            const shareTotal = intake.contingentBeneficiaries.reduce((sum, b) => sum + (parseFloat(b.share) || 0), 0);
+            if (Math.round(shareTotal) !== 100) return false;
+          }
+        }
         if (hasMinorChildren && !intake.distributionAge) return false;
         return true;
       }
@@ -209,6 +222,7 @@ export default function TrustPage() {
             <div className="mt-5"><QuestionLabel>Last name</QuestionLabel><TextInput value={intake.lastName} onChange={(v) => update({ lastName: v })} placeholder="Last name" /></div>
             <div className="mt-5"><QuestionLabel>Date of birth</QuestionLabel><input type="date" value={intake.dateOfBirth} onChange={(e) => update({ dateOfBirth: e.target.value })} className="min-h-[44px] w-full rounded-xl border-2 border-gray-200 bg-white px-4 py-3 text-sm text-charcoal focus:border-gold focus:outline-none focus:ring-1 focus:ring-gold/30 transition-colors" /></div>
             <div className="mt-5"><QuestionLabel>City of residence</QuestionLabel><TextInput value={intake.city} onChange={(v) => update({ city: v })} placeholder="e.g. Grand Rapids" /></div>
+            <div className="mt-5"><QuestionLabel>Do you have minor children (under 18)?</QuestionLabel><YesNoTiles value={intake.hasMinorChildren} onChange={(v) => update({ hasMinorChildren: v, ...(v === "No" ? { guardianName: "", guardianRelationship: "", successorGuardianName: "" } : {}) })} /></div>
             <div className="mt-5">
               <QuestionLabel>Trust name (optional)</QuestionLabel>
               <p className="mb-2 text-xs text-charcoal/50">Leave blank to use the default: &quot;The [Your Name] Revocable Living Trust&quot;</p>
@@ -222,7 +236,7 @@ export default function TrustPage() {
           <>
             <p className="mb-2 text-xs text-charcoal/60 leading-relaxed">Your trustee is responsible for managing the assets inside your trust. While you are alive and capable, you remain in full control as your own trustee.</p>
             <p className="mb-5 text-xs text-charcoal/50">Most people name <strong>Myself</strong> as the primary trustee. Your successor trustee automatically takes over only if you become incapacitated or pass away — they have no control during your lifetime.</p>
-            <QuestionLabel>Who should serve as primary trustee?</QuestionLabel>
+            <QuestionLabel>Who are you creating trust for?</QuestionLabel>
             <div className="grid grid-cols-2 gap-3">
               {["Myself", "Someone else"].map((opt) => (<ChoiceTile key={opt} label={opt} selected={intake.primaryTrustee === opt} onClick={() => update({ primaryTrustee: opt, ...(opt === "Myself" ? { trusteeName: "" } : {}) })} />))}
             </div>
@@ -255,18 +269,79 @@ export default function TrustPage() {
                 <div className="mt-5"><QuestionLabel>Second beneficiary full name</QuestionLabel><TextInput value={intake.secondBeneficiaryName} onChange={(v) => update({ secondBeneficiaryName: v })} placeholder="Full name" /></div>
                 <div className="mt-5"><QuestionLabel>Relationship</QuestionLabel><div className="grid grid-cols-2 gap-3">{benRelOptions.map((opt) => (<ChoiceTile key={opt} label={opt} selected={intake.secondBeneficiaryRelationship === opt} onClick={() => update({ secondBeneficiaryRelationship: opt })} />))}</div></div>
                 <div className="mt-5"><QuestionLabel>Split equally between both beneficiaries?</QuestionLabel><div className="grid grid-cols-2 gap-3">{[{label: "Yes — equal split", val: "50/50"}, {label: "No — custom split", val: "Other"}].map(({label, val}) => (<ChoiceTile key={val} label={label} selected={val === "50/50" ? intake.estateSplit === "50/50" : intake.estateSplit !== "" && intake.estateSplit !== "50/50"} onClick={() => update({ estateSplit: val, ...(val === "50/50" ? { customSplit: "" } : {}) })} />))}</div>
-                  {intake.estateSplit !== "" && intake.estateSplit !== "50/50" && <div className="mt-3"><p className="mb-2 text-xs text-charcoal/50">Enter percentage for each beneficiary (e.g. 70/30, 60/40)</p><TextInput value={intake.customSplit} onChange={(v) => update({ customSplit: v, estateSplit: v || "Other" })} placeholder="e.g. 70/30" /></div>}
+                  {intake.estateSplit !== "" && intake.estateSplit !== "50/50" && (() => {
+                    const parts = (intake.customSplit || "").split("/");
+                    const pPct = parts[0] ?? "";
+                    const sPct = parts[1] ?? "";
+                    const total = (parseFloat(pPct) || 0) + (parseFloat(sPct) || 0);
+                    return (
+                      <div className="mt-3 space-y-2">
+                        {[
+                          { label: intake.primaryBeneficiaryName || "Primary beneficiary", pct: pPct, side: "primary" as const },
+                          { label: intake.secondBeneficiaryName || "Second beneficiary", pct: sPct, side: "secondary" as const },
+                        ].map(({ label, pct, side }) => (
+                          <div key={side} className="flex items-center gap-3 rounded-xl border-2 border-gray-200 bg-white px-4 py-3">
+                            <span className="flex-1 truncate text-sm font-medium text-navy">{label}</span>
+                            <div className="flex items-center gap-1.5">
+                              <input type="number" min={0} max={100} value={pct}
+                                onChange={(e) => { const v = e.target.value; update({ customSplit: side === "primary" ? `${v}/${sPct}` : `${pPct}/${v}`, estateSplit: "Other" }); }}
+                                className="w-16 rounded-lg border-2 border-gray-200 px-2 py-1.5 text-center text-sm font-medium focus:border-gold focus:outline-none transition-colors"
+                                placeholder="0" />
+                              <span className="text-sm text-charcoal/50">%</span>
+                            </div>
+                          </div>
+                        ))}
+                        <p className={`text-sm font-medium ${Math.round(total) === 100 ? "text-green-600" : "text-red-500"}`}>
+                          Total: {total % 1 === 0 ? total : total.toFixed(1)}%{Math.round(total) === 100 ? " — all set" : " — must equal 100%"}
+                        </p>
+                      </div>
+                    );
+                  })()}
                 </div>
               </>
             )}
-            {hasMinorChildren && (
-              <div className="mt-5"><QuestionLabel>At what age should a minor beneficiary receive their full inheritance?</QuestionLabel><p className="mb-2 text-xs text-charcoal/50">Assets are held in trust until this age. Michigan law grants full rights at 18.</p><div className="grid grid-cols-4 gap-3">{["18", "21", "25", "30"].map((opt) => (<ChoiceTile key={opt} label={opt} selected={intake.distributionAge === opt} onClick={() => update({ distributionAge: opt })} />))}</div></div>
-            )}
+            {hasMinorChildren && (() => {
+              const presetAges = ["18", "21", "25", "30"];
+              const isCustomSelected = customAgeMode || (!!intake.distributionAge && !presetAges.includes(intake.distributionAge));
+              return (
+                <div className="mt-5">
+                  <QuestionLabel>At what age should a minor beneficiary receive their full inheritance?</QuestionLabel>
+                  <p className="mb-2 text-xs text-charcoal/50">Assets are held in trust until this age. Michigan law grants full rights at 18.</p>
+                  <div className="grid grid-cols-5 gap-3">
+                    {presetAges.map((opt) => (
+                      <ChoiceTile key={opt} label={opt} selected={!isCustomSelected && intake.distributionAge === opt} onClick={() => { setCustomAgeMode(false); update({ distributionAge: opt }); }} />
+                    ))}
+                    <ChoiceTile label="Other" selected={isCustomSelected} onClick={() => { setCustomAgeMode(true); if (presetAges.includes(intake.distributionAge)) update({ distributionAge: "" }); }} />
+                  </div>
+                  {isCustomSelected && (
+                    <div className="mt-3">
+                      <TextInput
+                        value={intake.distributionAge}
+                        onChange={(v) => {
+                          const digits = v.replace(/[^0-9]/g, "");
+                          if (digits.length > 0 && parseInt(digits, 10) > 99) {
+                            setCustomAgeError("Age must be under 99.");
+                            update({ distributionAge: "99" });
+                          } else {
+                            setCustomAgeError("");
+                            update({ distributionAge: digits.slice(0, 2) });
+                          }
+                        }}
+                        placeholder="Enter custom age (e.g., 35)"
+                      />
+                      {customAgeError && (
+                        <p className="mt-1 text-xs text-red-500">{customAgeError}</p>
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
             {/* Contingent beneficiary */}
             <div className="mt-5">
               <QuestionLabel>Add a contingent beneficiary?</QuestionLabel>
               <p className="mb-3 text-xs text-charcoal/50">A contingent beneficiary inherits only if your primary beneficiary cannot. Example: your children inherit if your spouse passes before you.</p>
-              <YesNoTiles value={intake.hasContingentBeneficiary} onChange={(v) => { update({ hasContingentBeneficiary: v }); if (v === "Yes" && intake.contingentBeneficiaries.length === 0) update({ contingentBeneficiaries: [{ name: "", relationship: "" }] }); if (v === "No") update({ contingentBeneficiaries: [] }); }} />
+              <YesNoTiles value={intake.hasContingentBeneficiary} onChange={(v) => { update({ hasContingentBeneficiary: v }); if (v === "Yes" && intake.contingentBeneficiaries.length === 0) update({ contingentBeneficiaries: [{ name: "", relationship: "", share: "" }] }); if (v === "No") update({ contingentBeneficiaries: [], contingentEqualShares: "" }); }} />
             </div>
             {intake.hasContingentBeneficiary === "Yes" && (
               <>
@@ -280,7 +355,36 @@ export default function TrustPage() {
                   </div>
                 ))}
                 {intake.contingentBeneficiaries.length < 3 && (
-                  <button type="button" onClick={() => update({ contingentBeneficiaries: [...intake.contingentBeneficiaries, { name: "", relationship: "" }] })} className="mt-3 text-sm text-gold font-medium hover:text-gold/80">+ Add another contingent beneficiary</button>
+                  <button type="button" onClick={() => update({ contingentBeneficiaries: [...intake.contingentBeneficiaries, { name: "", relationship: "", share: "" }] })} className="mt-3 text-sm text-gold font-medium hover:text-gold/80">+ Add another contingent beneficiary</button>
+                )}
+                {intake.contingentBeneficiaries.length > 1 && (
+                  <div className="mt-5">
+                    <QuestionLabel>Should these beneficiaries receive equal shares?</QuestionLabel>
+                    <YesNoTiles value={intake.contingentEqualShares} onChange={(v) => { update({ contingentEqualShares: v, contingentBeneficiaries: intake.contingentBeneficiaries.map((b) => ({ ...b, share: "" })) }); }} />
+                    {intake.contingentEqualShares === "No" && (() => {
+                      const total = intake.contingentBeneficiaries.reduce((sum, b) => sum + (parseFloat(b.share) || 0), 0);
+                      const rounded = Math.round(total);
+                      return (
+                        <div className="mt-3 space-y-2">
+                          {intake.contingentBeneficiaries.map((cb, idx) => (
+                            <div key={idx} className="flex items-center gap-3 rounded-xl border-2 border-gray-200 bg-white px-4 py-3">
+                              <span className="flex-1 truncate text-sm font-medium text-navy">{cb.name || `Beneficiary ${idx + 1}`}</span>
+                              <div className="flex items-center gap-1.5">
+                                <input type="number" min={0} max={100} value={cb.share}
+                                  onChange={(e) => { const u = [...intake.contingentBeneficiaries]; u[idx] = { ...u[idx], share: e.target.value }; update({ contingentBeneficiaries: u }); }}
+                                  className="w-16 rounded-lg border-2 border-gray-200 px-2 py-1.5 text-center text-sm font-medium focus:border-gold focus:outline-none transition-colors"
+                                  placeholder="0" />
+                                <span className="text-sm text-charcoal/50">%</span>
+                              </div>
+                            </div>
+                          ))}
+                          <p className={`text-sm font-medium ${rounded === 100 ? "text-green-600" : "text-red-500"}`}>
+                            Total: {total % 1 === 0 ? total : total.toFixed(1)}%{rounded === 100 ? " — all set" : " — must equal 100%"}
+                          </p>
+                        </div>
+                      );
+                    })()}
+                  </div>
                 )}
               </>
             )}
@@ -406,10 +510,10 @@ export default function TrustPage() {
             <hr className="border-gray-100" />
             <div><p className="font-medium text-navy">Beneficiaries</p>
               <p className="text-charcoal/70">{intake.primaryBeneficiaryName} ({intake.primaryBeneficiaryRelationship})</p>
-              {intake.hasSecondBeneficiary === "Yes" && <p className="text-charcoal/70">{intake.secondBeneficiaryName} ({intake.secondBeneficiaryRelationship}) &middot; Split: {intake.estateSplit === "50/50" ? "50/50 (equal)" : intake.customSplit || intake.estateSplit}</p>}
+              {intake.hasSecondBeneficiary === "Yes" && <p className="text-charcoal/70">{intake.secondBeneficiaryName} ({intake.secondBeneficiaryRelationship}) &middot; {intake.estateSplit === "50/50" ? "50% each" : (() => { const sp = (intake.customSplit || "").split("/"); return `${intake.primaryBeneficiaryName} ${sp[0] || "?"}% / ${intake.secondBeneficiaryName} ${sp[1] || "?"}%`; })()}</p>}
               {hasMinorChildren && intake.distributionAge && <p className="text-charcoal/50 text-xs">Distribution age: {intake.distributionAge}</p>}
               {intake.hasContingentBeneficiary === "Yes" && intake.contingentBeneficiaries.length > 0 ? (
-                <p className="text-charcoal/50 text-xs mt-1">Contingent: {intake.contingentBeneficiaries.map((b) => `${b.name} (${b.relationship})`).join(", ")}</p>
+                <p className="text-charcoal/50 text-xs mt-1">Contingent: {intake.contingentBeneficiaries.map((b) => intake.contingentEqualShares === "No" && b.share ? `${b.name} (${b.relationship}) — ${b.share}%` : `${b.name} (${b.relationship})`).join(", ")}{intake.contingentBeneficiaries.length > 1 && intake.contingentEqualShares !== "No" && " — equal shares"}</p>
               ) : (
                 <p className="text-charcoal/50 text-xs mt-1">No contingent beneficiary designated</p>
               )}

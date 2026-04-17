@@ -1,0 +1,35 @@
+{
+  "eval_id": 2,
+  "eval_name": "attorney-review-schema",
+  "prompt": "Create a schema for the attorney review request form. Fields: client_id required, order_id required, notes optional, urgency (one of: standard, urgent), and the user must check an acknowledgment box.",
+  "assertions": [
+    {
+      "text": "Schema named attorneyReviewRequestSchema",
+      "check": "grep 'attorneyReviewRequestSchema' schema_addition.ts"
+    },
+    {
+      "text": "Type exported as AttorneyReviewRequest",
+      "check": "grep 'AttorneyReviewRequest' schema_addition.ts"
+    },
+    {
+      "text": "acknowledgment_signed uses .boolean().refine(val => val === true, ...) pattern",
+      "check": "grep 'boolean.*refine' schema_addition.ts"
+    },
+    {
+      "text": "acknowledgment_signed is the LAST field in the schema",
+      "check": "acknowledgment_signed appears after urgency in the object"
+    },
+    {
+      "text": "Acknowledgment message matches codebase: 'You must sign the acknowledgment before proceeding'",
+      "check": "grep 'You must sign the acknowledgment before proceeding' schema_addition.ts"
+    },
+    {
+      "text": "urgency uses z.enum(['standard', 'urgent'])",
+      "check": "grep 'standard.*urgent' schema_addition.ts"
+    },
+    {
+      "text": "No spurious import statement",
+      "check": "no 'import { z }' line"
+    }
+  ]
+}

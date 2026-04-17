@@ -27,7 +27,7 @@ export default function WillPage() {
   const [currentCard, setCurrentCard] = useState(0);
   const [animating, setAnimating] = useState(false);
   const [direction, setDirection] = useState<"forward" | "back">("forward");
-  const [hasMinorChildren, setHasMinorChildren] = useState(false);
+  const hasMinorChildren = intake.hasMinorChildren === "Yes";
 
   const update = useCallback(
     (updates: Partial<WillIntake>) =>
@@ -61,8 +61,7 @@ export default function WillPage() {
               const a = quiz.answers as Record<string, string>;
               if (a.financeManager) update({ executorName: a.financeManager });
               if (a.childGuardian && a.childGuardian !== "N/A") {
-                update({ guardianName: a.childGuardian });
-                setHasMinorChildren(true);
+                update({ guardianName: a.childGuardian, hasMinorChildren: "Yes" });
               }
             }
           }
@@ -92,7 +91,8 @@ export default function WillPage() {
           intake.firstName.trim() !== "" &&
           intake.lastName.trim() !== "" &&
           intake.dateOfBirth !== "" &&
-          intake.city.trim() !== ""
+          intake.city.trim() !== "" &&
+          intake.hasMinorChildren !== ""
         );
       case "executor":
         return (
@@ -114,14 +114,25 @@ export default function WillPage() {
             intake.estateSplit === ""
           )
             return false;
-          if (intake.estateSplit === "Other" && intake.customSplit.trim() === "")
-            return false;
+          if (intake.estateSplit === "Other") {
+            if (!intake.customSplit.trim()) return false;
+            const sp = intake.customSplit.split("/");
+            if (Math.round((parseFloat(sp[0]) || 0) + (parseFloat(sp[1]) || 0)) !== 100) return false;
+          }
         }
         if (intake.hasContingentBeneficiary === "Yes" && intake.contingentBeneficiaries.length === 0)
           return false;
         if (intake.hasContingentBeneficiary === "Yes") {
           if (intake.contingentBeneficiaries.some((b) => !b.name.trim() || !b.relationship))
             return false;
+          if (intake.contingentBeneficiaries.length > 1) {
+            if (!intake.contingentEqualShares) return false;
+            if (intake.contingentEqualShares === "No") {
+              if (intake.contingentBeneficiaries.some((b) => !b.share?.trim())) return false;
+              const shareTotal = intake.contingentBeneficiaries.reduce((sum, b) => sum + (parseFloat(b.share) || 0), 0);
+              if (Math.round(shareTotal) !== 100) return false;
+            }
+          }
         }
         return true;
       }
@@ -339,6 +350,24 @@ export default function WillPage() {
                 placeholder="e.g. Grand Rapids"
               />
             </div>
+            <div className="mt-5">
+              <QuestionLabel>Do you have minor children (under 18)?</QuestionLabel>
+              <YesNoTiles
+                value={intake.hasMinorChildren}
+                onChange={(v) =>
+                  update({
+                    hasMinorChildren: v,
+                    ...(v === "No"
+                      ? {
+                          guardianName: "",
+                          guardianRelationship: "",
+                          successorGuardianName: "",
+                        }
+                      : {}),
+                  })
+                }
+              />
+            </div>
           </>
         );
 
@@ -476,16 +505,42 @@ export default function WillPage() {
                       />
                     ))}
                   </div>
-                  {intake.estateSplit !== "" && intake.estateSplit !== "50/50" && (
-                    <div className="mt-3">
-                      <p className="mb-2 text-xs text-charcoal/50">Enter percentage for each beneficiary (e.g. 70/30, 60/40)</p>
-                      <TextInput
-                        value={intake.customSplit}
-                        onChange={(v) => update({ customSplit: v, estateSplit: v || "Other" })}
-                        placeholder="e.g. 70/30"
-                      />
-                    </div>
-                  )}
+                  {intake.estateSplit !== "" && intake.estateSplit !== "50/50" && (() => {
+                    const parts = (intake.customSplit || "").split("/");
+                    const pPct = parts[0] ?? "";
+                    const sPct = parts[1] ?? "";
+                    const total = (parseFloat(pPct) || 0) + (parseFloat(sPct) || 0);
+                    return (
+                      <div className="mt-3 space-y-2">
+                        {[
+                          { label: intake.primaryBeneficiaryName || "Primary beneficiary", pct: pPct, side: "primary" as const },
+                          { label: intake.secondBeneficiaryName || "Second beneficiary", pct: sPct, side: "secondary" as const },
+                        ].map(({ label, pct, side }) => (
+                          <div key={side} className="flex items-center gap-3 rounded-xl border-2 border-gray-200 bg-white px-4 py-3">
+                            <span className="flex-1 truncate text-sm font-medium text-navy">{label}</span>
+                            <div className="flex items-center gap-1.5">
+                              <input
+                                type="number"
+                                min={0}
+                                max={100}
+                                value={pct}
+                                onChange={(e) => {
+                                  const v = e.target.value;
+                                  update({ customSplit: side === "primary" ? `${v}/${sPct}` : `${pPct}/${v}`, estateSplit: "Other" });
+                                }}
+                                className="w-16 rounded-lg border-2 border-gray-200 px-2 py-1.5 text-center text-sm font-medium focus:border-gold focus:outline-none transition-colors"
+                                placeholder="0"
+                              />
+                              <span className="text-sm text-charcoal/50">%</span>
+                            </div>
+                          </div>
+                        ))}
+                        <p className={`text-sm font-medium ${Math.round(total) === 100 ? "text-green-600" : "text-red-500"}`}>
+                          Total: {total % 1 === 0 ? total : total.toFixed(1)}%{Math.round(total) === 100 ? " — all set" : " — must equal 100%"}
+                        </p>
+                      </div>
+                    );
+                  })()}
                 </div>
               </>
             )}
@@ -498,9 +553,9 @@ export default function WillPage() {
                 onChange={(v) => {
                   update({ hasContingentBeneficiary: v });
                   if (v === "Yes" && intake.contingentBeneficiaries.length === 0) {
-                    update({ contingentBeneficiaries: [{ name: "", relationship: "" }] });
+                    update({ contingentBeneficiaries: [{ name: "", relationship: "", share: "" }] });
                   }
-                  if (v === "No") update({ contingentBeneficiaries: [] });
+                  if (v === "No") update({ contingentBeneficiaries: [], contingentEqualShares: "" });
                 }}
               />
             </div>
@@ -540,11 +595,59 @@ export default function WillPage() {
                 {intake.contingentBeneficiaries.length < 3 && (
                   <button
                     type="button"
-                    onClick={() => update({ contingentBeneficiaries: [...intake.contingentBeneficiaries, { name: "", relationship: "" }] })}
+                    onClick={() => update({ contingentBeneficiaries: [...intake.contingentBeneficiaries, { name: "", relationship: "", share: "" }] })}
                     className="mt-3 text-sm text-gold font-medium hover:text-gold/80"
                   >
                     + Add another contingent beneficiary
                   </button>
+                )}
+                {intake.contingentBeneficiaries.length > 1 && (
+                  <div className="mt-5">
+                    <QuestionLabel>Should these beneficiaries receive equal shares?</QuestionLabel>
+                    <YesNoTiles
+                      value={intake.contingentEqualShares}
+                      onChange={(v) => {
+                        update({
+                          contingentEqualShares: v,
+                          contingentBeneficiaries: intake.contingentBeneficiaries.map((b) => ({ ...b, share: "" })),
+                        });
+                      }}
+                    />
+                    {intake.contingentEqualShares === "No" && (() => {
+                      const total = intake.contingentBeneficiaries.reduce((sum, b) => sum + (parseFloat(b.share) || 0), 0);
+                      const rounded = Math.round(total);
+                      return (
+                        <div className="mt-3 space-y-2">
+                          {intake.contingentBeneficiaries.map((cb, idx) => (
+                            <div key={idx} className="flex items-center gap-3 rounded-xl border-2 border-gray-200 bg-white px-4 py-3">
+                              <span className="flex-1 truncate text-sm font-medium text-navy">
+                                {cb.name || `Beneficiary ${idx + 1}`}
+                              </span>
+                              <div className="flex items-center gap-1.5">
+                                <input
+                                  type="number"
+                                  min={0}
+                                  max={100}
+                                  value={cb.share}
+                                  onChange={(e) => {
+                                    const updated = [...intake.contingentBeneficiaries];
+                                    updated[idx] = { ...updated[idx], share: e.target.value };
+                                    update({ contingentBeneficiaries: updated });
+                                  }}
+                                  className="w-16 rounded-lg border-2 border-gray-200 px-2 py-1.5 text-center text-sm font-medium focus:border-gold focus:outline-none transition-colors"
+                                  placeholder="0"
+                                />
+                                <span className="text-sm text-charcoal/50">%</span>
+                              </div>
+                            </div>
+                          ))}
+                          <p className={`text-sm font-medium ${rounded === 100 ? "text-green-600" : "text-red-500"}`}>
+                            Total: {total % 1 === 0 ? total : total.toFixed(1)}%{rounded === 100 ? " — all set" : " — must equal 100%"}
+                          </p>
+                        </div>
+                      );
+                    })()}
+                  </div>
                 )}
               </>
             )}
@@ -666,15 +769,27 @@ export default function WillPage() {
               {intake.hasSecondBeneficiary === "Yes" && (
                 <>
                   <p className="text-charcoal/70 mt-1">
-                    {intake.secondBeneficiaryName} (
-                    {intake.secondBeneficiaryRelationship}) &middot; Split:{" "}
-                    {intake.estateSplit === "50/50" ? "50/50 (equal)" : intake.customSplit || intake.estateSplit}
+                    {intake.secondBeneficiaryName} ({intake.secondBeneficiaryRelationship}) &middot;{" "}
+                    {intake.estateSplit === "50/50"
+                      ? "50% each"
+                      : (() => {
+                          const sp = (intake.customSplit || "").split("/");
+                          return `${intake.primaryBeneficiaryName} ${sp[0] || "?"}% / ${intake.secondBeneficiaryName} ${sp[1] || "?"}%`;
+                        })()}
                   </p>
                 </>
               )}
               {intake.hasContingentBeneficiary === "Yes" && intake.contingentBeneficiaries.length > 0 ? (
                 <div className="mt-2">
-                  <p className="text-charcoal/50 text-xs">Contingent: {intake.contingentBeneficiaries.map((b) => `${b.name} (${b.relationship})`).join(", ")}</p>
+                  <p className="text-charcoal/50 text-xs">
+                    Contingent:{" "}
+                    {intake.contingentBeneficiaries.map((b) =>
+                      intake.contingentEqualShares === "No" && b.share
+                        ? `${b.name} (${b.relationship}) — ${b.share}%`
+                        : `${b.name} (${b.relationship})`
+                    ).join(", ")}
+                    {intake.contingentBeneficiaries.length > 1 && intake.contingentEqualShares !== "No" && " — equal shares"}
+                  </p>
                 </div>
               ) : (
                 <p className="text-charcoal/50 text-xs mt-1">No contingent beneficiary designated</p>

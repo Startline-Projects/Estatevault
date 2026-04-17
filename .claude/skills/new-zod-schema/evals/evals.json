@@ -1,0 +1,23 @@
+{
+  "skill_name": "new-zod-schema",
+  "evals": [
+    {
+      "id": 0,
+      "prompt": "Add a schema for partner onboarding step 1. Fields: company_name (required), website (optional), business_type (one of: law_firm, financial_advisor, insurance, other), years_in_business (optional number). No acknowledgment needed.",
+      "expected_output": "Appends a partnerOnboardingStep1Schema to /lib/validation/schemas.ts with correct Zod types, naming convention, and an exported PartnerOnboardingStep1 type",
+      "files": []
+    },
+    {
+      "id": 1,
+      "prompt": "I need validation for the vault item form. Fields: item_name required, category (one of: insurance, financial, digital, physical, contact, wishes), notes optional string, url optional string. User doesn't need to sign anything.",
+      "expected_output": "Appends a vaultItemSchema to /lib/validation/schemas.ts with correct types and an exported VaultItem type. No acknowledgment_signed field.",
+      "files": []
+    },
+    {
+      "id": 2,
+      "prompt": "Create a schema for the attorney review request form. Fields: client_id required, order_id required, notes optional, urgency (one of: standard, urgent), and the user must check an acknowledgment box.",
+      "expected_output": "Appends an attorneyReviewRequestSchema with acknowledgment_signed last, exports AttorneyReviewRequest type",
+      "files": []
+    }
+  ]
+}

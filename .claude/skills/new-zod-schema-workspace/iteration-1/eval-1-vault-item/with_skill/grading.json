@@ -1,0 +1,10 @@
+{
+  "expectations": [
+    { "text": "Schema named vaultItemSchema", "passed": true, "evidence": "export const vaultItemSchema = z.object({" },
+    { "text": "Type exported as VaultItem", "passed": true, "evidence": "export type VaultItem = z.infer<typeof vaultItemSchema>;" },
+    { "text": "item_name uses .string().min(1, ...) — required", "passed": true, "evidence": "item_name: z.string().min(1, \"Item name is required\")" },
+    { "text": "category uses z.enum with all 6 correct values (insurance, financial, digital, physical, contact, wishes)", "passed": true, "evidence": "category: z.enum([\"insurance\",\"financial\",\"digital\",\"physical\",\"contact\",\"wishes\"])" },
+    { "text": "url uses plain .string().optional() — no extra validators (no .url(), no .or())", "passed": true, "evidence": "url: z.string().optional() — no .url() or .or() present" },
+    { "text": "No acknowledgment_signed field", "passed": true, "evidence": "No acknowledgment_signed field found anywhere in the schema" }
+  ]
+}

@@ -1,0 +1,35 @@
+{
+  "eval_id": 0,
+  "eval_name": "partner-onboarding-schema",
+  "prompt": "Add a schema for partner onboarding step 1. Fields: company_name (required), website (optional), business_type (one of: law_firm, financial_advisor, insurance, other), years_in_business (optional number). No acknowledgment needed.",
+  "assertions": [
+    {
+      "text": "Schema is named partnerOnboardingStep1Schema (correct camelCase [feature]Schema convention)",
+      "check": "grep 'partnerOnboardingStep1Schema' schema_addition.ts"
+    },
+    {
+      "text": "Exported type is PartnerOnboardingStep1 using z.infer<typeof ...>",
+      "check": "grep 'PartnerOnboardingStep1' schema_addition.ts"
+    },
+    {
+      "text": "company_name uses .string().min(1, ...) — required string pattern",
+      "check": "grep 'company_name.*string.*min(1' schema_addition.ts"
+    },
+    {
+      "text": "website is optional with no extra validators (no .url(), no .email())",
+      "check": "website field uses .optional() only, no .url()"
+    },
+    {
+      "text": "business_type uses z.enum with all 4 correct values",
+      "check": "grep 'law_firm.*financial_advisor.*insurance.*other' schema_addition.ts"
+    },
+    {
+      "text": "No spurious import statement added (z is already imported in schemas.ts)",
+      "check": "no 'import { z }' in schema_addition.ts"
+    },
+    {
+      "text": "No acknowledgment_signed field present",
+      "check": "grep -v 'acknowledgment_signed' schema_addition.ts"
+    }
+  ]
+}

@@ -51,7 +51,8 @@ const config: Config = {
         },
       },
       fontFamily: {
-        sans: ["Inter", "sans-serif"],
+        sans: ["var(--font-inter)", "Inter", "sans-serif"],
+        serif: ["var(--font-fraunces)", "Fraunces", "Georgia", "serif"],
       },
       animation: {
         "fade-in": "fadeInUp 0.7s cubic-bezier(0.16, 1, 0.3, 1) forwards",

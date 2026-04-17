@@ -1,0 +1,11 @@
+{
+  "expectations": [
+    { "text": "Schema named attorneyReviewRequestSchema", "passed": true, "evidence": "export const attorneyReviewRequestSchema = z.object({" },
+    { "text": "Type exported as AttorneyReviewRequest", "passed": true, "evidence": "export type AttorneyReviewRequest = z.infer<typeof attorneyReviewRequestSchema>;" },
+    { "text": "acknowledgment_signed uses .boolean().refine(val => val === true, ...) pattern", "passed": true, "evidence": "acknowledgment_signed: z.boolean().refine((val) => val === true, { message: \"...\" })" },
+    { "text": "acknowledgment_signed is the LAST field in the schema", "passed": true, "evidence": "acknowledgment_signed is the final field before the closing }); of z.object" },
+    { "text": "Acknowledgment message is exactly: \"You must sign the acknowledgment before proceeding\"", "passed": true, "evidence": "message: \"You must sign the acknowledgment before proceeding\"" },
+    { "text": "urgency uses z.enum([\"standard\", \"urgent\"])", "passed": true, "evidence": "urgency: z.enum([\"standard\", \"urgent\"])" },
+    { "text": "No spurious import statement", "passed": true, "evidence": "No import statement present in the output" }
+  ]
+}

@@ -1,0 +1,12 @@
+{
+  "summary": { "pass_rate": 0.7143, "passed": 5, "failed": 2, "total": 7 },
+  "expectations": [
+    { "text": "Schema is named partnerOnboardingStep1Schema", "passed": true, "evidence": "export const partnerOnboardingStep1Schema = z.object({" },
+    { "text": "Exported type is PartnerOnboardingStep1 using z.infer<typeof ...>", "passed": true, "evidence": "export type PartnerOnboardingStep1 = z.infer<typeof partnerOnboardingStep1Schema>;" },
+    { "text": "company_name uses .string().min(1, ...) — required string pattern", "passed": true, "evidence": "company_name: z.string().min(1, \"Company name is required\")" },
+    { "text": "website is optional with no extra validators (no .url(), no .email())", "passed": false, "evidence": "website: z.string().url(\"Please enter a valid URL\").optional() — adds .url() validator which is not allowed" },
+    { "text": "business_type uses z.enum with all 4 correct values", "passed": true, "evidence": "business_type: z.enum([\"law_firm\", \"financial_advisor\", \"insurance\", \"other\"])" },
+    { "text": "No spurious import statement added", "passed": false, "evidence": "import { z } from \"zod\"; is present at the top of the output" },
+    { "text": "No acknowledgment_signed field present", "passed": true, "evidence": "No acknowledgment_signed field found anywhere in the schema" }
+  ]
+}

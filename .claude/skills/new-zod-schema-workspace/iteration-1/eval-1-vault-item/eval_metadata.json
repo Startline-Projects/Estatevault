@@ -1,0 +1,31 @@
+{
+  "eval_id": 1,
+  "eval_name": "vault-item-schema",
+  "prompt": "I need validation for the vault item form. Fields: item_name required, category (one of: insurance, financial, digital, physical, contact, wishes), notes optional string, url optional string. User doesn't need to sign anything.",
+  "assertions": [
+    {
+      "text": "Schema named vaultItemSchema",
+      "check": "grep 'vaultItemSchema' schema_addition.ts"
+    },
+    {
+      "text": "Type exported as VaultItem",
+      "check": "grep 'VaultItem' schema_addition.ts"
+    },
+    {
+      "text": "item_name uses .string().min(1, ...) — required",
+      "check": "grep 'item_name.*string.*min(1' schema_addition.ts"
+    },
+    {
+      "text": "category uses z.enum with all 6 correct values",
+      "check": "enum contains insurance, financial, digital, physical, contact, wishes"
+    },
+    {
+      "text": "url uses plain .string().optional() — no extra validators (no .url(), no .or())",
+      "check": "url field is simple optional, no chained validators"
+    },
+    {
+      "text": "No acknowledgment_signed field",
+      "check": "no acknowledgment_signed in output"
+    }
+  ]
+}

@@ -6,7 +6,6 @@
  */
 
 import { PDFDocument, StandardFonts, rgb, PageSizes } from "pdf-lib";
-import { getMichiganCounty } from "./michigan-counties";
 
 const TYPE_NAMES: Record<string, string> = {
   will: "Last Will and Testament",
@@ -141,8 +140,7 @@ export async function generatePDF(
   const fontSize = 11;
   const lineHeight = fontSize * 1.6;
   const title = TYPE_NAMES[documentType] || documentType;
-  const county = getMichiganCounty(city || "");
-  const today = new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
+const today = new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
   const footerText = reviewingAttorney
     ? `Prepared by EstateVault | Reviewed by ${reviewingAttorney.name}, Bar #${reviewingAttorney.barNumber} | ${reviewingAttorney.reviewedAt}`
     : `Prepared by EstateVault${partnerName ? ` on behalf of ${partnerName}` : ""} | Document preparation service only | Not legal advice | Template Version 1.0.0-michigan`;
@@ -214,7 +212,7 @@ export async function generatePDF(
     yPos -= 16;
     currentPage.drawText("STATE OF MICHIGAN", { x: margin + 16, y: yPos, size: 9, font: timesRoman });
     yPos -= 12;
-    currentPage.drawText(`COUNTY OF ${county}`, { x: margin + 16, y: yPos, size: 9, font: timesRoman });
+    currentPage.drawText("COUNTY OF ____________________", { x: margin + 16, y: yPos, size: 9, font: timesRoman });
     yPos -= 16;
 
     const notaryText = "On this _____ day of __________________, 20_____, before me, the undersigned notary public, personally appeared the above-named person, known to me to be the person whose name is subscribed to the within instrument, and acknowledged that they executed the same for the purposes therein contained.";

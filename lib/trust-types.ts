@@ -21,6 +21,7 @@ export interface TrustIntake {
   customSplit: string;
   distributionAge: string;
   // Guardian
+  hasMinorChildren: string;
   guardianName: string;
   guardianRelationship: string;
   successorGuardianName: string;
@@ -44,7 +45,8 @@ export interface TrustIntake {
   healthcareWishesDescription: string;
   // Contingent beneficiaries
   hasContingentBeneficiary: string;
-  contingentBeneficiaries: Array<{ name: string; relationship: string }>;
+  contingentBeneficiaries: Array<{ name: string; relationship: string; share: string }>;
+  contingentEqualShares: string;
   // Specific gifts
   hasSpecificGifts: string;
   specificGiftsDescription: string;
@@ -69,6 +71,7 @@ export const initialTrustIntake: TrustIntake = {
   estateSplit: "",
   customSplit: "",
   distributionAge: "",
+  hasMinorChildren: "",
   guardianName: "",
   guardianRelationship: "",
   successorGuardianName: "",
@@ -88,6 +91,7 @@ export const initialTrustIntake: TrustIntake = {
   healthcareWishesDescription: "",
   hasContingentBeneficiary: "",
   contingentBeneficiaries: [],
+  contingentEqualShares: "",
   hasSpecificGifts: "",
   specificGiftsDescription: "",
 };

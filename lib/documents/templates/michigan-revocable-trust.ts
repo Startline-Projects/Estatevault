@@ -91,7 +91,8 @@ export function buildTrustPrompt(intake: Record<string, unknown>): string {
   const successor_guardian = (i.successor_guardian || i.successorGuardianName || "") as string;
   const specific_gifts = (i.specific_gifts || (i.hasSpecificGifts === "Yes" ? i.specificGiftsDescription : "") || "") as string;
   const assets = (i.assets || i.assetTypes || []) as string[];
-  const contingent_beneficiaries = (i.contingent_beneficiaries || i.contingentBeneficiaries || []) as Array<{ name: string; relationship: string }>;
+  const contingent_beneficiaries = (i.contingent_beneficiaries || i.contingentBeneficiaries || []) as Array<{ name: string; relationship: string; share?: string }>;
+  const contingent_equal_shares = (i.contingentEqualShares ?? "Yes") as string;
 
   let prompt = `Draft a Michigan Revocable Living Trust with the following client intake data:
 
@@ -111,10 +112,22 @@ BENEFICIARY DESIGNATIONS:
 
   if (secondary_beneficiary) {
     prompt += `\n- Secondary Beneficiary: ${secondary_beneficiary}`;
+    if (estate_split === "50/50") {
+      prompt += `\n- Estate Distribution: Equal split — ${primary_beneficiary} 50%, ${secondary_beneficiary} 50%`;
+    } else {
+      const customSplitStr = (i.customSplit || i.custom_split || "") as string;
+      const sp = customSplitStr.split("/");
+      const pPct = sp[0]?.trim();
+      const sPct = sp[1]?.trim();
+      prompt += pPct && sPct
+        ? `\n- Estate Distribution: ${primary_beneficiary} receives ${pPct}%, ${secondary_beneficiary} receives ${sPct}%`
+        : `\n- Estate Distribution: ${estate_split}`;
+    }
+  } else {
+    prompt += `\n- Estate Distribution: 100% to ${primary_beneficiary}`;
   }
 
-  prompt += `\n- Estate Distribution: ${estate_split}
-- Distribution Age for Minor Beneficiaries: ${distribution_age} years old`;
+  prompt += `\n- Distribution Age for Minor Beneficiaries: ${distribution_age} years old`;
 
   if (guardian_name) {
     prompt += `\n\nGUARDIAN APPOINTMENT (for minor beneficiaries):
@@ -125,9 +138,14 @@ BENEFICIARY DESIGNATIONS:
   if (contingent_beneficiaries.length > 0) {
     prompt += `\n\nREMAINDER BENEFICIARIES (contingent):`;
     contingent_beneficiaries.forEach((b, idx) => {
-      prompt += `\nRemainder Beneficiary ${idx + 1}: ${b.name} (${b.relationship})`;
+      const shareLabel = contingent_equal_shares === "No" && b.share ? ` — ${b.share}%` : "";
+      prompt += `\nRemainder Beneficiary ${idx + 1}: ${b.name} (${b.relationship})${shareLabel}`;
     });
-    prompt += `\n\nRemainder beneficiaries receive the trust estate only if all primary beneficiaries predecease the Grantor or fail to survive by 30 days. If multiple remainder beneficiaries, they share equally.`;
+    if (contingent_equal_shares === "No") {
+      prompt += `\n\nRemainder beneficiaries receive the trust estate only if all primary beneficiaries predecease the Grantor or fail to survive by 30 days. Distribute the trust estate among the remainder beneficiaries at the percentages specified above. If any remainder beneficiary predeceases the Grantor, their share passes to the surviving remainder beneficiaries proportionally.`;
+    } else {
+      prompt += `\n\nRemainder beneficiaries receive the trust estate only if all primary beneficiaries predecease the Grantor or fail to survive by 30 days. If multiple remainder beneficiaries, they share equally.`;
+    }
   } else {
     prompt += `\n\nREMAINDER BENEFICIARIES: None designated. If primary beneficiary does not survive, trust assets distribute to Grantor's heirs under Michigan intestate succession.`;
   }
