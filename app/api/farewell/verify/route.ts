@@ -108,7 +108,7 @@ export async function POST(request: Request) {
       await resend.emails.send({
         from: "EstateVault <info@estatevault.us>",
         to: "support@estatevault.us",
-        subject: `Farewell Verification Request — ${trustee.trustee_name}`,
+        subject: `Farewell Verification Request, ${trustee.trustee_name}`,
         html: `<p>A death certificate has been submitted for verification.</p><p>Trustee: ${trustee.trustee_name} (${trusteeEmail})</p><p>Client ID: ${clientId}</p><p>Please review in the admin portal.</p>`,
       });
       // Confirmation to trustee
@@ -116,7 +116,7 @@ export async function POST(request: Request) {
         from: "EstateVault <info@estatevault.us>",
         to: trusteeEmail,
         subject: "Your verification request has been received",
-        html: `<div style="font-family:Inter,sans-serif;max-width:500px;margin:0 auto;padding:32px;"><h1 style="color:#1C3557;">Request Received</h1><p>Dear ${trustee.trustee_name},</p><p>Your verification request has been received. We will review the submitted documentation and notify you within 24-48 hours.</p><p style="color:#666;font-size:13px;">— EstateVault</p></div>`,
+        html: `<div style="font-family:Inter,sans-serif;max-width:500px;margin:0 auto;padding:32px;"><h1 style="color:#1C3557;">Request Received</h1><p>Dear ${trustee.trustee_name},</p><p>Your verification request has been received. We will review the submitted documentation and notify you within 24-48 hours.</p><p style="color:#666;font-size:13px;">- EstateVault</p></div>`,
       });
     } catch (emailErr) { console.error("Verification email failed:", emailErr); }
 

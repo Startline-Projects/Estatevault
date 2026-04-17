@@ -53,7 +53,7 @@ export default function Step5Page() {
             <input type="email" value={senderEmail} onChange={(e) => setSenderEmail(e.target.value)} placeholder="plans@yourcompany.com" className="w-full min-h-[44px] rounded-xl border-2 border-gray-200 px-4 py-3 text-sm focus:border-gold focus:outline-none" />
           </div>
           <button disabled className="rounded-full border border-gray-300 px-5 py-2 text-sm font-medium text-gray-400 cursor-not-allowed">
-            Send Test Email — available after launch
+            Send Test Email, available after launch
           </button>
 
           <div className="mt-6">

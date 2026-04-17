@@ -42,11 +42,11 @@ export async function POST(request: Request) {
 
     const supabase = createAdminClient();
 
-    // Step 1: resolve userId — try provided ID first, then look up by email
+    // Step 1: resolve userId, try provided ID first, then look up by email
     let resolvedUserId: string = userId || "";
 
     if (!resolvedUserId) {
-      // Webhook may still be processing — retry up to 4x with 2s gaps (8s total)
+      // Webhook may still be processing, retry up to 4x with 2s gaps (8s total)
       for (let attempt = 0; attempt < 4; attempt++) {
         const { data: profile } = await supabase
           .from("profiles")
@@ -129,7 +129,7 @@ export async function POST(request: Request) {
         }
       }
 
-      // Password already set during createUser — just sign audit and return
+      // Password already set during createUser, just sign audit and return
       await supabase.from("audit_log").insert({
         actor_id: resolvedUserId,
         action: "account.created_at_password_set",
@@ -140,7 +140,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: true });
     }
 
-    // Step 4: user exists — set their password
+    // Step 4: user exists, set their password
     const { data: authUserData, error: getUserErr } = await supabase.auth.admin.getUserById(resolvedUserId);
     if (getUserErr || !authUserData?.user) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });

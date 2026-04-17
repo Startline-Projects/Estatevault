@@ -1,9 +1,9 @@
 /**
  * Attorney Review Routing Types
  *
- * COMPLIANCE NOTE — Fee-splitting protection:
+ * COMPLIANCE NOTE, Fee-splitting protection:
  * - "inhouse_estatevault" reviewer (Mo): $300 is EstateVault employment revenue.
- *   Mo is W-2 payroll. This is NOT fee-splitting — it is employer revenue from
+ *   Mo is W-2 payroll. This is NOT fee-splitting, it is employer revenue from
  *   a service performed by an employee.
  * - "inhouse_partner" reviewer: $300 goes to partner's Stripe Connect account.
  *   The partner pays their own attorney via their own payroll.

@@ -49,7 +49,7 @@ export async function GET(request: Request) {
 
     const supabase = createAdminClient();
 
-    // Get documents for this order — only those that are generated
+    // Get documents for this order, only those that are generated
     const { data: documents } = await supabase
       .from("documents")
       .select("document_type, storage_path, status")
@@ -98,7 +98,7 @@ export async function GET(request: Request) {
       files.push({ name: "Trust Funding Instructions.pdf", data: fundingPdf });
     }
 
-    // Build ZIP file manually (minimal ZIP format — no external library)
+    // Build ZIP file manually (minimal ZIP format, no external library)
     const zipParts: Uint8Array[] = [];
     const centralDir: Uint8Array[] = [];
     let offset = 0;

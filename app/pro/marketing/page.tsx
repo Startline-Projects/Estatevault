@@ -11,15 +11,15 @@ const SCRIPT_CONTENT = `APPROVED INTRODUCTION SCRIPT
 
 USE THIS WORD FOR WORD:
 
-"[Client name], one thing I want to make sure we cover today is your estate plan. A lot of my clients have been using a platform called [Product Name] to get their wills and trusts done quickly and affordably. It generates attorney-reviewed documents — takes about 15 minutes. Would you like me to walk you through it?"
+"[Client name], one thing I want to make sure we cover today is your estate plan. A lot of my clients have been using a platform called [Product Name] to get their wills and trusts done quickly and affordably. It generates attorney-reviewed documents, takes about 15 minutes. Would you like me to walk you through it?"
 
 IF THEY ASK "Are you my lawyer?":
 
-"No — I'm not acting as your attorney, and this platform doesn't provide legal advice. What it does is generate attorney-reviewed estate planning documents based on your answers. If you have complex legal questions, we can connect you with a licensed estate planning attorney."
+"No, I'm not acting as your attorney, and this platform doesn't provide legal advice. What it does is generate attorney-reviewed estate planning documents based on your answers. If you have complex legal questions, we can connect you with a licensed estate planning attorney."
 
 IF THEY ASK "Is this legitimate?":
 
-"Yes — all documents are based on attorney-approved templates specific to [State]. They're the same documents an estate planning attorney would prepare, at a fraction of the cost."
+"Yes, all documents are based on attorney-approved templates specific to [State]. They're the same documents an estate planning attorney would prepare, at a fraction of the cost."
 
 NEVER SAY:
 ✗ "I recommend you get a trust"
@@ -29,11 +29,11 @@ NEVER SAY:
 ✗ "I'm helping you with your legal plan"`;
 
 const EMAIL_TEMPLATES = [
-  { name: "Client Introduction", useCase: "Send to your client list to introduce your estate planning service", subject: "Protect your family — estate planning made simple", body: `Hi [First Name],
+  { name: "Client Introduction", useCase: "Send to your client list to introduce your estate planning service", subject: "Protect your family, estate planning made simple", body: `Hi [First Name],
 
 I wanted to share something I've been offering clients that has gotten a great response.
 
-[Product Name] makes it simple to create a professional estate plan — a will or revocable trust — in about 15 minutes, from the comfort of your home.
+[Product Name] makes it simple to create a professional estate plan, a will or revocable trust, in about 15 minutes, from the comfort of your home.
 
 Documents are based on attorney-approved templates and include everything your family needs:
 - Last Will & Testament
@@ -52,13 +52,13 @@ Best,
 [Partner Name]
 [Company Name]
 [Phone]` },
-  { name: "7-Day Follow-Up", useCase: "Send to clients who haven't responded", subject: "Quick follow-up — your estate plan", body: `Hi [First Name],
+  { name: "7-Day Follow-Up", useCase: "Send to clients who haven't responded", subject: "Quick follow-up, your estate plan", body: `Hi [First Name],
 
 I wanted to follow up on my note from last week about estate planning.
 
 Many of my clients have been surprised by how quick and affordable this has become. Most finish in under 15 minutes.
 
-[Product Name] generates attorney-reviewed documents for $400 (will) or $600 (trust) — a fraction of traditional attorney costs.
+[Product Name] generates attorney-reviewed documents for $400 (will) or $600 (trust), a fraction of traditional attorney costs.
 
 Your family's protection shouldn't wait.
 
@@ -70,7 +70,7 @@ Best,
 
 It's been about a year since you created your estate plan through [Product Name].
 
-A lot can change in a year — new assets, family changes, address changes. We recommend a quick annual review to make sure your plan is still current.
+A lot can change in a year, new assets, family changes, address changes. We recommend a quick annual review to make sure your plan is still current.
 
 Document amendments are available for $50.
 
@@ -95,7 +95,7 @@ I've been helping families protect what matters most. Ask me how.
 
 But what happens when a loved one passes and no one can find the insurance policy? Or the bank account information?
 
-[Product Name] includes a secure Family Vault where clients store everything their family will need — documents, accounts, policies, digital credentials.
+[Product Name] includes a secure Family Vault where clients store everything their family will need, documents, accounts, policies, digital credentials.
 
 Everything in one secure place.
 
@@ -113,7 +113,7 @@ If your clients have been putting off estate planning, let's talk.
   facebook: [
     { title: "Introduction", caption: `Protecting your family doesn't have to be complicated or expensive. 💙
 
-Through [Company Name], you can create a complete estate plan — will or trust — in about 15 minutes. Attorney-reviewed documents, specific to [State].
+Through [Company Name], you can create a complete estate plan, will or trust, in about 15 minutes. Attorney-reviewed documents, specific to [State].
 
 Will Package: $400
 Trust Package: $600
@@ -123,14 +123,14 @@ Have questions? Send me a message.
 [white-label URL]`, imageText: "Protect Your Family\nin 15 Minutes", size: "1200x630" },
     { title: "Question Hook", caption: `Quick question for my [City] friends:
 
-Do you have a will? Most people don't — and it means the state decides what happens to your assets and who raises your children.
+Do you have a will? Most people don't, and it means the state decides what happens to your assets and who raises your children.
 
 I've been helping families solve this quickly and affordably. Message me to learn more. 💛`, imageText: "Do you have a will?\nMost people don't.", size: "1200x630" },
     { title: "Simple CTA", caption: `The most important financial document your family needs isn't an investment account.
 
 It's a will or trust.
 
-I help families in [City] create complete estate plans through [Product Name] — attorney-reviewed, affordable, and done in 15 minutes.
+I help families in [City] create complete estate plans through [Product Name], attorney-reviewed, affordable, and done in 15 minutes.
 
 [white-label URL]`, imageText: "Will: $400\nTrust: $600\nPeace of mind: Priceless", size: "1200x630" },
   ],
@@ -214,7 +214,7 @@ export default function MarketingPage() {
   return (
     <div className="max-w-5xl">
       <h1 className="text-2xl font-bold text-navy">Marketing Tools</h1>
-      <p className="mt-1 text-sm text-charcoal/60">Everything you need to introduce Legacy Protection to your clients. All materials are pre-branded for you — download and use immediately.</p>
+      <p className="mt-1 text-sm text-charcoal/60">Everything you need to introduce Legacy Protection to your clients. All materials are pre-branded for you, download and use immediately.</p>
 
       {!certified && (
         <div className="mt-4 rounded-xl bg-amber-50 border border-amber-200 p-4 flex items-center justify-between">
@@ -235,7 +235,7 @@ export default function MarketingPage() {
           <div className="mt-3 rounded-xl border-2 border-gold bg-gold/5 p-6">
             <div className="flex items-center gap-2 mb-3">
               <span className="rounded-full bg-gold px-3 py-0.5 text-xs font-bold text-white">START HERE</span>
-              <span className="text-xs text-charcoal/50">Always available — no certification required</span>
+              <span className="text-xs text-charcoal/50">Always available, no certification required</span>
             </div>
             <h3 className="text-base font-bold text-navy">Compliance Script Card</h3>
             <p className="mt-1 text-sm text-charcoal/60">Word-for-word approved scripts for introducing estate planning. What to say. What NOT to say. Print and keep at your desk.</p>

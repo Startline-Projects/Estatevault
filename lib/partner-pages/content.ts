@@ -8,7 +8,7 @@
  *
  * 1. White-labeled marketing toolkit
  *    "Flyers, email templates, social media posts, and print
- *     materials — all pre-branded with your firm name, logo,
+ *     materials, all pre-branded with your firm name, logo,
  *     and contact info. Download and use immediately."
  *
  * 2. Marketing training and approved client scripts
@@ -21,6 +21,6 @@
  */
 
 export const SHARED_PARTNER_FEATURES = [
-  'White-labeled marketing toolkit — flyers, emails, social posts, all branded for your firm',
+  'White-labeled marketing toolkit, flyers, emails, social posts, all branded for your firm',
   'Marketing training and approved client scripts included',
 ] as const;

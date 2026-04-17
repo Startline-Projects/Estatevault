@@ -251,7 +251,7 @@ export default function VaultPage() {
               type="text"
               value={uploadLabel}
               onChange={(e) => setUploadLabel(e.target.value)}
-              placeholder="e.g. Signed Will — April 2026"
+              placeholder="e.g. Signed Will, April 2026"
               className="w-full min-h-[44px] rounded-xl border-2 border-gray-200 px-4 py-3 text-sm focus:border-gold focus:outline-none"
             />
           </div>
@@ -296,7 +296,7 @@ export default function VaultPage() {
                     <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
                   </svg>
                   <p className="text-sm font-medium text-navy truncate max-w-[240px]">{uploadFile.name}</p>
-                  <p className="text-xs text-charcoal/50 mt-0.5">{(uploadFile.size / 1024).toFixed(0)} KB — tap to change</p>
+                  <p className="text-xs text-charcoal/50 mt-0.5">{(uploadFile.size / 1024).toFixed(0)} KB, tap to change</p>
                 </div>
               ) : (
                 <div className="text-center px-4">
@@ -474,7 +474,7 @@ export default function VaultPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-navy">My Family Vault</h1>
-          <p className="mt-1 text-sm text-charcoal/60">Everything your family needs — secured and organized.</p>
+          <p className="mt-1 text-sm text-charcoal/60">Everything your family needs, secured and organized.</p>
         </div>
         <Link href="/dashboard/vault/trustees" className="rounded-full border border-navy px-4 py-2 text-sm font-medium text-navy hover:bg-navy hover:text-white transition-colors">
           Manage Emergency Access
@@ -503,7 +503,7 @@ export default function VaultPage() {
                 }}
                 className="w-full min-h-[44px] flex items-center justify-center rounded-full bg-gold text-sm font-semibold text-white hover:bg-gold/90 transition-colors"
               >
-                Upgrade — $99/year
+                Upgrade, $99/year
               </button>
               <button onClick={() => setShowUpgradePrompt(false)} className="text-sm text-charcoal/50 hover:text-charcoal transition-colors">
                 Maybe later

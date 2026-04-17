@@ -12,7 +12,7 @@ const EXECUTION_GUIDES: Record<string, { title: string; steps: string[] }> = {
       "Witnesses must be 18+ and not named in your will",
       "A notary is not required but recommended",
       "Sign every page if your will is multiple pages",
-      "Store the original in a safe place — tell your executor where it is",
+      "Store the original in a safe place, tell your executor where it is",
     ],
   },
   trust: {
@@ -20,7 +20,7 @@ const EXECUTION_GUIDES: Record<string, { title: string; steps: string[] }> = {
     steps: [
       "You sign as both Grantor and Trustee",
       "Notarization is required in Michigan",
-      "Keep the original — certified copies for your records",
+      "Keep the original, certified copies for your records",
       "Your trust is not complete until assets are transferred",
     ],
   },
@@ -232,7 +232,7 @@ export default function DocumentsPage() {
             <div>
               <p className="text-sm font-semibold text-amber-800">Your documents are under attorney review</p>
               <p className="text-sm text-amber-700 mt-1 leading-relaxed">
-                A licensed Michigan attorney is reviewing your {packageName} Package. Your documents will be unlocked and ready to download once the review is complete — this typically takes 1–4 business days.
+                A licensed Michigan attorney is reviewing your {packageName} Package. Your documents will be unlocked and ready to download once the review is complete, this typically takes 1 to 4 business days.
               </p>
               <p className="text-xs text-amber-600 mt-2">You will receive an email as soon as your documents are approved.</p>
             </div>
@@ -305,7 +305,7 @@ export default function DocumentsPage() {
         </div>
       )}
 
-      {/* Execution guides — only show when docs are ready (not under review) */}
+      {/* Execution guides, only show when docs are ready (not under review) */}
       {docsReady && deliveredDocs.length > 0 && (
         <>
           <div className="mt-10">

@@ -6,9 +6,9 @@ import { createClient } from "@/lib/supabase/client";
 
 const TIPS = [
   "Financial advisors who introduce estate planning in client review meetings see 3x higher conversion. Try leading with: 'Have you thought about what happens to your assets?'",
-  "Trust packages convert better when you explain the probate process first. Michigan probate takes 9\u201318 months on average.",
+  "Trust packages convert better when you explain the probate process first. Michigan probate takes 9 to 18 months on average.",
   "Your clients with children under 18 are your highest-intent prospects for trust packages.",
-  "The best time to introduce estate planning is right after a client reviews their investment portfolio \u2014 they're already thinking about their money.",
+  "The best time to introduce estate planning is right after a client reviews their investment portfolio, they're already thinking about their money.",
   "Clients who use the Family Vault feature are significantly less likely to churn. Encourage every client to set up their vault.",
 ];
 

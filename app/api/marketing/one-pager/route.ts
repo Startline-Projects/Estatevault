@@ -43,12 +43,12 @@ export async function GET() {
   .footer { margin-top: 32px; padding-top: 16px; border-top: 1px solid #e5e5e5; font-size: 11px; color: #999; }
 </style></head><body>
 <div class="header">
-  <h1>${c} — ${p}</h1>
+  <h1>${c}, ${p}</h1>
   <p>Attorney-Reviewed Estate Planning</p>
 </div>
 
 <h2>What is ${p}?</h2>
-<p style="font-size:13px;">A simple, affordable way to create attorney-reviewed estate planning documents — a will or revocable living trust — in about 15 minutes. Documents are specific to Michigan and include everything your family needs.</p>
+<p style="font-size:13px;">A simple, affordable way to create attorney-reviewed estate planning documents, a will or revocable living trust, in about 15 minutes. Documents are specific to Michigan and include everything your family needs.</p>
 
 <h2>What's Included</h2>
 <div class="two-col">
@@ -70,7 +70,7 @@ export async function GET() {
 
 <div class="vault">
   <h3>The Family Vault</h3>
-  <p>A secure encrypted space to store estate documents, insurance policies, financial accounts, and digital credentials — everything your family needs in one place.</p>
+  <p>A secure encrypted space to store estate documents, insurance policies, financial accounts, and digital credentials, everything your family needs in one place.</p>
 </div>
 
 <h2>How to Get Started</h2>

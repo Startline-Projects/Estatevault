@@ -105,7 +105,7 @@ export default function Step1Page() {
       <div className="mt-8 rounded-xl bg-gray-50 border border-gray-200 p-6">
         <p className="text-sm font-semibold text-navy">Before proceeding, please review our Partner Agreement.</p>
         <ul className="mt-3 space-y-2 text-sm text-charcoal/70">
-          <li>• You agree that this platform provides document preparation services only — not legal advice</li>
+          <li>• You agree that this platform provides document preparation services only, not legal advice</li>
           <li>• You will not provide legal advice to clients using this platform</li>
           <li>• You agree to complete platform certification before facilitating client sessions</li>
         </ul>
@@ -119,7 +119,7 @@ export default function Step1Page() {
       {error && <div className="mt-4 rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">{error}</div>}
 
       <button onClick={handleGetStarted} disabled={!agreed || loading} className="mt-8 w-full min-h-[44px] rounded-full bg-gold py-3.5 text-sm font-semibold text-white hover:bg-gold/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
-        {loading ? "Redirecting to payment..." : `Get Started — ${selectedTier === "enterprise" ? "$6,000" : "$1,200"} one-time`}
+        {loading ? "Redirecting to payment..." : `Get Started, ${selectedTier === "enterprise" ? "$6,000" : "$1,200"} one-time`}
       </button>
 
       {showAgreement && (

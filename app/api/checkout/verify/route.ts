@@ -35,7 +35,7 @@ export async function GET(request: Request) {
     const amount = session.amount_total ? session.amount_total / 100 : 0;
     const email = session.customer_details?.email || "";
 
-    // Look up the userId from profiles table — retry in case webhook is still processing
+    // Look up the userId from profiles table, retry in case webhook is still processing
     let userId = "";
     let hasExistingAccount = false;
     let clientName = "";
@@ -51,7 +51,7 @@ export async function GET(request: Request) {
         clientName = session.customer_details.name;
       }
 
-      // Resolve userId — retry up to 3x in case webhook is still processing
+      // Resolve userId, retry up to 3x in case webhook is still processing
       for (let attempt = 0; attempt < 3; attempt++) {
         const { data: profile } = await supabase
           .from("profiles")

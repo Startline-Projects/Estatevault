@@ -204,7 +204,7 @@ export default function FarewellMessagesPage() {
               </svg>
             </div>
             <p className="font-semibold text-navy">Upload Video</p>
-            <p className="text-xs text-gray-400 mt-1">MP4, MOV, WebM — max 500MB</p>
+            <p className="text-xs text-gray-400 mt-1">MP4, MOV, WebM, max 500MB</p>
           </button>
         </div>
       </div>
@@ -234,7 +234,7 @@ export default function FarewellMessagesPage() {
 
       <SubscriptionBanner onStatusLoaded={handleStatusLoaded} />
 
-      {/* Create message form — shown when user clicks "+ New Message" */}
+      {/* Create message form, shown when user clicks "+ New Message" */}
       {showCreateForm && (
         <div className="rounded-xl bg-white border border-gray-200 p-5">
           <h3 className="text-sm font-semibold text-navy mb-3">Create a New Farewell Message</h3>

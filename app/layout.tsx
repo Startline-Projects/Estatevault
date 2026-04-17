@@ -17,7 +17,7 @@ const fraunces = Fraunces({
 });
 
 export const metadata: Metadata = {
-  title: "EstateVault — Protect Everything That Matters",
+  title: "EstateVault, Protect Everything That Matters",
   description:
     "Attorney-reviewed wills and trusts built for Michigan. Secure estate planning with a complete family vault. Takes just 15 minutes.",
 };

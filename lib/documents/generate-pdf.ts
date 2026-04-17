@@ -1,5 +1,5 @@
 /*
- * DOCUMENT GENERATION — ATTORNEY SUPERVISED
+ * DOCUMENT GENERATION, ATTORNEY SUPERVISED
  * Template Version: 1.0.0-michigan
  * Attorney Approval Date: [TO BE FILLED]
  * Approved By: [TO BE FILLED]
@@ -158,7 +158,7 @@ const today = new Date().toLocaleDateString("en-US", { year: "numeric", month: "
 
   function addHeaderFooter() {
     // Header
-    currentPage.drawText(`${clientName} \u2014 ${title}`, { x: margin, y: pageHeight - 30, size: 8, font: helvetica, color: rgb(0.5, 0.5, 0.5) });
+    currentPage.drawText(`${clientName}, ${title}`, { x: margin, y: pageHeight - 30, size: 8, font: helvetica, color: rgb(0.5, 0.5, 0.5) });
     // Footer
     currentPage.drawText(footerText, { x: margin, y: 22, size: 6.5, font: helvetica, color: rgb(0.6, 0.6, 0.6) });
     currentPage.drawText(`Page ${pageNum}`, { x: pageWidth - margin - 30, y: 22, size: 7, font: helvetica, color: rgb(0.6, 0.6, 0.6) });

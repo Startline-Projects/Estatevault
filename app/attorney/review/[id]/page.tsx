@@ -290,7 +290,7 @@ export default function AttorneyReviewPage() {
                 {[
                   { value: "approved", label: "Approve", desc: "Documents are complete and ready for delivery", color: "border-green-400 bg-green-50", dot: "bg-green-500" },
                   { value: "approved_with_notes", label: "Approve with Notes", desc: "Acceptable with comments for the client", color: "border-yellow-400 bg-yellow-50", dot: "bg-yellow-500" },
-                  { value: "flagged", label: "Flag for Consultation", desc: "Hold delivery — client needs direct attorney consultation", color: "border-red-400 bg-red-50", dot: "bg-red-500" },
+                  { value: "flagged", label: "Flag for Consultation", desc: "Hold delivery, client needs direct attorney consultation", color: "border-red-400 bg-red-50", dot: "bg-red-500" },
                 ].map((opt) => (
                   <label
                     key={opt.value}
@@ -310,7 +310,7 @@ export default function AttorneyReviewPage() {
 
               <div className="px-6 pb-6">
                 <label className="block text-xs font-semibold text-navy mb-2">
-                  Notes <span className="font-normal text-charcoal/40">(optional — visible to partner and client)</span>
+                  Notes <span className="font-normal text-charcoal/40">(optional, visible to partner and client)</span>
                 </label>
                 <textarea
                   value={notes}

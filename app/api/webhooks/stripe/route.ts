@@ -79,7 +79,7 @@ export async function POST(request: Request) {
             await resend.emails.send({
               from: "EstateVault <info@estatevault.us>",
               to: profile.email,
-              subject: "Action Required — Vault Subscription Payment Failed",
+              subject: "Action Required, Vault Subscription Payment Failed",
               html: `<div style="font-family:Inter,sans-serif;max-width:500px;margin:0 auto;padding:32px;"><h1 style="color:#1C3557;">Payment Failed</h1><p>Hi ${profile.full_name || "there"},</p><p>We were unable to process your annual Vault subscription payment of $99. Your premium vault features (free amendments, farewell messages) will be paused until payment is resolved.</p><p>Please update your payment method to continue enjoying these benefits.</p><a href="https://www.estatevault.us/dashboard/settings" style="display:inline-block;background:#C9A84C;color:white;text-decoration:none;padding:12px 24px;border-radius:999px;font-weight:600;font-size:14px;">Update Payment Method</a></div>`,
             });
           }
@@ -255,7 +255,7 @@ export async function POST(request: Request) {
     }
 
     // ── 2. Update order to paid/generating ──────────────────────
-    // Also ensure intake_data is saved (belt-and-suspenders — checkout should have saved it too)
+    // Also ensure intake_data is saved (belt-and-suspenders, checkout should have saved it too)
     const { data: quizForIntake } = await supabase
       .from("quiz_sessions")
       .select("id, answers")
@@ -333,7 +333,7 @@ export async function POST(request: Request) {
             }
           }
         } else if (partnerId) {
-          // Store pending earnings — no Stripe account yet
+          // Store pending earnings, no Stripe account yet
           const { evCut, partnerCut } = calculateSplit(
             productType,
             (partner?.tier as "standard" | "enterprise") || "standard"
@@ -352,7 +352,7 @@ export async function POST(request: Request) {
         }
       } catch (payoutError) {
         console.error("Partner payout failed:", payoutError);
-        // Don't fail the webhook — log and continue
+        // Don't fail the webhook, log and continue
       }
     }
 
@@ -375,9 +375,9 @@ export async function POST(request: Request) {
     // ── 4. Attorney review record if requested ─────────────────
     //
     // COMPLIANCE: Attorney review routing determines who reviews and where
-    // the $300 fee goes. Mo Murshed is W-2 payroll — when reviews route to him,
+    // the $300 fee goes. Mo Murshed is W-2 payroll, when reviews route to him,
     // the fee is EstateVault employment revenue, NOT fee-splitting.
-    // Review Network attorneys receive 100% — EstateVault earns $0.
+    // Review Network attorneys receive 100%, EstateVault earns $0.
     //
     if (attorneyReview) {
       const { resolveReviewRouting, INHOUSE_ATTORNEY_EMAIL, ESTATEVAULT_ADMIN_EMAIL } = await import("@/lib/attorney-review/routing");
@@ -430,10 +430,10 @@ export async function POST(request: Request) {
       });
 
       // ── Handle fee routing via Stripe ──
-      // COMPLIANCE: Mo is W-2 payroll — no Stripe transfer for inhouse_estatevault.
+      // COMPLIANCE: Mo is W-2 payroll, no Stripe transfer for inhouse_estatevault.
       // Revenue stays in EstateVault's Stripe account as employment revenue.
       if (routing.feeDestination === "partner_admin" && partnerForRouting?.stripe_account_id) {
-        // Transfer $300 to partner's Stripe Connect — they pay their in-house attorney
+        // Transfer $300 to partner's Stripe Connect, they pay their in-house attorney
         try {
           const transferAmount = routing.feeAmount;
           const transfer = await stripe.transfers.create({
@@ -549,7 +549,7 @@ export async function POST(request: Request) {
       }
     }
 
-    // ── 7. Email removed — client sets password on success page ──
+    // ── 7. Email removed, client sets password on success page ──
     // No automatic email sent. Client creates password inline on
     // the success page and can send documents to their email later
     // via the "Send documents to my email" button on their dashboard.

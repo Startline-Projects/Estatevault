@@ -11,7 +11,7 @@ function createAdminClient() {
 
 // POST /api/farewell/access
 // Trustee verifies identity and gets signed URLs for unlocked messages.
-// No auth required — trustee is not a Supabase user.
+// No auth required, trustee is not a Supabase user.
 export async function POST(request: Request) {
   try {
     const { clientId, trusteeEmail } = await request.json();

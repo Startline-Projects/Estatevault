@@ -70,7 +70,7 @@ export default function VaultSection() {
         </div>
 
         <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-white tracking-tight">
-          More Than Documents —<br className="hidden sm:block" />
+          More Than Documents  <br className="hidden sm:block" />
           <span className="text-gradient">A Complete Family Vault</span>
         </h2>
         <p className="mt-4 text-lg text-white/60 max-w-2xl mx-auto">

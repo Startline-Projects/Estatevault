@@ -9,14 +9,14 @@
  * ├─────────────────────────────────────────────────┼──────────────────────┼───────────────┤
  * │ Direct EstateVault client (no partner)          │ Mo (in-house, W-2)   │ EstateVault   │
  * │ Non-attorney partner                            │ Mo (in-house, W-2)   │ EstateVault   │
- * │ Attorney partner — NO in-house estate attorney  │ Mo (in-house, W-2)   │ EstateVault   │
- * │ Attorney partner — HAS in-house estate attorney │ Partner's attorney   │ Partner admin │
+ * │ Attorney partner, NO in-house estate attorney  │ Mo (in-house, W-2)   │ EstateVault   │
+ * │ Attorney partner, HAS in-house estate attorney │ Partner's attorney   │ Partner admin │
  * └─────────────────────────────────────────────────┴──────────────────────┴───────────────┘
  *
- * COMPLIANCE — Fee-splitting protection:
+ * COMPLIANCE, Fee-splitting protection:
  * Mo Murshed (mmurshed@thepeoplesfirmpllc.com, Bar #P-79739) is a W-2 employee
  * of EstateVault. When reviews are routed to him, the $300 fee is employment
- * revenue for EstateVault — NOT fee-splitting. This is a critical legal distinction.
+ * revenue for EstateVault, NOT fee-splitting. This is a critical legal distinction.
  *
  * Review Network attorneys (independent, Stripe Connect) receive 100% of the $300.
  * EstateVault earns $0 on Review Network reviews. Never route these fees to EstateVault.
@@ -25,13 +25,13 @@
 import type { ReviewRouting, PartnerForRouting } from "./types";
 
 /**
- * Mo Murshed's email — used to look up his profile ID at runtime.
+ * Mo Murshed's email, used to look up his profile ID at runtime.
  * His profile must exist in the database with user_type = 'review_attorney'.
  */
 export const INHOUSE_ATTORNEY_EMAIL = "mmurshed@thepeoplesfirmpllc.com";
 
 /**
- * EstateVault admin email — controls fee for all in-house reviews.
+ * EstateVault admin email, controls fee for all in-house reviews.
  */
 export const ESTATEVAULT_ADMIN_EMAIL = "ockmedk@gmail.com";
 

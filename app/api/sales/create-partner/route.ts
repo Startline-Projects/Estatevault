@@ -45,7 +45,7 @@ export async function POST(request: Request) {
   let userId: string;
 
   if (existingProfile) {
-    // User already exists — reset their password to the new temp password
+    // User already exists, reset their password to the new temp password
     userId = existingProfile.id;
     await admin.auth.admin.updateUserById(userId, {
       password: tempPassword,
@@ -115,7 +115,7 @@ export async function POST(request: Request) {
     await resend.emails.send({
       from: "EstateVault <info@estatevault.us>",
       to: email,
-      subject: "Welcome to EstateVault — Your Partner Account",
+      subject: "Welcome to EstateVault, Your Partner Account",
       html: `
         <div style="font-family: Inter, sans-serif; max-width: 500px; margin: 0 auto; padding: 32px;">
           <h1 style="color: #1C3557; font-size: 24px;">Welcome to EstateVault</h1>

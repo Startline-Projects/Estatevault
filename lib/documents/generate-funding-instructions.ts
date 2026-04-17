@@ -24,7 +24,7 @@ const ASSET_INSTRUCTIONS: Record<string, { title: string; steps: string[] }> = {
       "Contact each bank or financial institution to retitle your accounts in the name of your trust.",
       "Provide a copy of your Trust Certificate (included with your trust documents).",
       "New title format: \"[Your Name], Trustee of the [Your Name] Revocable Living Trust.\"",
-      "For retirement accounts (401k, IRA): do NOT retitle these — instead update the beneficiary designation to your trust.",
+      "For retirement accounts (401k, IRA): do NOT retitle these, instead update the beneficiary designation to your trust.",
     ],
   },
   "Business interests": {

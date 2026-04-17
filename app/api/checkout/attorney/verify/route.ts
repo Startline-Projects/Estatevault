@@ -90,7 +90,7 @@ export async function POST(request: Request) {
 
     if (authError) {
       console.error("Auth user creation error:", authError);
-      // If user already exists, that might be a retry — don't fail hard
+      // If user already exists, that might be a retry, don't fail hard
       if (!authError.message?.includes("already been registered")) {
         return NextResponse.json(
           { error: "Failed to create user account." },

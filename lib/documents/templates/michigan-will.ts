@@ -1,5 +1,5 @@
 /*
- * DOCUMENT GENERATION — ATTORNEY SUPERVISED
+ * DOCUMENT GENERATION, ATTORNEY SUPERVISED
  * All document templates and Claude prompts used in this file have been reviewed and
  * approved by a licensed Michigan estate planning attorney before deployment.
  * Claude generates document content based on structured client intake data.
@@ -38,7 +38,7 @@ DOCUMENT REQUIREMENTS:
 
 NOTARY RULES:
 - Do NOT include any county name (such as "Wayne County," "Oakland County," etc.) anywhere in the document body, notary acknowledgment, or witness sections. Leave county fields blank.
-- Do NOT write out full notary acknowledgment language — use [NOTARY BLOCK] placeholder only.
+- Do NOT write out full notary acknowledgment language, use [NOTARY BLOCK] placeholder only.
 
 OUTPUT FORMAT:
 - Return PLAIN TEXT only. Do NOT use any markdown formatting. No pound signs (#), no asterisks (**), no dashes for rules (---), no backticks. Use ALL CAPS for section headers and article titles.
@@ -46,7 +46,7 @@ OUTPUT FORMAT:
 - Use [SIGNATURE LINE] where the testator signs.
 - Use [DATE LINE] where the date of signing goes.
 - For witness blocks use EXACTLY: [WITNESS SIGNATURE] on its own line. Include two witness blocks. Do not add additional labels or headers around witness blocks.
-- Use [NOTARY BLOCK] EXACTLY ONCE at the end of the document for the self-proving affidavit. Do NOT write out notary acknowledgment language in the document body — the platform renders this automatically.
+- Use [NOTARY BLOCK] EXACTLY ONCE at the end of the document for the self-proving affidavit. Do NOT write out notary acknowledgment language in the document body, the platform renders this automatically.
 - Do NOT include any commentary, instructions, or explanations outside the document text itself.
 - Output ONLY the complete will text ready for formatting.`;
 
@@ -87,7 +87,7 @@ BENEFICIARY DESIGNATIONS:
   if (secondary_beneficiary) {
     prompt += `\n- Secondary Beneficiary: ${secondary_beneficiary}`;
     if (estate_split === "50/50") {
-      prompt += `\n- Estate Distribution: Equal split — ${primary_beneficiary} 50%, ${secondary_beneficiary} 50%`;
+      prompt += `\n- Estate Distribution: Equal split, ${primary_beneficiary} 50%, ${secondary_beneficiary} 50%`;
     } else {
       const customSplitStr = (i.customSplit || i.custom_split || "") as string;
       const sp = customSplitStr.split("/");
@@ -108,7 +108,7 @@ If the primary beneficiary does not survive the testator by thirty (30) days, th
   if (contingent_beneficiaries.length > 0) {
     prompt += `\n\nCONTINGENT BENEFICIARIES:`;
     contingent_beneficiaries.forEach((b, idx) => {
-      const shareLabel = contingent_equal_shares === "No" && b.share ? ` — ${b.share}%` : "";
+      const shareLabel = contingent_equal_shares === "No" && b.share ? `, ${b.share}%` : "";
       prompt += `\nContingent Beneficiary ${idx + 1}: ${b.name} (${b.relationship})${shareLabel}`;
     });
     if (contingent_equal_shares === "No") {

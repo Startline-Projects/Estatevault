@@ -24,7 +24,7 @@ export async function POST() {
       return NextResponse.json({ error: "No active subscription" }, { status: 400 });
     }
 
-    // Cancel at period end — don't revoke access mid-period
+    // Cancel at period end, don't revoke access mid-period
     await stripe.subscriptions.update(client.vault_subscription_stripe_id, {
       cancel_at_period_end: true,
     });

@@ -89,7 +89,7 @@ export default function ProPreviewPage() {
 
         <div className="mt-10 text-center">
           <button onClick={() => router.push("/pro/onboarding/step-1")} className="inline-flex min-h-[44px] items-center rounded-full bg-gold px-10 py-3.5 text-base font-semibold text-white hover:bg-gold/90 transition-colors shadow-lg">
-            Begin My Setup — 7 Steps
+            Begin My Setup, 7 Steps
           </button>
           <div className="mt-4">
             <button onClick={() => router.push("/pro/dashboard")} className="text-sm text-blue-100/40 hover:text-blue-100/70 transition-colors">

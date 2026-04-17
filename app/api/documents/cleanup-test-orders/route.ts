@@ -9,7 +9,7 @@ function createAdminClient() {
   );
 }
 
-// Runs hourly via Vercel cron — deletes expired test orders and their files
+// Runs hourly via Vercel cron, deletes expired test orders and their files
 export async function GET() {
   try {
     const supabase = createAdminClient();

@@ -65,7 +65,7 @@ export default function AcknowledgmentCard({ onContinue }: AcknowledgmentCardPro
                 : "bg-gray-200 text-gray-400 cursor-not-allowed"
             }`}
           >
-            {loading ? "Loading..." : "I Understand \u2014 Continue"}
+            {loading ? "Loading..." : "I Understand, Continue"}
           </button>
         </div>
       </div>

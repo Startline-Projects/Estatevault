@@ -45,7 +45,7 @@ export default function TestControls() {
         <div className="flex items-center justify-between">
           <div>
             <p className="text-sm font-medium text-charcoal">Test Promo Code</p>
-            <p className="text-xs text-gray-400 mt-0.5">Code &quot;Test&quot; for internal document review — no accounts created</p>
+            <p className="text-xs text-gray-400 mt-0.5">Code &quot;Test&quot; for internal document review, no accounts created</p>
           </div>
           <button
             onClick={handleToggle}
@@ -56,7 +56,7 @@ export default function TestControls() {
           </button>
         </div>
         <p className="mt-2 text-xs text-gray-400">
-          {active ? "Active — Mike can use \"Test\" promo code" : "Inactive — \"Test\" code returns invalid"}
+          {active ? "Active, Mike can use \"Test\" promo code" : "Inactive, \"Test\" code returns invalid"}
         </p>
       </div>
     </div>

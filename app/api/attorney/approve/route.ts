@@ -12,7 +12,7 @@ function createAdminClient() {
 }
 
 export async function POST(request: Request) {
-  // Auth check — only the assigned attorney or admin can approve
+  // Auth check, only the assigned attorney or admin can approve
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -44,7 +44,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  // Update attorney_reviews — use admin client so RLS is bypassed
+  // Update attorney_reviews, use admin client so RLS is bypassed
   const { error: reviewErr } = await admin
     .from("attorney_reviews")
     .update({ status: decision, notes: notes || null, reviewed_at: new Date().toISOString() })
@@ -56,7 +56,7 @@ export async function POST(request: Request) {
   }
 
   if (decision === "approved" || decision === "approved_with_notes") {
-    // Unlock order and documents — admin client bypasses all RLS
+    // Unlock order and documents, admin client bypasses all RLS
     const { error: orderErr } = await admin
       .from("orders")
       .update({ status: "delivered" })

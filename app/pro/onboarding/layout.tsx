@@ -36,7 +36,7 @@ export default function OnboardingLayout({ children }: { children: React.ReactNo
         <div className="mx-auto max-w-2xl">{children}</div>
       </div>
 
-      {/* Bottom navigation — hidden on step 7 */}
+      {/* Bottom navigation, hidden on step 7 */}
       {!isLastStep && (
         <div className="fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-gray-200 px-6 py-4">
           <div className="mx-auto max-w-2xl flex items-center justify-between">

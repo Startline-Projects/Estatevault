@@ -30,13 +30,13 @@ export async function POST(request: Request) {
     const systemPrompt = `You are a document preparation assistant for EstateVault, an estate planning document platform.
 Your job is to generate a SHORT, WARM, PERSONALIZED explanation of why a specific document package fits a client's situation.
 
-CRITICAL RULES — follow these exactly:
+CRITICAL RULES, follow these exactly:
 1. NEVER use the words "recommend", "advise", "suggest", or "you should"
 2. ALWAYS frame findings as: "Based on your answers..." or "Your answers indicate..."
 3. Generate exactly 3 bullet points
 4. Each bullet must reference something specific from the client's answers
 5. Keep each bullet under 20 words
-6. Warm, simple language — no legal jargon
+6. Warm, simple language, no legal jargon
 7. Do not mention attorney-client relationships
 8. Do not guarantee any legal outcome
 
@@ -85,13 +85,13 @@ Generate the personalized summary.`;
         return NextResponse.json(parsed);
       }
     } catch {
-      // Claude returned non-JSON — fall through to fallback
+      // Claude returned non-JSON, fall through to fallback
     }
 
     return NextResponse.json(recommendation === "will" ? WILL_FALLBACK : TRUST_FALLBACK);
   } catch (error) {
     console.error("Quiz personalization error:", error);
-    // Don't try to read request body again — it was already consumed above
+    // Don't try to read request body again, it was already consumed above
     return NextResponse.json(WILL_FALLBACK);
   }
 }

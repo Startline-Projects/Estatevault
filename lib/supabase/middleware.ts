@@ -79,25 +79,25 @@ export async function updateSession(request: NextRequest) {
     }
   );
 
-  // Refresh the session — important for Server Components
+  // Refresh the session, important for Server Components
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
-  // Public routes — no auth required
+  // Public routes, no auth required
   const publicPaths = ["/", "/quiz", "/will", "/trust", "/auth", "/attorney-referral", "/pro-partners", "/partners", "/professionals", "/farewell", "/api/webhooks", "/api/documents/process", "/api/documents/cleanup-test-orders", "/api/documents/process-now", "/api/documents/check-status", "/api/attorney/check-sla", "/api/checkout", "/api/quiz", "/api/professionals", "/api/farewell", "/api/admin/test-promo", "/api/documents/download-zip", "/api/auth/set-password"];
   const isPublic = publicPaths.some(
     (p) => pathname === p || pathname.startsWith(p + "/")
   );
 
-  // Partner slug pages (e.g. /the-peoples-firm) are public — single-segment paths
+  // Partner slug pages (e.g. /the-peoples-firm) are public, single-segment paths
   // that don't match known app routes are treated as partner landing pages
   const knownAppPrefixes = ["/pro", "/auth", "/dashboard", "/quiz", "/will", "/trust", "/api", "/sales", "/attorney", "/legal", "/_next", "/favicon"];
   const segments = pathname.split("/").filter(Boolean);
   const isPartnerSlug = segments.length === 1 && !knownAppPrefixes.some((p) => pathname.startsWith(p));
 
   if (!isPublic && !isPartnerSlug && !user) {
-    // Not authenticated — redirect to universal login
+    // Not authenticated, redirect to universal login
     const url = request.nextUrl.clone();
     url.pathname = "/auth/login";
     url.searchParams.set("redirect", pathname);
@@ -117,7 +117,7 @@ export async function updateSession(request: NextRequest) {
 
   // Cross-portal guards: redirect users to their correct portal
   if (user && userType) {
-    // Client dashboard — redirect non-clients to their portal
+    // Client dashboard, redirect non-clients to their portal
     if (pathname.startsWith("/dashboard")) {
       if (userType === "sales_rep" || userType === "admin") {
         const url = request.nextUrl.clone();
@@ -131,7 +131,7 @@ export async function updateSession(request: NextRequest) {
       }
     }
 
-    // Partner portal — only partners and admins
+    // Partner portal, only partners and admins
     if (pathname.startsWith("/pro") && pathname !== "/pro-partners") {
       const allowedTypes = ["partner", "admin"];
       if (!allowedTypes.includes(userType)) {
@@ -146,7 +146,7 @@ export async function updateSession(request: NextRequest) {
       }
     }
 
-    // Sales portal — only sales_rep and admin
+    // Sales portal, only sales_rep and admin
     if (pathname.startsWith("/sales/") || pathname === "/sales") {
       const salesTypes = ["sales_rep", "admin"];
       if (!salesTypes.includes(userType)) {

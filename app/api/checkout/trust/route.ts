@@ -28,7 +28,7 @@ export async function POST(request: Request) {
 
     // ── TEST PROMO CODE ────────────────────────────────────
     if (isTestCode) {
-      // Only valid on estatevault.us — block on partner URLs
+      // Only valid on estatevault.us, block on partner URLs
       const origin = request.headers.get("origin") || request.headers.get("referer") || request.headers.get("host") || "";
       const isPartnerUrl = origin.includes("legacy.");
       const isEstateVault = origin.includes("estatevault.us");
@@ -95,7 +95,7 @@ export async function POST(request: Request) {
     let clientId: string;
 
     if (userId) {
-      // Logged-in user — find or create their client record
+      // Logged-in user, find or create their client record
       const { data: existingClient } = await supabase.from("clients").select("id").eq("profile_id", userId).single();
 
       if (existingClient) {
@@ -114,7 +114,7 @@ export async function POST(request: Request) {
         clientId = newClient.id;
       }
     } else {
-      // Anonymous user — create client record without profile_id
+      // Anonymous user, create client record without profile_id
       const { data: newClient, error: clientError } = await supabase
         .from("clients")
         .insert({ source: partnerId ? "partner" : "direct", state: "Michigan", partner_id: partnerId || null })
@@ -216,7 +216,7 @@ export async function POST(request: Request) {
           const existingAuthUser = authUsers?.users?.find((u) => u.email === emailAddr);
 
           if (existingAuthUser) {
-            // Auth user exists but no profile — update password and create profile
+            // Auth user exists but no profile, update password and create profile
             profileId = existingAuthUser.id;
             await supabase.auth.admin.updateUserById(existingAuthUser.id, { password: tempPassword });
             await supabase.from("profiles").upsert({
@@ -249,7 +249,7 @@ export async function POST(request: Request) {
         }
       }
 
-      // No email sent — client sets password on success page
+      // No email sent, client sets password on success page
       // and can send documents to their email from the dashboard
 
       const docTypes = ["trust", "pour_over_will", "poa", "healthcare_directive"];

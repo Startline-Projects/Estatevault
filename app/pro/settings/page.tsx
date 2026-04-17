@@ -243,7 +243,7 @@ export default function ProSettingsPage() {
     {
       key: "plan",
       title: "Plan",
-      subtitle: isEnterprise ? "Enterprise Plan - $6,000 one-time" : "Standard Plan - $1,200 one-time",
+      subtitle: isEnterprise ? "Enterprise Plan $6,000 one-time" : "Standard Plan $1,200 one-time",
       content: (
         <div>
           <div className="rounded-xl bg-gray-50 p-4">
@@ -253,7 +253,7 @@ export default function ProSettingsPage() {
                   {isEnterprise ? "Enterprise" : "Standard"} Plan
                 </p>
                 <p className="text-xs text-charcoal/50 mt-1">
-                  {isEnterprise ? "$6,000 one-time" : "$1,200 one-time"} - Unlimited documents
+                  {isEnterprise ? "$6,000 one-time" : "$1,200 one-time"} Unlimited documents
                 </p>
               </div>
               <span
@@ -302,7 +302,7 @@ export default function ProSettingsPage() {
             <label className="block text-sm font-medium text-navy mb-1">Logo</label>
             <div className="rounded-xl border-2 border-dashed border-gray-300 p-6 text-center">
               <p className="text-sm text-charcoal/50">Drag and drop or click to upload</p>
-              <p className="text-xs text-charcoal/60 mt-1">PNG, SVG, JPG - max 5MB</p>
+              <p className="text-xs text-charcoal/60 mt-1">PNG, SVG, JPG max 5MB</p>
             </div>
           </div>
           <div>

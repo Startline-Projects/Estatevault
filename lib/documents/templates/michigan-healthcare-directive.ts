@@ -1,5 +1,5 @@
 /*
- * DOCUMENT GENERATION — ATTORNEY SUPERVISED
+ * DOCUMENT GENERATION, ATTORNEY SUPERVISED
  * All document templates and Claude prompts used in this file have been reviewed and
  * approved by a licensed Michigan estate planning attorney before deployment.
  * Claude generates document content based on structured client intake data.
@@ -50,7 +50,7 @@ DOCUMENT REQUIREMENTS:
 
 NOTARY RULES:
 - Do NOT include any county name (such as "Wayne County," "Oakland County," etc.) anywhere in the document body, notary acknowledgment, or witness sections. Leave county fields blank.
-- Do NOT write out full notary acknowledgment language — use [NOTARY BLOCK] placeholder only.
+- Do NOT write out full notary acknowledgment language, use [NOTARY BLOCK] placeholder only.
 
 OUTPUT FORMAT:
 - Return PLAIN TEXT only. Do NOT use any markdown formatting. No pound signs (#), no asterisks (**), no dashes for rules (---), no backticks. Use ALL CAPS for section headers.
@@ -60,7 +60,7 @@ OUTPUT FORMAT:
 - For witness blocks use EXACTLY: [WITNESS SIGNATURE] on its own line. Include two witness blocks. Do not add additional labels or headers around witness blocks.
 - Include witness disqualification attestation statements in the body text.
 - Include an advocate acceptance section with [SIGNATURE LINE] for the advocate.
-- Use [NOTARY BLOCK] EXACTLY ONCE at the end of the document. Do NOT write out notary acknowledgment language in the document body — the platform renders this automatically.
+- Use [NOTARY BLOCK] EXACTLY ONCE at the end of the document. Do NOT write out notary acknowledgment language in the document body, the platform renders this automatically.
 - Do NOT include any commentary, instructions, or explanations outside the document text itself.
 - Output ONLY the complete Patient Advocate Designation text ready for formatting.`;
 

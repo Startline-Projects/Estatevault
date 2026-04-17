@@ -43,7 +43,7 @@ export async function POST(request: Request) {
 
     const isPromoFree = promo_code && VALID_PROMO_CODES[promo_code.toUpperCase()];
 
-    // If promo code makes it free — skip Stripe, create account directly
+    // If promo code makes it free, skip Stripe, create account directly
     if (isPromoFree) {
       const supabase = createAdminClient();
 
@@ -118,7 +118,7 @@ export async function POST(request: Request) {
         await resend.emails.send({
           from: "EstateVault <info@estatevault.us>",
           to: salesEmail,
-          subject: `New Attorney Partner (PROMO) — Bar Verification Needed — ${firm_name || name}`,
+          subject: `New Attorney Partner (PROMO), Bar Verification Needed, ${firm_name || name}`,
           html: `<p><strong>New attorney partner signed up with promo code ${promo_code.toUpperCase()}</strong></p>
             <p>Name: ${name}<br>Email: ${email}<br>Phone: ${phone || "N/A"}<br>
             Firm: ${firm_name || "N/A"}<br>Bar Number: ${bar_number}<br>
@@ -136,7 +136,7 @@ export async function POST(request: Request) {
       });
     }
 
-    // Normal paid flow — create Stripe checkout session
+    // Normal paid flow, create Stripe checkout session
     const amount = tier === "professional" ? 600000 : 120000;
     const planName = tier === "professional" ? "Professional" : "Standard";
     const origin = request.headers.get("origin") || "https://www.estatevault.us";
@@ -149,7 +149,7 @@ export async function POST(request: Request) {
           price_data: {
             currency: "usd",
             product_data: {
-              name: `EstateVault Attorney Partner — ${planName}`,
+              name: `EstateVault Attorney Partner, ${planName}`,
               description: `One-time ${planName} attorney partner platform fee`,
             },
             unit_amount: amount,

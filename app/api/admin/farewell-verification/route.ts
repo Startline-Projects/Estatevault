@@ -166,7 +166,7 @@ export async function POST(request: Request) {
           from: "EstateVault <info@estatevault.us>",
           to: verReq.trustee_email,
           subject: "Verification Update",
-          html: `<div style="font-family:Inter,sans-serif;max-width:500px;margin:0 auto;padding:32px;"><h1 style="color:#1C3557;">Verification Update</h1><p>We were unable to verify the documentation you submitted. ${notes ? `<br><br>Reason: ${notes}` : ""}</p><p>If you believe this is an error, please resubmit with a clearer copy of the documentation.</p><p style="color:#999;font-size:12px;">— EstateVault</p></div>`,
+          html: `<div style="font-family:Inter,sans-serif;max-width:500px;margin:0 auto;padding:32px;"><h1 style="color:#1C3557;">Verification Update</h1><p>We were unable to verify the documentation you submitted. ${notes ? `<br><br>Reason: ${notes}` : ""}</p><p>If you believe this is an error, please resubmit with a clearer copy of the documentation.</p><p style="color:#999;font-size:12px;">- EstateVault</p></div>`,
         });
       } catch (emailErr) { console.error("Rejection email failed:", emailErr); }
 

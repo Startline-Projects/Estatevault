@@ -12,7 +12,7 @@ export default function VerifyEmailPage() {
     setResending(true);
     const supabase = createClient();
 
-    // Resend requires the user's email — get it from the current session
+    // Resend requires the user's email, get it from the current session
     const { data } = await supabase.auth.getSession();
     const email = data.session?.user?.email;
 

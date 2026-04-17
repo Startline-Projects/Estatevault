@@ -160,10 +160,10 @@ export default function ProClientsPage() {
                 return (
                   <tr key={c.id} className="border-b border-gray-100 hover:bg-gray-50">
                     <td className="px-4 py-3"><span className="font-medium text-navy">{initials}.</span></td>
-                    <td className="px-4 py-3">{order ? <span className="rounded-full bg-navy/10 px-2 py-0.5 text-xs text-navy">{order.product_type === "trust" ? "Trust" : "Will"}</span> : "—"}</td>
+                    <td className="px-4 py-3">{order ? <span className="rounded-full bg-navy/10 px-2 py-0.5 text-xs text-navy">{order.product_type === "trust" ? "Trust" : "Will"}</span> : "-"}</td>
                     <td className="px-4 py-3">{statusBadge(status)}</td>
                     <td className="px-4 py-3 text-charcoal/50 text-xs">{new Date(c.created_at).toLocaleDateString()}</td>
-                    <td className="px-4 py-3 text-charcoal/70">{order?.partner_cut ? `$${order.partner_cut / 100}` : "—"}</td>
+                    <td className="px-4 py-3 text-charcoal/70">{order?.partner_cut ? `$${order.partner_cut / 100}` : "-"}</td>
                     <td className="px-4 py-3"><Link href={`/pro/clients/${c.id}`} className="text-xs text-gold hover:text-gold/80">View</Link></td>
                   </tr>
                 );

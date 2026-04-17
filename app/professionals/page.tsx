@@ -83,7 +83,7 @@ const STEPS = [
     number: "1",
     title: "We set up your branded platform",
     description:
-      "Your logo, your colors, your URL. Your clients see your brand \u2014 powered by EstateVault.",
+      "Your logo, your colors, your URL. Your clients see your brand, powered by EstateVault.",
   },
   {
     number: "2",
@@ -319,7 +319,7 @@ function EarningsCalculator() {
                     : "bg-gray-100 text-charcoal/60 hover:bg-gray-200"
                 }`}
               >
-                {TIER_CONFIG[key].label} &mdash; {TIER_CONFIG[key].price}
+                {TIER_CONFIG[key].label} {TIER_CONFIG[key].price}
               </button>
             ))}
           </div>
@@ -614,10 +614,10 @@ function RequestAccessForm() {
             <option value="" disabled>
               Number of Clients
             </option>
-            <option value="1-50">1 - 50</option>
-            <option value="51-100">51 - 100</option>
-            <option value="101-250">101 - 250</option>
-            <option value="251-500">251 - 500</option>
+            <option value="1-50">1 to 50</option>
+            <option value="51-100">51 to 100</option>
+            <option value="101-250">101 to 250</option>
+            <option value="251-500">251 to 500</option>
             <option value="500+">500+</option>
           </select>
 

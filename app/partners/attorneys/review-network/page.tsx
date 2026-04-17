@@ -298,7 +298,7 @@ export default function ReviewNetworkPage() {
                     placeholder="300"
                   />
                 </div>
-                <p className="mt-1 text-xs text-charcoal/60">Range: $150 - $1,500 per review</p>
+                <p className="mt-1 text-xs text-charcoal/60">Range: $150 to $1,500 per review</p>
               </div>
 
               {/* Practice areas */}

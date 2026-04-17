@@ -67,7 +67,7 @@ export default function Step7Page() {
         <h3 className="text-base font-bold text-navy">Compliance Readiness</h3>
         <div className="mt-4 space-y-3">
           <div className="flex items-center gap-2"><span className="text-green-500">✅</span><span className="text-sm text-charcoal">Partner Agreement Signed</span></div>
-          <div className="flex items-center gap-2"><span className="text-gray-300">⬜</span><span className="text-sm text-charcoal/60">Certification Training — <span className="text-gold font-medium">Required to unlock client features</span></span></div>
+          <div className="flex items-center gap-2"><span className="text-gray-300">⬜</span><span className="text-sm text-charcoal/60">Certification Training, <span className="text-gold font-medium">Required to unlock client features</span></span></div>
           <div className="flex items-center gap-2"><span className="text-green-500">✅</span><span className="text-sm text-charcoal">Pricing Acknowledged</span></div>
         </div>
         <p className="mt-3 text-xs text-charcoal/50">You can explore your dashboard now, but client sessions are locked until you complete certification training.</p>
@@ -84,7 +84,7 @@ export default function Step7Page() {
         <div className="rounded-xl bg-white border border-gray-200 p-5 border-l-4 border-l-navy">
           <span className="text-xl">📦</span>
           <h4 className="mt-2 text-sm font-bold text-navy">Download Marketing Toolkit</h4>
-          <p className="mt-1 text-xs text-charcoal/60">Scripts, email templates, social posts, and print materials — all branded for you.</p>
+          <p className="mt-1 text-xs text-charcoal/60">Scripts, email templates, social posts, and print materials, all branded for you.</p>
           <button disabled className="mt-3 inline-flex items-center rounded-full bg-gray-200 px-4 py-1.5 text-xs font-semibold text-gray-400 cursor-not-allowed">Requires Certification</button>
         </div>
         <div className="rounded-xl bg-white border border-gray-200 p-5 border-l-4 border-l-teal-500">

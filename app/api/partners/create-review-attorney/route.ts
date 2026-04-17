@@ -45,7 +45,7 @@ export async function POST(request: Request) {
     let profileId: string;
 
     if (existingUser) {
-      // User already exists — update their profile
+      // User already exists, update their profile
       profileId = existingUser.id;
       await supabase
         .from("profiles")

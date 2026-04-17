@@ -18,7 +18,7 @@ const willBullets = [
 ];
 
 const trustBullets = [
-  "Avoids Michigan probate \u2014 keeps your affairs private",
+  "Avoids Michigan probate, keeps your affairs private",
   "Protects your home and assets for your family",
   "Includes all 4 documents your family needs",
 ];
@@ -109,7 +109,7 @@ export default function ResultScreen({
             href={href}
             className="mt-8 block w-full min-h-[44px] rounded-full bg-gold py-3.5 text-center text-sm font-semibold text-white hover:bg-gold/90 transition-colors"
           >
-            Continue With {isWill ? "Will" : "Trust"} Package — {price}
+            Continue With {isWill ? "Will" : "Trust"} Package, {price}
           </Link>
 
           <Link
@@ -157,7 +157,7 @@ export default function ResultScreen({
                 </span>
               </label>
               <p className="mt-2 text-xs text-blue-100/60">
-                We&apos;ll ask for their name and firm — your explicit opt-in only
+                We&apos;ll ask for their name and firm, your explicit opt-in only
               </p>
             </div>
           )}

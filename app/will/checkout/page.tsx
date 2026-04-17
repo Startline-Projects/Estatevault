@@ -49,7 +49,7 @@ export default function WillCheckoutPage() {
     if (code === "FREE134") {
       setPromoApplied(true); setIsTestMode(false); setAttorneyReview(false); setError("");
     } else if (code === "TEST") {
-      // Validate server-side — don't expose test logic in client JS
+      // Validate server-side, don't expose test logic in client JS
       try {
         const res = await fetch("/api/admin/test-promo");
         const data = await res.json();
@@ -180,7 +180,7 @@ export default function WillCheckoutPage() {
               disabled={!ackChecked || loading}
               className="mt-6 w-full min-h-[44px] rounded-full bg-gold py-3.5 text-sm font-semibold text-white hover:bg-gold/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {loading ? "Creating your account..." : "I Agree — Continue"}
+              {loading ? "Creating your account..." : "I Agree, Continue"}
             </button>
             <button onClick={() => setShowAcknowledgment(false)} className="mt-3 w-full text-sm text-charcoal/50 hover:text-charcoal transition-colors">
               Go Back
@@ -240,7 +240,7 @@ export default function WillCheckoutPage() {
             </div>
             {promoApplied && (
               <div className="mt-3 rounded-lg bg-green-50 border border-green-200 px-4 py-2 text-sm text-green-700 font-medium text-center">
-                Promo code applied — Will Package is free
+                Promo code applied, Will Package is free
               </div>
             )}
           </div>
@@ -266,13 +266,13 @@ export default function WillCheckoutPage() {
           </div>
         )}
 
-        {/* Attorney review — hide when promo applied */}
+        {/* Attorney review, hide when promo applied */}
         {!promoApplied && (
           <div className="mt-6 rounded-2xl bg-white border border-gray-200 p-6 shadow-sm">
             <div className="flex items-start gap-3">
               <span className="text-2xl">⚖</span>
               <div className="flex-1">
-                <h3 className="text-base font-bold text-navy">Attorney Review — $300</h3>
+                <h3 className="text-base font-bold text-navy">Attorney Review, $300</h3>
                 <p className="mt-1 text-sm text-charcoal/60 leading-relaxed">A licensed Michigan attorney will personally review your documents before delivery. (48hr turnaround)</p>
               </div>
             </div>
@@ -296,8 +296,8 @@ export default function WillCheckoutPage() {
           {loading
             ? "Processing..."
             : isTestMode ? "Generate Test Documents"
-            : promoApplied ? "Get Your Documents — Free"
-            : `Proceed to Payment — $${total}`
+            : promoApplied ? "Get Your Documents, Free"
+            : `Proceed to Payment, $${total}`
           }
         </button>
         {!promoApplied && <p className="mt-3 text-center text-xs text-charcoal/60">Secure payment powered by Stripe</p>}

@@ -120,7 +120,7 @@ function AdminCommissionView() {
         <p className="text-sm font-medium text-white/60 uppercase tracking-wide">Total Commission Owed This Month</p>
         <p className="text-4xl font-bold mt-2">{formatCurrency(totalMtdOwed)}</p>
         <p className="text-sm text-white/50 mt-1">
-          {new Date().toLocaleDateString("en-US", { month: "long", year: "numeric" })} &mdash; across {repSummaries.filter(r => r.mtdCommissionOwed > 0).length} rep{repSummaries.filter(r => r.mtdCommissionOwed > 0).length !== 1 ? "s" : ""}
+          {new Date().toLocaleDateString("en-US", { month: "long", year: "numeric" })} across {repSummaries.filter(r => r.mtdCommissionOwed > 0).length} rep{repSummaries.filter(r => r.mtdCommissionOwed > 0).length !== 1 ? "s" : ""}
         </p>
       </div>
 
@@ -129,7 +129,7 @@ function AdminCommissionView() {
         <h3 className="text-sm font-semibold text-navy mb-1">How Commission Works</h3>
         <p className="text-sm text-charcoal leading-relaxed">
           Sales reps earn their configured commission rate on the white-label platform fee paid by partners they recruit.
-          Commission is earned when a partner completes their signup payment — not on document sales.
+          Commission is earned when a partner completes their signup payment, not on document sales.
           Commissions are processed and paid to reps on the 1st of each month.
         </p>
       </div>
@@ -290,7 +290,7 @@ function RepCommissionView() {
         <p className="text-sm text-charcoal leading-relaxed">
           You earn a <span className="font-semibold">{(commissionRate * 100).toFixed(0)}% commission</span> on
           the white-label platform fee paid by partners you recruit. Commission is earned when a partner
-          completes their signup payment — not on document sales. Commissions are processed and paid monthly.
+          completes their signup payment, not on document sales. Commissions are processed and paid monthly.
         </p>
       </div>
 

@@ -185,10 +185,10 @@ export async function sendDocumentEmail(params: SendDocumentEmailParams) {
     });
 
     if (error) {
-      console.error("Email delivery failed — documents are still saved in Supabase:", error);
+      console.error("Email delivery failed, documents are still saved in Supabase:", error);
     }
   } catch (emailError) {
-    console.error("Email delivery failed — documents are still saved in Supabase:", emailError);
-    // Do NOT re-throw — generation succeeded, client can download from their account
+    console.error("Email delivery failed, documents are still saved in Supabase:", emailError);
+    // Do NOT re-throw, generation succeeded, client can download from their account
   }
 }

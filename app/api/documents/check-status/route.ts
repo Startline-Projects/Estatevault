@@ -9,7 +9,7 @@ function createAdminClient() {
   );
 }
 
-// Public endpoint — returns document status for an order
+// Public endpoint, returns document status for an order
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);

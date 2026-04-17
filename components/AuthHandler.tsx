@@ -15,7 +15,7 @@ export default function AuthHandler() {
 
     const supabase = createClient();
 
-    // Listen for auth state change — Supabase client auto-detects hash tokens
+    // Listen for auth state change, Supabase client auto-detects hash tokens
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         if (event === "SIGNED_IN" && session) {

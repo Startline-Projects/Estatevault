@@ -221,7 +221,7 @@ export async function GET() {
       await supabase.from("vault_items").upsert({
         client_id: job.client_id,
         category: "estate_document",
-        label: `${dt.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())} — ${new Date().toLocaleDateString()}`,
+        label: `${dt.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())}, ${new Date().toLocaleDateString()}`,
         data: { document_type: dt, order_id: job.order_id, generated_date: new Date().toISOString(), is_auto_generated: true },
       }, { onConflict: "id" });
     }

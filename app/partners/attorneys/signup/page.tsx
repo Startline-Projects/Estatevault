@@ -239,7 +239,7 @@ function AttorneySignupContent() {
         {/* Tier badge */}
         <div className="text-center mb-8">
           <span className="inline-block bg-navy/10 text-navy text-sm font-semibold px-4 py-1.5 rounded-full">
-            {config.name} Plan — ${config.price.toLocaleString()}
+            {config.name} Plan, ${config.price.toLocaleString()}
           </span>
         </div>
 
@@ -251,7 +251,7 @@ function AttorneySignupContent() {
         )}
 
         {/* ============================================================ */}
-        {/*  STEP 1 — Your Details                                       */}
+        {/*  STEP 1, Your Details                                       */}
         {/* ============================================================ */}
         {step === 1 && (
           <div className="bg-white rounded-2xl border border-gray-200 p-8 shadow-sm">
@@ -424,7 +424,7 @@ function AttorneySignupContent() {
         )}
 
         {/* ============================================================ */}
-        {/*  STEP 2 — Set Your Review Fee                                */}
+        {/*  STEP 2, Set Your Review Fee                                */}
         {/* ============================================================ */}
         {step === 2 && (
           <div className="bg-white rounded-2xl border border-gray-200 p-8 shadow-sm">
@@ -543,7 +543,7 @@ function AttorneySignupContent() {
         )}
 
         {/* ============================================================ */}
-        {/*  STEP 3 — Payment                                            */}
+        {/*  STEP 3, Payment                                            */}
         {/* ============================================================ */}
         {step === 3 && (
           <div className="bg-white rounded-2xl border border-gray-200 p-8 shadow-sm">
@@ -558,7 +558,7 @@ function AttorneySignupContent() {
               <div className="mt-4 space-y-3">
                 <div className="flex justify-between text-sm">
                   <span className="text-charcoal/70">Plan</span>
-                  <span className="font-semibold text-charcoal">EstateVault Attorney — {config.name}</span>
+                  <span className="font-semibold text-charcoal">EstateVault Attorney, {config.name}</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-charcoal/70">One-time platform fee</span>
@@ -583,7 +583,7 @@ function AttorneySignupContent() {
                 </div>
                 {isPromoFree && (
                   <div className="mt-2 bg-green-50 border border-green-200 rounded-lg px-4 py-2 text-sm text-green-700 font-medium text-center">
-                    ✓ Promotional code TPFP applied — platform fee waived
+                    ✓ Promotional code TPFP applied, platform fee waived
                   </div>
                 )}
               </div>
@@ -627,7 +627,7 @@ function AttorneySignupContent() {
                     Redirecting to Stripe...
                   </span>
                 ) : (
-                  isPromoFree ? 'Create My Account — Free' : 'Secure Payment'
+                  isPromoFree ? 'Create My Account, Free' : 'Secure Payment'
                 )}
               </button>
             </div>

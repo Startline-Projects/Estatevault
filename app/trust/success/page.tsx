@@ -51,7 +51,7 @@ function SuccessContent() {
             { label: "Promo code applied", status: "done" },
             { label: "Trust Package generated", status: "done" },
             { label: "Ready for download", status: "done" },
-            { label: "Test Mode — not saved", status: "done" },
+            { label: "Test Mode, not saved", status: "done" },
           ]);
           return true;
         }
@@ -86,7 +86,7 @@ function SuccessContent() {
   useEffect(() => {
     async function init() {
       if ((isPromo || isTest) && orderId) {
-        const lastStep = isTest ? "Test Mode — not saved" : "Saved to your account";
+        const lastStep = isTest ? "Test Mode, not saved" : "Saved to your account";
         setSteps([
           { label: "Promo code applied", status: "done" },
           { label: "Generating your Trust Package...", status: "active" },
@@ -95,7 +95,7 @@ function SuccessContent() {
         ]);
         setLoading(false);
 
-        // Trigger document generation (fire-and-forget — don't await)
+        // Trigger document generation (fire-and-forget, don't await)
         fetch(`/api/documents/process-now?order_id=${orderId}`).catch(() => {});
 
         // Poll for document readiness
@@ -123,19 +123,19 @@ function SuccessContent() {
 
         if (data.attorneyReview) {
           setSteps([
-            { label: `Payment confirmed — $${data.amount}`, status: "done" },
+            { label: `Payment confirmed, $${data.amount}`, status: "done" },
             { label: "Generating your Trust Package...", status: "active" },
             { label: "Attorney review in progress (up to 4 days)", status: "pending" },
             { label: "Documents unlocked after approval", status: "pending" },
           ]);
 
-          // Trigger generation for attorney review orders — docs must exist before attorney can review
+          // Trigger generation for attorney review orders, docs must exist before attorney can review
           if (data.orderId) {
             fetch(`/api/documents/process-now?order_id=${data.orderId}`).catch(() => {});
           }
         } else {
           setSteps([
-            { label: `Payment confirmed — $${data.amount}`, status: "done" },
+            { label: `Payment confirmed, $${data.amount}`, status: "done" },
             { label: "Generating your Trust Package...", status: "active" },
             { label: "Ready for download", status: "pending" },
             { label: "Saved to your account", status: "pending" },
@@ -260,7 +260,7 @@ function SuccessContent() {
                 const parsed = intake ? JSON.parse(intake) : {};
                 const fn = parsed.firstName || "Test";
                 const ln = parsed.lastName || "User";
-                const zipName = `Test - ${fn} ${ln}.zip`;
+                const zipName = `Test ${fn} ${ln}.zip`;
                 const res = await fetch(`/api/documents/download-zip?order_id=${orderId}&first_name=${encodeURIComponent(fn)}&last_name=${encodeURIComponent(ln)}`);
                 if (!res.ok) return;
                 const blob = await res.blob();
@@ -281,10 +281,10 @@ function SuccessContent() {
 
         {/* Test mode label */}
         {isTest && (
-          <p className="mt-6 text-center text-xs text-white/50">Test Mode — Documents will not be saved</p>
+          <p className="mt-6 text-center text-xs text-white/50">Test Mode, Documents will not be saved</p>
         )}
 
-        {/* Password setup — always shown (even attorney review) unless test mode */}
+        {/* Password setup, always shown (even attorney review) unless test mode */}
         {email && !isTest && (
           <div className="mt-10">
             {hasExistingAccount ? (
@@ -304,7 +304,7 @@ function SuccessContent() {
                 {attorneyReview && (
                   <div className="mb-6 rounded-2xl bg-white/10 border border-white/10 p-5 text-center">
                     <p className="text-sm text-white font-medium">Set up your account to track your review status.</p>
-                    <p className="mt-1 text-xs text-blue-100/60">Your documents will be unlocked and available to download once the attorney approves them — up to 4 days.</p>
+                    <p className="mt-1 text-xs text-blue-100/60">Your documents will be unlocked and available to download once the attorney approves them, up to 4 days.</p>
                   </div>
                 )}
                 <PasswordSetup email={email} userId={userId} defaultName={clientName} />

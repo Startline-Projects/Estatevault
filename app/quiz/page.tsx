@@ -323,8 +323,8 @@ export default function QuizPage() {
               <div className="grid grid-cols-2 gap-3">
                 {[
                   "Under $150K",
-                  "$150K\u2013$500K",
-                  "$500K\u2013$1M",
+                  "$150K to $500K",
+                  "$500K to $1M",
                   "Over $1M",
                 ].map((opt) => (
                   <ChoiceTile

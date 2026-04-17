@@ -42,7 +42,7 @@ export async function GET() {
 </style></head><body>
 <div class="header">
   <h1>${c}</h1>
-  <p>PROTECT YOUR FAMILY'S FUTURE — Attorney-Reviewed Estate Planning</p>
+  <p>PROTECT YOUR FAMILY'S FUTURE, Attorney-Reviewed Estate Planning</p>
 </div>
 <div class="packages">
   <div class="package">

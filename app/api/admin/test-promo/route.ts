@@ -10,7 +10,7 @@ function createAdminClient() {
   );
 }
 
-// GET — check if test code is active (public, used by checkout APIs)
+// GET, check if test code is active (public, used by checkout APIs)
 export async function GET() {
   try {
     const admin = createAdminClient();
@@ -33,7 +33,7 @@ export async function GET() {
   }
 }
 
-// POST — toggle test code (admin only)
+// POST, toggle test code (admin only)
 export async function POST(request: Request) {
   try {
     const supabase = createClient();

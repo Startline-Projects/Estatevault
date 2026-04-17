@@ -143,7 +143,7 @@ export default function Step4Page() {
     Cloudflare: [
       "Log in → select domain → DNS → Records → Add Record",
       'Type: CNAME, Name: legacy, Target: cname.estatevault.us',
-      "Proxy status: DNS only (grey cloud — NOT orange)",
+      "Proxy status: DNS only (grey cloud, NOT orange)",
       "Save",
     ],
     "Google Domains": [
@@ -206,7 +206,7 @@ export default function Step4Page() {
         )}
       </div>
 
-      {/* DNS instructions — shown after domain is saved */}
+      {/* DNS instructions, shown after domain is saved */}
       {savedDomain && (
         <>
           <div className="mt-8">
@@ -325,7 +325,7 @@ export default function Step4Page() {
 
       {/* Fallback URL notice */}
       <div className="mt-6 rounded-lg bg-gray-50 border border-gray-200 p-4">
-        <p className="text-xs text-charcoal/50 font-medium">Available immediately — no DNS setup needed:</p>
+        <p className="text-xs text-charcoal/50 font-medium">Available immediately, no DNS setup needed:</p>
         <p className="mt-1 text-sm font-mono text-navy">
           estatevault.us/{slug || "your-company"}
         </p>

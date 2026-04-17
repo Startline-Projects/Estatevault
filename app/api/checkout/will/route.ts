@@ -37,7 +37,7 @@ export async function POST(request: Request) {
 
     // ── TEST PROMO CODE ────────────────────────────────────
     if (isTestCode) {
-      // Only valid on estatevault.us — block on partner URLs
+      // Only valid on estatevault.us, block on partner URLs
       const origin = request.headers.get("origin") || request.headers.get("referer") || request.headers.get("host") || "";
       const isPartnerUrl = origin.includes("legacy.");
       const isEstateVault = origin.includes("estatevault.us");
@@ -78,7 +78,7 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: "Failed to create test order" }, { status: 500 });
       }
 
-      // Save intake for document generation — link to order via quiz_session_id
+      // Save intake for document generation, link to order via quiz_session_id
       const { data: quizSession } = await supabase.from("quiz_sessions").insert({
         answers: intakeAnswers,
         recommendation: "will",
@@ -95,7 +95,7 @@ export async function POST(request: Request) {
         order_id: order.id, document_type: dt, status: "pending", template_version: "1.0",
       })));
 
-      // Audit log — no personal data
+      // Audit log, no personal data
       await supabase.from("audit_log").insert({
         action: "test_promo.used",
         resource_type: "order",
@@ -110,7 +110,7 @@ export async function POST(request: Request) {
     let clientId: string;
 
     if (userId) {
-      // Logged-in user — find or create their client record
+      // Logged-in user, find or create their client record
       const { data: existingClient } = await supabase
         .from("clients")
         .select("id")
@@ -136,7 +136,7 @@ export async function POST(request: Request) {
         clientId = newClient.id;
       }
     } else {
-      // Anonymous user — create client record without profile_id
+      // Anonymous user, create client record without profile_id
       const { data: newClient, error: clientError } = await supabase
         .from("clients")
         .insert({ source: partnerId ? "partner" : "direct", state: "Michigan", partner_id: partnerId || null })
@@ -276,7 +276,7 @@ export async function POST(request: Request) {
         }
       }
 
-      // No email sent — client sets password on success page
+      // No email sent, client sets password on success page
       // and can send documents to their email from the dashboard
 
       // Create document records

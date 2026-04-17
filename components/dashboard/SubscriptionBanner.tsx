@@ -88,12 +88,12 @@ export default function SubscriptionBanner({ onStatusLoaded }: { onStatusLoaded?
     );
   }
 
-  // status === "none" — promotional
+  // status === "none", promotional
   return (
     <div className="rounded-xl bg-navy/5 border border-navy/10 p-5">
       <div className="flex items-start justify-between">
         <div>
-          <p className="text-sm font-bold text-navy">Upgrade to Vault Plan — $99/year</p>
+          <p className="text-sm font-bold text-navy">Upgrade to Vault Plan, $99/year</p>
           <ul className="mt-2 space-y-1">
             <li className="flex items-center gap-2 text-xs text-charcoal/70">
               <span className="text-gold">&#10003;</span> Unlimited free document amendments

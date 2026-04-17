@@ -47,7 +47,7 @@ export async function GET(request: Request) {
     const supabase = createAdminClient();
     log.push("1. Connected to Supabase");
 
-    // Find the order — include attorney_review_requested
+    // Find the order, include attorney_review_requested
     const { data: order, error: orderErr } = await supabase
       .from("orders")
       .select("id, client_id, product_type, status, order_type, quiz_session_id, intake_data, attorney_review_requested")
@@ -62,7 +62,7 @@ export async function GET(request: Request) {
     const isAttorneyReview = order.attorney_review_requested === true;
     log.push(`2. Order found: type=${order.product_type}, status=${order.status}, attorney_review=${isAttorneyReview}, client_id=${order.client_id}`);
 
-    // Get quiz answers — prefer intake_data, then quiz_session_id, then client_id
+    // Get quiz answers, prefer intake_data, then quiz_session_id, then client_id
     let quizAnswers: Record<string, unknown> = {};
     if (order.intake_data && typeof order.intake_data === "object") {
       quizAnswers = order.intake_data as Record<string, unknown>;
@@ -126,24 +126,24 @@ export async function GET(request: Request) {
 
         const storageClientId = isTestOrder ? "test" : (order.client_id || "unknown");
         const path = await uploadDocument(storageClientId, order.id, docType, pdfBuffer);
-        // uploadDocument sets doc status to "generated" — we will update below
+        // uploadDocument sets doc status to "generated", we will update below
         log.push(`   ${docType}: uploaded to ${path}`);
         results.push({ docType, success: true, path });
       } catch (docError) {
         const msg = docError instanceof Error ? docError.message : String(docError);
-        log.push(`   ${docType}: FAILED — ${msg}`);
+        log.push(`   ${docType}: FAILED, ${msg}`);
         results.push({ docType, success: false, error: msg });
       }
     }
 
     // Update order and document statuses based on attorney review
     if (isAttorneyReview) {
-      // Order goes to "review" — attorney must approve before client can download
+      // Order goes to "review", attorney must approve before client can download
       await supabase.from("orders").update({ status: "review" }).eq("id", orderId);
       await supabase.from("documents").update({ status: "review" }).eq("order_id", orderId);
       log.push("8. Order and documents set to 'review' (attorney review required)");
     } else {
-      // No attorney review — deliver immediately
+      // No attorney review, deliver immediately
       await supabase.from("orders").update({ status: "delivered" }).eq("id", orderId);
       await supabase.from("documents").update({ status: "delivered", delivered_at: new Date().toISOString() }).eq("order_id", orderId);
       log.push("8. Order and documents set to 'delivered'");

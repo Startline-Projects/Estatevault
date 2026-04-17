@@ -44,7 +44,7 @@ async function main() {
   if (existing) {
     userId = existing.id;
     await supabase.auth.admin.updateUserById(userId, { password: tempPassword });
-    console.log("Existing attorney found — password reset.");
+    console.log("Existing attorney found, password reset.");
   } else {
     const { data: newUser, error } = await supabase.auth.admin.createUser({
       email: ATTORNEY_EMAIL,

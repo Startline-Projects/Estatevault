@@ -292,7 +292,7 @@ export default function FarewellTrusteePage() {
               className="w-full rounded-xl border-2 border-gold bg-gold/5 p-5 text-left hover:bg-gold/10 transition-colors"
             >
               <p className="font-semibold text-navy text-sm">I already have access</p>
-              <p className="text-xs text-gray-500 mt-1">My verification was approved — view messages now</p>
+              <p className="text-xs text-gray-500 mt-1">My verification was approved, view messages now</p>
             </button>
 
             <button
@@ -362,7 +362,7 @@ export default function FarewellTrusteePage() {
                 ) : (
                   <>
                     <p className="text-sm text-gray-500">Click to upload</p>
-                    <p className="text-xs text-gray-400 mt-1">PDF, JPG, or PNG — max 10MB</p>
+                    <p className="text-xs text-gray-400 mt-1">PDF, JPG, or PNG, max 10MB</p>
                   </>
                 )}
               </div>

@@ -30,7 +30,7 @@ function AttorneyWelcomeContent() {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    // Promo code flow — account already created, no Stripe session to verify
+    // Promo code flow, account already created, no Stripe session to verify
     if (promoParam?.toUpperCase() === 'TPFP') {
       setResult({
         success: true,
@@ -148,7 +148,7 @@ function AttorneyWelcomeContent() {
               <div className="space-y-4">
                 <div className="flex items-center gap-3">
                   <span className="text-green-500 text-xl">&#10003;</span>
-                  <span className="text-charcoal font-medium">Payment confirmed — ${result.amount?.toLocaleString()}</span>
+                  <span className="text-charcoal font-medium">Payment confirmed, ${result.amount?.toLocaleString()}</span>
                 </div>
                 <div className="flex items-center gap-3">
                   <span className="text-green-500 text-xl">&#10003;</span>

@@ -1,5 +1,5 @@
 /*
- * DOCUMENT GENERATION — ATTORNEY SUPERVISED
+ * DOCUMENT GENERATION, ATTORNEY SUPERVISED
  * All document templates and Claude prompts used in this file have been reviewed and
  * approved by a licensed Michigan estate planning attorney before deployment.
  * Claude generates document content based on structured client intake data.
@@ -34,7 +34,7 @@ THIS IS A SHORTER DOCUMENT than a standard will. Do not include detailed distrib
 
 NOTARY RULES:
 - Do NOT include any county name (such as "Wayne County," "Oakland County," etc.) anywhere in the document body, notary acknowledgment, or witness sections. Leave county fields blank.
-- Do NOT write out full notary acknowledgment language — use [NOTARY BLOCK] placeholder only.
+- Do NOT write out full notary acknowledgment language, use [NOTARY BLOCK] placeholder only.
 
 EXECUTION INSTRUCTIONS: Always include an Execution Instructions article before the signature block stating: Michigan law (MCL 700.2502) requires the testator to sign in the presence of two (2) adult witnesses who are present at the same time. Witnesses must sign in the testator's presence. Witnesses should not be named beneficiaries. All three parties should sign simultaneously in the same location.
 
@@ -44,7 +44,7 @@ OUTPUT FORMAT:
 - Use [SIGNATURE LINE] where the testator signs.
 - Use [DATE LINE] where the date of signing goes.
 - For witness blocks use EXACTLY: [WITNESS SIGNATURE] on its own line. Include two witness blocks. Do not add additional labels or headers around witness blocks.
-- Use [NOTARY BLOCK] EXACTLY ONCE at the end of the document. Do NOT write out notary acknowledgment language in the document body — the platform renders this automatically.
+- Use [NOTARY BLOCK] EXACTLY ONCE at the end of the document. Do NOT write out notary acknowledgment language in the document body, the platform renders this automatically.
 - Do NOT include any commentary, instructions, or explanations outside the document text itself.
 - Output ONLY the complete pour-over will text ready for formatting.`;
 

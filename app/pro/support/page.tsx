@@ -30,7 +30,7 @@ const FAQS = [
   {
     question: "How do I get paid for client documents?",
     answer:
-      "You earn a fixed commission for every document your clients complete. Will packages earn you $300 (Standard) or $350 (Enterprise), and trust packages earn $400 or $450 respectively. Payouts are processed every Friday via Stripe Connect or ACH. The minimum payout is $50 — anything below rolls to the following week.",
+      "You earn a fixed commission for every document your clients complete. Will packages earn you $300 (Standard) or $350 (Enterprise), and trust packages earn $400 or $450 respectively. Payouts are processed every Friday via Stripe Connect or ACH. The minimum payout is $50, anything below rolls to the following week.",
   },
   {
     question: "What happens when a client triggers a hard stop?",

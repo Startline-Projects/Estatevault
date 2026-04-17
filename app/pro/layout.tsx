@@ -6,7 +6,7 @@ export default async function ProLayout({ children }: { children: React.ReactNod
   const headersList = headers();
   const url = headersList.get("x-url") || headersList.get("x-invoke-path") || headersList.get("x-matched-path") || "";
 
-  // Onboarding and login pages render their own full-page layout — skip ProShell
+  // Onboarding and login pages render their own full-page layout, skip ProShell
   if (url.includes("/pro/onboarding") || url.includes("/pro/login")) {
     return <>{children}</>;
   }

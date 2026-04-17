@@ -38,7 +38,7 @@ export default function Hero() {
 
           <p className="mt-6 text-lg md:text-xl text-white/70 max-w-2xl mx-auto leading-relaxed">
             Attorney-reviewed wills and trusts built for Michigan families.
-            Your documents and a secure family vault — all in one place.
+            Your documents and a secure family vault, all in one place.
           </p>
 
           <div className="mt-10 flex flex-col items-center gap-4">

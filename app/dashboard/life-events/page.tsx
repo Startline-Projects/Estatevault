@@ -11,7 +11,7 @@ const EVENTS = [
   { id: "business", icon: "💼", title: "Started or Sold a Business", description: "Business ownership significantly affects your estate plan.", urgent: false, recommendation: "Business interests require careful estate planning. We recommend attorney review for this change.", action: "attorney" },
   { id: "death", icon: "🕊", title: "Loss of a Beneficiary or Trustee", description: "Your plan references someone who has passed. An update is needed.", urgent: true, recommendation: "Your estate plan names someone who is no longer living. Successor provisions may apply, but an update is recommended.", action: "amendment" },
   { id: "health", icon: "🏥", title: "Health Diagnosis", description: "Consider reviewing your healthcare directive and power of attorney.", urgent: false, recommendation: "Review your healthcare directive to ensure your wishes are current, and confirm your patient advocate is still appropriate.", action: "amendment" },
-  { id: "assets", icon: "💰", title: "Significant Change in Assets", description: "Major asset changes — inheritance, large purchase, retirement account changes — may affect your plan.", urgent: false, recommendation: "Significant changes in net worth may affect which estate planning strategy is best for you.", action: "amendment" },
+  { id: "assets", icon: "💰", title: "Significant Change in Assets", description: "Major asset changes, inheritance, large purchase, retirement account changes, may affect your plan.", urgent: false, recommendation: "Significant changes in net worth may affect which estate planning strategy is best for you.", action: "amendment" },
 ];
 
 export default function LifeEventsPage() {
@@ -72,11 +72,11 @@ export default function LifeEventsPage() {
               <div className="mt-4">
                 {event.action === "amendment" ? (
                   <Link href="/dashboard/amendment" className="inline-flex items-center rounded-full bg-navy px-5 py-2 text-sm font-semibold text-white hover:bg-navy/90 transition-colors">
-                    Request Amendment — $50
+                    Request Amendment, $50
                   </Link>
                 ) : (
                   <Link href="/attorney-referral" className="inline-flex items-center rounded-full bg-amber-600 px-5 py-2 text-sm font-semibold text-white hover:bg-amber-700 transition-colors">
-                    This may require attorney review — Connect with an attorney
+                    This may require attorney review, Connect with an attorney
                   </Link>
                 )}
               </div>

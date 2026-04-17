@@ -167,7 +167,7 @@ export default function TrustCheckoutPage() {
             </label>
             {error && <div className="mt-4 rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">{error}</div>}
             <button onClick={handleAcknowledgmentAccepted} disabled={!ackChecked || loading} className="mt-6 w-full min-h-[44px] rounded-full bg-gold py-3.5 text-sm font-semibold text-white hover:bg-gold/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
-              {loading ? "Creating your account..." : "I Agree — Continue"}
+              {loading ? "Creating your account..." : "I Agree, Continue"}
             </button>
             <button onClick={() => setShowAcknowledgment(false)} className="mt-3 w-full text-sm text-charcoal/50 hover:text-charcoal transition-colors">Go Back</button>
           </div>
@@ -219,7 +219,7 @@ export default function TrustCheckoutPage() {
               <span className="text-2xl font-bold text-navy">{promoApplied ? <span className="text-green-600">$0</span> : `$${total}`}</span>
             </div>
             {promoApplied && (
-              <div className="mt-3 rounded-lg bg-green-50 border border-green-200 px-4 py-2 text-sm text-green-700 font-medium text-center">Promo code applied — Trust Package is free</div>
+              <div className="mt-3 rounded-lg bg-green-50 border border-green-200 px-4 py-2 text-sm text-green-700 font-medium text-center">Promo code applied, Trust Package is free</div>
             )}
           </div>
         </div>
@@ -244,7 +244,7 @@ export default function TrustCheckoutPage() {
           </div>
         )}
 
-        {/* Attorney review — hide when promo applied */}
+        {/* Attorney review, hide when promo applied */}
         {!promoApplied && (
           <div className={`mt-6 rounded-2xl bg-white border ${complexity.flagged ? "border-amber-300" : "border-gray-200"} p-6 shadow-sm`}>
             {complexity.flagged ? (
@@ -252,7 +252,7 @@ export default function TrustCheckoutPage() {
                 <div className="flex items-start gap-3">
                   <span className="text-2xl">⚖</span>
                   <div>
-                    <h3 className="text-base font-bold text-navy">Attorney Review — Recommended</h3>
+                    <h3 className="text-base font-bold text-navy">Attorney Review, Recommended</h3>
                     <p className="mt-2 text-sm text-charcoal/60 leading-relaxed">Based on your answers, your situation has some complexity ({complexity.reasons.join(", ").toLowerCase()}) that benefits from attorney review.</p>
                     <p className="mt-2 text-sm text-charcoal/60">A licensed Michigan attorney will review your trust before delivery. 48-hour turnaround. $300.</p>
                   </div>
@@ -276,7 +276,7 @@ export default function TrustCheckoutPage() {
                 <div className="flex items-start gap-3">
                   <span className="text-2xl">⚖</span>
                   <div className="flex-1">
-                    <h3 className="text-base font-bold text-navy">Add Attorney Review — $300</h3>
+                    <h3 className="text-base font-bold text-navy">Add Attorney Review, $300</h3>
                     <p className="mt-1 text-sm text-charcoal/60 leading-relaxed">A licensed Michigan attorney will personally review your trust before delivery. (48hr turnaround)</p>
                   </div>
                 </div>
@@ -297,7 +297,7 @@ export default function TrustCheckoutPage() {
           disabled={loading || (showDeclineWarning && !declineAck) || (promoApplied && !isTestMode && !promoEmail.trim())}
           className="mt-8 w-full min-h-[44px] rounded-full bg-gold py-4 text-base font-semibold text-white hover:bg-gold/90 transition-colors shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          {loading ? "Processing..." : isTestMode ? "Generate Test Documents" : promoApplied ? "Get Your Documents — Free" : `Proceed to Payment \u2014 $${total}`}
+          {loading ? "Processing..." : isTestMode ? "Generate Test Documents" : promoApplied ? "Get Your Documents, Free" : `Proceed to Payment, $${total}`}
         </button>
         {!promoApplied && <p className="mt-3 text-center text-xs text-charcoal/60">Secure payment powered by Stripe</p>}
       </div>

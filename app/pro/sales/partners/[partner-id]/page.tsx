@@ -444,7 +444,7 @@ export default function PartnerDetailPage() {
               >
                 {promoSaving ? "Applying..." : "Apply"}
               </button>
-              {promoSaved && <span className="text-sm text-green-600">&#10003; Applied — platform fee waived, partner skips Step 1</span>}
+              {promoSaved && <span className="text-sm text-green-600">&#10003; Applied, platform fee waived, partner skips Step 1</span>}
             </div>
           </div>
         </div>

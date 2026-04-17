@@ -139,7 +139,7 @@ export default function FarewellUploader({ messageId, onComplete, onCancel }: Fa
             </svg>
           </div>
           <p className="text-sm font-medium text-charcoal">Click to select a video file</p>
-          <p className="text-xs text-gray-400 mt-1">MP4, MOV, WebM — max 500MB, 30 minutes</p>
+          <p className="text-xs text-gray-400 mt-1">MP4, MOV, WebM, max 500MB, 30 minutes</p>
         </div>
       ) : (
         <div className="rounded-xl border border-gray-200 p-4">

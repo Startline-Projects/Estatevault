@@ -170,7 +170,7 @@ export default async function DashboardHome() {
       {/* Annual review banner */}
       {showAnnualReview && (
         <div className="mt-6 rounded-xl bg-amber-50 border border-amber-200 p-6">
-          <p className="text-sm font-semibold text-amber-800">It&apos;s been a year since your estate plan was created. Life changes — your plan should too.</p>
+          <p className="text-sm font-semibold text-amber-800">It&apos;s been a year since your estate plan was created. Life changes, your plan should too.</p>
           <Link href="/dashboard/life-events" className="mt-3 inline-flex items-center rounded-full bg-amber-600 px-5 py-2 text-sm font-semibold text-white hover:bg-amber-700 transition-colors">
             Review My Plan
           </Link>

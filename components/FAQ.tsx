@@ -9,11 +9,11 @@ const faqs = [
   },
   {
     q: "How long does it take?",
-    a: "Most clients complete the quiz and intake in 10\u201315 minutes. Your documents are generated immediately after purchase.",
+    a: "Most clients complete the quiz and intake in 10 to 15 minutes. Your documents are generated immediately after purchase.",
   },
   {
     q: "What is the Family Vault?",
-    a: "The Vault is a secure encrypted storage system inside your account where you can store your estate documents, insurance policies, financial account details, and digital credentials \u2014 everything your family needs in one place.",
+    a: "The Vault is a secure encrypted storage system inside your account where you can store your estate documents, insurance policies, financial account details, and digital credentials, everything your family needs in one place.",
   },
   {
     q: "Is my information secure?",

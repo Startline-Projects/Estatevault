@@ -85,7 +85,7 @@ export default function Step3Page() {
   return (
     <div>
       <h1 className="text-2xl font-bold text-navy">Your Pricing</h1>
-      <p className="mt-1 text-sm text-charcoal/60">EstateVault sets the prices — this keeps the product premium and your earnings consistent.</p>
+      <p className="mt-1 text-sm text-charcoal/60">EstateVault sets the prices, this keeps the product premium and your earnings consistent.</p>
 
       <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="rounded-xl bg-white border border-gray-200 p-6">
@@ -158,7 +158,7 @@ export default function Step3Page() {
                   : "border-gray-200 hover:border-gray-300"
               }`}
             >
-              <p className="text-sm font-semibold text-navy">Yes — we have an estate attorney</p>
+              <p className="text-sm font-semibold text-navy">Yes, we have an estate attorney</p>
               <p className="mt-1 text-xs text-charcoal/50">
                 Reviews are handled in-house. The $300 review fee goes to your firm.
               </p>
@@ -172,7 +172,7 @@ export default function Step3Page() {
                   : "border-gray-200 hover:border-gray-300"
               }`}
             >
-              <p className="text-sm font-semibold text-navy">No — use EstateVault&apos;s attorney</p>
+              <p className="text-sm font-semibold text-navy">No, use EstateVault&apos;s attorney</p>
               <p className="mt-1 text-xs text-charcoal/50">
                 Reviews are handled by EstateVault&apos;s in-house counsel at no cost to your firm.
               </p>

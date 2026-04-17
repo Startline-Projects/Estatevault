@@ -79,7 +79,7 @@ export async function GET() {
   y -= 4;
   page.drawRectangle({ x: margin, y: y - 52, width: contentWidth, height: 62, color: rgb(0.97, 0.97, 0.97), borderColor: rgb(0.9, 0.9, 0.9), borderWidth: 0.5 });
   y -= 4;
-  drawWrapped(`"[Client name], one thing I want to make sure we cover today is your estate plan. A lot of my clients have been using a platform called ${productName} to get their wills and trusts done quickly and affordably. It generates attorney-reviewed documents — takes about 15 minutes. Would you like me to walk you through it?"`, { size: 9, indent: 8 });
+  drawWrapped(`"[Client name], one thing I want to make sure we cover today is your estate plan. A lot of my clients have been using a platform called ${productName} to get their wills and trusts done quickly and affordably. It generates attorney-reviewed documents, takes about 15 minutes. Would you like me to walk you through it?"`, { size: 9, indent: 8 });
   y -= 8;
 
   // Script 2
@@ -87,7 +87,7 @@ export async function GET() {
   y -= 4;
   page.drawRectangle({ x: margin, y: y - 42, width: contentWidth, height: 52, color: rgb(0.97, 0.97, 0.97), borderColor: rgb(0.9, 0.9, 0.9), borderWidth: 0.5 });
   y -= 4;
-  drawWrapped(`"No — I'm not acting as your attorney, and this platform doesn't provide legal advice. What it does is generate attorney-reviewed estate planning documents based on your answers. If you have complex legal questions, we can connect you with a licensed estate planning attorney."`, { size: 9, indent: 8 });
+  drawWrapped(`"No, I'm not acting as your attorney, and this platform doesn't provide legal advice. What it does is generate attorney-reviewed estate planning documents based on your answers. If you have complex legal questions, we can connect you with a licensed estate planning attorney."`, { size: 9, indent: 8 });
   y -= 8;
 
   // Script 3
@@ -95,7 +95,7 @@ export async function GET() {
   y -= 4;
   page.drawRectangle({ x: margin, y: y - 30, width: contentWidth, height: 40, color: rgb(0.97, 0.97, 0.97), borderColor: rgb(0.9, 0.9, 0.9), borderWidth: 0.5 });
   y -= 4;
-  drawWrapped(`"Yes — all documents are based on attorney-approved templates specific to Michigan. They're the same documents an estate planning attorney would prepare, at a fraction of the cost."`, { size: 9, indent: 8 });
+  drawWrapped(`"Yes, all documents are based on attorney-approved templates specific to Michigan. They're the same documents an estate planning attorney would prepare, at a fraction of the cost."`, { size: 9, indent: 8 });
   y -= 12;
 
   // Never say section

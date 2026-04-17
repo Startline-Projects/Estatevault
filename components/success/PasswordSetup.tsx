@@ -50,7 +50,7 @@ export default function PasswordSetup({ email, userId, defaultName = "" }: Passw
           await supabase.from("profiles").update({ full_name: fullName.trim() }).eq("id", session.user.id);
         }
       } else {
-        // Call set-password API — it handles userId lookup by email with retry
+        // Call set-password API, it handles userId lookup by email with retry
         const res = await fetch("/api/auth/set-password", {
           method: "POST",
           headers: { "Content-Type": "application/json" },

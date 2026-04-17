@@ -99,7 +99,7 @@ export async function POST(request: Request) {
               accessible after a verified death certificate is submitted and reviewed by our team.
             </p>
             <p style="color:#2D2D2D;font-size:15px;line-height:1.6;margin-top:24px;">
-              <strong>Save this link</strong> — when the time comes, click it to request access:
+              <strong>Save this link</strong>, when the time comes, click it to request access:
             </p>
             <div style="margin:24px 0;">
               <a href="${accessLink}"
@@ -112,12 +112,12 @@ export async function POST(request: Request) {
               You will need to upload a death certificate to verify your request. Our team reviews
               all submissions within 24-48 hours. You will be notified by email once access is granted.
             </p>
-            <p style="color:#999;font-size:12px;margin-top:16px;">— EstateVault</p>
+            <p style="color:#999;font-size:12px;margin-top:16px;">- EstateVault</p>
           </div>
         `,
       });
     } catch (emailErr) {
-      // Don't fail the request if email fails — message was already created
+      // Don't fail the request if email fails, message was already created
       console.error("Farewell notification email failed:", emailErr);
     }
 
@@ -208,7 +208,7 @@ export async function DELETE(request: Request) {
       return NextResponse.json({ error: "Cannot delete unlocked messages" }, { status: 400 });
     }
 
-    // Soft delete — mark as deleted, remove video from storage
+    // Soft delete, mark as deleted, remove video from storage
     if (existing.storage_path) {
       await admin.storage.from("farewell-videos").remove([existing.storage_path]);
     }

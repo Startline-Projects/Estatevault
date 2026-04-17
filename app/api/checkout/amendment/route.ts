@@ -40,7 +40,7 @@ export async function POST(request: Request) {
     const isSubscriber = client.vault_subscription_status === "active";
 
     if (isSubscriber) {
-      // Free amendment for active subscribers — bypass Stripe
+      // Free amendment for active subscribers, bypass Stripe
       const { data: order, error: orderError } = await supabase.from("orders").insert({
         client_id: client.id,
         product_type: "amendment",
@@ -73,7 +73,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ free: true, orderId: order.id, url: "/dashboard/documents?amended=true" });
     }
 
-    // Paid amendment — normal Stripe flow
+    // Paid amendment, normal Stripe flow
     const { evCut, partnerCut } = partnerId
       ? calculateSplit("amendment", partnerTier)
       : { evCut: 5000, partnerCut: 0 };

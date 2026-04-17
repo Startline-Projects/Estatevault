@@ -296,7 +296,7 @@ export default function WillPage() {
                   : "bg-gray-200 text-gray-400 cursor-not-allowed"
               }`}
             >
-              {ackLoading ? "Loading..." : "I Understand — Continue"}
+              {ackLoading ? "Loading..." : "I Understand, Continue"}
             </button>
           </div>
         </div>
@@ -487,19 +487,19 @@ export default function WillPage() {
                     Split equally between both beneficiaries?
                   </QuestionLabel>
                   <div className="grid grid-cols-2 gap-3">
-                    {["Yes — equal split", "No — custom split"].map((opt) => (
+                    {["Yes, equal split", "No, custom split"].map((opt) => (
                       <ChoiceTile
                         key={opt}
                         label={opt}
                         selected={
-                          opt === "Yes — equal split"
+                          opt === "Yes, equal split"
                             ? intake.estateSplit === "50/50"
                             : intake.estateSplit !== "" && intake.estateSplit !== "50/50"
                         }
                         onClick={() =>
                           update({
-                            estateSplit: opt === "Yes — equal split" ? "50/50" : "Other",
-                            customSplit: opt === "Yes — equal split" ? "" : intake.customSplit,
+                            estateSplit: opt === "Yes, equal split" ? "50/50" : "Other",
+                            customSplit: opt === "Yes, equal split" ? "" : intake.customSplit,
                           })
                         }
                       />
@@ -536,7 +536,7 @@ export default function WillPage() {
                           </div>
                         ))}
                         <p className={`text-sm font-medium ${Math.round(total) === 100 ? "text-green-600" : "text-red-500"}`}>
-                          Total: {total % 1 === 0 ? total : total.toFixed(1)}%{Math.round(total) === 100 ? " — all set" : " — must equal 100%"}
+                          Total: {total % 1 === 0 ? total : total.toFixed(1)}%{Math.round(total) === 100 ? ", all set" : ", must equal 100%"}
                         </p>
                       </div>
                     );
@@ -642,7 +642,7 @@ export default function WillPage() {
                             </div>
                           ))}
                           <p className={`text-sm font-medium ${rounded === 100 ? "text-green-600" : "text-red-500"}`}>
-                            Total: {total % 1 === 0 ? total : total.toFixed(1)}%{rounded === 100 ? " — all set" : " — must equal 100%"}
+                            Total: {total % 1 === 0 ? total : total.toFixed(1)}%{rounded === 100 ? ", all set" : ", must equal 100%"}
                           </p>
                         </div>
                       );
@@ -785,10 +785,10 @@ export default function WillPage() {
                     Contingent:{" "}
                     {intake.contingentBeneficiaries.map((b) =>
                       intake.contingentEqualShares === "No" && b.share
-                        ? `${b.name} (${b.relationship}) — ${b.share}%`
+                        ? `${b.name} (${b.relationship}), ${b.share}%`
                         : `${b.name} (${b.relationship})`
                     ).join(", ")}
-                    {intake.contingentBeneficiaries.length > 1 && intake.contingentEqualShares !== "No" && " — equal shares"}
+                    {intake.contingentBeneficiaries.length > 1 && intake.contingentEqualShares !== "No" && ", equal shares"}
                   </p>
                 </div>
               ) : (
@@ -886,7 +886,7 @@ export default function WillPage() {
                   onClick={handleContinue}
                   className="flex-1 min-h-[44px] rounded-full bg-gold py-3 text-sm font-semibold text-white hover:bg-gold/90 transition-colors shadow-md"
                 >
-                  Looks Good — Continue
+                  Looks Good, Continue
                 </button>
               </div>
             ) : (

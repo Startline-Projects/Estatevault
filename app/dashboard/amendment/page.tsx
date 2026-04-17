@@ -46,13 +46,13 @@ export default function AmendmentPage() {
       const data = await res.json();
       if (!res.ok) { setError(data.error || "Something went wrong"); setLoading(false); return; }
 
-      // Free amendment for subscribers — redirect directly
+      // Free amendment for subscribers, redirect directly
       if (data.free) {
         router.push(data.url || "/dashboard/documents?amended=true");
         return;
       }
 
-      // Paid amendment — redirect to Stripe
+      // Paid amendment, redirect to Stripe
       window.location.href = data.url;
     } catch {
       setError("Something went wrong. Please try again.");
@@ -93,7 +93,7 @@ export default function AmendmentPage() {
         <button onClick={handleSubmit} disabled={loading || !changeType || !description.trim()} className="mt-6 w-full min-h-[44px] rounded-full bg-gold py-3 text-sm font-semibold text-white hover:bg-gold/90 disabled:opacity-50 disabled:cursor-not-allowed">
           {loading
             ? (isSubscriber ? "Submitting..." : "Redirecting to payment...")
-            : (isSubscriber ? "Submit Amendment (Included with Subscription)" : "Proceed to Payment — $50")
+            : (isSubscriber ? "Submit Amendment (Included with Subscription)" : "Proceed to Payment, $50")
           }
         </button>
         {!isSubscriber && <p className="mt-2 text-center text-xs text-charcoal/60">Secure payment powered by Stripe</p>}

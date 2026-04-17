@@ -11,8 +11,8 @@ function createAdminClient() {
 }
 
 // Register or remove a custom domain on Vercel for a partner
-// POST — add domain
-// DELETE — remove domain
+// POST, add domain
+// DELETE, remove domain
 
 async function registerVercelDomain(domain: string): Promise<{ ok: boolean; error?: string }> {
   const token = process.env.VERCEL_API_TOKEN;
@@ -37,7 +37,7 @@ async function registerVercelDomain(domain: string): Promise<{ ok: boolean; erro
 
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
-    // domain_already_registered is fine — it's already on the project
+    // domain_already_registered is fine, it's already on the project
     if (body?.error?.code === "domain_already_registered") return { ok: true };
     console.error("Vercel domain registration error:", body);
     return { ok: false, error: body?.error?.message || "Failed to register domain" };

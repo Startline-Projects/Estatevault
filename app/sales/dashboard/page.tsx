@@ -133,7 +133,7 @@ export default function SalesDashboardPage() {
       setRepName(name);
       if (profileData?.user_type) setUserType(profileData.user_type);
 
-      // Fetch partners — admin sees all, reps see only their own
+      // Fetch partners, admin sees all, reps see only their own
       const isAdmin = profileData?.user_type === "admin";
       let partnersQuery = supabase
         .from("partners")
@@ -625,10 +625,10 @@ export default function SalesDashboardPage() {
                       {lead.professional_type}
                     </td>
                     <td className="px-5 py-3 text-right text-gray-600">
-                      {lead.client_count ?? "\u2014"}
+                      {lead.client_count ?? ", "}
                     </td>
                     <td className="px-5 py-3 text-gray-600 capitalize whitespace-nowrap">
-                      {lead.referral_source || "\u2014"}
+                      {lead.referral_source || ", "}
                     </td>
                     <td className="px-5 py-3 text-gray-500 whitespace-nowrap">
                       {relativeTime(lead.created_at)}

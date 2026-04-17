@@ -36,7 +36,7 @@ export async function POST(request: Request) {
           currency: "usd",
           product_data: {
             name: "EstateVault Vault Plan",
-            description: "Annual vault subscription — free amendments, farewell messages, annual review reminders, priority processing",
+            description: "Annual vault subscription, free amendments, farewell messages, annual review reminders, priority processing",
           },
           unit_amount: 9900,
           recurring: { interval: "year" },

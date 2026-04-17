@@ -8,7 +8,7 @@ const STANDARD_FEATURES = [
   'Unlimited document generation',
   'Branded client-facing platform',
   'Reviewing attorney role on all documents',
-  'Set your own review fee ($150–$1,500)',
+  'Set your own review fee ($150 to $1,500)',
   '$300/will + your review fee',
   '$400/trust + your review fee',
   'White-labeled marketing materials',
@@ -38,15 +38,15 @@ const ENTERPRISE_FEATURES: Array<{ text: string; strong?: boolean }> = [
 const FAQ_ITEMS = [
   {
     q: 'Am I the attorney of record on these documents?',
-    a: 'Yes. Your name and bar number appear on every document you review and approve. EstateVault is a document preparation platform — you remain the professional of record on every engagement.',
+    a: 'Yes. Your name and bar number appear on every document you review and approve. EstateVault is a document preparation platform, you remain the professional of record on every engagement.',
   },
   {
     q: 'Can I set my own review fee?',
-    a: 'Absolutely. You choose any review fee between $150 and $1,500. 100% of your review fee flows directly to you — EstateVault takes nothing from that amount.',
+    a: 'Absolutely. You choose any review fee between $150 and $1,500. 100% of your review fee flows directly to you, EstateVault takes nothing from that amount.',
   },
   {
     q: 'What happens with complex cases?',
-    a: "If a client's intake indicates an irrevocable trust, special needs planning, Medicaid asset protection, or business succession, the platform halts document generation and flags the case directly to you for a full engagement. These are your clients — not referrals.",
+    a: "If a client's intake indicates an irrevocable trust, special needs planning, Medicaid asset protection, or business succession, the platform halts document generation and flags the case directly to you for a full engagement. These are your clients, not referrals.",
   },
   {
     q: 'Are the documents compliant with Michigan law?',
@@ -58,7 +58,7 @@ const FAQ_ITEMS = [
   },
   {
     q: 'How long does onboarding take?',
-    a: 'Standard tier: self-serve onboarding in ~48 hours. Professional tier: dedicated onboarding specialist walks you through everything in 3–5 business days. Enterprise: white-glove onboarding tailored to your firm.',
+    a: 'Standard tier: self-serve onboarding in ~48 hours. Professional tier: dedicated onboarding specialist walks you through everything in 3 to 5 business days. Enterprise: white-glove onboarding tailored to your firm.',
   },
 ];
 
@@ -280,7 +280,7 @@ export default function AttorneyPartnerPage() {
           <div className={styles.floatIc}>✓</div>
           <div>
             <div style={{ fontWeight: 600 }}>Trust drafted</div>
-            <div style={{ opacity: 0.6, fontSize: 11 }}>Sarah M. — 3 min ago</div>
+            <div style={{ opacity: 0.6, fontSize: 11 }}>Sarah M., 3 min ago</div>
           </div>
         </div>
         <div className={`${styles.floatCard} ${styles.fc2}`}>
@@ -312,8 +312,8 @@ export default function AttorneyPartnerPage() {
           </h1>
           <p className={styles.heroSub}>
             LegalZoom is taking your clients. EstateVault lets you offer the same automated
-            experience &mdash; under your name, at your price, with your legal oversight. You
-            become the DIY option in your market.
+            experience  under your name, at your price, with your legal oversight. You become
+            the DIY option in your market.
           </p>
           <div className={styles.heroCta}>
             <button onClick={() => scrollTo('pricing')} className={`${styles.btnLg} ${styles.btnGold}`}>
@@ -349,7 +349,7 @@ export default function AttorneyPartnerPage() {
       </section>
 
       {/* ============ LOGO BAR ============ */}
-      <div className={styles.logobar}>
+      {/* <div className={styles.logobar}>
         <div className={styles.container}>
           <div className={styles.logobarLabel}>Trusted by Michigan estate-planning firms</div>
           <div className={styles.logobarRow}>
@@ -361,6 +361,7 @@ export default function AttorneyPartnerPage() {
           </div>
         </div>
       </div>
+      {/* </div> */}
 
       {/* ============ PROBLEM / SOLUTION ============ */}
       <section className={styles.section} id="why">
@@ -370,7 +371,7 @@ export default function AttorneyPartnerPage() {
             <h2>The old model is leaving money on the table.</h2>
             <p>
               For every client who drafts a $49 will online, there&apos;s one who would&apos;ve
-              paid you $400 — if you could deliver it in 15 minutes instead of three office
+              paid you $400, if you could deliver it in 15 minutes instead of three office
               visits.
             </p>
           </div>
@@ -397,11 +398,11 @@ export default function AttorneyPartnerPage() {
 
             <div className={`${styles.psCard} ${styles.psSolution} ${styles.reveal}`} ref={registerReveal(2)}>
               <span className={styles.psTag}>With EstateVault</span>
-              <h3>Your firm becomes the DIY option — premium-priced.</h3>
+              <h3>Your firm becomes the DIY option, premium-priced.</h3>
               <ul>
                 {[
-                  'Clients complete a 15-minute intake — no paralegal time',
-                  'AI drafts attorney-grade Michigan documents instantly',
+                  'Clients complete a 15-minute intake, no paralegal time',
+                  'Software drafts attorney-grade Michigan documents instantly',
                   'You review, approve, and deliver under your name',
                   'Complex cases flag straight to your engagement pipeline',
                   'Your bar number, your branding, your review fee',
@@ -430,9 +431,9 @@ export default function AttorneyPartnerPage() {
             <div className={styles.howLine} />
             {[
               { n: 1, t: 'Client completes the intake', d: 'A 15-minute questionnaire covers everything you need. No paralegal time required.' },
-              { n: 2, t: 'AI drafts the documents', d: 'Attorney-quality Michigan documents based on EPIC, generated in minutes.' },
+              { n: 2, t: 'Software drafts the documents', d: 'Attorney-quality Michigan documents based on EPIC, generated in minutes.' },
               { n: 3, t: 'You review and approve', d: 'Your name, your bar number on delivery. You set your own review fee.' },
-              { n: 4, t: 'Complex cases become engagements', d: 'Irrevocable trusts, Medicaid planning, business succession — flagged to you.' },
+              { n: 4, t: 'Complex cases become engagements', d: 'Irrevocable trusts, Medicaid planning, business succession, flagged to you.' },
             ].map((s, i) => (
               <div key={s.n} className={`${styles.howStep} ${styles.reveal}`} ref={registerReveal(4 + i)}>
                 <div className={styles.howNum}>{s.n}</div>
@@ -450,7 +451,7 @@ export default function AttorneyPartnerPage() {
           <div className={`${styles.sectionHead} ${styles.reveal}`} ref={registerReveal(8)}>
             <span className={styles.sectionEyebrow}>Client experience</span>
             <h2>See exactly what your clients experience.</h2>
-            <p>This is the platform they use — professional, simple, and branded with your firm&apos;s name and logo.</p>
+            <p>This is the platform they use, professional, simple, and branded with your firm&apos;s name and logo.</p>
           </div>
 
           <div className={`${styles.demoStage} ${styles.reveal}`} ref={registerReveal(9)}>
@@ -515,7 +516,7 @@ export default function AttorneyPartnerPage() {
               </div>
 
               <div className={styles.deviceBody}>
-                {/* Panel 0 — Quiz */}
+                {/* Panel 0, Quiz */}
                 <div className={`${styles.panel} ${demoTab === 0 ? styles.panelOn : ''}`}>
                   <div className={styles.panelInner}>
                     <div className={styles.quizShell}>
@@ -570,7 +571,7 @@ export default function AttorneyPartnerPage() {
                   </div>
                 </div>
 
-                {/* Panel 1 — Results */}
+                {/* Panel 1, Results */}
                 <div className={`${styles.panel} ${demoTab === 1 ? styles.panelOn : ''}`}>
                   <div className={styles.panelInner}>
                     <div className={styles.recWrap}>
@@ -631,7 +632,7 @@ export default function AttorneyPartnerPage() {
                   </div>
                 </div>
 
-                {/* Panel 2 — Documents */}
+                {/* Panel 2, Documents */}
                 <div className={`${styles.panel} ${demoTab === 2 ? styles.panelOn : ''}`}>
                   <div className={styles.panelInner}>
                     <div className={styles.docsHero}>
@@ -666,7 +667,7 @@ export default function AttorneyPartnerPage() {
                   </div>
                 </div>
 
-                {/* Panel 3 — Vault */}
+                {/* Panel 3, Vault */}
                 <div className={`${styles.panel} ${demoTab === 3 ? styles.panelOn : ''}`}>
                   <div className={styles.panelInner}>
                     <div className={styles.vaultHead}>
@@ -723,7 +724,7 @@ export default function AttorneyPartnerPage() {
                   </div>
                 </div>
 
-                {/* Panel 4 — Your Review */}
+                {/* Panel 4, Your Review */}
                 <div className={`${styles.panel} ${demoTab === 4 ? styles.panelOn : ''}`}>
                   <div className={styles.panelInner}>
                     <div className={styles.revGrid}>
@@ -761,7 +762,7 @@ export default function AttorneyPartnerPage() {
                       <div className={styles.revDetail}>
                         <div className={styles.revDetailTop}>
                           <div>
-                            <div className={styles.rdl}>Sarah M. — Revocable Living Trust</div>
+                            <div className={styles.rdl}>Sarah M., Revocable Living Trust</div>
                             <div className={styles.rds}>Generated from intake · 32 pages · Ready for attorney review</div>
                           </div>
                           <div className={styles.revSla}>
@@ -772,10 +773,10 @@ export default function AttorneyPartnerPage() {
                         <div className={styles.revPage}>
                           <p><strong>REVOCABLE LIVING TRUST OF <span className={styles.hl}>SARAH M. THOMPSON</span></strong></p>
                           <p>&nbsp;</p>
-                          <p>ARTICLE I — DECLARATION OF TRUST</p>
+                          <p>ARTICLE I, DECLARATION OF TRUST</p>
                           <p>I, <span className={styles.hl}>Sarah M. Thompson</span>, of <span className={styles.hl}>Washtenaw County, Michigan</span>, hereby declare this Revocable Living Trust…</p>
                           <p>&nbsp;</p>
-                          <p>ARTICLE II — TRUST PROPERTY</p>
+                          <p>ARTICLE II, TRUST PROPERTY</p>
                           <p>The Grantor transfers to the Trustee the real property located at <span className={styles.hl}>[intake-derived address]</span>…</p>
                         </div>
                         <div className={styles.revActions}>
@@ -813,7 +814,7 @@ export default function AttorneyPartnerPage() {
           </div>
           <div className={styles.promoMsg}>
             {promoApplied && isPromoValid && (
-              <span className={styles.promoOk}>✓ Code applied — platform fee waived!</span>
+              <span className={styles.promoOk}>✓ Code applied, platform fee waived!</span>
             )}
             {promoApplied && !isPromoValid && promoCode.trim() !== '' && (
               <span className={styles.promoErr}>Invalid code</span>
@@ -849,7 +850,7 @@ export default function AttorneyPartnerPage() {
                 href={`/partners/attorneys/signup?tier=standard${promoActive ? '&promo=TPFP' : ''}`}
                 className={`${styles.planCta} ${styles.planCtaGold}`}
               >
-                {promoActive ? 'Get started — Free' : 'Get started'}
+                {promoActive ? 'Get started, Free' : 'Get started'}
               </Link>
             </div>
 
@@ -882,7 +883,7 @@ export default function AttorneyPartnerPage() {
                 href={`/partners/attorneys/signup?tier=professional${promoActive ? '&promo=TPFP' : ''}`}
                 className={`${styles.planCta} ${styles.planCtaNavy}`}
               >
-                {promoActive ? 'Get started — Free' : 'Get started'}
+                {promoActive ? 'Get started, Free' : 'Get started'}
               </Link>
             </div>
 
@@ -917,10 +918,10 @@ export default function AttorneyPartnerPage() {
           <div className={styles.referral} id="contact-form">
             <div>
               <h3>
-                Just want to send and receive referrals? <em>Become a Referral Partner — free.</em>
+                Just want to send and receive referrals? <em>Become a Referral Partner, free.</em>
               </h3>
               <ul>
-                <li>Send clients to EstateVault — earn per completion</li>
+                <li>Send clients to EstateVault, earn per completion</li>
                 <li>Receive flagged complex cases from the platform</li>
                 <li>No platform fee, no commitment</li>
                 <li>Track referrals from your dashboard</li>
@@ -950,13 +951,13 @@ export default function AttorneyPartnerPage() {
                 className={calcTier === 'standard' ? styles.calcToggleOn : ''}
                 onClick={() => setCalcTier('standard')}
               >
-                Standard — $1,200 one-time
+                Standard, $1,200 one-time
               </button>
               <button
                 className={calcTier === 'professional' ? styles.calcToggleOn : ''}
                 onClick={() => setCalcTier('professional')}
               >
-                Professional — $6,000 one-time
+                Professional, $6,000 one-time
               </button>
             </div>
 
@@ -1008,7 +1009,7 @@ export default function AttorneyPartnerPage() {
                 <div className={`${styles.calcRow} ${styles.calcRowGold}`}>
                   <div>
                     <div className={styles.cl}>Attorney Review × {calcVolume} client{calcVolume !== 1 ? 's' : ''}</div>
-                    <div className={styles.cs}>+${calcReviewFee} per client — 100% to you</div>
+                    <div className={styles.cs}>+${calcReviewFee} per client, 100% to you</div>
                   </div>
                   <div className={styles.cv}>+${reviewEarnings.toLocaleString()}</div>
                 </div>
@@ -1046,16 +1047,16 @@ export default function AttorneyPartnerPage() {
             </h2>
             <p>
               When a client&apos;s situation involves irrevocable trusts, special needs planning,
-              Medicaid asset protection, or business succession — the platform flags the case
+              Medicaid asset protection, or business succession, the platform flags the case
               and routes it directly to you.
             </p>
           </div>
 
           <div className={styles.upsellGrid}>
             {[
-              { t: 'Irrevocable Trust', p: '$3,500 – $7,500' },
-              { t: 'Special Needs Trust', p: '$4,000 – $8,000' },
-              { t: 'Medicaid Planning', p: '$5,000 – $10,000' },
+              { t: 'Irrevocable Trust', p: '$3,500 to $7,500' },
+              { t: 'Special Needs Trust', p: '$4,000 to $8,000' },
+              { t: 'Medicaid Planning', p: '$5,000 to $10,000' },
             ].map((u, i) => (
               <div key={u.t} className={`${styles.upsellCard} ${styles.reveal}`} ref={registerReveal(18 + i)}>
                 <div className={styles.utype}>{u.t}</div>
@@ -1094,7 +1095,7 @@ export default function AttorneyPartnerPage() {
                 r: 'Brennan Legal · Grand Rapids, MI',
               },
               {
-                q: 'My firm\'s name on a branded vault, on my terms, with my bar number. EstateVault isn\'t trying to replace us — it\'s positioning us as the premium DIY option in our market. Exactly what we needed.',
+                q: 'My firm\'s name on a branded vault, on my terms, with my bar number. EstateVault isn\'t trying to replace us, it\'s positioning us as the premium DIY option in our market. Exactly what we needed.',
                 i: 'JW',
                 n: 'Jennifer Whitfield, Esq.',
                 r: 'Whitfield Law Group · Detroit, MI',
@@ -1159,7 +1160,7 @@ export default function AttorneyPartnerPage() {
             All document templates were developed in collaboration with Michigan-licensed
             attorneys with over 40 years of combined estate planning experience. You remain the
             professional of record on every engagement. EstateVault is a document preparation
-            tool — not a law firm and not a substitute for legal counsel.
+            tool, not a law firm and not a substitute for legal counsel.
           </p>
         </div>
       </section>

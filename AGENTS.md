@@ -22,3 +22,80 @@ These defaults are optimized for AI coding agents (and humans) working on apps t
   needed. Always curl https://ai-gateway.vercel.sh/v1/models first; never trust model IDs from memory
 - For durable agent loops or untrusted code: use Workflow (pause/resume/state) + Sandbox; use Vercel MCP for secure infra access
 <!-- VERCEL BEST PRACTICES END -->
+
+---
+
+# EstateVault — Agent Roster
+
+Each agent below has a scoped context brief. Load ONLY the relevant files listed.
+Never load the full codebase unless explicitly needed.
+
+---
+
+## AGENT: Explorer (model: haiku)
+**Use for:** Finding files, searching code, answering "where is X?" questions.
+**Load:** Nothing. Use Glob/Grep only.
+**Never:** Edit files. Just locate and report.
+
+---
+
+## AGENT: Frontend (model: sonnet)
+**Use for:** UI components, pages, Tailwind styling, quiz flows, forms.
+**Load these paths only:**
+- `app/` (page files and layouts)
+- `components/`
+- `tailwind.config.ts`
+- `app/globals.css`
+
+**Brand tokens:** Navy `#1C3557` · Gold `#C9A84C` · White `#FFFFFF` · Charcoal `#2D2D2D` · Font: Inter
+**Never:** Touch `lib/`, `app/api/`, or DB logic.
+
+---
+
+## AGENT: Backend (model: sonnet)
+**Use for:** API routes, Supabase queries, Stripe, Resend email, server actions, auth middleware.
+**Load these paths only:**
+- `app/api/`
+- `lib/`
+- `middleware.ts`
+- `supabase/`
+
+**Key constraints:**
+- Never give legal advice — generate documents from answers only
+- Hard stops: special needs dependent, irrevocable trust → attorney referral (hardcoded, no override)
+- Pricing is fixed (see CLAUDE.md)
+**Never:** Touch `components/` or page UI.
+
+---
+
+## AGENT: Schema (model: haiku)
+**Use for:** Zod schemas, TypeScript types, form validation.
+**Load these paths only:**
+- `lib/validation/`
+- `lib/will-types.ts`
+- `lib/trust-types.ts`
+- `lib/quiz-types.ts`
+
+**Never:** Edit pages, API routes, or UI components.
+
+---
+
+## AGENT: Review (model: opus)
+**Use for:** Pre-deploy security review, logic audit, breaking change check.
+**Load:** Full diff (`git diff main`) + any file flagged in the diff.
+**Checklist:** Auth bypass · SQL injection · exposed secrets · pricing override · hard-stop bypass · Stripe webhook validation.
+**Use sparingly** — only before merges to master.
+
+---
+
+## Workflow Pattern
+
+```
+Task: "Add new field to will form"
+
+1. Explorer (haiku)  → find relevant files
+2. Schema   (haiku)  → add Zod field + TS type
+3. Backend  (sonnet) → update API route / server action
+4. Frontend (sonnet) → update form UI
+5. Review   (opus)   → only if touching auth/payments/hard-stops
+```
