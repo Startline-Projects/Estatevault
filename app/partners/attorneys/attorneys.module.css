@@ -71,6 +71,17 @@
 .navWrap.scrolled .brand {
   color: var(--navy);
 }
+.brandLogo {
+  height: 48px;
+  width: auto;
+  display: block;
+}
+.brandName {
+  font-family: var(--font-fraunces), Georgia, serif;
+  font-weight: 600;
+  font-size: 20px;
+  letter-spacing: -0.01em;
+}
 .logomark {
   width: 32px;
   height: 32px;
