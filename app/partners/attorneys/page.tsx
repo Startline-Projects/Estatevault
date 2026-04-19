@@ -226,11 +226,8 @@ export default function AttorneyPartnerPage() {
       <header className={`${styles.navWrap} ${scrolled ? styles.scrolled : ''}`}>
         <div className={styles.nav}>
           <Link href="#top" className={styles.brand} onClick={() => setMobileMenuOpen(false)}>
-            <span className={styles.logomark}>
-              <span>E</span>
-            </span>
-            EstateVault
-            <span className={styles.brandTag}>Pro</span>
+            <img src="/logo.svg" alt="EstateVault" className={styles.brandLogo} />
+            <span className={styles.brandName}>EstateVault</span>
           </Link>
           <nav className={styles.navLinks}>
             <a href="#how">How it works</a>
@@ -1193,11 +1190,8 @@ export default function AttorneyPartnerPage() {
           <div className={styles.footTop}>
             <div className={styles.footBrand}>
               <Link href="#top" className={styles.brand}>
-                <span className={styles.logomark}>
-                  <span>E</span>
-                </span>
-                EstateVault
-                <span className={styles.brandTag}>Pro</span>
+                <img src="/logo.svg" alt="EstateVault" className={styles.brandLogo} />
+                <span className={styles.brandName}>EstateVault</span>
               </Link>
               <p>
                 A B2B2C estate planning platform for attorneys, financial advisors, and
