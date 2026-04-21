@@ -292,9 +292,9 @@ export default function AttorneyPartnerPage() {
             <em>Build your own.</em>
           </h1>
           <p className={styles.heroSub}>
-            LegalZoom is taking your clients. EstateVault lets you offer the same automated
-            experience  under your name, at your price, with your legal oversight. You become
-            the DIY option in your market.
+            Your clients already trust Khan Law Group. Now offer them that same trusted counsel
+            for estate planning, attorney-grade wills and trusts under your name, your bar
+            number, and your review fee.
           </p>
           <div className={styles.heroCta}>
             <button onClick={() => scrollTo('pricing')} className={`${styles.btnLg} ${styles.btnGold}`}>
