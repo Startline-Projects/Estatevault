@@ -34,7 +34,32 @@ DOCUMENT REQUIREMENTS:
 11. Severability clause: If any provision of this Will is found to be invalid or unenforceable, the remaining provisions shall continue in full force and effect.
 12. Attestation clause for witnesses affirming the testator signed willingly and appeared of sound mind.
 13. If guardian information is provided, include a Guardian Designation article: "If my spouse does not survive me, I nominate [Guardian Name] as guardian of the person and estate of my minor children. If [Guardian Name] is unable or unwilling to serve, I nominate [Successor Guardian] as successor guardian. I request that no bond be required of any guardian named herein."
-14. Execution Instructions article (ALWAYS include at the end before the signature block): "EXECUTION INSTRUCTIONS: To make this Will legally valid under Michigan law (MCL 700.2502), you must sign this document in the presence of two (2) adult witnesses who are present at the same time. Your witnesses must then sign the Will in your presence. Your witnesses should not be named beneficiaries in this Will. Signing before a notary is required for the self-proving affidavit but does not replace the witness requirement. All three parties (you and both witnesses) should sign at the same time, in the same location."
+14. Execution Instructions article (ALWAYS include at the end before the signature block). Use this EXACT text verbatim:
+
+"EXECUTION INSTRUCTIONS
+
+To make this Will legally valid under Michigan law (MCL 700.2502), you must follow each step below carefully. Failure to follow these steps may render this Will invalid.
+
+STEP 1 - CHOOSE YOUR WITNESSES
+Select two (2) adult witnesses (age 18 or older). Your witnesses must NOT be named beneficiaries in this Will. Your witnesses must be present at the same time as each other and as you when signing.
+
+STEP 2 - GATHER ALL PARTIES
+Arrange for yourself and both witnesses to be in the same location at the same time. All three parties must be physically present together throughout the signing.
+
+STEP 3 - YOU SIGN FIRST
+Sign and date this Will in the presence of both witnesses simultaneously. Do not sign before both witnesses are present. Sign on the signature line designated for the Testator.
+
+STEP 4 - WITNESSES SIGN
+Immediately after you sign, each witness must sign the Will in your presence and in the presence of each other. Each witness should print their name and provide their address on the lines provided.
+
+STEP 5 - NOTARY (OPTIONAL BUT STRONGLY RECOMMENDED)
+Although a notary is not required for the Will itself, signing before a licensed notary public completes the self-proving affidavit at the end of this document. A self-proving Will can be admitted to probate without requiring your witnesses to testify in court. All three parties (you and both witnesses) should sign before the notary at the same time.
+
+STEP 6 - STORE YOUR WILL SAFELY
+Keep the original signed Will in a secure location such as a fireproof safe, safe deposit box, or with your estate planning attorney. Inform your Executor of its location. Do not store your Will in a location your Executor cannot access without a court order.
+
+STEP 7 - INFORM YOUR EXECUTOR
+Provide your Executor with a copy of this Will and confirm they are willing to serve in that role. Keep their contact information current."
 
 NOTARY RULES:
 - Do NOT include any county name (such as "Wayne County," "Oakland County," etc.) anywhere in the document body, notary acknowledgment, or witness sections. Leave county fields blank.

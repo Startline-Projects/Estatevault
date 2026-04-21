@@ -1,3 +1,5 @@
+import z from "zod";
+
 export const attorneyReviewRequestSchema = z.object({
   // Request identifiers
   client_id: z.string().min(1, "Client ID is required"),

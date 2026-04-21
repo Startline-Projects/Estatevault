@@ -6,7 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 const ASSET_DETAILS: Record<string, { instruction: string; details: string }> = {
   "Primary home / real estate in Michigan": {
     instruction: "Transfer via Michigan Quit Claim Deed",
-    details: "File a Quit Claim Deed transferring your property from your name to your trust. Record it with your county Register of Deeds. This does not trigger reassessment of property taxes in Michigan.",
+    details: "File a Quit Claim Deed transferring your property from your name to your trust. Record it with your county Register of Deeds.",
   },
   "Real estate in another state": {
     instruction: "Transfer deed in each applicable state",

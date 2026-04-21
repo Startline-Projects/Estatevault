@@ -226,7 +226,7 @@ export default function TrustPage() {
             <div className="mt-5">
               <QuestionLabel>Trust name (optional)</QuestionLabel>
               <p className="mb-2 text-xs text-charcoal/50">Leave blank to use the default: &quot;The [Your Name] Revocable Living Trust&quot;</p>
-              <TextInput value={intake.trustName} onChange={(v) => update({ trustName: v })} placeholder={`e.g. The ${intake.firstName || "Smith"} Family Revocable Living Trust`} />
+              <TextInput value={intake.trustName} onChange={(v) => update({ trustName: v })} placeholder={`e.g. The ${[intake.firstName, intake.lastName].filter(Boolean).join(" ") || "John Smith"} Revocable Living Trust`} />
             </div>
           </>
         );

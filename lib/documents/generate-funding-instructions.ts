@@ -7,7 +7,6 @@ const ASSET_INSTRUCTIONS: Record<string, { title: string; steps: string[] }> = {
       "Prepare a Michigan Quit Claim Deed transferring ownership from your name to your trust.",
       "The deed should transfer from \"[Your Name]\" to \"[Your Name], Trustee of the [Your Name] Revocable Living Trust, dated [date].\"",
       "Record the deed with your county Register of Deeds office.",
-      "This does not trigger property tax reassessment in Michigan.",
     ],
   },
   "Real estate in another state": {
@@ -39,8 +38,9 @@ const ASSET_INSTRUCTIONS: Record<string, { title: string; steps: string[] }> = {
   "Vehicles": {
     title: "Vehicles",
     steps: [
-      "Visit your local Michigan Secretary of State office.",
-      "Bring your current title, trust certificate, and valid ID.",
+      "Vehicles valued under $60,000 do not need to be titled into your trust. They are covered as personal property under your Assignment of Personal Property document.",
+      "Vehicles valued over $60,000 should be titled into your trust. Visit your local Michigan Secretary of State office.",
+      "For vehicles over $60,000: Bring your current title, trust certificate, and valid ID.",
       "Request a title transfer to: \"[Your Name], Trustee of the [Your Name] Revocable Living Trust.\"",
       "Update your auto insurance policy to reflect the trust as the named insured.",
     ],
@@ -126,14 +126,20 @@ export async function generateFundingInstructionsPDF(
   });
   y -= 30;
 
+  const fullName = `${firstName} ${lastName}`;
+
   // Asset sections
   const relevantAssets = assetTypes.length > 0
     ? assetTypes.filter((a) => ASSET_INSTRUCTIONS[a])
     : Object.keys(ASSET_INSTRUCTIONS);
 
   for (const assetKey of relevantAssets) {
-    const asset = ASSET_INSTRUCTIONS[assetKey];
-    if (!asset) continue;
+    const rawAsset = ASSET_INSTRUCTIONS[assetKey];
+    if (!rawAsset) continue;
+    const asset = {
+      ...rawAsset,
+      steps: rawAsset.steps.map((s) => s.replaceAll("[Your Name]", fullName)),
+    };
 
     checkSpace(60);
 

@@ -1,3 +1,5 @@
+import z from "zod";
+
 export const partnerOnboardingStep1Schema = z.object({
   // Company information
   company_name: z.string().min(1, "Company name is required"),
