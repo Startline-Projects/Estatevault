@@ -237,15 +237,6 @@ export default function AttorneyPartnerPage() {
             <a href="#faq">FAQ</a>
           </nav>
           <div className={styles.navCta}>
-            <Link
-              href="https://www.estatevault.us/partners/attorneys/review-network"
-              className={styles.btnPrimary}
-            >
-              Become a Review Attorney
-              <span className={styles.arrow}>
-                <ArrowRight />
-              </span>
-            </Link>
             <button
               className={styles.mobileToggle}
               aria-label="Menu"
@@ -261,13 +252,6 @@ export default function AttorneyPartnerPage() {
           <a href="#pricing" onClick={() => setMobileMenuOpen(false)}>Pricing</a>
           <a href="#calculator" onClick={() => setMobileMenuOpen(false)}>Earnings</a>
           <a href="#faq" onClick={() => setMobileMenuOpen(false)}>FAQ</a>
-          <Link
-            href="https://www.estatevault.us/partners/attorneys/review-network"
-            onClick={() => setMobileMenuOpen(false)}
-            className={styles.btnPrimary}
-          >
-            Become a Review Attorney <ArrowRight />
-          </Link>
         </div>
       </header>
 
