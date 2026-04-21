@@ -212,6 +212,37 @@
 .btnPrimary:hover .arrow {
   transform: translateX(3px);
 }
+.khanMark {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 8px;
+  text-decoration: none;
+  padding: 6px 14px;
+  border-left: 2px solid var(--gold);
+  transition: opacity 0.2s;
+}
+.khanMark:hover {
+  opacity: 0.85;
+}
+.khanMarkName {
+  font-family: var(--font-fraunces), Georgia, serif;
+  font-weight: 600;
+  font-size: 17px;
+  letter-spacing: -0.01em;
+  color: #fff;
+  line-height: 1;
+  white-space: nowrap;
+}
+.navWrap.scrolled .khanMarkName {
+  color: var(--navy);
+}
+.khanMarkPc {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: var(--gold);
+  line-height: 1;
+}
 .mobileToggle {
   display: none;
   align-items: center;
@@ -2817,6 +2848,9 @@
   }
   .navCta .btnGhost,
   .navCta .btnPrimary {
+    display: none;
+  }
+  .khanMark {
     display: none;
   }
   .mobileToggle {

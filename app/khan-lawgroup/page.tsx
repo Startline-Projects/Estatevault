@@ -237,6 +237,16 @@ export default function AttorneyPartnerPage() {
             <a href="#faq">FAQ</a>
           </nav>
           <div className={styles.navCta}>
+            <a
+              href="https://khan-lawgroup.com/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className={styles.khanMark}
+              aria-label="Khan Law Group, PC"
+            >
+              <span className={styles.khanMarkName}>Khan Law Group</span>
+              <span className={styles.khanMarkPc}>PC</span>
+            </a>
             <button
               className={styles.mobileToggle}
               aria-label="Menu"
