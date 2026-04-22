@@ -358,7 +358,9 @@ function LifeEventsSection() {
         <div style={{ fontSize: 48, marginBottom: 12 }}>✅</div>
         <h2 style={{ fontSize: 20, fontWeight: 700, color: NAVY }}>Update request sent!</h2>
         <p style={{ fontSize: 14, color: 'rgba(45,41,38,0.6)', marginTop: 8 }}>
-          Khan Law Group will review the changes and update your documents. You'll be notified by email.
+          {
+            "Khan Law Group will review the changes and update your documents. You'll be notified by email."
+          }
         </p>
         <button onClick={() => { setSubmitted(false); setSelected([]); }}
           style={{ marginTop: 20, padding: '10px 24px', borderRadius: 24, background: NAVY, border: 'none', color: 'white', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>
@@ -372,7 +374,9 @@ function LifeEventsSection() {
     <div style={{ maxWidth: 600 }}>
       <h1 style={{ fontSize: 22, fontWeight: 700, color: NAVY, marginBottom: 6 }}>Life Events</h1>
       <p style={{ fontSize: 14, color: 'rgba(45,41,38,0.6)', marginBottom: 24 }}>
-        Review your plan when life changes. Select all that apply and we'll send an amendment recommendation.
+        {
+          "Review your plan when life changes. Select all that apply and we'll send an amendment recommendation."
+        }
       </p>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 24 }}>
