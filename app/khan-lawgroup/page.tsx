@@ -930,7 +930,7 @@ export default function AttorneyPartnerPage() {
           <div className={`${styles.sectionHead} ${styles.reveal}`} ref={registerReveal(8)}>
             <span className={styles.sectionEyebrow}>Client experience</span>
             <h2>See exactly what your clients experience and what you experience.</h2>
-            <p>This is the platform they use — and what you experience managing it — professional, simple, and branded with your firm&apos;s name and logo.</p>
+            <p>This is the platform they use and what you experience managing it professional, simple, and branded with your firm&apos;s name and logo.</p>
           </div>
           <div className={`${styles.demoStage} ${styles.reveal}`} ref={registerReveal(9)}>
             <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 0 }}>
@@ -1357,7 +1357,7 @@ export default function AttorneyPartnerPage() {
                 <span className={styles.footKhanPc}>PC</span>
               </a>
               <p>
-                Estate planning for Michigan families — guided by attorneys who know you,
+                Estate planning for Michigan families guided by attorneys who know you,
                 protected by documents built to last.
               </p>
             </div>
