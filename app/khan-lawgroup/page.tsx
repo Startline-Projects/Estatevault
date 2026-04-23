@@ -109,11 +109,11 @@ const DownloadIcon = () => (
 
 export default function AttorneyPartnerPage() {
   const [calcTier, setCalcTier] = useState<'standard' | 'professional'>('standard');
+  const [calcProduct, setCalcProduct] = useState<'trust' | 'will'>('trust');
   const [calcVolume, setCalcVolume] = useState(5);
   const [calcReviewFee, setCalcReviewFee] = useState(300);
   const [demoTab, setDemoTab] = useState(0);
   const [demoLoading, setDemoLoading] = useState(false);
-  const [clientSubTab, setClientSubTab] = useState(0);
   const [promoCode, setPromoCode] = useState('');
   const [promoApplied, setPromoApplied] = useState(false);
   const [openFaq, setOpenFaq] = useState<number | null>(0);
@@ -150,11 +150,14 @@ export default function AttorneyPartnerPage() {
   const isPromoValid = promoCode.trim().toUpperCase() === 'TPFP';
   const promoActive = promoApplied && isPromoValid;
 
-  const trustSplit = calcTier === 'standard' ? 400 : 500;
+  const productSplit =
+    calcProduct === 'trust'
+      ? calcTier === 'standard' ? 400 : 500
+      : calcTier === 'standard' ? 300 : 350;
   const platformFee = promoActive ? 0 : calcTier === 'standard' ? 1200 : 6000;
-  const trustEarnings = trustSplit * calcVolume;
+  const productEarnings = productSplit * calcVolume;
   const reviewEarnings = calcReviewFee > 0 ? calcReviewFee * calcVolume : 0;
-  const totalMonthly = trustEarnings + reviewEarnings;
+  const totalMonthly = productEarnings + reviewEarnings;
   const paybackRatio = totalMonthly > 0 ? platformFee / totalMonthly : Infinity;
   const paybackText =
     platformFee === 0
@@ -194,12 +197,6 @@ export default function AttorneyPartnerPage() {
     },
   ];
 
-  const clientSubTabs = [
-    { label: 'Quiz' },
-    { label: 'Results' },
-    { label: 'Documents' },
-    { label: 'The Vault' },
-  ];
 
   return (
     <div className={`${styles.page} font-sans`}>
@@ -248,6 +245,7 @@ export default function AttorneyPartnerPage() {
 
       {/* ============ HERO ============ */}
       <section className={styles.hero} id="top">
+        <div className={styles.heroFade} />
         <div className={`${styles.floatCard} ${styles.fc1}`}>
           <div className={styles.floatIc}>✓</div>
           <div>
@@ -303,6 +301,7 @@ export default function AttorneyPartnerPage() {
           <div className={styles.trustBar}>
             {[
               { n: '40+', l: ['Years of combined', 'attorney expertise'] },
+              { n: '$300', l: ['Your earnings per', 'will package sold'] },
               { n: '$400', l: ['Your earnings per', 'trust package sold'] },
               { n: '15min', l: ['Average client', 'intake time'] },
               { n: 'EPIC', l: ['Fully compliant', 'Michigan templates'] },
@@ -443,9 +442,24 @@ export default function AttorneyPartnerPage() {
             </div>
 
             <div className={styles.calcBody}>
+              <div className={styles.productToggle}>
+                <button
+                  className={calcProduct === 'trust' ? styles.productToggleOn : ''}
+                  onClick={() => setCalcProduct('trust')}
+                >
+                  Trust Package
+                </button>
+                <button
+                  className={calcProduct === 'will' ? styles.productToggleOn : ''}
+                  onClick={() => setCalcProduct('will')}
+                >
+                  Will Package
+                </button>
+              </div>
+
               <div className={styles.sliderBlock}>
                 <div className={styles.sliderHead}>
-                  <span className={styles.sliderLabel}>Trust packages / month</span>
+                  <span className={styles.sliderLabel}>{calcProduct === 'trust' ? 'Trust' : 'Will'} packages / month</span>
                   <span className={styles.sliderVal}>{calcVolume}</span>
                 </div>
                 <input
@@ -481,10 +495,10 @@ export default function AttorneyPartnerPage() {
             <div className={styles.calcResults}>
               <div className={styles.calcRow}>
                 <div>
-                  <div className={styles.cl}>Trust Package × {calcVolume} client{calcVolume !== 1 ? 's' : ''}</div>
-                  <div className={styles.cs}>${trustSplit} per trust package</div>
+                  <div className={styles.cl}>{calcProduct === 'trust' ? 'Trust' : 'Will'} Package × {calcVolume} client{calcVolume !== 1 ? 's' : ''}</div>
+                  <div className={styles.cs}>${productSplit} per {calcProduct} package</div>
                 </div>
-                <div className={styles.cv}>${trustEarnings.toLocaleString()}</div>
+                <div className={styles.cv}>${productEarnings.toLocaleString()}</div>
               </div>
               {calcReviewFee > 0 && (
                 <div className={`${styles.calcRow} ${styles.calcRowGold}`}>
@@ -515,7 +529,6 @@ export default function AttorneyPartnerPage() {
           </p>
         </div>
       </section>
-
       {/* ============ DEMO ============ */}
       <section className={styles.section} id="demo">
         <div className={styles.container}>
@@ -524,7 +537,6 @@ export default function AttorneyPartnerPage() {
             <h2>See exactly what your clients experience and what you experience.</h2>
             <p>This is the platform they use — and what you experience managing it — professional, simple, and branded with your firm&apos;s name and logo.</p>
           </div>
-
           <div className={`${styles.demoStage} ${styles.reveal}`} ref={registerReveal(9)}>
             <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 0 }}>
             <div className={styles.demoTabs}>
@@ -540,7 +552,6 @@ export default function AttorneyPartnerPage() {
               ))}
             </div>
             </div>
-
             <div className={styles.device}>
               <div className={styles.deviceChrome}>
                 <div className={styles.deviceDots}>
@@ -570,43 +581,45 @@ export default function AttorneyPartnerPage() {
                 </div>
               </div>
 
-              {/* Loading skeleton overlay */}
-              {demoLoading && (
-                <div className={styles.iframeSkeleton}>
-                  <div className={styles.skeletonBar} style={{ width: '40%', height: 16, marginBottom: 20 }} />
-                  <div className={styles.skeletonBar} style={{ width: '100%', height: 48, marginBottom: 12 }} />
-                  <div className={styles.skeletonBar} style={{ width: '100%', height: 48, marginBottom: 12 }} />
-                  <div className={styles.skeletonBar} style={{ width: '100%', height: 48, marginBottom: 12 }} />
-                  <div className={styles.skeletonBar} style={{ width: '60%', height: 14, marginTop: 8 }} />
-                </div>
-              )}
+              <div className={styles.deviceBody} style={{ position: 'relative' }}>
+                {/* Loading skeleton overlay */}
+                {demoLoading && (
+                  <div className={styles.iframeSkeleton}>
+                    <div className={styles.skeletonBar} style={{ width: '40%', height: 16, marginBottom: 20 }} />
+                    <div className={styles.skeletonBar} style={{ width: '100%', height: 48, marginBottom: 12 }} />
+                    <div className={styles.skeletonBar} style={{ width: '100%', height: 48, marginBottom: 12 }} />
+                    <div className={styles.skeletonBar} style={{ width: '100%', height: 48, marginBottom: 12 }} />
+                    <div className={styles.skeletonBar} style={{ width: '60%', height: 14, marginTop: 8 }} />
+                  </div>
+                )}
 
-              {/* Client view — full interactive dashboard in iframe */}
-              {demoTab === 0 && (
-                <iframe
-                  src="/khan-lawgroup/dashboard"
-                  className={styles.demoIframe}
-                  style={{ opacity: demoLoading ? 0 : 1, transition: 'opacity 0.3s ease' }}
-                  title="Client dashboard demo"
-                  onLoad={() => setDemoLoading(false)}
-                />
-              )}
+                {/* Client view — full interactive dashboard in iframe */}
+                {demoTab === 0 && (
+                  <iframe
+                    src="/khan-lawgroup/dashboard"
+                    className={styles.demoIframe}
+                    style={{ opacity: demoLoading ? 0 : 1, transition: 'opacity 0.3s ease' }}
+                    title="Client dashboard demo"
+                    onLoad={() => setDemoLoading(false)}
+                  />
+                )}
 
-              {/* Your view — attorney review queue */}
-              {demoTab === 1 && (
-                <iframe
-                  src="/khan-lawgroup/attorney"
-                  className={styles.demoIframe}
-                  style={{ opacity: demoLoading ? 0 : 1, transition: 'opacity 0.3s ease' }}
-                  title="Attorney review queue demo"
-                  onLoad={() => setDemoLoading(false)}
-                />
-              )}
+                {/* Your view — attorney review queue */}
+                {demoTab === 1 && (
+                  <iframe
+                    src="/khan-lawgroup/attorney"
+                    className={styles.demoIframe}
+                    style={{ opacity: demoLoading ? 0 : 1, transition: 'opacity 0.3s ease' }}
+                    title="Attorney review queue demo"
+                    onLoad={() => setDemoLoading(false)}
+                  />
+                )}
+              </div>
             </div>
-
           </div>
         </div>
       </section>
+
 
       {/* ============ UPSELL ============ */}
       <section className={`${styles.section} ${styles.upsellWrap}`}>

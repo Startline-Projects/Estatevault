@@ -497,10 +497,11 @@ export default function AttorneyPartnerPage() {
 
               <div className={styles.appTop}>
                 <div className={styles.firm}>
-                  <div className={styles.firmLogo}>H</div>
-                  <div className={styles.firmMeta}>
-                    <div className={styles.fn}>Harding &amp; Ross</div>
-                    <div className={styles.fs}>Estate Planning · Ann Arbor</div>
+                  <div className={styles.khanMark}>
+                    <span className={styles.khanMarkName}>Khan Law Group</span>
+                    <span className={styles.khanMarkPc}>PC</span>
+                    <span className={styles.khanMarkSep}>/</span>
+                    <span className={styles.khanMarkLegacy}>Legacy</span>
                   </div>
                 </div>
                 <div className={styles.appActions}>
