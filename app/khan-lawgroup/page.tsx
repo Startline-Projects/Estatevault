@@ -1347,47 +1347,50 @@ export default function AttorneyPartnerPage() {
         <div className={styles.container}>
           <div className={styles.footTop}>
             <div className={styles.footBrand}>
-              <Link href="#top" className={styles.brand}>
-                <img src="/logo.svg" alt="EstateVault" className={styles.brandLogo} />
-                <span className={styles.brandName}>EstateVault</span>
-              </Link>
+              <a
+                href="https://khan-lawgroup.com/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className={styles.footKhanMark}
+              >
+                <span className={styles.footKhanName}>Khan Law Group</span>
+                <span className={styles.footKhanPc}>PC</span>
+              </a>
               <p>
-                A B2B2C estate planning platform for attorneys, financial advisors, and
-                professional partners.
+                Estate planning for Michigan families — guided by attorneys who know you,
+                protected by documents built to last.
               </p>
             </div>
             <div className={styles.footCol}>
-              <h4>Product</h4>
+              <h4>Platform</h4>
               <ul>
                 <li><a href="#how">How it works</a></li>
                 <li><a href="#pricing">Pricing</a></li>
                 <li><a href="#calculator">Earnings calculator</a></li>
-                <li><a href="#demo">Client experience</a></li>
+                <li><a href="#demo-client">Client experience</a></li>
+                <li><a href="#demo-attorney">Attorney dashboard</a></li>
               </ul>
             </div>
             <div className={styles.footCol}>
-              <h4>Partners</h4>
+              <h4>Khan Law Group</h4>
               <ul>
-                <li><Link href="/partners/attorneys">Attorneys</Link></li>
-                <li><Link href="/partners/attorneys/review-network">Review attorney network</Link></li>
-                <li><a href="mailto:info@estatevault.us?subject=Referral%20Partner%20Inquiry">Referral partners</a></li>
+                <li><a href="https://khan-lawgroup.com/" target="_blank" rel="noopener noreferrer">Firm website</a></li>
+                <li><a href="#faq">FAQ</a></li>
+                <li><a href="mailto:info@khan-lawgroup.com">Contact us</a></li>
               </ul>
             </div>
             <div className={styles.footCol}>
-              <h4>Company</h4>
+              <h4>Legal</h4>
               <ul>
-                <li><a href="mailto:info@estatevault.us">Contact</a></li>
-                <li><Link href="/privacy">Privacy</Link></li>
-                <li><Link href="/terms">Terms</Link></li>
-                <li><a href="mailto:info@estatevault.us">Security</a></li>
+                <li><Link href="/privacy">Privacy policy</Link></li>
+                <li><Link href="/terms">Terms of service</Link></li>
               </ul>
             </div>
           </div>
           <div className={styles.footBot}>
-            © 2026 EstateVault Technologies LLC. EstateVault is a document preparation platform.
-            Professionals using this platform facilitate document preparation only and do not
-            provide legal advice through this platform. Partners are responsible for compliance
-            with their state bar&apos;s rules of professional conduct.
+            <span>© 2026 Khan Law Group, PC. Document preparation services provided in partnership with</span>{' '}
+            <span className={styles.footPowered}>EstateVault</span>
+            <span>. This platform generates documents from client-provided answers only and does not constitute legal advice. Khan Law Group attorneys are responsible for all attorney review services.</span>
           </div>
         </div>
       </footer>
