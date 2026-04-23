@@ -427,8 +427,8 @@
 .heroTitle em {
   font-style: italic;
   font-weight: 400;
-  color: #6b3a1f;
-  -webkit-text-fill-color: #6b3a1f;
+  color: #000000;
+  -webkit-text-fill-color: #000000;
 }
 .page .heroSub {
   box-sizing: border-box;
@@ -512,7 +512,7 @@
   font-family: var(--font-fraunces), serif;
   font-size: 26px;
   font-weight: 600;
-  color: #6b3a1f;
+  color: #000000;
   line-height: 1;
 }
 .trustLabel {

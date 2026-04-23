@@ -113,6 +113,7 @@ export default function AttorneyPartnerPage() {
   const [calcVolume, setCalcVolume] = useState(5);
   const [calcReviewFee, setCalcReviewFee] = useState(300);
   const [demoTab, setDemoTab] = useState(0);
+  const [clientDemoTab, setClientDemoTab] = useState(0);
   const [demoLoading, setDemoLoading] = useState(false);
   const [promoCode, setPromoCode] = useState('');
   const [promoApplied, setPromoApplied] = useState(false);
@@ -189,6 +190,49 @@ export default function AttorneyPartnerPage() {
     },
     {
       label: 'Your view',
+      icon: (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M12 20h9M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
+        </svg>
+      ),
+    },
+  ];
+
+  const clientDemoTabs = [
+    {
+      label: 'Quiz',
+      icon: (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="12" cy="12" r="10" /><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3M12 17h.01" />
+        </svg>
+      ),
+    },
+    {
+      label: 'Results',
+      icon: (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 16.8l-6.2 4.5 2.4-7.4L2 9.4h7.6z" />
+        </svg>
+      ),
+    },
+    {
+      label: 'Documents',
+      icon: (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" />
+        </svg>
+      ),
+    },
+    {
+      label: 'The Vault',
+      icon: (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="3" y="11" width="18" height="11" rx="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" />
+        </svg>
+      ),
+    },
+    {
+      label: 'Your Review',
       icon: (
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <path d="M12 20h9M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
@@ -527,6 +571,357 @@ export default function AttorneyPartnerPage() {
             reasonableness of fees. EstateVault does not set, approve, or regulate attorney
             review fees.
           </p>
+        </div>
+      </section>
+      {/* ============ DEMO Client  ============ */}
+      <section className={styles.section} id="demo-client">
+        <div className={styles.container}>
+          <div className={`${styles.sectionHead} ${styles.reveal}`} ref={registerReveal(28)}>
+            <span className={styles.sectionEyebrow}>Client experience</span>
+            <h2>See exactly what your clients experience.</h2>
+            <p>This is the platform they use, professional, simple, and branded with your firm&apos;s name and logo.</p>
+          </div>
+
+          <div className={`${styles.demoStage} ${styles.reveal}`} ref={registerReveal(29)}>
+            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 0 }}>
+            <div className={styles.demoTabs}>
+              {clientDemoTabs.map((t, i) => (
+                <button
+                  key={t.label}
+                  onClick={() => setClientDemoTab(i)}
+                  className={`${styles.demoTab} ${clientDemoTab === i ? styles.demoTabActive : ''}`}
+                >
+                  {t.icon}
+                  <span className={styles.tn}>{String(i + 1).padStart(2, '0')}</span>
+                  {t.label}
+                </button>
+              ))}
+            </div>
+            </div>
+
+            <div className={styles.device}>
+              <div className={styles.deviceChrome}>
+                <div className={styles.deviceDots}>
+                  <span /><span /><span />
+                </div>
+                <div className={styles.deviceUrl}>
+                  <svg className={styles.lock} width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
+                    <rect x="3" y="11" width="18" height="11" rx="2" />
+                    <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                  </svg>
+                  legacy.yourfirm.com
+                </div>
+                <div className={styles.deviceActions}>
+                  <span>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M21 21l-6-6" />
+                      <circle cx="10" cy="10" r="7" />
+                    </svg>
+                  </span>
+                  <span>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                      <circle cx="5" cy="12" r="1.5" />
+                      <circle cx="12" cy="12" r="1.5" />
+                      <circle cx="19" cy="12" r="1.5" />
+                    </svg>
+                  </span>
+                </div>
+              </div>
+
+              <div className={styles.appTop}>
+                <div className={styles.firm}>
+                  <div className={styles.khanMark}>
+                    <span className={styles.khanMarkName}>Khan Law Group</span>
+                    <span className={styles.khanMarkPc}>PC</span>
+                    <span className={styles.khanMarkSep}>/</span>
+                    <span className={styles.khanMarkLegacy}>Legacy</span>
+                  </div>
+                </div>
+                <div className={styles.appActions}>
+                  <span className={styles.chip}>
+                    <span className={styles.dot} />
+                    Secure session
+                  </span>
+                  <div className={styles.appAvatar}>SM</div>
+                </div>
+              </div>
+
+              <div className={styles.deviceBody}>
+                {/* Panel 0, Quiz */}
+                <div className={`${styles.panel} ${clientDemoTab === 0 ? styles.panelOn : ''}`}>
+                  <div className={styles.panelInner}>
+                    <div className={styles.quizShell}>
+                      <aside className={styles.quizSide}>
+                        <h4>Your progress</h4>
+                        <ul className={styles.quizSteps}>
+                          <li className="done"><span className={styles.sd}>✓</span>About you</li>
+                          <li className="done"><span className={styles.sd}>✓</span>Family</li>
+                          <li className="now"><span className={styles.sd}>3</span>Assets</li>
+                          <li><span className={styles.sd}>4</span>Beneficiaries</li>
+                          <li><span className={styles.sd}>5</span>Guardians</li>
+                          <li><span className={styles.sd}>6</span>Review</li>
+                        </ul>
+                      </aside>
+
+                      <div className={styles.quizMain}>
+                        <div className={styles.quizBarRow}>
+                          <span className={styles.quizStepTag}>Step 3 / 10</span>
+                          <div className={styles.quizBar}><i /></div>
+                          <span className={styles.quizPct}>30%</span>
+                        </div>
+                        <h3 className={styles.quizQ}>Do you own real estate in Michigan?</h3>
+                        <p className={styles.quizHelp}>
+                          This helps us determine whether a trust may benefit your family by avoiding probate.
+                        </p>
+                        <div className={styles.quizOpts}>
+                          <div className={`${styles.quizOpt} ${styles.quizOptSel}`}>
+                            <span className={styles.quizCheckBoxSel}>✓</span>
+                            Yes
+                            <span className={styles.kbd}>Y</span>
+                          </div>
+                          <div className={styles.quizOpt}>
+                            <span className={styles.quizCheckBox} />
+                            No
+                            <span className={styles.kbd}>N</span>
+                          </div>
+                        </div>
+                        <div className={styles.quizFoot}>
+                          <div className={styles.quizBack}>
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                              <path d="M19 12H5M12 19l-7-7 7-7" />
+                            </svg>
+                            Back
+                          </div>
+                          <div className={styles.quizNext}>
+                            Continue
+                            <ArrowRight />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Panel 1, Results */}
+                <div className={`${styles.panel} ${clientDemoTab === 1 ? styles.panelOn : ''}`}>
+                  <div className={styles.panelInner}>
+                    <div className={styles.recWrap}>
+                      <div className={styles.recPrimary}>
+                        <span className={styles.recTag}>
+                          <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 16.8l-6.2 4.5 2.4-7.4L2 9.4h7.6z" />
+                          </svg>
+                          Your match
+                        </span>
+                        <h3>
+                          Based on your answers, a <em>Trust Package</em> fits your situation best.
+                        </h3>
+                        <p className={styles.recWhy}>
+                          Recommended because you own Michigan real estate, have minor children, and value privacy from probate.
+                        </p>
+                        <ul className={styles.recBullets}>
+                          {['Revocable Living Trust', 'Pour-Over Will', 'Durable Power of Attorney', 'Patient Advocate Designation'].map(d => (
+                            <li key={d}><Check size={12} />{d}</li>
+                          ))}
+                        </ul>
+                        <div className={styles.recPricebox}>
+                          <div>
+                            <div className="pl" style={{ fontSize: 10, letterSpacing: '.08em', textTransform: 'uppercase', color: 'rgba(255,255,255,.5)', fontWeight: 700 }}>Trust Package</div>
+                            <div className="pv" style={{ fontFamily: 'var(--font-fraunces), serif', fontSize: 28, color: '#fff', fontWeight: 500, lineHeight: 1.1, marginTop: 2 }}>$600</div>
+                          </div>
+                          <ArrowRight size={22} />
+                        </div>
+                        <div className={styles.recCta}>Get started →</div>
+                      </div>
+
+                      <div className={styles.recAlt}>
+                        <h4>Other options</h4>
+                        <div className={styles.recAltRow}>
+                          <div className={styles.recAltCard}>
+                            <div>
+                              <div className="nm" style={{ fontWeight: 600, color: 'var(--navy)', fontSize: 13, lineHeight: 1.2 }}>Will Package</div>
+                              <div className="ds" style={{ fontSize: 11, color: 'var(--charcoal-60)', marginTop: 2 }}>For simpler estates</div>
+                            </div>
+                            <div className="pr" style={{ fontFamily: 'var(--font-fraunces), serif', fontSize: 20, fontWeight: 600, color: 'var(--navy)' }}>$400</div>
+                          </div>
+                          <div className={styles.recAltCard}>
+                            <div>
+                              <div className="nm" style={{ fontWeight: 600, color: 'var(--navy)', fontSize: 13, lineHeight: 1.2 }}>+ Attorney Review</div>
+                              <div className="ds" style={{ fontSize: 11, color: 'var(--charcoal-60)', marginTop: 2 }}>Reviewed by your firm</div>
+                            </div>
+                            <div className="pr" style={{ fontFamily: 'var(--font-fraunces), serif', fontSize: 20, fontWeight: 600, color: 'var(--navy)' }}>+$300</div>
+                          </div>
+                        </div>
+                        <div className={styles.recTrust}>
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                          </svg>
+                          Reviewed by Michigan-licensed attorneys at Harding &amp; Ross.
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Panel 2, Documents */}
+                <div className={`${styles.panel} ${clientDemoTab === 2 ? styles.panelOn : ''}`}>
+                  <div className={styles.panelInner}>
+                    <div className={styles.docsHero}>
+                      <div className={styles.dhIc}><Check size={22} /></div>
+                      <div>
+                        <div className={styles.dhT}>Your Trust Package is ready.</div>
+                        <div className={styles.dhS}>Reviewed &amp; approved by Rachel Harding, Esq. · Apr 17, 2026</div>
+                      </div>
+                      <div className={styles.dhBadge}>Delivered</div>
+                    </div>
+
+                    <div className={styles.docList}>
+                      {[
+                        { n: 'Revocable Living Trust', p: '32 pages', s: '248 KB' },
+                        { n: 'Pour-Over Will', p: '8 pages', s: '62 KB' },
+                        { n: 'Durable Power of Attorney', p: '6 pages', s: '48 KB' },
+                        { n: 'Patient Advocate Designation', p: '4 pages', s: '36 KB' },
+                      ].map((d) => (
+                        <div key={d.n} className={styles.docItem}>
+                          <div className={styles.docIc}><span className={styles.dx}>PDF</span></div>
+                          <div className={styles.docInfo}>
+                            <div className={styles.dn}>{d.n}</div>
+                            <div className={styles.dm}>
+                              {d.p}<span className={styles.sep} />{d.s}<span className={styles.sep} />Updated today
+                            </div>
+                          </div>
+                          <div className={styles.docSig}>Signed</div>
+                          <div className={styles.docDl}><DownloadIcon /></div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Panel 3, Vault */}
+                <div className={`${styles.panel} ${clientDemoTab === 3 ? styles.panelOn : ''}`}>
+                  <div className={styles.panelInner}>
+                    <div className={styles.vaultHead}>
+                      <div className={styles.vt}>
+                        <div className={styles.vic}>
+                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <rect x="3" y="11" width="18" height="11" rx="2" />
+                            <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                          </svg>
+                        </div>
+                        <div>
+                          <div className={styles.vl}>Your Vault</div>
+                          <div className={styles.vs}>AES-256 encrypted · PIN protected</div>
+                        </div>
+                      </div>
+                      <div className={styles.vaultPin}>
+                        <span className={styles.pinLabel}>Vault PIN</span>
+                        <div className={styles.pinDots}>
+                          <span /><span /><span /><span />
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className={styles.vaultGrid}>
+                      {[
+                        { n: 'Estate Documents', c: '4 items', active: true, count: 4 },
+                        { n: 'Financial Accounts', c: 'Empty' },
+                        { n: 'Insurance Policies', c: 'Empty' },
+                        { n: 'Digital Accounts', c: 'Empty' },
+                        { n: 'Physical Locations', c: 'Empty' },
+                        { n: 'Important Contacts', c: 'Empty' },
+                        { n: 'Business Interests', c: 'Empty' },
+                        { n: 'Final Wishes', c: 'Empty' },
+                      ].map((item, i) => (
+                        <div key={item.n} className={`${styles.vaultItem} ${item.active ? styles.vaultItemActive : ''}`}>
+                          {item.count ? <span className={styles.vbadge}>{item.count}</span> : null}
+                          <div className={styles.vi}>
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              {i === 0 && (<><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><path d="M14 2v6h6" /></>)}
+                              {i === 1 && (<><rect x="2" y="5" width="20" height="14" rx="2" /><line x1="2" y1="10" x2="22" y2="10" /></>)}
+                              {i === 2 && (<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />)}
+                              {i === 3 && (<><circle cx="8" cy="15" r="4" /><path d="M10.85 12.15L19 4M18 5l2 2M15 8l2 2" /></>)}
+                              {i === 4 && (<><path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0 1 18 0z" /><circle cx="12" cy="10" r="3" /></>)}
+                              {i === 5 && (<><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></>)}
+                              {i === 6 && (<><rect x="2" y="7" width="20" height="14" rx="2" /><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" /></>)}
+                              {i === 7 && (<path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />)}
+                            </svg>
+                          </div>
+                          <div className={styles.vn}>{item.n}</div>
+                          <div className={styles.vc}>{item.c}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Panel 4, Your Review */}
+                <div className={`${styles.panel} ${clientDemoTab === 4 ? styles.panelOn : ''}`}>
+                  <div className={styles.panelInner}>
+                    <div className={styles.revGrid}>
+                      <div className={styles.revList}>
+                        <div className={styles.revListHead}>
+                          <h4>Review Queue</h4>
+                          <span className={styles.rct}>3 pending</span>
+                        </div>
+                        <div className={`${styles.revRow} ${styles.revRowSel}`}>
+                          <div className={styles.av}>SM</div>
+                          <div>
+                            <div className={styles.rn}>Sarah M.</div>
+                            <div className={styles.rp}>Trust Package</div>
+                          </div>
+                          <div className={styles.rt}><span className={styles.urg}>36h</span></div>
+                        </div>
+                        <div className={styles.revRow}>
+                          <div className={styles.av} style={{ background: 'linear-gradient(135deg,#c7d2fe,#818cf8)', color: '#fff' }}>JT</div>
+                          <div>
+                            <div className={styles.rn}>James T.</div>
+                            <div className={styles.rp}>Will Package</div>
+                          </div>
+                          <div className={styles.rt}>2d</div>
+                        </div>
+                        <div className={styles.revRow}>
+                          <div className={styles.av} style={{ background: 'linear-gradient(135deg,#fecaca,#f87171)', color: '#fff' }}>LP</div>
+                          <div>
+                            <div className={styles.rn}>Linda P.</div>
+                            <div className={styles.rp}>Trust Package</div>
+                          </div>
+                          <div className={styles.rt}>3d</div>
+                        </div>
+                      </div>
+
+                      <div className={styles.revDetail}>
+                        <div className={styles.revDetailTop}>
+                          <div>
+                            <div className={styles.rdl}>Sarah M., Revocable Living Trust</div>
+                            <div className={styles.rds}>Generated from intake · 32 pages · Ready for attorney review</div>
+                          </div>
+                          <div className={styles.revSla}>
+                            <span className={styles.spdot} />
+                            SLA 36h
+                          </div>
+                        </div>
+                        <div className={styles.revPage}>
+                          <p><strong>REVOCABLE LIVING TRUST OF <span className={styles.hl}>SARAH M. THOMPSON</span></strong></p>
+                          <p>&nbsp;</p>
+                          <p>ARTICLE I, DECLARATION OF TRUST</p>
+                          <p>I, <span className={styles.hl}>Sarah M. Thompson</span>, of <span className={styles.hl}>Washtenaw County, Michigan</span>, hereby declare this Revocable Living Trust…</p>
+                          <p>&nbsp;</p>
+                          <p>ARTICLE II, TRUST PROPERTY</p>
+                          <p>The Grantor transfers to the Trustee the real property located at <span className={styles.hl}>[intake-derived address]</span>…</p>
+                        </div>
+                        <div className={styles.revActions}>
+                          <div className={`${styles.revBtn} ${styles.revBtnGhost}`}>Request revision</div>
+                          <div className={`${styles.revBtn} ${styles.revBtnPrimary}`}>Approve &amp; sign →</div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+          </div>
         </div>
       </section>
       {/* ============ DEMO ============ */}
