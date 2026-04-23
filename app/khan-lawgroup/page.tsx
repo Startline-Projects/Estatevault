@@ -114,7 +114,7 @@ export default function AttorneyPartnerPage() {
   const [calcReviewFee, setCalcReviewFee] = useState(300);
   const [demoTab, setDemoTab] = useState(0);
   const [clientDemoTab, setClientDemoTab] = useState(0);
-  const [demoLoading, setDemoLoading] = useState(false);
+  const [demoLoaded, setDemoLoaded] = useState<Record<number, boolean>>({});
   const [promoCode, setPromoCode] = useState('');
   const [promoApplied, setPromoApplied] = useState(false);
   const [openFaq, setOpenFaq] = useState<number | null>(0);
@@ -609,7 +609,7 @@ export default function AttorneyPartnerPage() {
                     <rect x="3" y="11" width="18" height="11" rx="2" />
                     <path d="M7 11V7a5 5 0 0 1 10 0v4" />
                   </svg>
-                  legacy.yourfirm.com
+                  legacy.khan-lawgroup.com
                 </div>
                 <div className={styles.deviceActions}>
                   <span>
@@ -726,8 +726,8 @@ export default function AttorneyPartnerPage() {
                         </ul>
                         <div className={styles.recPricebox}>
                           <div>
-                            <div className="pl" style={{ fontSize: 10, letterSpacing: '.08em', textTransform: 'uppercase', color: 'rgba(255,255,255,.5)', fontWeight: 700 }}>Trust Package</div>
-                            <div className="pv" style={{ fontFamily: 'var(--font-fraunces), serif', fontSize: 28, color: '#fff', fontWeight: 500, lineHeight: 1.1, marginTop: 2 }}>$600</div>
+                            <div className="pl" style={{ fontSize: 10, letterSpacing: '.08em', textTransform: 'uppercase', color: 'rgba(0,0,0,.5)', fontWeight: 700 }}>Trust Package</div>
+                            <div className="pv" style={{ fontFamily: 'var(--font-fraunces), serif', fontSize: 28, color: '#000', fontWeight: 500, lineHeight: 1.1, marginTop: 2 }}>$600</div>
                           </div>
                           <ArrowRight size={22} />
                         </div>
@@ -938,7 +938,7 @@ export default function AttorneyPartnerPage() {
               {demoTabs.map((t, i) => (
                 <button
                   key={t.label}
-                  onClick={() => { if (i !== demoTab) { setDemoTab(i); setDemoLoading(true); } }}
+                  onClick={() => setDemoTab(i)}
                   className={`${styles.demoTab} ${demoTab === i ? styles.demoTabActive : ''}`}
                 >
                   {t.icon}
@@ -957,7 +957,7 @@ export default function AttorneyPartnerPage() {
                     <rect x="3" y="11" width="18" height="11" rx="2" />
                     <path d="M7 11V7a5 5 0 0 1 10 0v4" />
                   </svg>
-                  khan-lawgroup.com
+                  legacy.khan-lawgroup.com
                 </div>
                 <div className={styles.deviceActions}>
                   <span>
@@ -977,38 +977,42 @@ export default function AttorneyPartnerPage() {
               </div>
 
               <div className={styles.deviceBody} style={{ position: 'relative' }}>
-                {/* Loading skeleton overlay */}
-                {demoLoading && (
+                {/* Skeleton shown until active iframe finishes loading */}
+                {!demoLoaded[demoTab] && (
                   <div className={styles.iframeSkeleton}>
-                    <div className={styles.skeletonBar} style={{ width: '40%', height: 16, marginBottom: 20 }} />
-                    <div className={styles.skeletonBar} style={{ width: '100%', height: 48, marginBottom: 12 }} />
-                    <div className={styles.skeletonBar} style={{ width: '100%', height: 48, marginBottom: 12 }} />
-                    <div className={styles.skeletonBar} style={{ width: '100%', height: 48, marginBottom: 12 }} />
-                    <div className={styles.skeletonBar} style={{ width: '60%', height: 14, marginTop: 8 }} />
+                    <div style={{ display: 'flex', gap: 12, marginBottom: 20 }}>
+                      <div className={styles.skeletonBar} style={{ width: 32, height: 32, borderRadius: '50%', flexShrink: 0 }} />
+                      <div style={{ flex: 1 }}>
+                        <div className={styles.skeletonBar} style={{ width: '55%', height: 13, marginBottom: 8 }} />
+                        <div className={styles.skeletonBar} style={{ width: '35%', height: 10 }} />
+                      </div>
+                    </div>
+                    <div className={styles.skeletonBar} style={{ width: '100%', height: 72, marginBottom: 12, borderRadius: 10 }} />
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 12 }}>
+                      <div className={styles.skeletonBar} style={{ height: 90, borderRadius: 10 }} />
+                      <div className={styles.skeletonBar} style={{ height: 90, borderRadius: 10 }} />
+                    </div>
+                    <div className={styles.skeletonBar} style={{ width: '100%', height: 56, marginBottom: 8, borderRadius: 10 }} />
+                    <div className={styles.skeletonBar} style={{ width: '100%', height: 56, marginBottom: 8, borderRadius: 10 }} />
+                    <div className={styles.skeletonBar} style={{ width: '100%', height: 56, borderRadius: 10 }} />
                   </div>
                 )}
 
-                {/* Client view — full interactive dashboard in iframe */}
-                {demoTab === 0 && (
-                  <iframe
-                    src="/khan-lawgroup/dashboard"
-                    className={styles.demoIframe}
-                    style={{ opacity: demoLoading ? 0 : 1, transition: 'opacity 0.3s ease' }}
-                    title="Client dashboard demo"
-                    onLoad={() => setDemoLoading(false)}
-                  />
-                )}
-
-                {/* Your view — attorney review queue */}
-                {demoTab === 1 && (
-                  <iframe
-                    src="/khan-lawgroup/attorney"
-                    className={styles.demoIframe}
-                    style={{ opacity: demoLoading ? 0 : 1, transition: 'opacity 0.3s ease' }}
-                    title="Attorney review queue demo"
-                    onLoad={() => setDemoLoading(false)}
-                  />
-                )}
+                {/* Both iframes stay mounted — no reload on tab switch */}
+                <iframe
+                  src="/khan-lawgroup/dashboard"
+                  className={styles.demoIframe}
+                  style={{ display: demoTab === 0 ? 'block' : 'none', opacity: demoLoaded[0] ? 1 : 0, transition: 'opacity 0.35s ease' }}
+                  title="Client dashboard demo"
+                  onLoad={() => setDemoLoaded(prev => ({ ...prev, 0: true }))}
+                />
+                <iframe
+                  src="/khan-lawgroup/attorney"
+                  className={styles.demoIframe}
+                  style={{ display: demoTab === 1 ? 'block' : 'none', opacity: demoLoaded[1] ? 1 : 0, transition: 'opacity 0.35s ease' }}
+                  title="Attorney review queue demo"
+                  onLoad={() => setDemoLoaded(prev => ({ ...prev, 1: true }))}
+                />
               </div>
             </div>
           </div>
@@ -1050,6 +1054,80 @@ export default function AttorneyPartnerPage() {
           <p className={`${styles.upsellFoot} ${styles.reveal}`} ref={registerReveal(21)}>
             These are not referrals. These are <strong>your clients</strong>, coming to you.
           </p>
+        </div>
+      </section>
+
+      {/* ============ PACKAGE INCLUDES ============ */}
+      <section className={`${styles.section} ${styles.pkgWrap}`} id="packages">
+        <div className={styles.container}>
+          <div className={`${styles.sectionHead} ${styles.reveal}`} ref={registerReveal(30)}>
+            <span className={styles.sectionEyebrow}>What clients get</span>
+            <h2>Every document your client needs, nothing they don&apos;t.</h2>
+            <p>
+              Both packages are drafted from client answers, reviewed by you, and delivered
+              as attorney-grade Michigan documents compliant with EPIC.
+            </p>
+          </div>
+
+          <div className={`${styles.pkgGrid} ${styles.reveal}`} ref={registerReveal(31)}>
+            <div className={styles.pkgCard}>
+              <span className={styles.pkgTag}>Will Package</span>
+              <div className={styles.pkgName}>Essential Protection</div>
+              <div className={styles.pkgPrice}>$400</div>
+              <div className={styles.pkgDivider} />
+              <ul className={styles.pkgList}>
+                {[
+                  { doc: 'Last Will & Testament', desc: 'Directs distribution of assets and names an executor' },
+                  { doc: 'Durable Power of Attorney', desc: 'Designates who manages finances if incapacitated' },
+                  { doc: 'Patient Advocate Designation', desc: 'Names a healthcare decision-maker' },
+                  { doc: 'HIPAA Authorization', desc: 'Allows designated persons to access medical records' },
+                  { doc: 'Secure Vault access', desc: 'Encrypted storage for documents and critical information' },
+                ].map((item) => (
+                  <li key={item.doc} className={styles.pkgItem}>
+                    <Check size={15} />
+                    <span>
+                      <span className={styles.pkgItemStrong}>{item.doc}</span>
+                      {' — '}
+                      {item.desc}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+              <p className={styles.pkgNote}>
+                Best for clients with no real estate, no minor children, and straightforward estates.
+              </p>
+            </div>
+
+            <div className={styles.pkgCard}>
+              <span className={styles.pkgTag}>Trust Package</span>
+              <div className={styles.pkgName}>Complete Estate Plan</div>
+              <div className={styles.pkgPrice}>$600</div>
+              <div className={styles.pkgDivider} />
+              <ul className={styles.pkgList}>
+                {[
+                  { doc: 'Revocable Living Trust', desc: 'Avoids probate, controls distribution of all assets' },
+                  { doc: 'Pour-Over Will', desc: 'Catches any assets not transferred into the trust' },
+                  { doc: 'Durable Power of Attorney', desc: 'Designates who manages finances if incapacitated' },
+                  { doc: 'Patient Advocate Designation', desc: 'Names a healthcare decision-maker' },
+                  { doc: 'HIPAA Authorization', desc: 'Allows designated persons to access medical records' },
+                  { doc: 'Trustee Instructions Letter', desc: 'Plain-language guide for the successor trustee' },
+                  { doc: 'Secure Vault access', desc: 'Encrypted storage for documents and critical information' },
+                ].map((item) => (
+                  <li key={item.doc} className={styles.pkgItem}>
+                    <Check size={15} />
+                    <span>
+                      <span className={styles.pkgItemStrong}>{item.doc}</span>
+                      {' — '}
+                      {item.desc}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+              <p className={styles.pkgNote}>
+                Best for clients who own Michigan real estate, have minor children, or want to avoid probate entirely.
+              </p>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -1162,7 +1240,7 @@ export default function AttorneyPartnerPage() {
                 ))}
               </ul>
               <a
-                href="mailto:support@estatevault.us?subject=Enterprise%20Attorney%20Partnership%20Inquiry"
+                href="mailto:info@estatevault.us?subject=Enterprise%20Attorney%20Partnership%20Inquiry"
                 className={`${styles.planCta} ${styles.planCtaOutline}`}
               >
                 Talk to sales
@@ -1187,56 +1265,10 @@ export default function AttorneyPartnerPage() {
               </ul>
             </div>
             <div className={styles.referralCta}>
-              <a href="mailto:support@estatevault.us?subject=Referral%20Partner%20Inquiry">
+              <a href="mailto:info@estatevault.us?subject=Referral%20Partner%20Inquiry">
                 Learn more <ArrowRight />
               </a>
             </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ============ TESTIMONIALS ============ */}
-      <section className={`${styles.section} ${styles.testimonialsWrap}`}>
-        <div className={styles.container}>
-          <div className={`${styles.sectionHead} ${styles.reveal}`} ref={registerReveal(22)}>
-            <span className={styles.sectionEyebrow}>What attorneys say</span>
-            <h2>Built with attorneys. Trusted by firms.</h2>
-          </div>
-
-          <div className={styles.tg}>
-            {[
-              {
-                q: 'I used to turn away simple will clients because they weren\'t worth my time. Now they\'re my most profitable 15 minutes of the day. I set my review fee at $350 and the platform did the rest.',
-                i: 'RH',
-                n: 'Rachel Harding, Esq.',
-                r: 'Harding & Ross · Ann Arbor, MI',
-              },
-              {
-                q: 'The complex case routing alone paid for the Professional tier in the first month. I got two Medicaid planning engagements the system flagged during intake. Those were clients I never would have seen otherwise.',
-                i: 'MB',
-                n: 'Marcus Brennan, Esq.',
-                r: 'Brennan Legal · Grand Rapids, MI',
-              },
-              {
-                q: 'My firm\'s name on a branded vault, on my terms, with my bar number. EstateVault isn\'t trying to replace us, it\'s positioning us as the premium DIY option in our market. Exactly what we needed.',
-                i: 'JW',
-                n: 'Jennifer Whitfield, Esq.',
-                r: 'Whitfield Law Group · Detroit, MI',
-              },
-            ].map((t, i) => (
-              <div key={t.i} className={`${styles.tcard} ${styles.reveal}`} ref={registerReveal(23 + i)}>
-                <div className={styles.tquote}>&ldquo;</div>
-                <div className={styles.tstars}>★★★★★</div>
-                <p className={styles.tcopy}>{t.q}</p>
-                <div className={styles.tauthor}>
-                  <div className={styles.tavatar}>{t.i}</div>
-                  <div>
-                    <div className={styles.tname}>{t.n}</div>
-                    <div className={styles.trole}>{t.r}</div>
-                  </div>
-                </div>
-              </div>
-            ))}
           </div>
         </div>
       </section>
@@ -1303,7 +1335,7 @@ export default function AttorneyPartnerPage() {
             <button onClick={() => scrollTo('pricing')} className={`${styles.btnLg} ${styles.btnGold}`}>
               Get started now
             </button>
-            <a href="mailto:support@estatevault.us" className={`${styles.btnLg} ${styles.btnGlass}`}>
+            <a href="mailto:info@estatevault.us" className={`${styles.btnLg} ${styles.btnGlass}`}>
               Talk to sales
             </a>
           </div>
@@ -1338,16 +1370,16 @@ export default function AttorneyPartnerPage() {
               <ul>
                 <li><Link href="/partners/attorneys">Attorneys</Link></li>
                 <li><Link href="/partners/attorneys/review-network">Review attorney network</Link></li>
-                <li><a href="mailto:support@estatevault.us?subject=Referral%20Partner%20Inquiry">Referral partners</a></li>
+                <li><a href="mailto:info@estatevault.us?subject=Referral%20Partner%20Inquiry">Referral partners</a></li>
               </ul>
             </div>
             <div className={styles.footCol}>
               <h4>Company</h4>
               <ul>
-                <li><a href="mailto:support@estatevault.us">Contact</a></li>
+                <li><a href="mailto:info@estatevault.us">Contact</a></li>
                 <li><Link href="/privacy">Privacy</Link></li>
                 <li><Link href="/terms">Terms</Link></li>
-                <li><a href="mailto:support@estatevault.us">Security</a></li>
+                <li><a href="mailto:info@estatevault.us">Security</a></li>
               </ul>
             </div>
           </div>

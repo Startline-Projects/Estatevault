@@ -4,13 +4,13 @@ import { useState } from 'react';
 import Link from 'next/link';
 
 // ─── Khan Law Group palette ───────────────────────────────────────────────────
-const NAVY = '#3f2d18';
-const NAVY_800 = '#2d2018';
-const GOLD = '#efba81';
-const GOLD_600 = '#ba8b57';
-const SURFACE = '#faf5ee';
-const LINE = '#ece4d7';
-const CHARCOAL = '#2d2926';
+const NAVY = '#000000';
+const NAVY_800 = '#111111';
+const GOLD = '#F2D7C1';
+const GOLD_600 = '#c4a48a';
+const SURFACE = '#ffffff';
+const LINE = 'rgba(0,0,0,0.08)';
+const CHARCOAL = '#000000';
 
 // ─── Demo data ────────────────────────────────────────────────────────────────
 const DEMO_NAME = 'Sarah Thompson';
@@ -62,9 +62,9 @@ function CompletionRing({ percent }: { percent: number }) {
 
 function PdfIcon() {
   return (
-    <div style={{ width: 40, height: 48, background: `linear-gradient(135deg,${NAVY} 0%,${NAVY_800} 100%)`,
-      borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center',
-      fontSize: 9, fontWeight: 700, color: GOLD, letterSpacing: '.04em' }}>
+    <div style={{ width: 40, height: 48, background: GOLD,
+      borderRadius: 6, border: `1px solid rgba(0,0,0,0.1)`, display: 'flex', alignItems: 'center', justifyContent: 'center',
+      fontSize: 9, fontWeight: 700, color: '#000', letterSpacing: '.04em' }}>
       PDF
     </div>
   );
@@ -96,11 +96,11 @@ function HomeSection({ onNav }: { onNav: (s: NavSection) => void }) {
 
   return (
     <div style={{ maxWidth: 720 }}>
-      <div style={{ borderRadius: 14, background: NAVY, padding: '20px 24px', borderLeft: `4px solid ${GOLD}` }}>
-        <h1 style={{ color: 'white', fontSize: 20, fontWeight: 700, margin: 0 }}>
+      <div style={{ borderRadius: 14, background: GOLD, padding: '20px 24px', borderLeft: `4px solid rgba(0,0,0,0.15)` }}>
+        <h1 style={{ color: '#000', fontSize: 20, fontWeight: 700, margin: 0 }}>
           Welcome back, {DEMO_FIRST}.
         </h1>
-        <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: 13, marginTop: 4, marginBottom: 0 }}>
+        <p style={{ color: 'rgba(0,0,0,0.6)', fontSize: 13, marginTop: 4, marginBottom: 0 }}>
           Your {PACKAGE} is ready for review.
         </p>
       </div>
@@ -169,17 +169,17 @@ function DocumentsSection() {
         Reviewed &amp; approved by Khan Law Group · Apr 17, 2026
       </p>
 
-      <div style={{ borderRadius: 14, background: NAVY, padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 14, marginBottom: 16 }}>
-        <div style={{ width: 36, height: 36, borderRadius: '50%', background: GOLD, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={NAVY} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+      <div style={{ borderRadius: 14, background: GOLD, padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 14, marginBottom: 16 }}>
+        <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#000" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
             <polyline points="20 6 9 17 4 12" />
           </svg>
         </div>
         <div>
-          <div style={{ color: 'white', fontWeight: 600, fontSize: 14 }}>Your Trust Package is ready.</div>
-          <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: 12, marginTop: 2 }}>All 4 documents reviewed and signed off</div>
+          <div style={{ color: '#000', fontWeight: 600, fontSize: 14 }}>Your Trust Package is ready.</div>
+          <div style={{ color: 'rgba(0,0,0,0.5)', fontSize: 12, marginTop: 2 }}>All 4 documents reviewed and signed off</div>
         </div>
-        <div style={{ marginLeft: 'auto', background: GOLD, color: NAVY, borderRadius: 10, padding: '3px 10px', fontSize: 11, fontWeight: 700 }}>
+        <div style={{ marginLeft: 'auto', background: 'white', color: '#000', borderRadius: 10, padding: '3px 10px', fontSize: 11, fontWeight: 700 }}>
           Delivered
         </div>
       </div>
@@ -203,7 +203,7 @@ function DocumentsSection() {
         ))}
       </div>
 
-      <div style={{ marginTop: 20, borderRadius: 14, background: SURFACE, border: `1px solid ${LINE}`, padding: 20 }}>
+      <div style={{ marginTop: 20, borderRadius: 14, background: GOLD, border: `1px solid ${LINE}`, padding: 20 }}>
         <h3 style={{ fontSize: 14, fontWeight: 700, color: NAVY, marginBottom: 10 }}>Execution guide</h3>
         <p style={{ fontSize: 13, color: 'rgba(45,41,38,0.7)', lineHeight: 1.6 }}>
           To make your documents legally binding, follow these steps:
@@ -234,8 +234,8 @@ function VaultSection() {
   if (!unlocked) {
     return (
       <div style={{ maxWidth: 400, margin: '60px auto', textAlign: 'center' }}>
-        <div style={{ width: 64, height: 64, borderRadius: '50%', background: NAVY, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px' }}>
-          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={GOLD} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <div style={{ width: 64, height: 64, borderRadius: '50%', background: GOLD, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px' }}>
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#000" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <rect x="3" y="11" width="18" height="11" rx="2" />
             <path d="M7 11V7a5 5 0 0 1 10 0v4" />
           </svg>
@@ -255,7 +255,7 @@ function VaultSection() {
           />
           {error && <p style={{ color: '#dc2626', fontSize: 12, marginTop: 6 }}>{error}</p>}
           <button onClick={tryUnlock} style={{ marginTop: 12, width: '100%', padding: '12px', borderRadius: 10,
-            background: NAVY, border: 'none', color: 'white', fontWeight: 700, fontSize: 14, cursor: 'pointer' }}>
+            background: '#000', border: 'none', color: 'white', fontWeight: 700, fontSize: 14, cursor: 'pointer' }}>
             Unlock Vault
           </button>
         </div>
@@ -290,11 +290,11 @@ function VaultSection() {
             ))}
           </div>
         ) : (
-          <div style={{ borderRadius: 14, background: SURFACE, border: `1px dashed ${LINE}`, padding: '40px 24px', textAlign: 'center' }}>
+          <div style={{ borderRadius: 14, background: GOLD, border: `1px dashed rgba(0,0,0,0.12)`, padding: '40px 24px', textAlign: 'center' }}>
             <p style={{ fontSize: 24, marginBottom: 8 }}>{cat.icon}</p>
             <p style={{ fontSize: 15, fontWeight: 600, color: NAVY }}>No items yet</p>
             <p style={{ fontSize: 13, color: 'rgba(45,41,38,0.5)', marginTop: 4 }}>Add your {cat.name.toLowerCase()} to keep them secure and accessible to your trustees.</p>
-            <button style={{ marginTop: 16, padding: '10px 22px', borderRadius: 24, background: NAVY, border: 'none', color: 'white', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>
+            <button style={{ marginTop: 16, padding: '10px 22px', borderRadius: 24, background: '#000', border: 'none', color: 'white', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>
               + Add Item
             </button>
           </div>
@@ -322,8 +322,8 @@ function VaultSection() {
           <button
             key={cat.id}
             onClick={() => setActiveCategory(cat.id)}
-            style={{ position: 'relative', borderRadius: 12, background: cat.count > 0 ? NAVY : 'white',
-              border: `1.5px solid ${cat.count > 0 ? NAVY : LINE}`, padding: '20px 16px',
+            style={{ position: 'relative', borderRadius: 12, background: cat.count > 0 ? GOLD : 'white',
+              border: `1.5px solid ${cat.count > 0 ? 'rgba(0,0,0,0.15)' : LINE}`, padding: '20px 16px',
               textAlign: 'left', cursor: 'pointer', transition: 'all .2s' }}>
             {cat.count > 0 && (
               <span style={{ position: 'absolute', top: 10, right: 10, width: 20, height: 20, borderRadius: '50%',
@@ -332,8 +332,8 @@ function VaultSection() {
               </span>
             )}
             <div style={{ fontSize: 24, marginBottom: 8 }}>{cat.icon}</div>
-            <div style={{ fontSize: 13, fontWeight: 600, color: cat.count > 0 ? 'white' : NAVY, lineHeight: 1.3 }}>{cat.name}</div>
-            <div style={{ fontSize: 11, color: cat.count > 0 ? 'rgba(255,255,255,0.5)' : 'rgba(45,41,38,0.4)', marginTop: 4 }}>
+            <div style={{ fontSize: 13, fontWeight: 600, color: '#000', lineHeight: 1.3 }}>{cat.name}</div>
+            <div style={{ fontSize: 11, color: 'rgba(0,0,0,0.45)', marginTop: 4 }}>
               {cat.count > 0 ? `${cat.count} item${cat.count > 1 ? 's' : ''}` : 'Empty'}
             </div>
           </button>
@@ -363,7 +363,7 @@ function LifeEventsSection() {
           }
         </p>
         <button onClick={() => { setSubmitted(false); setSelected([]); }}
-          style={{ marginTop: 20, padding: '10px 24px', borderRadius: 24, background: NAVY, border: 'none', color: 'white', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>
+          style={{ marginTop: 20, padding: '10px 24px', borderRadius: 24, background: '#000', border: 'none', color: 'white', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>
           Back to Life Events
         </button>
       </div>
@@ -386,10 +386,10 @@ function LifeEventsSection() {
             <button
               key={e.id}
               onClick={() => toggle(e.id)}
-              style={{ borderRadius: 12, background: active ? NAVY : 'white', border: `2px solid ${active ? NAVY : LINE}`,
+              style={{ borderRadius: 12, background: active ? GOLD : 'white', border: `2px solid ${active ? 'rgba(0,0,0,0.15)' : LINE}`,
                 padding: '16px', textAlign: 'left', cursor: 'pointer', transition: 'all .2s' }}>
               <div style={{ fontSize: 22, marginBottom: 6 }}>{e.icon}</div>
-              <div style={{ fontSize: 13, fontWeight: 600, color: active ? 'white' : NAVY }}>{e.label}</div>
+              <div style={{ fontSize: 13, fontWeight: 600, color: '#000' }}>{e.label}</div>
             </button>
           );
         })}
@@ -398,8 +398,8 @@ function LifeEventsSection() {
       <button
         disabled={selected.length === 0}
         onClick={() => setSubmitted(true)}
-        style={{ padding: '12px 28px', borderRadius: 24, background: selected.length > 0 ? GOLD : LINE,
-          border: 'none', color: selected.length > 0 ? NAVY : 'rgba(45,41,38,0.3)', fontWeight: 700,
+        style={{ padding: '12px 28px', borderRadius: 24, background: selected.length > 0 ? '#000' : LINE,
+          border: 'none', color: selected.length > 0 ? 'white' : 'rgba(0,0,0,0.3)', fontWeight: 700,
           fontSize: 14, cursor: selected.length > 0 ? 'pointer' : 'not-allowed', transition: 'all .2s' }}>
         Request Plan Update{selected.length > 0 ? ` (${selected.length})` : ''}
       </button>
@@ -418,7 +418,7 @@ function SettingsSection() {
       <h1 style={{ fontSize: 22, fontWeight: 700, color: NAVY, marginBottom: 24 }}>Settings</h1>
 
       <div style={{ borderRadius: 14, background: 'white', border: `1px solid ${LINE}`, overflow: 'hidden' }}>
-        <div style={{ padding: '16px 20px', borderBottom: `1px solid ${LINE}`, background: SURFACE }}>
+        <div style={{ padding: '16px 20px', borderBottom: `1px solid ${LINE}`, background: GOLD }}>
           <p style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.07em', color: 'rgba(45,41,38,0.5)', margin: 0 }}>Profile</p>
         </div>
         <div style={{ padding: '20px' }}>
@@ -431,7 +431,7 @@ function SettingsSection() {
             style={{ width: '100%', padding: '10px 14px', borderRadius: 8, border: `1.5px solid ${LINE}`,
               fontSize: 13, outline: 'none', boxSizing: 'border-box', marginBottom: 20 }} />
           <button onClick={() => setSaved(true)}
-            style={{ padding: '10px 22px', borderRadius: 24, background: NAVY, border: 'none',
+            style={{ padding: '10px 22px', borderRadius: 24, background: '#000', border: 'none',
               color: 'white', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>
             {saved ? '✓ Saved' : 'Save changes'}
           </button>
@@ -439,12 +439,12 @@ function SettingsSection() {
       </div>
 
       <div style={{ borderRadius: 14, background: 'white', border: `1px solid ${LINE}`, overflow: 'hidden', marginTop: 16 }}>
-        <div style={{ padding: '16px 20px', borderBottom: `1px solid ${LINE}`, background: SURFACE }}>
+        <div style={{ padding: '16px 20px', borderBottom: `1px solid ${LINE}`, background: GOLD }}>
           <p style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.07em', color: 'rgba(45,41,38,0.5)', margin: 0 }}>Partner</p>
         </div>
         <div style={{ padding: '20px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <div style={{ width: 40, height: 40, borderRadius: 10, background: NAVY, display: 'flex', alignItems: 'center', justifyContent: 'center', color: GOLD, fontWeight: 700, fontSize: 16 }}>K</div>
+            <div style={{ width: 40, height: 40, borderRadius: 10, background: GOLD, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#000', fontWeight: 700, fontSize: 16 }}>K</div>
             <div>
               <div style={{ fontWeight: 600, fontSize: 14, color: NAVY }}>Khan Law Group</div>
               <div style={{ fontSize: 12, color: 'rgba(45,41,38,0.5)' }}>Estate Planning · Michigan</div>
@@ -481,12 +481,12 @@ export default function DemoDashboard() {
   function SidebarContent() {
     return (
       <>
-        <div style={{ padding: '20px 20px 14px', borderBottom: `1px solid rgba(239,186,129,0.15)` }}>
+        <div style={{ padding: '20px 20px 14px', borderBottom: `1px solid ${LINE}` }}>
           <Link href="/khan-lawgroup" style={{ display: 'flex', alignItems: 'center', gap: 8, textDecoration: 'none' }}>
-            <div style={{ width: 32, height: 32, borderRadius: 8, background: GOLD, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 14, color: NAVY }}>K</div>
+            <div style={{ width: 32, height: 32, borderRadius: 8, background: GOLD, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 14, color: '#000' }}>K</div>
             <div>
-              <div style={{ color: 'white', fontWeight: 700, fontSize: 13, lineHeight: 1 }}>Khan Law Group</div>
-              <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: 10, marginTop: 2 }}>Client Portal</div>
+              <div style={{ color: '#000', fontWeight: 700, fontSize: 13, lineHeight: 1 }}>Khan Law Group</div>
+              <div style={{ color: 'rgba(0,0,0,0.4)', fontSize: 10, marginTop: 2 }}>Client Portal</div>
             </div>
           </Link>
         </div>
@@ -499,8 +499,8 @@ export default function DemoDashboard() {
                 key={item.id}
                 onClick={() => { setSection(item.id); setMobileOpen(false); }}
                 style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px',
-                  borderRadius: 8, border: 'none', background: active ? 'rgba(255,255,255,0.1)' : 'transparent',
-                  color: active ? 'white' : 'rgba(255,255,255,0.55)', fontSize: 13, fontWeight: active ? 600 : 400,
+                  borderRadius: 8, border: 'none', background: active ? GOLD : 'transparent',
+                  color: active ? '#000' : 'rgba(0,0,0,0.55)', fontSize: 13, fontWeight: active ? 600 : 400,
                   cursor: 'pointer', textAlign: 'left', marginBottom: 2, transition: 'all .15s' }}>
                 <span style={{ fontSize: 16 }}>{item.icon}</span>
                 {item.label}
@@ -509,12 +509,12 @@ export default function DemoDashboard() {
           })}
         </nav>
 
-        <div style={{ padding: '14px 20px', borderTop: `1px solid rgba(239,186,129,0.15)` }}>
+        <div style={{ padding: '14px 20px', borderTop: `1px solid ${LINE}` }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <div style={{ width: 30, height: 30, borderRadius: '50%', background: GOLD, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 11, color: NAVY }}>ST</div>
+            <div style={{ width: 30, height: 30, borderRadius: '50%', background: GOLD, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 11, color: '#000' }}>ST</div>
             <div>
-              <div style={{ color: 'white', fontSize: 12, fontWeight: 600 }}>{DEMO_NAME}</div>
-              <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: 10 }}>Demo session</div>
+              <div style={{ color: '#000', fontSize: 12, fontWeight: 600 }}>{DEMO_NAME}</div>
+              <div style={{ color: 'rgba(0,0,0,0.4)', fontSize: 10 }}>Demo session</div>
             </div>
           </div>
         </div>
@@ -525,22 +525,22 @@ export default function DemoDashboard() {
   return (
     <div style={{ minHeight: '100vh', background: SURFACE, fontFamily: 'Inter, system-ui, sans-serif', WebkitFontSmoothing: 'antialiased' }}>
       {/* Desktop sidebar */}
-      <aside style={{ position: 'fixed', left: 0, top: 0, width: 220, height: '100vh', background: NAVY,
-        display: 'flex', flexDirection: 'column', zIndex: 40 }}
+      <aside style={{ position: 'fixed', left: 0, top: 0, width: 220, height: '100vh', background: 'white',
+        borderRight: `1px solid ${LINE}`, display: 'flex', flexDirection: 'column', zIndex: 40 }}
         className="hidden-mobile">
         <SidebarContent />
       </aside>
 
       {/* Mobile header */}
-      <header style={{ position: 'fixed', top: 0, left: 0, right: 0, background: NAVY, padding: '12px 16px',
+      <header style={{ position: 'fixed', top: 0, left: 0, right: 0, background: 'white', borderBottom: `1px solid ${LINE}`, padding: '12px 16px',
         display: 'flex', alignItems: 'center', justifyContent: 'space-between', zIndex: 40 }}
         className="show-mobile">
         <Link href="/khan-lawgroup" style={{ display: 'flex', alignItems: 'center', gap: 8, textDecoration: 'none' }}>
           <div style={{ width: 28, height: 28, borderRadius: 7, background: GOLD, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 12, color: NAVY }}>K</div>
-          <span style={{ color: 'white', fontWeight: 700, fontSize: 14 }}>Khan Law Group</span>
+          <span style={{ color: '#000', fontWeight: 700, fontSize: 14 }}>Khan Law Group</span>
         </Link>
         <button onClick={() => setMobileOpen(!mobileOpen)}
-          style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.7)', fontSize: 20, cursor: 'pointer' }}>
+          style={{ background: 'none', border: 'none', color: 'rgba(0,0,0,0.7)', fontSize: 20, cursor: 'pointer' }}>
           {mobileOpen ? '✕' : '☰'}
         </button>
       </header>
@@ -549,7 +549,7 @@ export default function DemoDashboard() {
       {mobileOpen && (
         <div style={{ position: 'fixed', inset: 0, zIndex: 50 }} className="show-mobile">
           <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.5)' }} onClick={() => setMobileOpen(false)} />
-          <div style={{ position: 'absolute', left: 0, top: 0, width: 240, height: '100%', background: NAVY, display: 'flex', flexDirection: 'column' }}>
+          <div style={{ position: 'absolute', left: 0, top: 0, width: 240, height: '100%', background: 'white', display: 'flex', flexDirection: 'column' }}>
             <SidebarContent />
           </div>
         </div>

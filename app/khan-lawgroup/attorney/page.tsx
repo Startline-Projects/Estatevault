@@ -1,12 +1,12 @@
 'use client';
 
 // ─── Khan Law Group palette ───────────────────────────────────────────────────
-const NAVY = '#3f2d18';
-const GOLD = '#efba81';
-const GOLD_600 = '#ba8b57';
-const SURFACE = '#faf5ee';
-const LINE = '#ece4d7';
-const CHARCOAL = '#2d2926';
+const NAVY = '#000000';
+const GOLD = '#F2D7C1';
+const GOLD_600 = '#c4a48a';
+const SURFACE = '#F2D7C1';
+const LINE = 'rgba(0,0,0,0.08)';
+const CHARCOAL = '#000000';
 
 // ─── Demo data ────────────────────────────────────────────────────────────────
 const PENDING = [
@@ -75,14 +75,14 @@ const TD: React.CSSProperties = {
 
 export default function AttorneyDemoPage() {
   return (
-    <div style={{ minHeight: '100vh', background: SURFACE, fontFamily: 'Inter, system-ui, sans-serif', WebkitFontSmoothing: 'antialiased' }}>
+    <div style={{ minHeight: '100vh', background: '#ffffff', fontFamily: 'Inter, system-ui, sans-serif', WebkitFontSmoothing: 'antialiased' }}>
 
       {/* Top bar */}
       <div style={{ background: 'white', borderBottom: `1px solid ${LINE}`, padding: '14px 24px' }}>
         <div style={{ maxWidth: 960, margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <div style={{ width: 36, height: 36, borderRadius: '50%', background: NAVY,
-              display: 'flex', alignItems: 'center', justifyContent: 'center', color: GOLD, fontWeight: 700, fontSize: 14 }}>
+            <div style={{ width: 36, height: 36, borderRadius: '50%', background: GOLD,
+              display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#000', fontWeight: 700, fontSize: 14 }}>
               K
             </div>
             <div>
@@ -135,7 +135,7 @@ export default function AttorneyDemoPage() {
               </thead>
               <tbody>
                 {PENDING.map((r, i) => (
-                  <tr key={r.id} style={{ background: i % 2 === 0 ? 'white' : 'rgba(250,245,238,0.4)' }}>
+                  <tr key={r.id} style={{ background: i % 2 === 0 ? 'white' : 'rgba(242,215,193,0.25)' }}>
                     <td style={TD}>
                       <p style={{ fontWeight: 600, color: NAVY, margin: 0 }}>{r.client}</p>
                       <p style={{ fontSize: 11, color: 'rgba(45,41,38,0.4)', margin: '2px 0 0' }}>{r.email}</p>
@@ -150,7 +150,7 @@ export default function AttorneyDemoPage() {
                     <td style={TD}><SLABadge hours={r.hoursLeft} /></td>
                     <td style={{ ...TD, textAlign: 'right', borderBottom: `1px solid ${LINE}` }}>
                       <button style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '7px 16px',
-                        borderRadius: 8, background: NAVY, border: 'none', color: GOLD, fontWeight: 700, fontSize: 12, cursor: 'pointer' }}>
+                        borderRadius: 8, background: '#000', border: 'none', color: 'white', fontWeight: 700, fontSize: 12, cursor: 'pointer' }}>
                         Review
                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                           <path d="M5 12h14M13 5l7 7-7 7" />
@@ -180,7 +180,7 @@ export default function AttorneyDemoPage() {
               </thead>
               <tbody>
                 {COMPLETED.map((r, i) => (
-                  <tr key={r.id} style={{ background: i % 2 === 0 ? 'white' : 'rgba(250,245,238,0.4)' }}>
+                  <tr key={r.id} style={{ background: i % 2 === 0 ? 'white' : 'rgba(242,215,193,0.25)' }}>
                     <td style={TD}>
                       <p style={{ fontWeight: 600, color: NAVY, margin: 0 }}>{r.client}</p>
                       <p style={{ fontSize: 11, color: 'rgba(45,41,38,0.4)', margin: '2px 0 0' }}>{r.email}</p>

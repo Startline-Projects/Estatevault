@@ -3285,3 +3285,122 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* ============ PACKAGE INCLUDES ============ */
+.pkgWrap {
+  background: var(--surface);
+}
+.pkgGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+}
+.pkgCard {
+  padding: 40px;
+  border-radius: 20px;
+  position: relative;
+  overflow: hidden;
+  background: var(--surface);
+  border: 1px solid var(--line);
+}
+.pkgCard:last-child {
+  background: #F2D7C1;
+  border: none;
+  box-shadow: 0 24px 60px -20px rgba(63, 45, 24, 0.35);
+}
+.pkgCard:last-child::before {
+  content: "";
+  position: absolute;
+  top: -60px;
+  right: -60px;
+  width: 220px;
+  height: 220px;
+  background: radial-gradient(circle, rgba(239, 186, 129, 0.25), transparent 70%);
+}
+.pkgTag {
+  display: inline-block;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 5px 10px;
+  border-radius: 5px;
+  background: rgba(0,0,0,0.06);
+  color: rgba(0,0,0,0.55);
+  margin-bottom: 0;
+}
+.pkgCard:last-child .pkgTag {
+  background: rgba(239, 186, 129, 0.2);
+  color: rgba(0,0,0,0.65);
+}
+.pkgName {
+  font-family: var(--font-fraunces), serif;
+  font-weight: 500;
+  font-size: 28px;
+  line-height: 1.15;
+  color: var(--charcoal);
+  margin: 16px 0 0;
+}
+.pkgPrice {
+  font-family: var(--font-fraunces), serif;
+  font-size: 40px;
+  font-weight: 600;
+  color: var(--charcoal);
+  margin: 8px 0 0;
+  line-height: 1;
+}
+.pkgDivider {
+  height: 1px;
+  background: var(--line);
+  margin: 24px 0;
+}
+.pkgCard:last-child .pkgDivider {
+  background: rgba(0,0,0,0.08);
+}
+.pkgList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.pkgItem {
+  display: flex;
+  gap: 12px;
+  padding: 10px 0;
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--charcoal-80);
+  border-bottom: 1px solid var(--line-2);
+}
+.pkgItem:last-child {
+  border-bottom: none;
+}
+.pkgCard:last-child .pkgItem {
+  color: rgba(0,0,0,0.75);
+  border-bottom: 1px solid rgba(0,0,0,0.08);
+}
+.pkgCard:last-child .pkgItem:last-child {
+  border-bottom: none;
+}
+.pkgItem svg {
+  flex-shrink: 0;
+  color: var(--charcoal-60);
+  margin-top: 2px;
+}
+.pkgCard:last-child .pkgItem svg {
+  color: rgba(0,0,0,0.5);
+}
+.pkgItemStrong {
+  font-weight: 600;
+  color: var(--charcoal);
+}
+.pkgNote {
+  margin-top: 24px;
+  font-size: 12px;
+  color: var(--charcoal-60);
+  line-height: 1.6;
+}
+@media (max-width: 680px) {
+  .pkgGrid {
+    grid-template-columns: 1fr;
+  }
+}
