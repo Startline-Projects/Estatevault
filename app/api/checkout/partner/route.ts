@@ -16,18 +16,19 @@ export async function POST(request: Request) {
     const { data: { user } } = await authClient.auth.getUser();
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-    const amount = tier === "enterprise" ? 600000 : 120000;
-    const planName = tier === "enterprise" ? "Enterprise" : "Standard";
+    const amount = tier === "enterprise" ? 600000 : tier === "basic" ? 50000 : 120000;
+    const planName = tier === "enterprise" ? "Enterprise" : tier === "basic" ? "Basic" : "Standard";
+    const successPath = tier === "basic" ? "/pro/onboarding/step-2-vault" : "/pro/onboarding/step-2";
 
     const origin = request.headers.get("origin") || "https://www.estatevault.us";
 
     const session = await stripe.checkout.sessions.create({
       mode: "payment",
       line_items: [{
-        price_data: { currency: "usd", product_data: { name: `EstateVault Pro ${planName}, Platform Access`, description: `${planName} partner platform one-time fee` }, unit_amount: amount },
+        price_data: { currency: "usd", product_data: { name: `EstateVault ${planName} — White-Label Vault Access`, description: `${planName} partner platform one-time fee` }, unit_amount: amount },
         quantity: 1,
       }],
-      success_url: `${origin}/pro/onboarding/step-2`,
+      success_url: `${origin}${successPath}`,
       cancel_url: `${origin}/pro/onboarding/step-1`,
       metadata: { partner_id: partnerId, tier, type: "partner_platform_fee" },
     });

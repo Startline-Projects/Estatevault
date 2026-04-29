@@ -23,36 +23,51 @@ export async function updateSession(request: NextRequest) {
   const skipRewrite = pathname.startsWith("/api") || pathname.startsWith("/_next") || pathname.startsWith("/favicon");
 
   if (!isMainDomain && hostname.includes(".") && !skipRewrite) {
-    // Fetch partner by subdomain or custom_domain
     const adminSupabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY!,
       { cookies: { getAll: () => [], setAll: () => {} } }
     );
 
+    // Extract subdomain prefix if hostname ends with .estatevault.us
+    // vault_subdomain stores prefix only (e.g. "acme"), not full domain
+    const vaultSubdomainPrefix = hostname.endsWith(".estatevault.us")
+      ? hostname.replace(/\.estatevault\.us$/, "")
+      : null;
+
     const { data: partner } = await adminSupabase
       .from("partners")
-      .select("partner_slug")
-      .or(`subdomain.eq."${hostname}",custom_domain.eq."${hostname}"`)
+      .select("partner_slug, tier, vault_subdomain")
+      .or(
+        vaultSubdomainPrefix
+          ? `subdomain.eq."${hostname}",custom_domain.eq."${hostname}",vault_subdomain.eq."${vaultSubdomainPrefix}"`
+          : `subdomain.eq."${hostname}",custom_domain.eq."${hostname}"`
+      )
       .eq("status", "active")
       .single();
 
     if (partner?.partner_slug) {
-      // Rewrite the request to the partner's slug page, preserving the path
       const url = request.nextUrl.clone();
       const originalPath = request.nextUrl.pathname;
 
-      // If root, rewrite to partner landing page
+      // Basic-tier vault subdomain → rewrite root to /{slug}/vault
+      const isVaultSubdomain =
+        partner.tier === "basic" &&
+        vaultSubdomainPrefix &&
+        partner.vault_subdomain === vaultSubdomainPrefix;
+
       if (originalPath === "/" || originalPath === "") {
-        url.pathname = `/${partner.partner_slug}`;
+        url.pathname = isVaultSubdomain
+          ? `/${partner.partner_slug}/vault`
+          : `/${partner.partner_slug}`;
       } else {
-        // Preserve deeper paths (e.g. /quiz, /will) for the partner's flow
         url.pathname = originalPath;
       }
-      // Pass partner context via header so pages know which partner is active
+
       const rewriteResponse = NextResponse.rewrite(url);
       rewriteResponse.headers.set("x-partner-slug", partner.partner_slug);
       rewriteResponse.headers.set("x-partner-hostname", hostname);
+      rewriteResponse.headers.set("x-is-vault-subdomain", isVaultSubdomain ? "1" : "0");
       return rewriteResponse;
     }
   }
@@ -94,7 +109,9 @@ export async function updateSession(request: NextRequest) {
   // that don't match known app routes are treated as partner landing pages
   const knownAppPrefixes = ["/pro", "/auth", "/dashboard", "/quiz", "/will", "/trust", "/api", "/sales", "/attorney", "/legal", "/_next", "/favicon"];
   const segments = pathname.split("/").filter(Boolean);
-  const isPartnerSlug = segments.length === 1 && !knownAppPrefixes.some((p) => pathname.startsWith(p));
+  const isPartnerSlug =
+    !knownAppPrefixes.some((p) => pathname.startsWith(p)) &&
+    (segments.length === 1 || (segments.length === 2 && segments[1] === "vault"));
 
   if (!isPublic && !isPartnerSlug && !user) {
     // Not authenticated, redirect to universal login

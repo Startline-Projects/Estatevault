@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
 interface PartnerData {
@@ -19,10 +20,13 @@ interface PartnerData {
   has_inhouse_estate_attorney: boolean;
   inhouse_review_attorney_id: string | null;
   custom_review_fee: number | null;
+  vault_tagline: string | null;
+  vault_theme: string | null;
+  vault_subdomain: string | null;
   profiles: { full_name: string; email: string } | null;
 }
 
-type SectionKey = "plan" | "brand" | "pricing" | "domain" | "email" | "payouts" | "team" | "account" | "attorney_review";
+type SectionKey = "plan" | "brand" | "pricing" | "domain" | "email" | "payouts" | "team" | "account" | "attorney_review" | "vault_branding";
 
 export default function ProSettingsPage() {
   const [partner, setPartner] = useState<PartnerData | null>(null);
@@ -44,11 +48,17 @@ export default function ProSettingsPage() {
   const [reviewFee, setReviewFee] = useState(300);
   const [domainSaving, setDomainSaving] = useState(false);
   const [domainError, setDomainError] = useState("");
+  const [connectingStripe, setConnectingStripe] = useState(false);
+  const [stripeConnectSuccess, setStripeConnectSuccess] = useState(false);
+  const searchParams = useSearchParams();
   const [savedSubdomain, setSavedSubdomain] = useState("");
   const [domainVerifying, setDomainVerifying] = useState(false);
   const [domainVerifyStatus, setDomainVerifyStatus] = useState<"idle" | "verified" | "pending" | "wrong">("idle");
   const [domainVerifyMessage, setDomainVerifyMessage] = useState("");
   const [copiedDns, setCopiedDns] = useState(false);
+  const [vaultTagline, setVaultTagline] = useState("");
+  const [vaultTheme, setVaultTheme] = useState<"light" | "dark">("light");
+  const [vaultSubdomainDisplay, setVaultSubdomainDisplay] = useState("");
 
   useEffect(() => {
     async function load() {
@@ -61,7 +71,7 @@ export default function ProSettingsPage() {
       const { data } = await supabase
         .from("partners")
         .select(
-          "id, tier, company_name, product_name, accent_color, logo_url, business_url, partner_slug, sender_name, sender_email, stripe_account_id, professional_type, has_inhouse_estate_attorney, inhouse_review_attorney_id, custom_review_fee, profiles!profile_id(full_name, email)"
+          "id, tier, company_name, product_name, accent_color, logo_url, business_url, partner_slug, sender_name, sender_email, stripe_account_id, professional_type, has_inhouse_estate_attorney, inhouse_review_attorney_id, custom_review_fee, vault_tagline, vault_theme, vault_subdomain, profiles!profile_id(full_name, email)"
         )
         .eq("profile_id", user.id)
         .single();
@@ -83,11 +93,31 @@ export default function ProSettingsPage() {
           setSavedSubdomain(p.subdomain);
           if (p.domain_verified) setDomainVerifyStatus("verified");
         }
+        if (p.vault_tagline) setVaultTagline(p.vault_tagline);
+        if (p.vault_theme) setVaultTheme(p.vault_theme as "light" | "dark");
+        if (p.vault_subdomain) setVaultSubdomainDisplay(p.vault_subdomain);
       }
       setLoading(false);
     }
     load();
   }, []);
+
+  useEffect(() => {
+    if (searchParams.get("stripe_connect") === "success") {
+      setStripeConnectSuccess(true);
+    }
+  }, [searchParams]);
+
+  async function handleStripeConnect() {
+    setConnectingStripe(true);
+    try {
+      const res = await fetch("/api/stripe/connect/onboard", { method: "POST" });
+      const data = await res.json();
+      if (data.url) window.location.href = data.url;
+    } catch {
+      setConnectingStripe(false);
+    }
+  }
 
   function toggleSection(key: SectionKey) {
     setOpenSection(openSection === key ? null : key);
@@ -105,6 +135,8 @@ export default function ProSettingsPage() {
     setSenderEmail(partner.sender_email || "");
     setFullName(partner.profiles?.full_name || "");
     setEmail(partner.profiles?.email || "");
+    setVaultTagline(partner.vault_tagline || "");
+    setVaultTheme((partner.vault_theme as "light" | "dark") || "light");
     setOpenSection(null);
   }
 
@@ -220,6 +252,26 @@ export default function ProSettingsPage() {
     setTimeout(() => setSaveSuccess(""), 2000);
   }
 
+  async function saveVaultBrand() {
+    if (!partner) return;
+    setSaving(true);
+    const supabase = createClient();
+    await supabase
+      .from("partners")
+      .update({
+        company_name: companyName,
+        product_name: productName,
+        accent_color: accentColor,
+        vault_tagline: vaultTagline,
+        vault_theme: vaultTheme,
+      })
+      .eq("id", partner.id);
+    setPartner({ ...partner, company_name: companyName, product_name: productName, accent_color: accentColor, vault_tagline: vaultTagline, vault_theme: vaultTheme });
+    setSaving(false);
+    setSaveSuccess("vault_branding");
+    setTimeout(() => setSaveSuccess(""), 2000);
+  }
+
   if (loading) {
     return (
       <div className="max-w-3xl space-y-3">
@@ -233,6 +285,7 @@ export default function ProSettingsPage() {
   if (!partner) return null;
 
   const isEnterprise = partner.tier === "enterprise";
+  const isBasic = partner.tier === "basic";
 
   const sections: Array<{
     key: SectionKey;
@@ -243,29 +296,30 @@ export default function ProSettingsPage() {
     {
       key: "plan",
       title: "Plan",
-      subtitle: isEnterprise ? "Enterprise Plan $6,000 one-time" : "Standard Plan $1,200 one-time",
+      subtitle: isBasic ? "Basic Plan — $500 one-time" : isEnterprise ? "Enterprise Plan — $6,000 one-time" : "Standard Plan — $1,200 one-time",
       content: (
         <div>
           <div className="rounded-xl bg-gray-50 p-4">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-bold text-navy">
-                  {isEnterprise ? "Enterprise" : "Standard"} Plan
+                  {isBasic ? "Basic" : isEnterprise ? "Enterprise" : "Standard"} Plan
                 </p>
                 <p className="text-xs text-charcoal/50 mt-1">
-                  {isEnterprise ? "$6,000 one-time" : "$1,200 one-time"} Unlimited documents
+                  {isBasic ? "$500 one-time · White-label vault only" : isEnterprise ? "$6,000 one-time · Unlimited documents" : "$1,200 one-time · Unlimited documents"}
                 </p>
               </div>
-              <span
-                className={`rounded-full px-3 py-1 text-xs font-semibold ${
-                  isEnterprise ? "bg-gold/20 text-gold" : "bg-navy/10 text-navy"
-                }`}
-              >
-                {isEnterprise ? "Enterprise" : "Standard"}
+              <span className={`rounded-full px-3 py-1 text-xs font-semibold ${isBasic ? "bg-blue-50 text-blue-600" : isEnterprise ? "bg-gold/20 text-gold" : "bg-navy/10 text-navy"}`}>
+                {isBasic ? "Basic" : isEnterprise ? "Enterprise" : "Standard"}
               </span>
             </div>
           </div>
-          {!isEnterprise && (
+          {isBasic && (
+            <p className="mt-3 text-xs text-charcoal/50">
+              Want to upgrade to Standard or Enterprise? Contact partners@estatevault.com.
+            </p>
+          )}
+          {!isEnterprise && !isBasic && (
             <p className="mt-3 text-xs text-charcoal/50">
               Want to upgrade to Enterprise? Contact your account manager or email
               partners@estatevault.com.
@@ -572,18 +626,30 @@ export default function ProSettingsPage() {
             <span className="text-sm text-charcoal/60">
               {partner.stripe_account_id
                 ? "Your Stripe account is connected and receiving payouts."
-                : "Connect your Stripe account to receive weekly payouts."}
+                : "Connect your Stripe account to receive instant payouts."}
             </span>
           </div>
-          <button className="rounded-full bg-navy px-6 py-2 text-sm font-semibold text-white hover:bg-navy/90">
-            {partner.stripe_account_id ? "Manage Stripe Account" : "Connect with Stripe"}
+          <button
+            onClick={handleStripeConnect}
+            disabled={connectingStripe}
+            className="rounded-full bg-navy px-6 py-2 text-sm font-semibold text-white hover:bg-navy/90 disabled:opacity-60"
+          >
+            {connectingStripe ? "Connecting..." : partner.stripe_account_id ? "Manage Stripe Account" : "Connect with Stripe"}
           </button>
           <div className="rounded-lg bg-gray-50 p-4">
             <p className="text-xs font-medium text-navy">Payout Schedule</p>
             <ul className="mt-2 space-y-1 text-xs text-charcoal/50">
-              <li>Payouts every Friday</li>
-              <li>Minimum payout: $50</li>
-              <li>Earnings below $50 roll to the following week</li>
+              {isBasic ? (
+                <>
+                  <li>Payouts are sent instantly after each successful payment.</li>
+                  <li>No weekly batching for Basic plan payouts.</li>
+                </>
+              ) : (
+                <>
+                  <li>Payouts are sent instantly after each successful payment.</li>
+                  <li>No weekly batching for Standard and Enterprise payouts.</li>
+                </>
+              )}
             </ul>
           </div>
         </div>
@@ -706,6 +772,102 @@ export default function ProSettingsPage() {
           </div>
         ),
     },
+    ...(isBasic ? [{
+      key: "vault_branding" as SectionKey,
+      title: "Vault Branding",
+      subtitle: productName || "Customize your white-label vault",
+      content: (
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-navy mb-1">Company Name</label>
+            <input
+              type="text"
+              value={companyName}
+              onChange={(e) => setCompanyName(e.target.value)}
+              className="w-full min-h-[44px] rounded-xl border-2 border-gray-200 px-4 py-3 text-sm focus:border-gold focus:outline-none"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-navy mb-1">Vault Product Name</label>
+            <input
+              type="text"
+              value={productName}
+              onChange={(e) => setProductName(e.target.value)}
+              className="w-full min-h-[44px] rounded-xl border-2 border-gray-200 px-4 py-3 text-sm focus:border-gold focus:outline-none"
+              placeholder="Acme Secure Vault"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-navy mb-1">Tagline</label>
+            <input
+              type="text"
+              value={vaultTagline}
+              onChange={(e) => setVaultTagline(e.target.value)}
+              className="w-full min-h-[44px] rounded-xl border-2 border-gray-200 px-4 py-3 text-sm focus:border-gold focus:outline-none"
+              placeholder="Secure your legacy, protect your family."
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-navy mb-1">Accent Color</label>
+            <div className="flex items-center gap-3">
+              <input
+                type="color"
+                value={accentColor}
+                onChange={(e) => setAccentColor(e.target.value)}
+                className="h-10 w-14 rounded border-0 cursor-pointer"
+              />
+              <input
+                type="text"
+                value={accentColor}
+                onChange={(e) => setAccentColor(e.target.value)}
+                className="flex-1 min-h-[44px] rounded-xl border-2 border-gray-200 px-4 py-3 text-sm focus:border-gold focus:outline-none"
+              />
+            </div>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-navy mb-2">Base Theme</label>
+            <div className="flex gap-3">
+              {(["light", "dark"] as const).map((t) => (
+                <button
+                  key={t}
+                  type="button"
+                  onClick={() => setVaultTheme(t)}
+                  className={`flex-1 rounded-xl border-2 py-3 text-sm font-medium capitalize transition ${vaultTheme === t ? "border-gold bg-gold/5 text-navy" : "border-gray-200 text-gray-500 hover:border-gray-300"}`}
+                >
+                  {t === "light" ? "☀️ Light" : "🌙 Dark"}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="rounded-xl bg-gray-50 border border-gray-200 p-4">
+            <p className="text-xs font-semibold text-gray-500 mb-1">Your Vault URL</p>
+            <p className="text-sm font-mono text-navy">
+              {vaultSubdomainDisplay ? `https://${vaultSubdomainDisplay}.estatevault.us` : "Not set"}
+            </p>
+            {vaultSubdomainDisplay && (
+              <p className="text-xs text-charcoal/50 mt-1">
+                Subdomain cannot be changed. Contact support@estatevault.com to request a change.
+              </p>
+            )}
+          </div>
+          <div className="flex gap-3 pt-2">
+            <button
+              onClick={saveVaultBrand}
+              disabled={saving}
+              className="rounded-full bg-gold px-6 py-2 text-sm font-semibold text-white hover:bg-gold/90 disabled:opacity-50"
+            >
+              {saving ? "Saving..." : saveSuccess === "vault_branding" ? "Saved!" : "Save Changes"}
+            </button>
+            <button
+              onClick={cancelSection}
+              className="rounded-full border border-gray-300 px-6 py-2 text-sm font-medium text-charcoal/60 hover:bg-gray-50"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      ),
+    }] : []),
     {
       key: "account",
       title: "Account",
@@ -757,6 +919,12 @@ export default function ProSettingsPage() {
     <div className="max-w-3xl">
       <h1 className="text-2xl font-bold text-navy">Settings</h1>
       <p className="mt-1 text-sm text-charcoal/60">Manage your platform configuration.</p>
+
+      {stripeConnectSuccess && (
+        <div className="mt-4 rounded-xl bg-green-50 border border-green-200 px-4 py-3 text-sm text-green-700">
+          Stripe account connected successfully.
+        </div>
+      )}
 
       <div className="mt-6 space-y-3">
         {sections.map((section) => (

@@ -191,6 +191,15 @@ function WhoItsForSection() {
 /*  What They Get (Pricing Tiers)                                      */
 /* ------------------------------------------------------------------ */
 
+const BASIC_FEATURES = [
+  "Branded digital vault for your clients",
+  "Your logo and brand colors",
+  "Secure document storage per client",
+  // "Client shares access with you",
+  // "You collect $99/yr per client vault",
+  "Email support",
+];
+
 const STANDARD_FEATURES = [
   "White-labeled client portal",
   "Your logo and brand colors",
@@ -215,12 +224,39 @@ const ENTERPRISE_FEATURES = [
 function PricingSection() {
   return (
     <section className="py-20 md:py-24 px-6 bg-white">
-      <div className="mx-auto max-w-5xl">
+      <div className="mx-auto max-w-6xl">
         <h2 className="text-2xl sm:text-3xl font-bold text-navy text-center">
           Everything you need. Nothing you don&rsquo;t.
         </h2>
 
-        <div className="mt-14 grid gap-8 md:grid-cols-2">
+        <div className="mt-14 grid gap-8 md:grid-cols-3">
+          {/* Basic */}
+          <div className="rounded-xl border border-gray-200 p-8 flex flex-col">
+            <p className="text-sm font-semibold uppercase tracking-wider text-gold">
+              Basic Partner
+            </p>
+            <p className="mt-2 text-3xl font-bold text-navy">
+              $500<span className="text-base font-normal text-charcoal/60"> one-time</span>
+            </p>
+            <p className="mt-3 text-xs text-charcoal/60 leading-relaxed">
+              Offer your clients a secure digital vault. No will or trust sales — pure vault access.
+            </p>
+            <ul className="mt-8 flex-1 space-y-4">
+              {BASIC_FEATURES.map((f) => (
+                <li key={f} className="flex items-start gap-3 text-sm text-charcoal">
+                  <span className="mt-0.5 text-gold font-bold">&#10003;</span>
+                  {f}
+                </li>
+              ))}
+            </ul>
+            <a
+              href="#request-access"
+              className="mt-8 block text-center rounded-full border-2 border-navy px-6 py-3 text-sm font-semibold text-navy hover:bg-navy hover:text-white transition-colors"
+            >
+              Get Started
+            </a>
+          </div>
+
           {/* Standard */}
           <div className="rounded-xl border border-gray-200 p-8 flex flex-col">
             <p className="text-sm font-semibold uppercase tracking-wider text-gold">
@@ -228,6 +264,9 @@ function PricingSection() {
             </p>
             <p className="mt-2 text-3xl font-bold text-navy">
               $1,200<span className="text-base font-normal text-charcoal/60"> one-time</span>
+            </p>
+            <p className="mt-3 text-xs text-charcoal/60 leading-relaxed">
+              Full estate planning platform with will and trust document revenue.
             </p>
             <ul className="mt-8 flex-1 space-y-4">
               {STANDARD_FEATURES.map((f) => (
@@ -255,6 +294,9 @@ function PricingSection() {
             </p>
             <p className="mt-2 text-3xl font-bold text-navy">
               $6,000<span className="text-base font-normal text-charcoal/60"> one-time</span>
+            </p>
+            <p className="mt-3 text-xs text-charcoal/60 leading-relaxed">
+              Maximum earnings, custom subdomain, and dedicated partnership support.
             </p>
             <ul className="mt-8 flex-1 space-y-4">
               {ENTERPRISE_FEATURES.map((f) => (
