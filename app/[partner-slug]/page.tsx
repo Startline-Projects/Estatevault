@@ -14,6 +14,7 @@ const reserved = [
   "pro", "auth", "dashboard", "quiz", "will", "trust", "api",
   "attorney-referral", "sales", "attorney", "farewell", "professionals",
   "contact", "privacy", "terms", "partners",
+  "a", "affiliate", "affiliate-signup",
 ];
 
 export default async function PartnerLandingPage({

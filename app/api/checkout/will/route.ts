@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
 import { stripe } from "@/lib/stripe";
 import { createServerClient } from "@supabase/ssr";
 import { calculateSplit } from "@/lib/stripe-payouts";
+import { AFFILIATE_COOKIE } from "@/lib/affiliate";
 
 function createAdminClient() {
   return createServerClient(
@@ -159,8 +161,10 @@ export async function POST(request: Request) {
     const totalAmount = willAmount + attorneyAmount;
 
     // Calculate ev/partner split based on partner tier
-    let evCut = 10000; // Default: direct sale, EV keeps $100
+    let evCut = 10000; // Default: direct sale, EV keeps $100 (legacy default)
     let partnerCut = 0;
+    let affiliateId: string | null = null;
+    let affiliateCut = 0;
     if (partnerId) {
       const { data: partnerData } = await supabase
         .from("partners")
@@ -171,6 +175,22 @@ export async function POST(request: Request) {
       const split = calculateSplit("will", tier);
       evCut = split.evCut;
       partnerCut = split.partnerCut;
+    } else {
+      // Affiliate attribution (only when no partner)
+      const affCookie = cookies().get(AFFILIATE_COOKIE)?.value;
+      if (affCookie) {
+        const { data: affRow } = await supabase
+          .from("affiliates")
+          .select("id, status, stripe_onboarding_complete")
+          .eq("id", affCookie)
+          .maybeSingle();
+        if (affRow && affRow.status === "active") {
+          const split = calculateSplit("will", "standard", { affiliate: true });
+          evCut = split.evCut;
+          affiliateCut = split.affiliateCut;
+          affiliateId = affRow.id;
+        }
+      }
     }
 
     // Create order
@@ -184,6 +204,8 @@ export async function POST(request: Request) {
         ev_cut: evCut,
         partner_cut: partnerCut,
         partner_id: partnerId || null,
+        affiliate_id: affiliateId,
+        affiliate_cut: affiliateCut,
         attorney_review_requested: attorneyReview,
         attorney_cut: attorneyAmount,
         acknowledgment_signed: true,
@@ -352,9 +374,28 @@ export async function POST(request: Request) {
         product_type: "will",
         attorney_review: attorneyReview ? "true" : "false",
         partner_id: partnerId || "",
+        affiliate_id: affiliateId || "",
         client_name: clientName,
       },
     });
+
+    // Mark latest unconverted click as converted
+    if (affiliateId) {
+      const { data: latestClick } = await supabase
+        .from("affiliate_clicks")
+        .select("id")
+        .eq("affiliate_id", affiliateId)
+        .eq("converted", false)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (latestClick) {
+        await supabase
+          .from("affiliate_clicks")
+          .update({ converted: true, order_id: order.id })
+          .eq("id", latestClick.id);
+      }
+    }
 
     // Update order with Stripe session ID
     await supabase

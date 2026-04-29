@@ -100,14 +100,14 @@ export async function updateSession(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   // Public routes, no auth required
-  const publicPaths = ["/", "/quiz", "/will", "/trust", "/auth", "/attorney-referral", "/pro-partners", "/partners", "/professionals", "/farewell", "/khan-lawgroup", "/api/webhooks", "/api/documents/process", "/api/documents/cleanup-test-orders", "/api/documents/process-now", "/api/documents/check-status", "/api/attorney/check-sla", "/api/checkout", "/api/quiz", "/api/professionals", "/api/farewell", "/api/admin/test-promo", "/api/documents/download-zip", "/api/auth/set-password"];
+  const publicPaths = ["/", "/quiz", "/will", "/trust", "/auth", "/attorney-referral", "/pro-partners", "/partners", "/professionals", "/farewell", "/khan-lawgroup", "/api/webhooks", "/api/documents/process", "/api/documents/cleanup-test-orders", "/api/documents/process-now", "/api/documents/check-status", "/api/attorney/check-sla", "/api/checkout", "/api/quiz", "/api/professionals", "/api/farewell", "/api/admin/test-promo", "/api/documents/download-zip", "/api/auth/set-password", "/a", "/affiliate-signup", "/api/affiliate"];
   const isPublic = publicPaths.some(
     (p) => pathname === p || pathname.startsWith(p + "/")
   );
 
   // Partner slug pages (e.g. /the-peoples-firm) are public, single-segment paths
   // that don't match known app routes are treated as partner landing pages
-  const knownAppPrefixes = ["/pro", "/auth", "/dashboard", "/quiz", "/will", "/trust", "/api", "/sales", "/attorney", "/legal", "/_next", "/favicon"];
+  const knownAppPrefixes = ["/pro", "/auth", "/dashboard", "/quiz", "/will", "/trust", "/api", "/sales", "/attorney", "/legal", "/_next", "/favicon", "/a", "/affiliate", "/affiliate-signup"];
   const segments = pathname.split("/").filter(Boolean);
   const isPartnerSlug =
     !knownAppPrefixes.some((p) => pathname.startsWith(p)) &&

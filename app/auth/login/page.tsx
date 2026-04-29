@@ -70,6 +70,8 @@ function LoginForm() {
       router.push("/sales/dashboard");
     } else if (userType === "review_attorney") {
       router.push("/attorney");
+    } else if (userType === "affiliate") {
+      router.push("/affiliate");
     } else {
       router.push(redirect);
     }

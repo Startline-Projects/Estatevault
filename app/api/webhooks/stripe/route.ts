@@ -6,7 +6,7 @@ import Stripe from "stripe";
 import { stripe } from "@/lib/stripe";
 import { createServerClient } from "@supabase/ssr";
 import { buildAssetChecklist } from "@/lib/email";
-import { calculateSplit, transferToPartner } from "@/lib/stripe-payouts";
+import { calculateSplit, transferToPartner, transferToAffiliate } from "@/lib/stripe-payouts";
 
 function createAdminClient() {
   return createServerClient(
@@ -412,6 +412,72 @@ export async function POST(request: Request) {
       } catch (payoutError) {
         console.error("Partner payout failed:", payoutError);
         // Don't fail the webhook, log and continue
+      }
+    }
+
+    // ── 2c. Affiliate payout via Stripe Connect ────────────────
+    const affiliateIdMeta = metadata.affiliate_id;
+    if (affiliateIdMeta && !partnerId) {
+      try {
+        const { data: aff } = await supabase
+          .from("affiliates")
+          .select("stripe_account_id, stripe_onboarding_complete")
+          .eq("id", affiliateIdMeta)
+          .single();
+
+        const { data: orderRow } = await supabase
+          .from("orders")
+          .select("affiliate_cut")
+          .eq("id", orderId)
+          .single();
+        const affCut = orderRow?.affiliate_cut || 0;
+
+        if (affCut > 0) {
+          let transferId: string | null = null;
+          let payoutStatus: "sent" | "pending" = "pending";
+
+          if (aff?.stripe_account_id && aff.stripe_onboarding_complete) {
+            const transfer = await transferToAffiliate(
+              aff.stripe_account_id,
+              affCut,
+              orderId,
+              affiliateIdMeta,
+              productType
+            );
+            if (transfer) {
+              transferId = transfer.id;
+              payoutStatus = "sent";
+            }
+          }
+
+          await supabase.from("affiliate_payouts").insert({
+            affiliate_id: affiliateIdMeta,
+            amount_cents: affCut,
+            status: payoutStatus,
+            stripe_transfer_id: transferId,
+            orders_included: [orderId],
+            paid_at: payoutStatus === "sent" ? new Date().toISOString() : null,
+          });
+
+          await supabase.rpc("increment_affiliate_stats", {
+            p_affiliate_id: affiliateIdMeta,
+            p_earned_cents: affCut,
+          });
+
+          await supabase.from("audit_log").insert({
+            action: "affiliate.conversion",
+            resource_type: "order",
+            resource_id: orderId,
+            metadata: {
+              affiliate_id: affiliateIdMeta,
+              amount_cents: affCut,
+              transfer_id: transferId,
+              status: payoutStatus,
+            },
+          });
+        }
+      } catch (affErr) {
+        console.error("Affiliate payout failed:", affErr);
       }
     }
 
