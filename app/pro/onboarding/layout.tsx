@@ -9,8 +9,19 @@ export default function OnboardingLayout({ children }: { children: React.ReactNo
 
   const stepMatch = pathname.match(/step-(\d)/);
   const currentStep = stepMatch ? parseInt(stepMatch[1]) : 1;
+  const isVaultFlow = pathname.includes("-vault");
   const progress = (currentStep / 7) * 100;
   const isLastStep = currentStep === 7;
+
+  function getBackPath() {
+    if (currentStep <= 1) return "";
+    if (!isVaultFlow) return `/pro/onboarding/step-${currentStep - 1}`;
+
+    if (pathname.includes("step-4-vault")) return "/pro/onboarding/step-3-vault";
+    if (pathname.includes("step-3-vault")) return "/pro/onboarding/step-2-vault";
+    if (pathname.includes("step-2-vault")) return "/pro/onboarding/step-1";
+    return `/pro/onboarding/step-${currentStep - 1}`;
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -40,7 +51,7 @@ export default function OnboardingLayout({ children }: { children: React.ReactNo
       {!isLastStep && (
         <div className="fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-gray-200 px-6 py-4">
           <div className="mx-auto max-w-2xl flex items-center justify-between">
-            <button onClick={() => { if (currentStep > 1) router.push(`/pro/onboarding/step-${currentStep - 1}`); }} disabled={currentStep <= 1} className="rounded-full border border-gray-300 px-6 py-2.5 text-sm font-medium text-charcoal hover:bg-gray-50 disabled:opacity-30 disabled:cursor-not-allowed transition-colors">
+            <button onClick={() => { const backPath = getBackPath(); if (backPath) router.push(backPath); }} disabled={currentStep <= 1} className="rounded-full border border-gray-300 px-6 py-2.5 text-sm font-medium text-charcoal hover:bg-gray-50 disabled:opacity-30 disabled:cursor-not-allowed transition-colors">
               Back
             </button>
             <div />

@@ -6,18 +6,19 @@ import { usePathname, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
 const navItems = [
-  { icon: "🏠", label: "Dashboard", href: "/pro/dashboard", basicHidden: false },
-  { icon: "👥", label: "Clients", href: "/pro/clients", basicHidden: true },
-  { icon: "📄", label: "Documents", href: "/pro/documents", basicHidden: true },
-  { icon: "🔗", label: "Referrals", href: "/pro/referrals", basicHidden: true },
-  { icon: "💰", label: "Revenue", href: "/pro/revenue", basicHidden: false },
-  { icon: "📣", label: "Marketing", href: "/pro/marketing", basicHidden: false },
-  { icon: "⚙", label: "Settings", href: "/pro/settings", basicHidden: false },
+  { icon: "🏠", label: "Dashboard", href: "/pro/dashboard", basicHidden: false, basicOnly: false },
+  { icon: "🔐", label: "Vault Clients", href: "/pro/vault-clients", basicHidden: false, basicOnly: true },
+  { icon: "👥", label: "Clients", href: "/pro/clients", basicHidden: true, basicOnly: false },
+  { icon: "📄", label: "Documents", href: "/pro/documents", basicHidden: true, basicOnly: false },
+  { icon: "🔗", label: "Referrals", href: "/pro/referrals", basicHidden: true, basicOnly: false },
+  { icon: "💰", label: "Revenue", href: "/pro/revenue", basicHidden: false, basicOnly: false },
+  { icon: "📣", label: "Marketing", href: "/pro/marketing", basicHidden: false, basicOnly: false },
+  { icon: "⚙", label: "Settings", href: "/pro/settings", basicHidden: false, basicOnly: false },
 ];
 
 const secondaryNav = [
-  { icon: "🎓", label: "Training", href: "/pro/training", basicHidden: true },
-  { icon: "💬", label: "Support", href: "/pro/support", basicHidden: false },
+  { icon: "🎓", label: "Training", href: "/pro/training", basicHidden: true, basicOnly: false },
+  { icon: "💬", label: "Support", href: "/pro/support", basicHidden: false, basicOnly: false },
 ];
 
 interface ProShellProps {
@@ -49,7 +50,7 @@ export default function ProShell({ companyName, userName, tier, logoUrl, onboard
 
   const initials = companyName.split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase();
 
-  function NavLink({ item }: { item: { icon: string; label: string; href: string; basicHidden: boolean } }) {
+  function NavLink({ item }: { item: { icon: string; label: string; href: string; basicHidden: boolean; basicOnly: boolean } }) {
     const active = isActive(item.href);
     return (
       <Link href={item.href} onClick={() => setDrawerOpen(false)}
@@ -72,7 +73,7 @@ export default function ProShell({ companyName, userName, tier, logoUrl, onboard
         <div className="mt-4 h-px bg-white/10" />
       </div>
       <nav className="flex-1 px-2 space-y-0.5">
-        {navItems.filter(item => !(tier === "basic" && item.basicHidden)).map((item) => <NavLink key={item.href} item={item} />)}
+        {navItems.filter(item => !(tier === "basic" && item.basicHidden) && !(tier !== "basic" && item.basicOnly)).map((item) => <NavLink key={item.href} item={item} />)}
         <div className="my-3 mx-4 h-px bg-white/10" />
         {secondaryNav.filter(item => !(tier === "basic" && item.basicHidden)).map((item) => <NavLink key={item.href} item={item} />)}
       </nav>
