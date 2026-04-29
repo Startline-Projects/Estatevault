@@ -175,6 +175,16 @@ export const quizAnswersSchema = z.object({
   state_of_residence: z.string().optional(),
 });
 
+export const affiliateSignupSchema = z.object({
+  fullName: z.string().min(1, "Full name is required"),
+  email: z.string().email("Valid email is required"),
+  password: z.string().min(8, "Password must be at least 8 characters"),
+  acceptTerms: z.boolean().refine((v) => v === true, {
+    message: "You must accept the Affiliate Agreement to continue",
+  }),
+});
+
 export type WillIntake = z.infer<typeof willIntakeSchema>;
 export type TrustIntake = z.infer<typeof trustIntakeSchema>;
 export type QuizAnswers = z.infer<typeof quizAnswersSchema>;
+export type AffiliateSignup = z.infer<typeof affiliateSignupSchema>;

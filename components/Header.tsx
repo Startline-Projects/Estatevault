@@ -10,6 +10,7 @@ const navLinks = [
   { label: "FAQ", href: "#faq" },
   { label: "The Vault", href: "#vault" },
   { label: "For Professionals", href: "/professionals" },
+  { label: "Become an Affiliate", href: "/affiliate-signup" },
 ];
 
 export default function Header() {
