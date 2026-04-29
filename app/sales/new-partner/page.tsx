@@ -22,9 +22,10 @@ const PROFESSIONAL_TYPES = [
   "Other",
 ];
 
-const PLAN_TIERS: { label: string; value: string; price: string }[] = [
-  { label: "Standard", value: "standard", price: "$1,200/yr" },
-  { label: "Enterprise", value: "enterprise", price: "$6,000/yr" },
+const PLAN_TIERS: { label: string; value: string; price: string; description: string }[] = [
+  { label: "Basic", value: "basic", price: "$500 one-time", description: "White-label vault only" },
+  { label: "Standard", value: "standard", price: "$1,200 one-time", description: "Full estate planning platform" },
+  { label: "Enterprise", value: "enterprise", price: "$6,000 one-time", description: "Full platform + custom domain" },
 ];
 
 const LEAD_SOURCES = [
@@ -47,6 +48,7 @@ interface FormData {
   planTier: string;
   leadSource: string;
   notes: string;
+  partnerRevenuePct: number;
 }
 
 const initialForm: FormData = {
@@ -60,6 +62,7 @@ const initialForm: FormData = {
   planTier: "",
   leadSource: "",
   notes: "",
+  partnerRevenuePct: 10,
 };
 
 interface SuccessData {
@@ -74,7 +77,7 @@ export default function NewPartnerPage() {
   const [success, setSuccess] = useState<SuccessData | null>(null);
   const [copied, setCopied] = useState(false);
 
-  function set(field: keyof FormData, value: string) {
+  function set(field: keyof FormData, value: string | number) {
     setForm((prev) => ({ ...prev, [field]: value }));
   }
 
@@ -100,6 +103,7 @@ export default function NewPartnerPage() {
           tier: form.planTier,
           source: form.leadSource,
           notes: form.notes,
+          partnerRevenuePct: form.partnerRevenuePct,
         }),
       });
       const data = await res.json();
@@ -145,9 +149,9 @@ export default function NewPartnerPage() {
   const strippedUrl = form.businessUrl
     ? form.businessUrl.replace(/^https?:\/\//, "").replace(/\/$/, "")
     : "";
-  const previewUrl = strippedUrl
-    ? `legacy.${strippedUrl}`
-    : "legacy.yoursite.com";
+  const previewUrl = form.planTier === "basic"
+    ? (strippedUrl ? `${strippedUrl.replace(/\./g, "-")}.estatevault.us` : "yourcompany.estatevault.us")
+    : (strippedUrl ? `legacy.${strippedUrl}` : "legacy.yoursite.com");
   const hasSomething = form.companyName || form.ownerName || form.email;
 
   /* =========================================== */
@@ -318,7 +322,7 @@ export default function NewPartnerPage() {
           {/* Plan Tier */}
           <div className="bg-white rounded-xl border border-gray-200 p-6 space-y-3">
             <h2 className="text-sm font-semibold text-navy uppercase tracking-wider">Plan Tier</h2>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-3 gap-3">
               {PLAN_TIERS.map((tier) => (
                 <button
                   key={tier.value}
@@ -331,7 +335,8 @@ export default function NewPartnerPage() {
                   }`}
                 >
                   <p className="font-semibold text-charcoal">{tier.label}</p>
-                  <p className="text-sm text-gray-500 mt-0.5">{tier.price}</p>
+                  <p className="text-sm text-gold font-medium mt-0.5">{tier.price}</p>
+                  <p className="text-xs text-gray-400 mt-1">{tier.description}</p>
                 </button>
               ))}
             </div>
@@ -340,6 +345,19 @@ export default function NewPartnerPage() {
           {/* Lead Source + Notes */}
           <div className="bg-white rounded-xl border border-gray-200 p-6 space-y-4">
             <h2 className="text-sm font-semibold text-navy uppercase tracking-wider">Additional Details</h2>
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Partner Revenue %</label>
+              <input
+                type="number"
+                min={0}
+                max={100}
+                step={1}
+                value={form.partnerRevenuePct}
+                onChange={(e) => set("partnerRevenuePct", Number(e.target.value))}
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gold/40 focus:border-gold"
+              />
+              <p className="mt-1 text-xs text-gray-400">Percentage of vault subscription revenue ($99/yr) sent directly to partner via Stripe.</p>
+            </div>
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">Lead Source</label>
               <select
@@ -420,7 +438,10 @@ export default function NewPartnerPage() {
                     </div>
                     {/* Features mini */}
                     <div className="grid grid-cols-3 gap-2 p-4">
-                      {["Will Package", "Trust Package", "Secure Vault"].map((f) => (
+                      {(form.planTier === "basic"
+                        ? ["Secure Vault", "Trustees", "Farewell Video"]
+                        : ["Will Package", "Trust Package", "Secure Vault"]
+                      ).map((f) => (
                         <div key={f} className="bg-gray-50 rounded-lg p-2 text-center">
                           <p className="text-[10px] font-medium text-charcoal">{f}</p>
                         </div>

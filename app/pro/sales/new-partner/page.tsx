@@ -22,9 +22,10 @@ const PROFESSIONAL_TYPES = [
   "Other",
 ];
 
-const PLAN_TIERS: { label: string; value: string; price: string }[] = [
-  { label: "Standard", value: "standard", price: "$1,200/yr" },
-  { label: "Enterprise", value: "enterprise", price: "$6,000/yr" },
+const PLAN_TIERS: { label: string; value: string; price: string; description: string }[] = [
+  { label: "Basic", value: "basic", price: "$500 one-time", description: "White-label vault only" },
+  { label: "Standard", value: "standard", price: "$1,200 one-time", description: "Full estate planning platform" },
+  { label: "Enterprise", value: "enterprise", price: "$6,000 one-time", description: "Full platform + custom domain" },
 ];
 
 const LEAD_SOURCES = [
@@ -138,9 +139,9 @@ export default function NewPartnerPage() {
   const strippedUrl = form.businessUrl
     ? form.businessUrl.replace(/^https?:\/\//, "").replace(/\/$/, "")
     : "";
-  const previewUrl = strippedUrl
-    ? `legacy.${strippedUrl}`
-    : "legacy.yoursite.com";
+  const previewUrl = form.planTier === "basic"
+    ? (strippedUrl ? `${strippedUrl.replace(/\./g, "-")}.estatevault.us` : "yourcompany.estatevault.us")
+    : (strippedUrl ? `legacy.${strippedUrl}` : "legacy.yoursite.com");
   const hasSomething = form.companyName || form.ownerName || form.email;
 
   /* =========================================== */
@@ -311,7 +312,7 @@ export default function NewPartnerPage() {
           {/* Plan Tier */}
           <div className="bg-white rounded-xl border border-gray-200 p-6 space-y-3">
             <h2 className="text-sm font-semibold text-navy uppercase tracking-wider">Plan Tier</h2>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-3 gap-3">
               {PLAN_TIERS.map((tier) => (
                 <button
                   key={tier.value}
@@ -324,7 +325,8 @@ export default function NewPartnerPage() {
                   }`}
                 >
                   <p className="font-semibold text-charcoal">{tier.label}</p>
-                  <p className="text-sm text-gray-500 mt-0.5">{tier.price}</p>
+                  <p className="text-sm text-gold font-medium mt-0.5">{tier.price}</p>
+                  <p className="text-xs text-gray-400 mt-1">{tier.description}</p>
                 </button>
               ))}
             </div>
@@ -425,7 +427,10 @@ export default function NewPartnerPage() {
                     </div>
                     {/* Features mini */}
                     <div className="grid grid-cols-3 gap-2 p-4">
-                      {["Will Package", "Trust Package", "Secure Vault"].map((f) => (
+                      {(form.planTier === "basic"
+                        ? ["Secure Vault", "Trustees", "Farewell Video"]
+                        : ["Will Package", "Trust Package", "Secure Vault"]
+                      ).map((f) => (
                         <div key={f} className="bg-gray-50 rounded-lg p-2 text-center">
                           <p className="text-[10px] font-medium text-charcoal">{f}</p>
                         </div>

@@ -6,7 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 
 export default function Step1Page() {
   const router = useRouter();
-  const [selectedTier, setSelectedTier] = useState<"standard" | "enterprise">("standard");
+  const [selectedTier, setSelectedTier] = useState<"standard" | "enterprise" | "basic">("standard");
   const [agreed, setAgreed] = useState(false);
   const [loading, setLoading] = useState(false);
   const [showAgreement, setShowAgreement] = useState(false);
@@ -22,13 +22,14 @@ export default function Step1Page() {
       const { data: partner } = await supabase.from("partners").select("id, tier, annual_fee_paid, one_time_fee_paid, professional_type, promo_code").eq("profile_id", user.id).single();
       if (partner) {
         setPartnerId(partner.id);
-        if (partner.tier) setSelectedTier(partner.tier as "standard" | "enterprise");
+        if (partner.tier) setSelectedTier(partner.tier as "standard" | "enterprise" | "basic");
+        const isBasic = partner.tier === "basic";
+        const nextStep = isBasic ? "/pro/onboarding/step-2-vault" : "/pro/onboarding/step-2";
         // Skip payment step if platform fee already paid, or promo code waives it
-        if (partner.annual_fee_paid || partner.one_time_fee_paid) { router.push("/pro/onboarding/step-2"); return; }
+        if (partner.annual_fee_paid || partner.one_time_fee_paid) { router.push(nextStep); return; }
         if (partner.promo_code && partner.promo_code.toUpperCase() === "FREE676") {
-          // Mark fee as paid via promo and skip to step 2
           await supabase.from("partners").update({ one_time_fee_paid: true, onboarding_step: 2 }).eq("id", partner.id);
-          router.push("/pro/onboarding/step-2");
+          router.push(nextStep);
           return;
         }
       }
@@ -37,13 +38,17 @@ export default function Step1Page() {
   }, [router]);
 
   const earningsPerTrust = selectedTier === "enterprise" ? 450 : 400;
-  const platformFee = selectedTier === "enterprise" ? 6000 : 1200;
+  const platformFee = selectedTier === "enterprise" ? 6000 : selectedTier === "basic" ? 500 : 1200;
   const monthlyEarnings = sliderValue * earningsPerTrust;
   const annualEarnings = monthlyEarnings * 12;
   const netFirstYearProfit = annualEarnings - platformFee;
 
   async function handleGetStarted() {
     if (!agreed) return;
+    if (!partnerId) {
+      setError("Partner profile not found. Please contact support@estatevault.com.");
+      return;
+    }
     setLoading(true);
     setError("");
 
@@ -63,6 +68,7 @@ export default function Step1Page() {
   }
 
   const plans = [
+    { tier: "basic" as const, name: "Basic", price: "$500 one-time", badge: null, features: ["White-label secure vault", "Custom subdomain (yourname.estatevault.us)", "Brand with logo, colors & tagline", "Trustee management for clients", "Farewell video storage", "Email support"], btnClass: "bg-navy text-white hover:bg-navy/90" },
     { tier: "standard" as const, name: "Standard", price: "$1,200 one-time", badge: null, features: ["Unlimited will and trust documents", "Branded white-label platform", "Custom subdomain (legacy.yourdomain.com)", "Branded email delivery", "3 team seats", "Partner earnings: $300/will · $400/trust", "Email and chat support", "Marketing toolkit"], btnClass: "bg-navy text-white hover:bg-navy/90" },
     { tier: "enterprise" as const, name: "Enterprise", price: "$6,000 one-time", badge: "Most Popular for Agencies", features: ["Everything in Standard", "Lower EstateVault cut: $50/will · $150/trust", "Partner earnings: $350/will · $450/trust", "Custom domain support", "10 team seats", "Custom commission hierarchy for sub-agents", "Dedicated account manager", "Attorney review tier included (10/month)"], btnClass: "bg-gold text-white hover:bg-gold/90" },
   ];
@@ -72,14 +78,14 @@ export default function Step1Page() {
       <h1 className="text-2xl font-bold text-navy">Choose Your Plan</h1>
       <p className="mt-1 text-sm text-charcoal/60">Both plans include unlimited documents and full platform access. One-time fee, no recurring charges.</p>
 
-      <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-6 md:-mx-24 lg:-mx-40">
         {plans.map((plan) => (
-          <div key={plan.tier} onClick={() => setSelectedTier(plan.tier)} className={`relative rounded-2xl bg-white border-2 p-6 cursor-pointer transition-all ${selectedTier === plan.tier ? "border-gold shadow-md" : "border-gray-200 hover:border-gold/40"}`}>
+          <div key={plan.tier} onClick={() => setSelectedTier(plan.tier)} className={`relative flex flex-col rounded-2xl bg-white border-2 p-6 cursor-pointer transition-all min-w-0 ${selectedTier === plan.tier ? "border-gold shadow-md" : "border-gray-200 hover:border-gold/40"}`}>
             {plan.badge && <span className="absolute -top-3 right-4 rounded-full bg-gold px-3 py-1 text-xs font-semibold text-white">{plan.badge}</span>}
             <h3 className="text-lg font-bold text-navy">{plan.name}</h3>
             <p className="text-2xl font-bold text-navy mt-1">{plan.price}</p>
-            <ul className="mt-4 space-y-2">
-              {plan.features.map((f) => <li key={f} className="flex items-start gap-2 text-sm text-charcoal/70"><span className="text-gold mt-0.5">✓</span>{f}</li>)}
+            <ul className="mt-4 space-y-2 flex-1">
+              {plan.features.map((f) => <li key={f} className="flex items-start gap-2 text-sm text-charcoal/70"><span className="text-gold mt-0.5 shrink-0">✓</span><span className="break-words min-w-0">{f}</span></li>)}
             </ul>
             <button onClick={(e) => { e.stopPropagation(); setSelectedTier(plan.tier); }} className={`mt-6 w-full min-h-[44px] rounded-full py-3 text-sm font-semibold transition-colors ${selectedTier === plan.tier ? plan.btnClass : "bg-gray-100 text-charcoal/50"}`}>
               {selectedTier === plan.tier ? "Selected" : "Select"}
@@ -88,8 +94,8 @@ export default function Step1Page() {
         ))}
       </div>
 
-      {/* ROI Calculator */}
-      <div className="mt-8 rounded-xl bg-gray-50 border border-gray-200 p-6">
+      {/* ROI Calculator — hidden for basic tier (no doc revenue) */}
+      {selectedTier !== "basic" && <div className="mt-8 rounded-xl bg-gray-50 border border-gray-200 p-6">
         <h3 className="text-base font-bold text-navy">How quickly does this pay for itself?</h3>
         <label className="mt-4 block text-sm text-charcoal/70">Estimated trust packages per month: <span className="font-bold text-navy">{sliderValue}</span></label>
         <input type="range" min={1} max={50} value={sliderValue} onChange={(e) => setSliderValue(parseInt(e.target.value))} className="mt-2 w-full accent-gold" />
@@ -99,7 +105,7 @@ export default function Step1Page() {
           <div><p className="text-xs text-charcoal/50">One-time platform fee</p><p className="text-lg font-bold text-charcoal/60">${platformFee.toLocaleString()}</p></div>
           <div><p className="text-xs text-charcoal/50">First-year net profit</p><p className={`text-lg font-bold ${netFirstYearProfit > 0 ? "text-green-600" : "text-red-600"}`}>${netFirstYearProfit.toLocaleString()}</p></div>
         </div>
-      </div>
+      </div>}
 
       {/* Partner Agreement */}
       <div className="mt-8 rounded-xl bg-gray-50 border border-gray-200 p-6">
@@ -118,8 +124,8 @@ export default function Step1Page() {
 
       {error && <div className="mt-4 rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">{error}</div>}
 
-      <button onClick={handleGetStarted} disabled={!agreed || loading} className="mt-8 w-full min-h-[44px] rounded-full bg-gold py-3.5 text-sm font-semibold text-white hover:bg-gold/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
-        {loading ? "Redirecting to payment..." : `Get Started, ${selectedTier === "enterprise" ? "$6,000" : "$1,200"} one-time`}
+      <button onClick={handleGetStarted} disabled={!agreed || loading || !partnerId} className="mt-8 w-full min-h-[44px] rounded-full bg-gold py-3.5 text-sm font-semibold text-white hover:bg-gold/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+        {loading ? "Redirecting to payment..." : !partnerId ? "Loading..." : `Get Started — ${selectedTier === "enterprise" ? "$6,000" : selectedTier === "basic" ? "$500" : "$1,200"} one-time`}
       </button>
 
       {showAgreement && (

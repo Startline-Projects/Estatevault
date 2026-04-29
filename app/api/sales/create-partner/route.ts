@@ -20,7 +20,7 @@ export async function POST(request: Request) {
   }
 
   const body = await request.json();
-  const { companyName, ownerName, email, businessUrl, phone, state, professionalType, tier, source, notes, promoCode } = body;
+  const { companyName, ownerName, email, businessUrl, phone, state, professionalType, tier, source, notes, promoCode, partnerRevenuePct } = body;
 
   if (!companyName || !ownerName || !email) {
     return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
@@ -41,10 +41,14 @@ export async function POST(request: Request) {
   for (let i = 0; i < 12; i++) tempPassword += chars[Math.floor(Math.random() * chars.length)];
 
   // Check if auth user already exists with this email
-  const { data: existingProfile } = await admin.from("profiles").select("id").eq("email", email).single();
+  const { data: existingProfile } = await admin.from("profiles").select("id, user_type").eq("email", email).single();
   let userId: string;
 
   if (existingProfile) {
+    // Block overwriting privileged accounts (sales_rep, admin) with partner role
+    if (["sales_rep", "admin"].includes(existingProfile.user_type)) {
+      return NextResponse.json({ error: "This email belongs to an internal account and cannot be used for a partner." }, { status: 409 });
+    }
     // User already exists, reset their password to the new temp password
     userId = existingProfile.id;
     await admin.auth.admin.updateUserById(userId, {
@@ -92,6 +96,7 @@ export async function POST(request: Request) {
     created_by: user.id,
     created_by_notes: notes || null,
     prospect_source: source || null,
+    partner_revenue_pct: partnerRevenuePct || 0,
     ...(validPromo ? { promo_code: validPromo, one_time_fee_paid: true, onboarding_step: 2 } : {}),
   }).select("id").single();
 
@@ -112,17 +117,23 @@ export async function POST(request: Request) {
   try {
     const { Resend } = await import("resend");
     const resend = new Resend(process.env.RESEND_API_KEY);
+    const isBasic = tier === "basic";
     await resend.emails.send({
       from: "EstateVault <info@estatevault.us>",
       to: email,
-      subject: "Welcome to EstateVault, Your Partner Account",
+      subject: isBasic
+        ? "Welcome to EstateVault — Your White-Label Vault Account"
+        : "Welcome to EstateVault, Your Partner Account",
       html: `
         <div style="font-family: Inter, sans-serif; max-width: 500px; margin: 0 auto; padding: 32px;">
           <h1 style="color: #1C3557; font-size: 24px;">Welcome to EstateVault</h1>
           <p style="color: #2D2D2D; line-height: 1.6;">Hi ${ownerName},</p>
           <p style="color: #2D2D2D; line-height: 1.6;">
-            Your partner account for <strong>${companyName}</strong> has been created.
-            Use the credentials below to sign in and complete your onboarding:
+            Your ${isBasic ? "White-Label Vault" : "partner"} account for <strong>${companyName}</strong> has been created.
+            ${isBasic
+              ? "Complete onboarding to brand your vault and get your custom subdomain."
+              : "Use the credentials below to sign in and complete your onboarding:"
+            }
           </p>
           <div style="background: #f8f9fa; border-radius: 12px; padding: 20px; margin: 24px 0;">
             <p style="margin: 0 0 8px 0; color: #666; font-size: 13px;">Email</p>
@@ -132,7 +143,7 @@ export async function POST(request: Request) {
           </div>
           <a href="https://www.estatevault.us/pro/login"
              style="display: block; text-align: center; background: #C9A84C; color: white; text-decoration: none; padding: 14px 24px; border-radius: 999px; font-weight: 600; font-size: 14px;">
-            Sign In to Your Partner Account
+            Sign In to Your Account
           </a>
           <p style="color: #999; font-size: 12px; margin-top: 24px; text-align: center;">
             Please change your password after signing in.

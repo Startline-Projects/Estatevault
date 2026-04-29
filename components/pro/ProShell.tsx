@@ -6,18 +6,19 @@ import { usePathname, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
 const navItems = [
-  { icon: "🏠", label: "Dashboard", href: "/pro/dashboard" },
-  { icon: "👥", label: "Clients", href: "/pro/clients" },
-  { icon: "📄", label: "Documents", href: "/pro/documents" },
-  { icon: "🔗", label: "Referrals", href: "/pro/referrals" },
-  { icon: "💰", label: "Revenue", href: "/pro/revenue" },
-  { icon: "📣", label: "Marketing", href: "/pro/marketing" },
-  { icon: "⚙", label: "Settings", href: "/pro/settings" },
+  { icon: "🏠", label: "Dashboard", href: "/pro/dashboard", basicHidden: false, basicOnly: false },
+  { icon: "🔐", label: "Vault Clients", href: "/pro/vault-clients", basicHidden: false, basicOnly: true },
+  { icon: "👥", label: "Clients", href: "/pro/clients", basicHidden: true, basicOnly: false },
+  { icon: "📄", label: "Documents", href: "/pro/documents", basicHidden: true, basicOnly: false },
+  { icon: "🔗", label: "Referrals", href: "/pro/referrals", basicHidden: true, basicOnly: false },
+  { icon: "💰", label: "Revenue", href: "/pro/revenue", basicHidden: false, basicOnly: false },
+  { icon: "📣", label: "Marketing", href: "/pro/marketing", basicHidden: false, basicOnly: false },
+  { icon: "⚙", label: "Settings", href: "/pro/settings", basicHidden: false, basicOnly: false },
 ];
 
 const secondaryNav = [
-  { icon: "🎓", label: "Training", href: "/pro/training" },
-  { icon: "💬", label: "Support", href: "/pro/support" },
+  { icon: "🎓", label: "Training", href: "/pro/training", basicHidden: true, basicOnly: false },
+  { icon: "💬", label: "Support", href: "/pro/support", basicHidden: false, basicOnly: false },
 ];
 
 interface ProShellProps {
@@ -49,7 +50,7 @@ export default function ProShell({ companyName, userName, tier, logoUrl, onboard
 
   const initials = companyName.split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase();
 
-  function NavLink({ item }: { item: { icon: string; label: string; href: string } }) {
+  function NavLink({ item }: { item: { icon: string; label: string; href: string; basicHidden: boolean; basicOnly: boolean } }) {
     const active = isActive(item.href);
     return (
       <Link href={item.href} onClick={() => setDrawerOpen(false)}
@@ -66,15 +67,15 @@ export default function ProShell({ companyName, userName, tier, logoUrl, onboard
           {logoUrl ? <img src={logoUrl} alt="" className="h-8 w-8 rounded object-cover" /> : <div className="h-8 w-8 rounded-full bg-gold/20 flex items-center justify-center text-xs font-bold text-gold">{initials}</div>}
           <div className="min-w-0">
             <p className="text-sm font-bold text-white truncate">{companyName}</p>
-            <span className={`text-xs font-medium ${tier === "enterprise" ? "text-gold" : "text-white/60"}`}>{tier === "enterprise" ? "Enterprise" : "Standard"}</span>
+            <span className={`text-xs font-medium ${tier === "enterprise" ? "text-gold" : "text-white/60"}`}>{tier === "enterprise" ? "Enterprise" : tier === "basic" ? "Basic" : "Standard"}</span>
           </div>
         </div>
         <div className="mt-4 h-px bg-white/10" />
       </div>
       <nav className="flex-1 px-2 space-y-0.5">
-        {navItems.map((item) => <NavLink key={item.href} item={item} />)}
+        {navItems.filter(item => !(tier === "basic" && item.basicHidden) && !(tier !== "basic" && item.basicOnly)).map((item) => <NavLink key={item.href} item={item} />)}
         <div className="my-3 mx-4 h-px bg-white/10" />
-        {secondaryNav.map((item) => <NavLink key={item.href} item={item} />)}
+        {secondaryNav.filter(item => !(tier === "basic" && item.basicHidden)).map((item) => <NavLink key={item.href} item={item} />)}
       </nav>
       <div className="px-5 pb-5">
         <p className="text-xs text-white/50 truncate">{userName}</p>
@@ -106,7 +107,7 @@ export default function ProShell({ companyName, userName, tier, logoUrl, onboard
       {/* Main content */}
       <main className="md:ml-60 pt-14 md:pt-0 min-h-screen">
         {/* Onboarding/certification banners */}
-        {(!onboardingComplete || !certificationComplete) && (
+        {tier !== "basic" && (!onboardingComplete || !certificationComplete) && (
           <div className="bg-amber-50 border-b border-amber-200 px-6 py-3 flex items-center gap-4 text-sm">
             <span className="text-amber-700">⚠</span>
             <span className="text-amber-800">{!onboardingComplete ? "Your setup is incomplete." : "Certification required to unlock client features."}</span>

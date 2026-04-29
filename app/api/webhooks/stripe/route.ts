@@ -132,21 +132,80 @@ export async function POST(request: Request) {
 
     // Handle vault subscription checkout
     if (metadata.product_type === "vault_subscription") {
-      const clientId = metadata.client_id;
       const subscriptionId = typeof session.subscription === "string" ? session.subscription : null;
       const expiry = new Date();
       expiry.setFullYear(expiry.getFullYear() + 1);
-      await supabase.from("clients").update({
-        vault_subscription_status: "active",
-        vault_subscription_expiry: expiry.toISOString(),
-        vault_subscription_stripe_id: subscriptionId,
-      }).eq("id", clientId);
-      await supabase.from("audit_log").insert({
-        action: "subscription.activated",
-        resource_type: "client",
-        resource_id: clientId,
-        metadata: { subscription_id: subscriptionId },
-      });
+      const partnerId = metadata.partner_id || null;
+
+      let clientId = metadata.client_id || null;
+
+      // Guest checkout: no client_id — create user + client by email
+      if (!clientId) {
+        const guestEmail = metadata.guest_email || session.customer_details?.email;
+        const guestName = metadata.guest_name || session.customer_details?.name || "";
+
+        if (guestEmail) {
+          // Find or create auth user
+          let profileId: string | null = null;
+          const { data: existingProfile } = await supabase
+            .from("profiles").select("id").eq("email", guestEmail).single();
+
+          if (existingProfile) {
+            profileId = existingProfile.id;
+          } else {
+            const { data: authUsers } = await supabase.auth.admin.listUsers();
+            const existingAuth = authUsers?.users?.find((u) => u.email === guestEmail);
+            if (existingAuth) {
+              profileId = existingAuth.id;
+              await supabase.from("profiles").upsert({
+                id: profileId, email: guestEmail, full_name: guestName, user_type: "client",
+              });
+            } else {
+              const { data: newUser } = await supabase.auth.admin.createUser({
+                email: guestEmail,
+                email_confirm: true,
+                user_metadata: { user_type: "client", full_name: guestName },
+              });
+              if (newUser?.user) {
+                profileId = newUser.user.id;
+                await supabase.from("profiles").upsert({
+                  id: profileId, email: guestEmail, full_name: guestName, user_type: "client",
+                });
+              }
+            }
+          }
+
+          if (profileId) {
+            // Get or create client record
+            const { data: existingClient } = await supabase
+              .from("clients").select("id").eq("profile_id", profileId).single();
+            if (existingClient) {
+              clientId = existingClient.id;
+            } else {
+              const { data: newClient } = await supabase
+                .from("clients")
+                .insert({ profile_id: profileId, partner_id: partnerId, source: partnerId ? "partner" : "direct" })
+                .select("id").single();
+              clientId = newClient?.id ?? null;
+            }
+          }
+        }
+      }
+
+      if (clientId) {
+        await supabase.from("clients").update({
+          vault_subscription_status: "active",
+          vault_subscription_expiry: expiry.toISOString(),
+          vault_subscription_stripe_id: subscriptionId,
+        }).eq("id", clientId);
+        await supabase.from("audit_log").insert({
+          action: "subscription.activated",
+          resource_type: "client",
+          resource_id: clientId,
+          metadata: { subscription_id: subscriptionId },
+        });
+      }
+
       return NextResponse.json({ received: true });
     }
 

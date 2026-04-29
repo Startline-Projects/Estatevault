@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { createClient } from "@/lib/supabase/client";
 
 const CONTACT_CARDS = [
   {
@@ -54,8 +55,56 @@ const FAQS = [
   },
 ];
 
+const VAULT_FAQS = [
+  {
+    question: "How do clients access my vault?",
+    answer:
+      "Share your unique vault URL (e.g. yourname.estatevault.us) with clients. They sign up directly on your branded vault page. You can find and copy your vault URL from your dashboard at any time.",
+  },
+  {
+    question: "What can clients store in the vault?",
+    answer:
+      "Clients can securely store estate documents, insurance policies, financial account details (masked), digital credentials, physical asset locations, trusted contacts, and final wishes — including a farewell video message for their family.",
+  },
+  {
+    question: "How is vault data protected?",
+    answer:
+      "All vault data is encrypted at rest and in transit. Clients set a separate vault PIN that is distinct from their account password. Neither you nor EstateVault staff can access the contents of a client's vault without trustee authorization.",
+  },
+  {
+    question: "What is a vault trustee?",
+    answer:
+      "Clients can designate 1–2 trustees — trusted people who can request access to the vault in the event of the client's death or incapacitation. Trustees go through a 72-hour review period and identity verification before access is granted.",
+  },
+  {
+    question: "How much does vault access cost clients?",
+    answer:
+      "Vault subscriptions are $99 per year per client. As a Basic partner, 100% of the subscription revenue goes to you — EstateVault does not take a cut. Subscriptions renew annually and are managed automatically via Stripe.",
+  },
+  {
+    question: "What happens if a client cancels their subscription?",
+    answer:
+      "Clients retain read-only access until the end of their billing period. After that, their vault is locked but data is retained for 90 days. They can reactivate at any time to regain full access.",
+  },
+];
+
 export default function ProSupportPage() {
   const [openFaq, setOpenFaq] = useState<number | null>(null);
+  const [tier, setTier] = useState<string>("");
+
+  useEffect(() => {
+    async function loadTier() {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const { data: partner } = await supabase.from("partners").select("tier").eq("profile_id", user.id).single();
+      if (partner) setTier(partner.tier || "standard");
+    }
+    loadTier();
+  }, []);
+
+  const isBasic = tier === "basic";
+  const activeFaqs = isBasic ? VAULT_FAQS : FAQS;
 
   function toggleFaq(index: number) {
     setOpenFaq(openFaq === index ? null : index);
@@ -88,7 +137,7 @@ export default function ProSupportPage() {
       <div className="mt-8">
         <h2 className="text-base font-bold text-navy">Frequently Asked Questions</h2>
         <div className="mt-4 space-y-3">
-          {FAQS.map((faq, index) => (
+          {activeFaqs.map((faq, index) => (
             <div
               key={index}
               className="rounded-xl bg-white border border-gray-200 overflow-hidden"

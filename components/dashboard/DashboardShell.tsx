@@ -14,15 +14,21 @@ const navItems = [
   { icon: "⚙", label: "Settings", href: "/dashboard/settings" },
 ];
 
+const vaultOnlyNavItems = navItems.filter(
+  (item) => item.href === "/dashboard/vault" || item.href === "/dashboard/settings"
+);
+
 interface DashboardShellProps {
   userName: string;
   children: React.ReactNode;
+  vaultOnly?: boolean;
 }
 
-export default function DashboardShell({ userName, children }: DashboardShellProps) {
+export default function DashboardShell({ userName, children, vaultOnly = false }: DashboardShellProps) {
   const pathname = usePathname();
   const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const visibleNavItems = vaultOnly ? vaultOnlyNavItems : navItems;
 
   async function handleSignOut() {
     const supabase = createClient();
@@ -49,7 +55,7 @@ export default function DashboardShell({ userName, children }: DashboardShellPro
         </div>
 
         <nav className="flex-1 px-3 space-y-1">
-          {navItems.map((item) => (
+          {visibleNavItems.map((item) => (
             <Link
               key={item.href}
               href={item.href}
@@ -104,7 +110,7 @@ export default function DashboardShell({ userName, children }: DashboardShellPro
               <button onClick={() => setSidebarOpen(false)} className="text-white/60">✕</button>
             </div>
             <nav className="space-y-1">
-              {navItems.map((item) => (
+              {visibleNavItems.map((item) => (
                 <Link
                   key={item.href}
                   href={item.href}
@@ -127,7 +133,7 @@ export default function DashboardShell({ userName, children }: DashboardShellPro
 
       {/* Mobile bottom tab bar */}
       <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-gray-200 flex justify-around py-2">
-        {navItems.map((item) => (
+        {visibleNavItems.map((item) => (
           <Link
             key={item.href}
             href={item.href}
