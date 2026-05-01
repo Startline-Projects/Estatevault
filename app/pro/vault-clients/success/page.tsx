@@ -53,7 +53,7 @@ function SuccessContent() {
         <div className="rounded-2xl border border-gray-200 bg-white p-6 space-y-4">
           <div className="rounded-xl bg-amber-50 border border-amber-200 px-4 py-3">
             <p className="text-sm font-semibold text-amber-800">Share these with your client</p>
-            <p className="mt-0.5 text-xs text-amber-700">They'll use the email + password to log in, then the PIN to access their vault.</p>
+            <p className="mt-0.5 text-xs text-amber-700">They&apos;ll use the email + password to log in, then the PIN to access their vault.</p>
           </div>
 
           <CredRow label="Client Email" value={creds.clientEmail} copied={copied} onCopy={copyText} copyKey="email" />

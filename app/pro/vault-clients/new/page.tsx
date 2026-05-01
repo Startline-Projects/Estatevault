@@ -130,7 +130,7 @@ export default function NewVaultClientPage() {
                 placeholder="jane@example.com"
                 className="w-full min-h-[44px] rounded-xl border-2 border-gray-200 px-4 py-3 text-sm focus:border-gold focus:outline-none"
               />
-              <p className="mt-1 text-xs text-charcoal/50">This will be the client's login email for their vault.</p>
+              <p className="mt-1 text-xs text-charcoal/50">This will be the client&apos;s login email for their vault.</p>
             </div>
             <button
               onClick={handleStep1Continue}
@@ -145,7 +145,7 @@ export default function NewVaultClientPage() {
         {/* ── Step 2: Set PIN ── */}
         {step === 2 && (
           <div className="space-y-5">
-            <p className="text-sm text-charcoal/70">Set a 4-digit vault PIN for <span className="font-semibold text-navy">{clientName}</span>. Share this with them — they'll need it to access their vault.</p>
+            <p className="text-sm text-charcoal/70">Set a 4-digit vault PIN for <span className="font-semibold text-navy">{clientName}</span>. Share this with them — they&apos;ll need it to access their vault.</p>
 
             {pinError && (
               <div className="rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">{pinError}</div>
