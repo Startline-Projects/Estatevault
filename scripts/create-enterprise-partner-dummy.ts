@@ -28,7 +28,7 @@ async function main() {
   });
 
   // 1. Get or create auth user
-  let userId: string | null = null;
+  let userId: string = "";
 
   const { data: existingProfile } = await supabase
     .from("profiles")
