@@ -1,12 +1,20 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 
 type State = "loading" | "success" | "already" | "error";
 
 export default function TrusteeConfirmPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-gray-50" />}>
+      <TrusteeConfirmInner />
+    </Suspense>
+  );
+}
+
+function TrusteeConfirmInner() {
   const searchParams = useSearchParams();
   const token = searchParams.get("token");
   const [state, setState] = useState<State>("loading");
