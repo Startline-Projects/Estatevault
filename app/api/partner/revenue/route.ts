@@ -59,7 +59,7 @@ export async function GET() {
       .from("orders")
       .select("id, partner_cut, product_type, created_at, status")
       .eq("partner_id", partnerId)
-      .eq("status", "completed");
+      .in("status", ["paid", "delivered"]);
 
     if (ordersError) {
       return NextResponse.json(

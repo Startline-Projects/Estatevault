@@ -223,13 +223,14 @@ export async function POST(request: Request) {
           partnerStripeAccountId = partner?.stripe_account_id || null;
         }
 
+        const willTransfer = !!(partnerId && partnerStripeAccountId && partnerCut > 0);
         const { data: vaultOrder } = await supabase
           .from("orders")
           .insert({
             client_id: clientId,
             partner_id: partnerId,
             product_type: "vault_subscription",
-            status: partnerId && partnerStripeAccountId && partnerCut > 0 ? "paid" : "completed",
+            status: partnerId && partnerCut > 0 ? "paid" : "delivered",
             amount_total: amountTotal,
             partner_cut: partnerCut,
             ev_cut: evCut,
@@ -238,6 +239,16 @@ export async function POST(request: Request) {
           })
           .select("id")
           .single();
+
+        // Record pending payout if partner not Stripe-connected yet
+        if (vaultOrder && partnerId && partnerCut > 0 && !willTransfer) {
+          await supabase.from("payouts").insert({
+            partner_id: partnerId,
+            amount: partnerCut,
+            status: "pending",
+            orders_included: [vaultOrder.id],
+          });
+        }
 
         // Stripe Connect transfer if partner has connected account
         if (vaultOrder && partnerId && partnerStripeAccountId && partnerCut > 0) {
@@ -252,7 +263,7 @@ export async function POST(request: Request) {
             if (transfer) {
               await supabase
                 .from("orders")
-                .update({ status: "completed", transfer_id: transfer.id })
+                .update({ status: "delivered", transfer_id: transfer.id })
                 .eq("id", vaultOrder.id);
               await supabase.from("payouts").insert({
                 partner_id: partnerId,

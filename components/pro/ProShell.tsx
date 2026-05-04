@@ -12,7 +12,7 @@ const navItems = [
   { icon: "📄", label: "Documents", href: "/pro/documents", basicHidden: true, basicOnly: false },
   { icon: "🔗", label: "Referrals", href: "/pro/referrals", basicHidden: true, basicOnly: false },
   { icon: "💰", label: "Revenue", href: "/pro/revenue", basicHidden: false, basicOnly: false },
-  { icon: "📣", label: "Marketing", href: "/pro/marketing", basicHidden: false, basicOnly: false },
+  { icon: "📣", label: "Marketing", href: "/pro/marketing", basicHidden: true, basicOnly: false },
   { icon: "⚙", label: "Settings", href: "/pro/settings", basicHidden: false, basicOnly: false },
 ];
 

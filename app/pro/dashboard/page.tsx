@@ -32,6 +32,7 @@ export default function ProDashboardPage() {
   const [recentActivity, setRecentActivity] = useState<Array<{ action: string; created_at: string }>>([]);
   const [dismissed, setDismissed] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     setDismissed(!!localStorage.getItem("ev_welcome_dismissed"));
@@ -46,7 +47,7 @@ export default function ProDashboardPage() {
         .select("id, company_name, business_url, certification_completed, tier, vault_subdomain")
         .eq("profile_id", user.id)
         .single();
-      if (!partner) return;
+      if (!partner) { setLoading(false); return; }
 
       setPartnerId(partner.id);
       setCompanyName(partner.company_name || "Partner");
@@ -111,6 +112,7 @@ export default function ProDashboardPage() {
         .order("created_at", { ascending: false })
         .limit(10);
       setRecentActivity(activity || []);
+      setLoading(false);
     }
     load();
   }, []);
@@ -133,6 +135,21 @@ export default function ProDashboardPage() {
     navigator.clipboard.writeText(vaultUrl);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+  }
+
+  if (loading) {
+    return (
+      <div className="max-w-5xl animate-pulse">
+        <div className="rounded-xl bg-gray-100 h-24 mb-6" />
+        <div className="rounded-xl bg-gray-100 h-20 mb-6" />
+        <div className="grid grid-cols-2 gap-4">
+          <div className="rounded-xl bg-gray-100 h-24" />
+          <div className="rounded-xl bg-gray-100 h-24" />
+        </div>
+        <div className="mt-6 rounded-xl bg-gray-100 h-48" />
+        <div className="mt-6 rounded-xl bg-gray-100 h-24" />
+      </div>
+    );
   }
 
   return (

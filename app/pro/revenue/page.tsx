@@ -63,10 +63,13 @@ export default function ProRevenuePage() {
 
       const { data: partner } = await supabase
         .from("partners")
-        .select("id")
+        .select("id, tier, partner_revenue_pct, stripe_account_id")
         .eq("profile_id", user.id)
         .single();
       if (!partner) return;
+
+      const VAULT_PRICE_CENTS = 9900;
+      const partnerPct = Number(partner.partner_revenue_pct) || 0;
 
       const now = new Date();
       const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
@@ -77,11 +80,43 @@ export default function ProRevenuePage() {
       // Fetch all orders for this partner
       const { data: allOrders } = await supabase
         .from("orders")
-        .select("id, product_type, partner_cut, status, created_at")
+        .select("id, client_id, product_type, partner_cut, status, transfer_id, created_at")
         .eq("partner_id", partner.id)
         .in("status", ["paid", "delivered", "generating", "review"]);
 
-      const orders = allOrders || [];
+      const orders = (allOrders || []).slice();
+
+      // Fallback: synthesize vault_subscription orders for active clients
+      // missing an orders row (basic-tier partner case where webhook insert
+      // failed or row predates the orders-tracking change).
+      if (partnerPct > 0) {
+        const { data: vaultClients } = await supabase
+          .from("clients")
+          .select("id, vault_subscription_status, vault_subscription_expiry, updated_at, created_at")
+          .eq("partner_id", partner.id)
+          .eq("vault_subscription_status", "active");
+
+        const tracked = new Set(
+          orders
+            .filter((o) => o.product_type === "vault_subscription" && o.client_id)
+            .map((o) => o.client_id as string)
+        );
+
+        const partnerCutCents = Math.round((VAULT_PRICE_CENTS * partnerPct) / 100);
+
+        for (const c of vaultClients || []) {
+          if (tracked.has(c.id)) continue;
+          orders.push({
+            id: `synthetic-${c.id}`,
+            client_id: c.id,
+            product_type: "vault_subscription",
+            partner_cut: partnerCutCents,
+            status: "paid",
+            transfer_id: null,
+            created_at: c.updated_at || c.created_at,
+          });
+        }
+      }
 
       // MTD
       const mtdOrders = orders.filter((o) => o.created_at >= monthStart);
@@ -101,10 +136,8 @@ export default function ProRevenuePage() {
       // All time
       setAllTime(orders.reduce((sum, o) => sum + (o.partner_cut || 0), 0));
 
-      // Pending balance (orders that are paid/generating but not yet delivered)
-      const pendingOrders = orders.filter((o) =>
-        ["paid", "generating", "review"].includes(o.status)
-      );
+      // Pending balance: any order without a transfer_id is owed to partner.
+      const pendingOrders = orders.filter((o) => !o.transfer_id);
       setPendingBalance(
         pendingOrders.reduce((sum, o) => sum + (o.partner_cut || 0), 0)
       );
@@ -113,6 +146,7 @@ export default function ProRevenuePage() {
       const willOrders = orders.filter((o) => o.product_type === "will");
       const trustOrders = orders.filter((o) => o.product_type === "trust");
       const amendOrders = orders.filter((o) => o.product_type === "amendment");
+      const vaultOrders = orders.filter((o) => o.product_type === "vault_subscription");
 
       const bd: EarningsBreakdown[] = [];
       if (willOrders.length > 0) {
@@ -136,16 +170,52 @@ export default function ProRevenuePage() {
           total: amendOrders.reduce((sum, o) => sum + (o.partner_cut || 0), 0),
         });
       }
+      if (vaultOrders.length > 0) {
+        bd.push({
+          type: "Vault Subscription",
+          count: vaultOrders.length,
+          total: vaultOrders.reduce((sum, o) => sum + (o.partner_cut || 0), 0),
+        });
+      }
       setBreakdown(bd);
 
       // Payouts
       const { data: payoutData } = await supabase
         .from("payouts")
-        .select("id, amount, status, created_at")
+        .select("id, amount, status, orders_included, created_at")
         .eq("partner_id", partner.id)
         .order("created_at", { ascending: false })
         .limit(20);
-      setPayouts(payoutData || []);
+
+      const payoutsList: PayoutRow[] = (payoutData || []).map((p) => ({
+        id: p.id,
+        amount: p.amount,
+        status: p.status,
+        created_at: p.created_at,
+      }));
+
+      const referencedOrderIds = new Set<string>();
+      for (const p of payoutData || []) {
+        for (const oid of (p.orders_included as string[] | null) || []) {
+          referencedOrderIds.add(oid);
+        }
+      }
+
+      // Synthesize pending payout entries for orders without transfer or payout row
+      for (const o of orders) {
+        if (o.transfer_id) continue;
+        if (referencedOrderIds.has(o.id)) continue;
+        if ((o.partner_cut || 0) <= 0) continue;
+        payoutsList.push({
+          id: `pending-${o.id}`,
+          amount: o.partner_cut || 0,
+          status: "pending",
+          created_at: o.created_at,
+        });
+      }
+
+      payoutsList.sort((a, b) => (a.created_at < b.created_at ? 1 : -1));
+      setPayouts(payoutsList);
 
       setLoading(false);
     }
