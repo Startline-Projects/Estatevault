@@ -89,6 +89,7 @@ export async function GET() {
       trust: 0,
       amendment: 0,
       attorney_review: 0,
+      vault_subscription: 0,
     };
 
     const monthlyTrendMap: Record<string, number> = {};

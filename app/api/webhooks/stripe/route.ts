@@ -204,6 +204,78 @@ export async function POST(request: Request) {
           resource_id: clientId,
           metadata: { subscription_id: subscriptionId },
         });
+
+        // Record order + partner revenue split for vault subscription
+        const amountTotal = session.amount_total || 0;
+        let partnerCut = 0;
+        let evCut = amountTotal;
+        let partnerStripeAccountId: string | null = null;
+
+        if (partnerId) {
+          const { data: partner } = await supabase
+            .from("partners")
+            .select("stripe_account_id, partner_revenue_pct")
+            .eq("id", partnerId)
+            .single();
+          const pct = Number(partner?.partner_revenue_pct) || 0;
+          partnerCut = Math.round((amountTotal * pct) / 100);
+          evCut = amountTotal - partnerCut;
+          partnerStripeAccountId = partner?.stripe_account_id || null;
+        }
+
+        const { data: vaultOrder } = await supabase
+          .from("orders")
+          .insert({
+            client_id: clientId,
+            partner_id: partnerId,
+            product_type: "vault_subscription",
+            status: partnerId && partnerStripeAccountId && partnerCut > 0 ? "paid" : "completed",
+            amount_total: amountTotal,
+            partner_cut: partnerCut,
+            ev_cut: evCut,
+            stripe_payment_intent_id:
+              typeof session.payment_intent === "string" ? session.payment_intent : null,
+          })
+          .select("id")
+          .single();
+
+        // Stripe Connect transfer if partner has connected account
+        if (vaultOrder && partnerId && partnerStripeAccountId && partnerCut > 0) {
+          try {
+            const transfer = await transferToPartner(
+              partnerStripeAccountId,
+              partnerCut,
+              vaultOrder.id,
+              partnerId,
+              "vault_subscription"
+            );
+            if (transfer) {
+              await supabase
+                .from("orders")
+                .update({ status: "completed", transfer_id: transfer.id })
+                .eq("id", vaultOrder.id);
+              await supabase.from("payouts").insert({
+                partner_id: partnerId,
+                amount: partnerCut,
+                status: "sent",
+                stripe_transfer_id: transfer.id,
+                orders_included: [vaultOrder.id],
+              });
+              await supabase.from("audit_log").insert({
+                action: "payout.sent",
+                resource_type: "payout",
+                metadata: {
+                  partner_id: partnerId,
+                  amount: partnerCut,
+                  transfer_id: transfer.id,
+                  product_type: "vault_subscription",
+                },
+              });
+            }
+          } catch (err) {
+            console.error("Vault subscription partner transfer failed:", err);
+          }
+        }
       }
 
       return NextResponse.json({ received: true });

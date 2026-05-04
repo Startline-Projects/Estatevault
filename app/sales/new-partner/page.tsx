@@ -28,6 +28,12 @@ const PLAN_TIERS: { label: string; value: string; price: string; description: st
   { label: "Enterprise", value: "enterprise", price: "$6,000 one-time", description: "Full platform + custom domain" },
 ];
 
+// Fixed revenue splits by tier (non-basic locked per CLAUDE.md pricing rules).
+const TIER_FIXED_REVENUE_PCT: Record<string, number> = {
+  standard: 75,    // $300 of $400 will / $400 of $600 trust
+  enterprise: 87,  // $350 of $400 will / $450 of $600 trust
+};
+
 const LEAD_SOURCES = [
   "Cold Outreach",
   "Referral",
@@ -78,7 +84,18 @@ export default function NewPartnerPage() {
   const [copied, setCopied] = useState(false);
 
   function set(field: keyof FormData, value: string | number) {
-    setForm((prev) => ({ ...prev, [field]: value }));
+    setForm((prev) => {
+      const next = { ...prev, [field]: value };
+      if (field === "planTier") {
+        const tier = String(value);
+        if (tier in TIER_FIXED_REVENUE_PCT) {
+          next.partnerRevenuePct = TIER_FIXED_REVENUE_PCT[tier];
+        } else if (tier === "basic") {
+          next.partnerRevenuePct = 10;
+        }
+      }
+      return next;
+    });
   }
 
   async function handleSubmit() {
@@ -345,19 +362,30 @@ export default function NewPartnerPage() {
           {/* Lead Source + Notes */}
           <div className="bg-white rounded-xl border border-gray-200 p-6 space-y-4">
             <h2 className="text-sm font-semibold text-navy uppercase tracking-wider">Additional Details</h2>
-            <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Partner Revenue %</label>
-              <input
-                type="number"
-                min={0}
-                max={100}
-                step={1}
-                value={form.partnerRevenuePct}
-                onChange={(e) => set("partnerRevenuePct", Number(e.target.value))}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gold/40 focus:border-gold"
-              />
-              <p className="mt-1 text-xs text-gray-400">Percentage of vault subscription revenue ($99/yr) sent directly to partner via Stripe.</p>
-            </div>
+            {form.planTier === "basic" && (
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Partner Revenue %</label>
+                <input
+                  type="number"
+                  min={0}
+                  max={100}
+                  step={1}
+                  value={form.partnerRevenuePct}
+                  onChange={(e) => set("partnerRevenuePct", Number(e.target.value))}
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gold/40 focus:border-gold"
+                />
+                <p className="mt-1 text-xs text-gray-400">Percentage of vault subscription revenue ($99/yr) sent directly to partner via Stripe.</p>
+              </div>
+            )}
+            {form.planTier in TIER_FIXED_REVENUE_PCT && (
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Partner Revenue %</label>
+                <div className="w-full border border-gray-100 bg-gray-50 rounded-lg px-3 py-2 text-sm text-charcoal">
+                  {TIER_FIXED_REVENUE_PCT[form.planTier]}% (fixed for {form.planTier} tier)
+                </div>
+                <p className="mt-1 text-xs text-gray-400">Standard and Enterprise tiers use fixed revenue splits per platform pricing rules.</p>
+              </div>
+            )}
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">Lead Source</label>
               <select

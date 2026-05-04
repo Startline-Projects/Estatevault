@@ -105,9 +105,14 @@ export default function VaultPage() {
 
   useEffect(() => {
     async function check() {
-      const res = await fetch("/api/vault/pin", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "check" }) });
-      const data = await res.json();
-      setScreen(data.hasPin ? "pin-enter" : "pin-create");
+      const [pinRes, subRes] = await Promise.all([
+        fetch("/api/vault/pin", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "check" }) }),
+        fetch("/api/subscription/status"),
+      ]);
+      const pinData = await pinRes.json();
+      const subData = await subRes.json();
+      setIsSubscribed(subData.status === "active");
+      setScreen(pinData.hasPin ? "pin-enter" : "pin-create");
     }
     check();
   }, []);
