@@ -168,10 +168,16 @@ export default function PartnerPageClient({ branding }: { branding: PartnerBrand
                 />
                 <span className="text-xl font-bold text-navy tracking-tight hidden sm:inline">
                   {companyName}
+                  <span className="mx-2 font-normal text-charcoal/50">/</span>
+                  <span className="text-charcoal/80">Legacy</span>
                 </span>
               </>
             ) : (
-              <span className="text-xl font-bold text-navy tracking-tight">{companyName}</span>
+              <span className="text-xl font-bold text-navy tracking-tight">
+                {companyName}
+                <span className="mx-2 font-normal text-charcoal/50">/</span>
+                <span className="text-charcoal/80">Legacy</span>
+              </span>
             )}
           </a>
 
@@ -401,7 +407,7 @@ export default function PartnerPageClient({ branding }: { branding: PartnerBrand
               ].map((pkg) => (
                 <div
                   key={pkg.title}
-                  className="relative group rounded-2xl bg-white p-8 text-left transition-all duration-300 hover:-translate-y-1"
+                  className="relative group flex flex-col h-full rounded-2xl bg-white p-8 text-left transition-all duration-300 hover:-translate-y-1"
                   style={{
                     border: pkg.popular ? `2px solid ${accentColor}` : "1px solid #e5e7eb",
                     boxShadow: pkg.popular ? `0 4px 24px ${accentColor}22` : undefined,
@@ -435,13 +441,15 @@ export default function PartnerPageClient({ branding }: { branding: PartnerBrand
                       </li>
                     ))}
                   </ul>
-                  <Link
-                    href={pkg.href}
-                    className="mt-8 block w-full rounded-xl py-3.5 text-center text-sm font-semibold text-white transition-all duration-200 hover:opacity-90 hover:scale-[1.01]"
-                    style={{ background: pkg.popular ? accentColor : "#1C3557" }}
-                  >
-                    {pkg.cta}
-                  </Link>
+                  <div className="mt-auto pt-8">
+                    <Link
+                      href={pkg.href}
+                      className="block w-full rounded-xl py-3.5 text-center text-sm font-semibold text-white transition-all duration-200 hover:opacity-90 hover:scale-[1.01]"
+                      style={{ background: pkg.popular ? accentColor : "#1C3557" }}
+                    >
+                      {pkg.cta}
+                    </Link>
+                  </div>
                 </div>
               ))}
             </div>

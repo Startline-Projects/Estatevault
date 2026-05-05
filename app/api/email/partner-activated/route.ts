@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
+import { partnerUrl } from "@/lib/hosts";
 import { cookies } from "next/headers";
 
 export const dynamic = "force-dynamic";
@@ -52,7 +53,7 @@ export async function POST(request: Request) {
         You can log in to your partner dashboard to start managing clients and earning revenue.
       </p>
       <div style="text-align:center;margin:32px 0;">
-        <a href="https://pro.estatevault.com/login" style="display:inline-block;background:#C9A84C;color:#ffffff;text-decoration:none;padding:14px 32px;border-radius:50px;font-size:14px;font-weight:600;">
+        <a href="${partnerUrl("/auth/login")}" style="display:inline-block;background:#C9A84C;color:#ffffff;text-decoration:none;padding:14px 32px;border-radius:50px;font-size:14px;font-weight:600;">
           Go to Partner Dashboard
         </a>
       </div>

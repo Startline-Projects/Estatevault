@@ -4,6 +4,19 @@ import { Suspense, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { clientUrl, partnerUrl } from "@/lib/hosts";
+
+function navigate(router: ReturnType<typeof useRouter>, fullUrl: string) {
+  if (typeof window === "undefined") return;
+  try {
+    const target = new URL(fullUrl);
+    if (target.host === window.location.host) {
+      router.push(target.pathname + target.search);
+      return;
+    }
+  } catch {}
+  window.location.href = fullUrl;
+}
 
 function LoginForm() {
   const router = useRouter();
@@ -57,23 +70,21 @@ function LoginForm() {
         .eq("profile_id", user.id)
         .single();
 
+      let path = "/pro/onboarding/step-1";
       if (partner?.status === "pending_verification") {
-        router.push("/partners/attorneys/welcome");
+        path = "/partners/attorneys/welcome";
       } else if (partner?.onboarding_completed) {
-        router.push("/pro/dashboard");
-      } else {
-        router.push("/pro/onboarding/step-1");
+        path = "/pro/dashboard";
       }
-    } else if (userType === "sales_rep") {
-      router.push("/sales/dashboard");
-    } else if (userType === "admin") {
-      router.push("/sales/dashboard");
+      navigate(router, partnerUrl(path));
+    } else if (userType === "sales_rep" || userType === "admin") {
+      navigate(router, partnerUrl("/sales/dashboard"));
     } else if (userType === "review_attorney") {
-      router.push("/attorney");
+      navigate(router, clientUrl("/attorney"));
     } else if (userType === "affiliate") {
-      router.push("/affiliate");
+      navigate(router, clientUrl("/affiliate"));
     } else {
-      router.push(redirect);
+      navigate(router, clientUrl(redirect));
     }
     router.refresh();
   }

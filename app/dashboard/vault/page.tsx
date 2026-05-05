@@ -220,8 +220,8 @@ export default function VaultPage() {
         <h1 className="mt-6 text-xl font-bold text-navy">Create Your Vault PIN</h1>
         <p className="mt-2 text-sm text-charcoal/60">Choose a 4-digit PIN to secure your vault. This is separate from your account password.</p>
         {pinError && <p className="mt-3 text-sm text-red-600">{pinError}</p>}
-        <input type="password" maxLength={4} inputMode="numeric" pattern="[0-9]*" value={pin} onChange={(e) => { setPin(e.target.value.replace(/\D/g, "")); setPinError(""); }} placeholder="Enter 4-digit PIN" className="mt-6 w-full text-center text-2xl tracking-[0.5em] rounded-xl border-2 border-gray-200 py-3 focus:border-gold focus:outline-none" />
-        <input type="password" maxLength={4} inputMode="numeric" pattern="[0-9]*" value={confirmPin} onChange={(e) => setConfirmPin(e.target.value.replace(/\D/g, ""))} placeholder="Confirm PIN" className="mt-3 w-full text-center text-2xl tracking-[0.5em] rounded-xl border-2 border-gray-200 py-3 focus:border-gold focus:outline-none" />
+        <input type="password" maxLength={4} inputMode="numeric" pattern="[0-9]*" value={pin} onChange={(e) => { setPin(e.target.value.replace(/\D/g, "")); setPinError(""); }} placeholder="Enter 4-digit PIN" className={`mt-6 w-full text-center rounded-xl border-2 border-gray-200 py-4 leading-none focus:border-gold focus:outline-none ${pin ? "text-2xl tracking-[0.5em]" : "text-sm tracking-normal"}`} />
+        <input type="password" maxLength={4} inputMode="numeric" pattern="[0-9]*" value={confirmPin} onChange={(e) => setConfirmPin(e.target.value.replace(/\D/g, ""))} placeholder="Confirm PIN" className={`mt-3 w-full text-center rounded-xl border-2 border-gray-200 py-4 leading-none focus:border-gold focus:outline-none ${confirmPin ? "text-2xl tracking-[0.5em]" : "text-sm tracking-normal"}`} />
         <button onClick={handleCreatePin} disabled={pin.length !== 4 || confirmPin.length !== 4} className="mt-6 w-full min-h-[44px] rounded-full bg-gold py-3 text-sm font-semibold text-white hover:bg-gold/90 disabled:opacity-50 disabled:cursor-not-allowed">Create PIN</button>
       </div>
     );
@@ -233,7 +233,7 @@ export default function VaultPage() {
         <div className="flex justify-center"><div className="h-16 w-16 rounded-full bg-gold/10 flex items-center justify-center"><span className="text-3xl">🔐</span></div></div>
         <h1 className="mt-6 text-xl font-bold text-navy">Enter Your Vault PIN</h1>
         {pinError && <p className="mt-3 text-sm text-red-600">{pinError}</p>}
-        <input type="password" maxLength={4} inputMode="numeric" pattern="[0-9]*" value={pin} onChange={(e) => { setPin(e.target.value.replace(/\D/g, "")); setPinError(""); }} placeholder="4-digit PIN" className="mt-6 w-full text-center text-2xl tracking-[0.5em] rounded-xl border-2 border-gray-200 py-3 focus:border-gold focus:outline-none"
+        <input type="password" maxLength={4} inputMode="numeric" pattern="[0-9]*" value={pin} onChange={(e) => { setPin(e.target.value.replace(/\D/g, "")); setPinError(""); }} placeholder="4-digit PIN" className={`mt-6 w-full text-center rounded-xl border-2 border-gray-200 py-4 leading-none focus:border-gold focus:outline-none ${pin ? "text-2xl tracking-[0.5em]" : "text-sm tracking-normal"}`}
           onKeyDown={(e) => { if (e.key === "Enter" && pin.length === 4) handleVerifyPin(); }} />
         <button onClick={handleVerifyPin} disabled={pin.length !== 4} className="mt-6 w-full min-h-[44px] rounded-full bg-gold py-3 text-sm font-semibold text-white hover:bg-gold/90 disabled:opacity-50 disabled:cursor-not-allowed">Unlock Vault</button>
       </div>

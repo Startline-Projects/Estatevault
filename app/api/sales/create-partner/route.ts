@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createServerClient } from "@supabase/ssr";
+import { partnerUrl, normalizeBusinessDomain } from "@/lib/hosts";
 
 function createAdminClient() {
   return createServerClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, { cookies: { getAll: () => [], setAll: () => {} } });
@@ -27,7 +28,8 @@ export async function POST(request: Request) {
   }
 
   // Generate slug from business URL
-  const urlForSlug = (businessUrl || companyName).replace(/^https?:\/\//, "").replace(/\/$/, "");
+  const cleanBusinessUrl = businessUrl ? normalizeBusinessDomain(businessUrl) : "";
+  const urlForSlug = cleanBusinessUrl || companyName;
   const slug = urlForSlug.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 
   const { data: existingPartner } = await admin.from("partners").select("id").eq("partner_slug", slug).single();
@@ -141,7 +143,7 @@ export async function POST(request: Request) {
             <p style="margin: 0 0 8px 0; color: #666; font-size: 13px;">Temporary Password</p>
             <p style="margin: 0; color: #1C3557; font-weight: 600; font-family: monospace; font-size: 18px;">${tempPassword}</p>
           </div>
-          <a href="https://www.estatevault.us/pro/login"
+          <a href="${partnerUrl("/auth/login")}"
              style="display: block; text-align: center; background: #C9A84C; color: white; text-decoration: none; padding: 14px 24px; border-radius: 999px; font-weight: 600; font-size: 14px;">
             Sign In to Your Account
           </a>

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { normalizeBusinessDomain } from "@/lib/hosts";
 
 const US_STATES = [
   "Alabama","Alaska","Arizona","Arkansas","California","Colorado","Connecticut",
@@ -163,9 +164,7 @@ export default function NewPartnerPage() {
   }
 
   /* ---------- live preview helpers ---------- */
-  const strippedUrl = form.businessUrl
-    ? form.businessUrl.replace(/^https?:\/\//, "").replace(/\/$/, "")
-    : "";
+  const strippedUrl = normalizeBusinessDomain(form.businessUrl);
   const previewUrl = form.planTier === "basic"
     ? (strippedUrl ? `${strippedUrl.replace(/\./g, "-")}.estatevault.us` : "yourcompany.estatevault.us")
     : (strippedUrl ? `legacy.${strippedUrl}` : "legacy.yoursite.com");

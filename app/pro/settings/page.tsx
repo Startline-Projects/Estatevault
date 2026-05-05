@@ -1,8 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useSearchParams } from "next/navigation";
+import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
+import { normalizeBusinessDomain } from "@/lib/hosts";
 
 interface PartnerData {
   id: string;
@@ -59,6 +61,11 @@ export default function ProSettingsPage() {
   const [vaultTagline, setVaultTagline] = useState("");
   const [vaultTheme, setVaultTheme] = useState<"light" | "dark">("light");
   const [vaultSubdomainDisplay, setVaultSubdomainDisplay] = useState("");
+  const [logoUrl, setLogoUrl] = useState<string>("");
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState("");
+  const [dragOver, setDragOver] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     async function load() {
@@ -93,6 +100,7 @@ export default function ProSettingsPage() {
           setSavedSubdomain(p.subdomain);
           if (p.domain_verified) setDomainVerifyStatus("verified");
         }
+        if (p.logo_url) setLogoUrl(p.logo_url);
         if (p.vault_tagline) setVaultTagline(p.vault_tagline);
         if (p.vault_theme) setVaultTheme(p.vault_theme as "light" | "dark");
         if (p.vault_subdomain) setVaultSubdomainDisplay(p.vault_subdomain);
@@ -146,12 +154,67 @@ export default function ProSettingsPage() {
     const supabase = createClient();
     await supabase
       .from("partners")
-      .update({ company_name: companyName, product_name: productName, accent_color: accentColor })
+      .update({ company_name: companyName, product_name: productName, accent_color: accentColor, logo_url: logoUrl || null })
       .eq("id", partner.id);
-    setPartner({ ...partner, company_name: companyName, product_name: productName, accent_color: accentColor });
+    setPartner({ ...partner, company_name: companyName, product_name: productName, accent_color: accentColor, logo_url: logoUrl || null });
     setSaving(false);
     setSaveSuccess("brand");
     setTimeout(() => setSaveSuccess(""), 2000);
+  }
+
+  async function handleLogoUpload(file: File) {
+    if (!partner) return;
+    const validTypes = ["image/png", "image/jpeg", "image/jpg", "image/svg+xml", "image/webp"];
+    if (!validTypes.includes(file.type)) {
+      setUploadError("Use PNG, JPG, SVG, or WebP.");
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setUploadError("Max 5MB.");
+      return;
+    }
+    setUploading(true);
+    setUploadError("");
+    try {
+      const supabase = createClient();
+      const ext = file.name.split(".").pop() || "png";
+      const filePath = `logos/${partner.id}-${Date.now()}.${ext}`;
+
+      let publicUrl = "";
+      const { error: uploadErr } = await supabase.storage
+        .from("logos")
+        .upload(filePath, file, { upsert: true });
+
+      if (uploadErr) {
+        const { error: fallbackErr } = await supabase.storage
+          .from("documents")
+          .upload(filePath, file, { upsert: true });
+        if (fallbackErr) {
+          setUploadError("Upload failed. Try again.");
+          setUploading(false);
+          return;
+        }
+        publicUrl = supabase.storage.from("documents").getPublicUrl(filePath).data.publicUrl;
+      } else {
+        publicUrl = supabase.storage.from("logos").getPublicUrl(filePath).data.publicUrl;
+      }
+
+      await supabase.from("partners").update({ logo_url: publicUrl }).eq("id", partner.id);
+      setLogoUrl(publicUrl);
+      setPartner({ ...partner, logo_url: publicUrl });
+    } catch {
+      setUploadError("Upload failed. Try again.");
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  async function removeLogo() {
+    if (!partner) return;
+    const supabase = createClient();
+    await supabase.from("partners").update({ logo_url: null }).eq("id", partner.id);
+    setLogoUrl("");
+    setPartner({ ...partner, logo_url: null });
   }
 
   async function saveDomain() {
@@ -159,7 +222,7 @@ export default function ProSettingsPage() {
     setDomainSaving(true);
     setDomainError("");
 
-    const cleanUrl = businessUrl.replace(/^https?:\/\//, "").replace(/\/$/, "").toLowerCase();
+    const cleanUrl = normalizeBusinessDomain(businessUrl);
 
     try {
       const res = await fetch("/api/partner/add-domain", {
@@ -354,10 +417,61 @@ export default function ProSettingsPage() {
           </div>
           <div>
             <label className="block text-sm font-medium text-navy mb-1">Logo</label>
-            <div className="rounded-xl border-2 border-dashed border-gray-300 p-6 text-center">
-              <p className="text-sm text-charcoal/50">Drag and drop or click to upload</p>
-              <p className="text-xs text-charcoal/60 mt-1">PNG, SVG, JPG max 5MB</p>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/png,image/jpeg,image/jpg,image/svg+xml,image/webp"
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                if (f) handleLogoUpload(f);
+                e.target.value = "";
+              }}
+              className="hidden"
+            />
+            <div
+              onClick={() => fileInputRef.current?.click()}
+              onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+              onDragLeave={() => setDragOver(false)}
+              onDrop={(e) => {
+                e.preventDefault();
+                setDragOver(false);
+                const f = e.dataTransfer.files[0];
+                if (f) handleLogoUpload(f);
+              }}
+              className={`rounded-xl border-2 border-dashed p-6 text-center cursor-pointer transition-colors ${dragOver ? "border-gold bg-gold/5" : "border-gray-300 hover:border-gold/60"}`}
+            >
+              {uploading ? (
+                <p className="text-sm text-charcoal/60">Uploading...</p>
+              ) : logoUrl ? (
+                <div className="flex items-center justify-center gap-4">
+                  <div className="relative h-16 w-32">
+                    <Image src={logoUrl} alt="Logo" fill className="object-contain" unoptimized />
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <button
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); fileInputRef.current?.click(); }}
+                      className="text-xs text-gold hover:text-gold/80"
+                    >
+                      Replace
+                    </button>
+                    <button
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); removeLogo(); }}
+                      className="text-xs text-red-600 hover:text-red-700"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <p className="text-sm text-charcoal/50">Drag and drop or click to upload</p>
+                  <p className="text-xs text-charcoal/60 mt-1">PNG, SVG, JPG max 5MB</p>
+                </>
+              )}
             </div>
+            {uploadError && <p className="mt-2 text-xs text-red-600">{uploadError}</p>}
           </div>
           <div>
             <label className="block text-sm font-medium text-navy mb-1">Accent Color</label>
@@ -420,7 +534,7 @@ export default function ProSettingsPage() {
               {
                 name: "Document Amendment",
                 clientPays: "$50",
-                earnings: isEnterprise ? "$40" : "$35",
+                earnings: "$10",
               },
             ].map((pkg) => (
               <div key={pkg.name} className="rounded-lg bg-gray-50 p-4">
@@ -461,7 +575,7 @@ export default function ProSettingsPage() {
               <input
                 type="text"
                 value={businessUrl}
-                onChange={(e) => setBusinessUrl(e.target.value.replace(/^https?:\/\//, "").replace(/\/$/, ""))}
+                onChange={(e) => setBusinessUrl(normalizeBusinessDomain(e.target.value))}
                 placeholder="yourcompany.com"
                 className="flex-1 min-h-[44px] rounded-xl border-2 border-gray-200 px-4 py-3 text-sm focus:border-gold focus:outline-none font-mono"
               />
@@ -477,7 +591,7 @@ export default function ProSettingsPage() {
             {businessUrl && (
               <p className="mt-1 text-xs text-charcoal/50">
                 Your site will be at:{" "}
-                <span className="font-mono text-navy">legacy.{businessUrl.replace(/^https?:\/\//, "").replace(/\/$/, "")}</span>
+                <span className="font-mono text-navy">legacy.{normalizeBusinessDomain(businessUrl)}</span>
               </p>
             )}
           </div>

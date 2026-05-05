@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createServerClient } from "@supabase/ssr";
+import { partnerUrl } from "@/lib/hosts";
 
 export const dynamic = "force-dynamic";
 
@@ -49,7 +50,7 @@ export async function POST(request: Request) {
             <p style="margin: 0 0 8px 0; color: #666; font-size: 13px;">Temporary Password</p>
             <p style="margin: 0; color: #1C3557; font-weight: 600; font-family: monospace; font-size: 18px;">${tempPassword}</p>
           </div>
-          <a href="https://www.estatevault.us/pro/login"
+          <a href="${partnerUrl("/auth/login")}"
              style="display: block; text-align: center; background: #C9A84C; color: white; text-decoration: none; padding: 14px 24px; border-radius: 999px; font-weight: 600; font-size: 14px;">
             Sign In to Your Partner Account
           </a>

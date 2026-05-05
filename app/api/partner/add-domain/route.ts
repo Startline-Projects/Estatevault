@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createServerClient } from "@supabase/ssr";
+import { normalizeBusinessDomain } from "@/lib/hosts";
 
 function createAdminClient() {
   return createServerClient(
@@ -86,9 +87,13 @@ export async function POST(request: Request) {
     }
 
     // Build the full domain string
+    const cleanDomain = normalizeBusinessDomain(businessUrl);
+    if (!cleanDomain) {
+      return NextResponse.json({ error: "Invalid businessUrl" }, { status: 400 });
+    }
     const fullDomain = domainType === "custom_domain"
-      ? businessUrl.replace(/^https?:\/\//, "").replace(/\/$/, "").toLowerCase()
-      : `legacy.${businessUrl.replace(/^https?:\/\//, "").replace(/\/$/, "").toLowerCase()}`;
+      ? cleanDomain
+      : `legacy.${cleanDomain}`;
 
     // Remove old domain from Vercel if changing
     const oldDomain = domainType === "custom_domain" ? partner.custom_domain : partner.subdomain;

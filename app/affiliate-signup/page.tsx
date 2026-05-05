@@ -107,8 +107,15 @@ function AffiliateSignupContent() {
     <div className="min-h-screen bg-gray-50 font-sans">
       <header className="bg-white border-b border-gray-200 px-6 py-4">
         <div className="mx-auto max-w-4xl flex items-center justify-between">
-          <Link href="/" className="text-xl font-bold text-navy">
-            EstateVault
+          <Link href="/" className="flex items-center gap-3 group">
+            <img
+              src="/logo.svg"
+              alt="EstateVault"
+              className="h-11 w-11 transition-transform duration-300 group-hover:scale-105"
+            />
+            <span className="text-xl font-bold text-navy tracking-tight hidden sm:inline">
+              EstateVault
+            </span>
           </Link>
           <span className="text-sm text-charcoal/50">Affiliate Program</span>
         </div>

@@ -704,8 +704,15 @@ function ProNav() {
   return (
     <header className="sticky top-0 z-50 bg-navy border-b border-white/10">
       <div className="mx-auto max-w-7xl flex items-center justify-between px-6 py-4">
-        <Link href="/" className="text-xl font-bold text-white tracking-tight">
-          EstateVault
+        <Link href="/" className="flex items-center gap-3 group">
+          <img
+            src="/logo.svg"
+            alt="EstateVault"
+            className="h-11 w-11 transition-transform duration-300 group-hover:scale-105"
+          />
+          <span className="text-xl font-bold text-white tracking-tight hidden sm:inline">
+            EstateVault
+          </span>
         </Link>
         <a
           href="#request-access"

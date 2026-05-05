@@ -53,6 +53,9 @@ export default function Footer() {
                 <Link href="/professionals" className="text-white/50 hover:text-white transition-colors duration-200">
                   For Professionals
                 </Link>
+                <Link href="/affiliate-signup" className="text-white/50 hover:text-white transition-colors duration-200">
+                  Become an Affiliate
+                </Link>
               </nav>
             </div>
           </div>

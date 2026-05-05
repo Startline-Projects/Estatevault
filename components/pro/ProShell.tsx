@@ -67,7 +67,6 @@ export default function ProShell({ companyName, userName, tier, logoUrl, onboard
           {logoUrl ? <img src={logoUrl} alt="" className="h-8 w-8 rounded object-cover" /> : <div className="h-8 w-8 rounded-full bg-gold/20 flex items-center justify-center text-xs font-bold text-gold">{initials}</div>}
           <div className="min-w-0">
             <p className="text-sm font-bold text-white truncate">{companyName}</p>
-            <span className={`text-xs font-medium ${tier === "enterprise" ? "text-gold" : "text-white/60"}`}>{tier === "enterprise" ? "Enterprise" : tier === "basic" ? "Basic" : "Standard"}</span>
           </div>
         </div>
         <div className="mt-4 h-px bg-white/10" />

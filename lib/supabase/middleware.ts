@@ -13,9 +13,22 @@ export async function updateSession(request: NextRequest) {
   // If the request comes from a partner's custom domain (e.g. legacy.thepeoplesfirm.com)
   // look up the partner by that hostname and rewrite to their slug page internally.
   const hostname = request.headers.get("host") || "";
-  const isMainDomain =
+  const partnerHostEnv = process.env.NEXT_PUBLIC_PARTNER_HOST || "pro.estatevault.us";
+  const clientHostEnv = process.env.NEXT_PUBLIC_CLIENT_HOST || "estatevault.us";
+  const isPartnerHost =
+    hostname === partnerHostEnv ||
+    hostname === "pro.estatevault.us" ||
+    hostname.startsWith("pro.localhost");
+  const isClientHost =
+    hostname === clientHostEnv ||
     hostname === "estatevault.us" ||
     hostname === "www.estatevault.us" ||
+    hostname.startsWith("app.localhost") ||
+    hostname === "localhost:3000" ||
+    hostname.startsWith("localhost:");
+  const isMainDomain =
+    isClientHost ||
+    isPartnerHost ||
     hostname.startsWith("localhost") ||
     hostname.includes("vercel.app");
 
@@ -180,6 +193,39 @@ export async function updateSession(request: NextRequest) {
         url.pathname = "/dashboard";
         return NextResponse.redirect(url);
       }
+    }
+  }
+
+  // ── Host-based portal isolation ──────────────────────────────────────────
+  // Only enforce cross-host redirects when request is on a real subdomain
+  // (app.*, pro.*, or production hosts). Plain `localhost:3000` and
+  // preview/test envs skip this so existing behavior is preserved.
+  const isSubdomainAware =
+    hostname.startsWith("pro.") ||
+    hostname.startsWith("app.") ||
+    hostname === "estatevault.us" ||
+    hostname === "www.estatevault.us" ||
+    hostname === "pro.estatevault.us";
+
+  if (isSubdomainAware) {
+    const partnerOnlyPath =
+      pathname.startsWith("/pro") && pathname !== "/pro-partners";
+    const clientOnlyPath =
+      pathname.startsWith("/dashboard") ||
+      pathname.startsWith("/quiz") ||
+      pathname.startsWith("/will") ||
+      pathname.startsWith("/trust");
+    const proto = process.env.NODE_ENV === "production" ? "https" : "http";
+
+    if (isClientHost && partnerOnlyPath) {
+      return NextResponse.redirect(
+        `${proto}://${partnerHostEnv}${pathname}${request.nextUrl.search}`
+      );
+    }
+    if (isPartnerHost && clientOnlyPath) {
+      return NextResponse.redirect(
+        `${proto}://${clientHostEnv}${pathname}${request.nextUrl.search}`
+      );
     }
   }
 

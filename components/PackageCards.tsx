@@ -53,7 +53,7 @@ export default function PackageCards() {
           {packages.map((pkg) => (
             <div
               key={pkg.title}
-              className={`relative group rounded-2xl bg-white p-8 text-left transition-all duration-300 hover:-translate-y-1 ${
+              className={`relative group flex flex-col h-full rounded-2xl bg-white p-8 text-left transition-all duration-300 hover:-translate-y-1 ${
                 pkg.popular
                   ? "border-2 border-gold shadow-gold hover:shadow-gold-lg"
                   : "border border-gray-200 shadow-premium hover:shadow-premium-lg hover:border-navy/20"
@@ -91,16 +91,18 @@ export default function PackageCards() {
                 ))}
               </ul>
 
-              <Link
-                href={pkg.href}
-                className={`mt-8 block w-full rounded-xl py-3.5 text-center text-sm font-semibold transition-all duration-200 ${
-                  pkg.popular
-                    ? "bg-gold text-white hover:bg-gold-600 shadow-gold hover:shadow-gold-lg hover:scale-[1.01]"
-                    : "bg-navy text-white hover:bg-navy-800 shadow-sm hover:shadow-premium hover:scale-[1.01]"
-                }`}
-              >
-                {pkg.cta}
-              </Link>
+              <div className="mt-auto pt-8">
+                <Link
+                  href={pkg.href}
+                  className={`block w-full rounded-xl py-3.5 text-center text-sm font-semibold transition-all duration-200 ${
+                    pkg.popular
+                      ? "bg-gold text-white hover:bg-gold-600 shadow-gold hover:shadow-gold-lg hover:scale-[1.01]"
+                      : "bg-navy text-white hover:bg-navy-800 shadow-sm hover:shadow-premium hover:scale-[1.01]"
+                  }`}
+                >
+                  {pkg.cta}
+                </Link>
+              </div>
             </div>
           ))}
         </div>
