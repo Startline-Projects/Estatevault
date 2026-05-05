@@ -1,21 +1,17 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
-import { createServerClient } from "@supabase/ssr";
-
-function createAdminClient() {
-  return createServerClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, { cookies: { getAll: () => [], setAll: () => {} } });
-}
+import { requireAuth, assertOrderAccess } from "@/lib/api/auth";
 
 export async function GET(request: Request) {
-  const supabase = createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const auth = await requireAuth();
+  if ("error" in auth) return auth.error;
+  const { admin, profile } = auth;
 
   const { searchParams } = new URL(request.url);
   const orderId = searchParams.get("order_id");
   if (!orderId) return NextResponse.json({ error: "Missing order_id" }, { status: 400 });
 
-  const admin = createAdminClient();
+  const access = await assertOrderAccess(admin, orderId, profile);
+  if ("error" in access) return access.error;
 
   const { data: order } = await admin.from("orders").select("status, product_type, attorney_review_requested").eq("id", orderId).single();
   if (!order) return NextResponse.json({ error: "Order not found" }, { status: 404 });

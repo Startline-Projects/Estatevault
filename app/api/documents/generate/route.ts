@@ -1,20 +1,29 @@
 export const dynamic = "force-dynamic";
 
 import { NextResponse } from "next/server";
-import { createServerClient } from "@supabase/ssr";
 import { addJob, type DocumentJob } from "@/lib/queue/document-queue";
 import { randomUUID } from "crypto";
-
-function createAdminClient() {
-  return createServerClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, { cookies: { getAll: () => [], setAll: () => {} } });
-}
+import { requireAuth, assertOrderAccess, rateLimit } from "@/lib/api/auth";
 
 export async function POST(request: Request) {
   try {
-    const { order_id } = await request.json();
-    if (!order_id) return NextResponse.json({ error: "Missing order_id" }, { status: 400 });
+    const auth = await requireAuth();
+    if ("error" in auth) return auth.error;
+    const { admin, profile } = auth;
 
-    const supabase = createAdminClient();
+    const { order_id } = await request.json();
+    if (!order_id || typeof order_id !== "string") {
+      return NextResponse.json({ error: "Missing order_id" }, { status: 400 });
+    }
+
+    const access = await assertOrderAccess(admin, order_id, profile);
+    if ("error" in access) return access.error;
+
+    if (!rateLimit(`gen:${profile.id}:${order_id}`, 3, 10 * 60_000)) {
+      return NextResponse.json({ error: "rate limit exceeded" }, { status: 429 });
+    }
+
+    const supabase = admin;
 
     const { data: order } = await supabase.from("orders").select("*, clients(id, partner_id)").eq("id", order_id).single();
     if (!order) return NextResponse.json({ error: "Order not found" }, { status: 404 });

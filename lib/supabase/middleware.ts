@@ -114,6 +114,10 @@ export async function updateSession(request: NextRequest) {
     (segments.length === 1 || (segments.length === 2 && segments[1] === "vault"));
 
   if (!isPublic && !isPartnerSlug && !user) {
+    // API routes return JSON 401 (no redirect — caller should handle)
+    if (pathname.startsWith("/api/")) {
+      return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+    }
     // Not authenticated, redirect to universal login
     const url = request.nextUrl.clone();
     url.pathname = "/auth/login";
