@@ -37,7 +37,7 @@ async function main() {
     auth: { autoRefreshToken: false, persistSession: false },
   });
 
-  const emails = Object.values(TEST_USERS).map((u) => u.email);
+  const emails: string[] = Object.values(TEST_USERS).map((u) => u.email);
   // Hard guard: every email must end with .test domain
   for (const e of emails) {
     if (!e.endsWith("@estatevault.test")) {
