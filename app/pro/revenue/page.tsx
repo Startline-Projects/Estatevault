@@ -59,14 +59,20 @@ export default function ProRevenuePage() {
       const {
         data: { user },
       } = await supabase.auth.getUser();
-      if (!user) return;
+      if (!user) {
+        setLoading(false);
+        return;
+      }
 
       const { data: partner } = await supabase
         .from("partners")
         .select("id, tier, partner_revenue_pct, stripe_account_id")
         .eq("profile_id", user.id)
         .single();
-      if (!partner) return;
+      if (!partner) {
+        setLoading(false);
+        return;
+      }
 
       const VAULT_PRICE_CENTS = 9900;
       const partnerPct = Number(partner.partner_revenue_pct) || 0;
@@ -216,10 +222,10 @@ export default function ProRevenuePage() {
 
       payoutsList.sort((a, b) => (a.created_at < b.created_at ? 1 : -1));
       setPayouts(payoutsList);
-
-      setLoading(false);
     }
-    load();
+    load()
+      .catch((err) => console.error("revenue load failed", err))
+      .finally(() => setLoading(false));
   }, []);
 
   function dollars(cents: number) {
