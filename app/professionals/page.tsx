@@ -437,21 +437,26 @@ function WhoItsForSection() {
 /* ------------------------------------------------------------------ */
 
 const STANDARD_FEATURES = [
-  "White-labeled client portal",
-  "Your logo and brand colors",
-  "Client management dashboard",
-  "Real-time revenue tracking",
-  "Marketing materials library",
+  "White-labeled client portal (your logo + colors)",
+  "Wills & trusts Documents (Michigan compliant)",
+  "Attorney review add on for clients",
+  "Encrypted client Vault (docs, accounts, credentials)",
+  "Guided quiz + intake flow for clients",
+  "Partner dashboard with client management",
+  "Approved scripts + marketing materials library",
+  "Instant Stripe payout on every sale",
   "Email support",
 ];
 
 const ENTERPRISE_FEATURES = [
   "Everything in Standard",
   "Custom subdomain (yourfirm.estatevault.com)",
+  "Higher payout: $350 / will · $450 / trust",
   "Priority onboarding with dedicated rep",
-  "Co-branded marketing campaigns",
+  "Co branded marketing campaigns",
   "API access for CRM integration",
-  "Phone and Slack support",
+  "Document amendment service for clients",
+  "Phone + Slack support",
   "Quarterly business reviews",
 ];
 

@@ -157,28 +157,11 @@ export default function PartnerPageClient({ branding }: { branding: PartnerBrand
       >
         <div className="mx-auto max-w-7xl flex items-center justify-between px-6 py-3">
           <a href="#" className="flex items-center gap-3 group">
-            {logoUrl ? (
-              <>
-                <Image
-                  src={logoUrl}
-                  alt={companyName}
-                  width={44}
-                  height={44}
-                  className="h-10 w-auto transition-transform duration-300 group-hover:scale-105"
-                />
-                <span className="text-xl font-bold text-navy tracking-tight hidden sm:inline">
-                  {companyName}
-                  <span className="mx-2 font-normal text-charcoal/50">/</span>
-                  <span className="text-charcoal/80">Legacy</span>
-                </span>
-              </>
-            ) : (
-              <span className="text-xl font-bold text-navy tracking-tight">
-                {companyName}
-                <span className="mx-2 font-normal text-charcoal/50">/</span>
-                <span className="text-charcoal/80">Legacy</span>
-              </span>
-            )}
+            <span className="text-xl font-bold text-navy tracking-tight">
+              {companyName}
+              <span className="mx-2 font-normal text-charcoal/50">/</span>
+              <span className="text-charcoal/80">Legacy</span>
+            </span>
           </a>
 
           <nav className="hidden lg:flex items-center gap-8">
