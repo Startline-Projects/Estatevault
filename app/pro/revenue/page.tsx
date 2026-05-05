@@ -312,13 +312,13 @@ export default function ProRevenuePage() {
             <p className="text-2xl font-bold text-navy mt-1">{dollars(pendingBalance)}</p>
           </div>
           <div className="text-right">
-            <p className="text-xs text-charcoal/50">Next payout</p>
-            <p className="text-sm font-medium text-navy">{getNextFriday()}</p>
+            <p className="text-xs text-charcoal/50">Payout</p>
+            <p className="text-sm font-medium text-navy">Instant</p>
           </div>
         </div>
         <p className="mt-3 text-xs text-charcoal/50">
-          Payouts are processed every Friday. Minimum payout is $50. Earnings below $50 roll
-          to the following week.
+          Get paid instantly. Your commission transfers to your Stripe account on every sale.
+          Bank deposit timing follows your Stripe payout schedule.
         </p>
       </div>
 
@@ -329,8 +329,8 @@ export default function ProRevenuePage() {
         </div>
         {payouts.length === 0 ? (
           <div className="p-6 text-center text-sm text-charcoal/50">
-            No payouts yet. Your first payout will arrive within 7 days of your first
-            completed document.
+            No payouts yet. Your first payout transfers instantly when your first sale
+            completes.
           </div>
         ) : (
           <table className="w-full text-sm">

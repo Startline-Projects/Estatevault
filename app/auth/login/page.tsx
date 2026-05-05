@@ -5,17 +5,50 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { clientUrl, partnerUrl } from "@/lib/hosts";
+import { createClient as createBrowserSupabase } from "@/lib/supabase/client";
 
-function navigate(router: ReturnType<typeof useRouter>, fullUrl: string) {
+async function navigate(
+  router: ReturnType<typeof useRouter>,
+  fullUrl: string,
+  target: "client" | "partner",
+  redirectPath: string
+) {
   if (typeof window === "undefined") return;
   try {
-    const target = new URL(fullUrl);
-    if (target.host === window.location.host) {
-      router.push(target.pathname + target.search);
+    const dest = new URL(fullUrl);
+    if (dest.host === window.location.host) {
+      router.push(dest.pathname + dest.search);
       return;
     }
-  } catch {}
-  window.location.href = fullUrl;
+    // Cross-host: get current session tokens, create handoff, sign out locally,
+    // then redirect to target host's /auth/handoff with encrypted token.
+    const supabase = createBrowserSupabase();
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      window.location.href = fullUrl;
+      return;
+    }
+    const res = await fetch("/api/auth/handoff", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        access_token: session.access_token,
+        refresh_token: session.refresh_token,
+        target,
+        redirect_path: redirectPath,
+      }),
+    });
+    if (!res.ok) {
+      window.location.href = fullUrl;
+      return;
+    }
+    const { url } = await res.json();
+    // Sign out on origin host so client doesn't keep stale session here
+    await supabase.auth.signOut();
+    window.location.href = url;
+  } catch {
+    window.location.href = fullUrl;
+  }
 }
 
 function LoginForm() {
@@ -76,15 +109,15 @@ function LoginForm() {
       } else if (partner?.onboarding_completed) {
         path = "/pro/dashboard";
       }
-      navigate(router, partnerUrl(path));
+      await navigate(router, partnerUrl(path), "partner", path);
     } else if (userType === "sales_rep" || userType === "admin") {
-      navigate(router, partnerUrl("/sales/dashboard"));
+      await navigate(router, partnerUrl("/sales/dashboard"), "partner", "/sales/dashboard");
     } else if (userType === "review_attorney") {
-      navigate(router, clientUrl("/attorney"));
+      await navigate(router, clientUrl("/attorney"), "client", "/attorney");
     } else if (userType === "affiliate") {
-      navigate(router, clientUrl("/affiliate"));
+      await navigate(router, clientUrl("/affiliate"), "client", "/affiliate");
     } else {
-      navigate(router, clientUrl(redirect));
+      await navigate(router, clientUrl(redirect), "client", redirect);
     }
     router.refresh();
   }

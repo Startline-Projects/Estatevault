@@ -19,7 +19,10 @@
       "Bash(docker info *)",
       "Bash(supabase start *)",
       "Bash(supabase --version)",
-      "Bash(npm run *)"
+      "Bash(npm run *)",
+      "Bash(openssl rand *)",
+      "Bash(grep -nE \"Basic|Standard|Enterprise|will_payout|trust_payout|price|Price|\\\\\\\\\\\\$[0-9]\" \"/Users/xamir/Desktop/Glo Staffing/Estatevault/app/professionals/page.tsx\")",
+      "Bash(grep *)"
     ]
   }
 }

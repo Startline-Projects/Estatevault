@@ -54,7 +54,7 @@ export default function Step6Page() {
   return (
     <div>
       <h1 className="text-2xl font-bold text-navy">Set Up Your Payouts</h1>
-      <p className="mt-1 text-sm text-charcoal/60">Get paid every Friday for completed documents.</p>
+      <p className="mt-1 text-sm text-charcoal/60">Get paid instantly for every completed document.</p>
 
       <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-4">
         <div onClick={() => setMethod("stripe")} className={`rounded-xl border-2 p-6 cursor-pointer transition-all ${method === "stripe" ? "border-gold bg-gold/5" : "border-gray-200 hover:border-gold/40"}`}>
@@ -95,10 +95,10 @@ export default function Step6Page() {
       <div className="mt-6 rounded-xl bg-gray-50 border border-gray-200 p-6">
         <p className="text-sm font-semibold text-navy">💰 Payout Schedule</p>
         <ul className="mt-3 space-y-1 text-sm text-charcoal/60">
-          <li>• Payouts every Friday</li>
-          <li>• Minimum payout: $50</li>
-          <li>• Earnings below $50 roll to the following week</li>
-          <li>• Your first payout arrives within 7 days of your first completed document</li>
+          <li>• Instant payout per sale via Stripe Connect</li>
+          <li>• No minimum threshold</li>
+          <li>• No batching — every sale transfers immediately</li>
+          <li>• Bank deposit timing follows your Stripe payout schedule</li>
         </ul>
       </div>
 

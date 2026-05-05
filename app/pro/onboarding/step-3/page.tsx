@@ -136,7 +136,7 @@ export default function Step3Page() {
       <div className="mt-6 rounded-xl bg-gray-50 border border-gray-200 p-6 text-center">
         <p className="text-sm text-charcoal/60">If you facilitate 5 trust packages this month:</p>
         <p className="mt-2 text-3xl font-bold text-navy">{scenarioEarnings}</p>
-        <p className="text-xs text-charcoal/60">in monthly earnings, deposited weekly every Friday</p>
+        <p className="text-xs text-charcoal/60">in monthly earnings, paid instantly per sale</p>
       </div>
 
       {/* In-House Attorney Decision Card (attorneys only) */}
