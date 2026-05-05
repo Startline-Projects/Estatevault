@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { encryptHandoff } from "@/lib/handoff";
-import { clientUrl, partnerUrl } from "@/lib/hosts";
+import { clientUrl, partnerUrl, adminUrl, salesUrl } from "@/lib/hosts";
 
 export const dynamic = "force-dynamic";
 
@@ -11,7 +11,7 @@ export async function POST(request: Request) {
     if (!access_token || !refresh_token || !target || !redirect_path) {
       return NextResponse.json({ error: "Missing fields" }, { status: 400 });
     }
-    if (target !== "client" && target !== "partner") {
+    if (!["client", "partner", "admin", "sales"].includes(target)) {
       return NextResponse.json({ error: "Invalid target" }, { status: 400 });
     }
     if (typeof redirect_path !== "string" || !redirect_path.startsWith("/")) {
@@ -19,7 +19,11 @@ export async function POST(request: Request) {
     }
 
     const token = encryptHandoff({ access_token, refresh_token, redirect_path });
-    const base = target === "partner" ? partnerUrl("/auth/handoff") : clientUrl("/auth/handoff");
+    const base =
+      target === "partner" ? partnerUrl("/auth/handoff") :
+      target === "admin" ? adminUrl("/auth/handoff") :
+      target === "sales" ? salesUrl("/auth/handoff") :
+      clientUrl("/auth/handoff");
     const url = `${base}?t=${encodeURIComponent(token)}`;
     return NextResponse.json({ url });
   } catch (e) {

@@ -15,20 +15,34 @@ export async function updateSession(request: NextRequest) {
   const hostname = request.headers.get("host") || "";
   const partnerHostEnv = process.env.NEXT_PUBLIC_PARTNER_HOST || "pro.estatevault.us";
   const clientHostEnv = process.env.NEXT_PUBLIC_CLIENT_HOST || "estatevault.us";
+  const adminHostEnv = process.env.NEXT_PUBLIC_ADMIN_HOST || "admin.estatevault.us";
+  const salesHostEnv = process.env.NEXT_PUBLIC_SALES_HOST || "sales.estatevault.us";
   const isPartnerHost =
     hostname === partnerHostEnv ||
     hostname === "pro.estatevault.us" ||
     hostname.startsWith("pro.localhost");
+  const isAdminHost =
+    hostname === adminHostEnv ||
+    hostname === "admin.estatevault.us" ||
+    hostname.startsWith("admin.localhost");
+  const isSalesHost =
+    hostname === salesHostEnv ||
+    hostname === "sales.estatevault.us" ||
+    hostname.startsWith("sales.localhost");
   const isClientHost =
-    hostname === clientHostEnv ||
-    hostname === "estatevault.us" ||
-    hostname === "www.estatevault.us" ||
-    hostname.startsWith("app.localhost") ||
-    hostname === "localhost:3000" ||
-    hostname.startsWith("localhost:");
+    !isPartnerHost && !isAdminHost && !isSalesHost && (
+      hostname === clientHostEnv ||
+      hostname === "estatevault.us" ||
+      hostname === "www.estatevault.us" ||
+      hostname.startsWith("app.localhost") ||
+      hostname === "localhost:3000" ||
+      hostname.startsWith("localhost:")
+    );
   const isMainDomain =
     isClientHost ||
     isPartnerHost ||
+    isAdminHost ||
+    isSalesHost ||
     hostname.startsWith("localhost") ||
     hostname.includes("vercel.app");
 
@@ -203,29 +217,40 @@ export async function updateSession(request: NextRequest) {
   const isSubdomainAware =
     hostname.startsWith("pro.") ||
     hostname.startsWith("app.") ||
+    hostname.startsWith("admin.") ||
+    hostname.startsWith("sales.") ||
     hostname === "estatevault.us" ||
     hostname === "www.estatevault.us" ||
-    hostname === "pro.estatevault.us";
+    hostname === "pro.estatevault.us" ||
+    hostname === "admin.estatevault.us" ||
+    hostname === "sales.estatevault.us";
 
   if (isSubdomainAware) {
     const partnerOnlyPath =
       pathname.startsWith("/pro") && pathname !== "/pro-partners";
+    const salesPath = pathname.startsWith("/sales");
+    const adminOnlyPath = pathname.startsWith("/admin");
     const clientOnlyPath =
       pathname.startsWith("/dashboard") ||
       pathname.startsWith("/quiz") ||
       pathname.startsWith("/will") ||
       pathname.startsWith("/trust");
     const proto = process.env.NODE_ENV === "production" ? "https" : "http";
+    const search = request.nextUrl.search;
 
-    if (isClientHost && partnerOnlyPath) {
-      return NextResponse.redirect(
-        `${proto}://${partnerHostEnv}${pathname}${request.nextUrl.search}`
-      );
+    if (partnerOnlyPath && !isPartnerHost) {
+      return NextResponse.redirect(`${proto}://${partnerHostEnv}${pathname}${search}`);
     }
-    if (isPartnerHost && clientOnlyPath) {
-      return NextResponse.redirect(
-        `${proto}://${clientHostEnv}${pathname}${request.nextUrl.search}`
-      );
+    if (adminOnlyPath && !isAdminHost) {
+      return NextResponse.redirect(`${proto}://${adminHostEnv}${pathname}${search}`);
+    }
+    // /sales paths allowed on sales host AND admin host (admin can access sales tools).
+    // From any other host → redirect to sales host.
+    if (salesPath && !isSalesHost && !isAdminHost) {
+      return NextResponse.redirect(`${proto}://${salesHostEnv}${pathname}${search}`);
+    }
+    if (clientOnlyPath && !isClientHost) {
+      return NextResponse.redirect(`${proto}://${clientHostEnv}${pathname}${search}`);
     }
   }
 

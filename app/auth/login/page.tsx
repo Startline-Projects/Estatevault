@@ -4,13 +4,13 @@ import { Suspense, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { clientUrl, partnerUrl } from "@/lib/hosts";
+import { clientUrl, partnerUrl, adminUrl, salesUrl } from "@/lib/hosts";
 import { createClient as createBrowserSupabase } from "@/lib/supabase/client";
 
 async function navigate(
   router: ReturnType<typeof useRouter>,
   fullUrl: string,
-  target: "client" | "partner",
+  target: "client" | "partner" | "admin" | "sales",
   redirectPath: string
 ) {
   if (typeof window === "undefined") return;
@@ -110,8 +110,10 @@ function LoginForm() {
         path = "/pro/dashboard";
       }
       await navigate(router, partnerUrl(path), "partner", path);
-    } else if (userType === "sales_rep" || userType === "admin") {
-      await navigate(router, partnerUrl("/sales/dashboard"), "partner", "/sales/dashboard");
+    } else if (userType === "sales_rep") {
+      await navigate(router, salesUrl("/sales/dashboard"), "sales", "/sales/dashboard");
+    } else if (userType === "admin") {
+      await navigate(router, adminUrl("/sales/dashboard"), "admin", "/sales/dashboard");
     } else if (userType === "review_attorney") {
       await navigate(router, clientUrl("/attorney"), "client", "/attorney");
     } else if (userType === "affiliate") {
