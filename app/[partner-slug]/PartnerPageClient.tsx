@@ -612,17 +612,15 @@ export default function PartnerPageClient({ branding }: { branding: PartnerBrand
 
       {/* ── FOOTER ─────────────────────────────────────────────────────────── */}
       {(() => {
-        const isDarkFooter = theme.heroText === "#FFFFFF";
-        const rgb = isDarkFooter ? "255,255,255" : "28,53,87";
-        const c = (a: number) => `rgba(${rgb},${a})`;
+        const c = (a: number) => `rgba(28,53,87,${a})`;
         return (
-          <footer className="py-16 px-6" style={{ background: `linear-gradient(180deg, ${theme.heroBg} 0%, ${theme.heroBgEnd} 100%)`, color: theme.heroText }}>
+          <footer className="py-16 px-6 bg-white border-t border-gray-100" style={{ color: "#1C3557" }}>
             <div className="mx-auto max-w-6xl">
               <div className="flex flex-col md:flex-row items-start justify-between gap-10">
                 <div className="flex flex-col gap-4">
                   {logoUrl ? (
                     <span className="flex items-center gap-2 text-lg font-bold" style={{ color: theme.heroText }}>
-                      <img src={logoUrl} alt={companyName} className="h-8 w-auto object-contain rounded p-1" style={{ background: c(0.10) }} />
+                      <img src={logoUrl} alt={companyName} className="h-8 w-auto object-contain" />
                       <span className="mx-1 font-normal" style={{ color: c(0.40) }}>/</span>
                       <span style={{ color: c(0.80) }}>Legacy</span>
                     </span>
