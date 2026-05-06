@@ -1,6 +1,32 @@
 import { Resend } from "resend";
+import { createServerClient } from "@supabase/ssr";
 
 const resend = new Resend(process.env.RESEND_API_KEY || "re_placeholder");
+
+const DEFAULT_FROM = "EstateVault <info@estatevault.us>";
+
+export async function getPartnerFrom(partnerId?: string | null): Promise<{ from: string; replyTo?: string }> {
+  if (!partnerId) return { from: DEFAULT_FROM };
+  try {
+    const admin = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+      { cookies: { getAll: () => [], setAll: () => {} } }
+    );
+    const { data: p } = await admin
+      .from("partners")
+      .select("sender_name, sender_email, email_verified, company_name")
+      .eq("id", partnerId)
+      .single();
+    if (p?.email_verified && p.sender_email) {
+      const name = p.sender_name || p.company_name || "EstateVault";
+      return { from: `${name} <${p.sender_email}>`, replyTo: p.sender_email };
+    }
+  } catch (e) {
+    console.error("getPartnerFrom failed:", e);
+  }
+  return { from: DEFAULT_FROM };
+}
 
 interface SendDocumentEmailParams {
   to: string;
@@ -130,11 +156,13 @@ function buildEmailHtml({
 </html>`;
 }
 
-export async function sendApprovalEmail({ to, productType, dashboardUrl }: { to: string; productType: "will" | "trust"; dashboardUrl: string }) {
+export async function sendApprovalEmail({ to, productType, dashboardUrl, partnerId }: { to: string; productType: "will" | "trust"; dashboardUrl: string; partnerId?: string | null }) {
   const packageName = productType === "will" ? "Will Package" : "Trust Package";
+  const sender = await getPartnerFrom(partnerId);
   try {
     await resend.emails.send({
-      from: "EstateVault <info@estatevault.us>",
+      from: sender.from,
+      replyTo: sender.replyTo,
       to,
       subject: `Your ${packageName} has been reviewed and is ready`,
       html: `<!DOCTYPE html>
@@ -173,12 +201,14 @@ export async function sendApprovalEmail({ to, productType, dashboardUrl }: { to:
   }
 }
 
-export async function sendDocumentEmail(params: SendDocumentEmailParams) {
+export async function sendDocumentEmail(params: SendDocumentEmailParams & { partnerId?: string | null }) {
   try {
     const packageName = params.productType === "will" ? "Will Package" : "Trust Package";
+    const sender = await getPartnerFrom(params.partnerId);
 
     const { error } = await resend.emails.send({
-      from: "EstateVault <info@estatevault.us>",
+      from: sender.from,
+      replyTo: sender.replyTo,
       to: params.to,
       subject: `Your ${packageName} is ready`,
       html: buildEmailHtml(params),

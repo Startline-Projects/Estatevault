@@ -273,7 +273,7 @@ export default function Step2Page() {
                 </div>
               ) : logoUrl ? (
                 <div className="flex flex-col items-center gap-3">
-                  <div className="relative h-16 w-16">
+                  <div className="relative h-32 w-32">
                     <Image src={logoUrl} alt="Logo" fill className="object-contain rounded" unoptimized />
                   </div>
                   <p className="text-xs text-charcoal/50">Click to replace</p>

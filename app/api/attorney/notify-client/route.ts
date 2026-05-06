@@ -29,7 +29,7 @@ export async function POST(request: Request) {
   // Get review → order → client → profile email
   const { data: review } = await admin
     .from("attorney_reviews")
-    .select("order_id, orders(product_type, client_id, clients(profiles(email)))")
+    .select("order_id, orders(product_type, client_id, partner_id, clients(profiles(email)))")
     .eq("id", reviewId)
     .single();
 
@@ -45,7 +45,8 @@ export async function POST(request: Request) {
 
   const dashboardUrl = `${process.env.NEXT_PUBLIC_SITE_URL || "https://www.estatevault.us"}/dashboard/documents`;
 
-  await sendApprovalEmail({ to: email, productType, dashboardUrl });
+  const partnerId = (order?.partner_id as string | null) || null;
+  await sendApprovalEmail({ to: email, productType, dashboardUrl, partnerId });
 
   return NextResponse.json({ success: true });
 }

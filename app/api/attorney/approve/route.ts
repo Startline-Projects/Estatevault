@@ -80,7 +80,7 @@ export async function POST(request: Request) {
     // Fetch client email for notification
     const { data: order } = await admin
       .from("orders")
-      .select("product_type, client_id")
+      .select("product_type, client_id, partner_id")
       .eq("id", review.order_id)
       .single();
 
@@ -108,7 +108,7 @@ export async function POST(request: Request) {
     // Send approval email to client
     if (clientEmail) {
       const dashboardUrl = `${process.env.NEXT_PUBLIC_SITE_URL || "https://www.estatevault.us"}/dashboard/documents`;
-      await sendApprovalEmail({ to: clientEmail, productType, dashboardUrl });
+      await sendApprovalEmail({ to: clientEmail, productType, dashboardUrl, partnerId: order?.partner_id });
     } else {
       console.error("Could not find client email for review:", reviewId);
     }
