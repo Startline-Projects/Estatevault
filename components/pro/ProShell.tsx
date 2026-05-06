@@ -64,10 +64,16 @@ export default function ProShell({ companyName, userName, tier, logoUrl, onboard
     <>
       <div className="px-5 pt-5 pb-4">
         <div className="flex items-center gap-3">
-          {logoUrl ? <img src={logoUrl} alt="" className="h-8 w-8 rounded object-cover" /> : <div className="h-8 w-8 rounded-full bg-gold/20 flex items-center justify-center text-xs font-bold text-gold">{initials}</div>}
-          <div className="min-w-0">
-            <p className="text-sm font-bold text-white truncate">{companyName}</p>
-          </div>
+          {logoUrl ? (
+            <img src={logoUrl} alt={companyName} className="h-8 max-w-full rounded object-contain" />
+          ) : (
+            <>
+              <div className="h-8 w-8 rounded-full bg-gold/20 flex items-center justify-center text-xs font-bold text-gold">{initials}</div>
+              <div className="min-w-0">
+                <p className="text-sm font-bold text-white truncate">{companyName}</p>
+              </div>
+            </>
+          )}
         </div>
         <div className="mt-4 h-px bg-white/10" />
       </div>
@@ -91,7 +97,7 @@ export default function ProShell({ companyName, userName, tier, logoUrl, onboard
       {/* Mobile header */}
       <header className="md:hidden fixed top-0 left-0 right-0 z-40 bg-navy px-4 py-3 flex items-center justify-between">
         <button onClick={() => setDrawerOpen(true)} className="text-white/70 text-xl">☰</button>
-        <span className="text-sm font-bold text-white">{companyName}</span>
+        {logoUrl ? <img src={logoUrl} alt={companyName} className="h-7 object-contain" /> : <span className="text-sm font-bold text-white">{companyName}</span>}
         <div className="w-6" />
       </header>
 

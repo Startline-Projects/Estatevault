@@ -44,7 +44,7 @@ async function navigate(
     }
     const { url } = await res.json();
     // Sign out on origin host so client doesn't keep stale session here
-    await supabase.auth.signOut();
+    await supabase.auth.signOut({ scope: "local" });
     window.location.href = url;
   } catch {
     window.location.href = fullUrl;

@@ -40,7 +40,7 @@ export default function Step3Page() {
   const isEnterprise = tier === "enterprise";
   const willEarnings = isEnterprise ? "$350" : "$300";
   const trustEarnings = isEnterprise ? "$450" : "$400";
-  const amendEarnings = isEnterprise ? "$40" : "$35";
+  const amendEarnings = "$10";
   const scenarioEarnings = isEnterprise ? "$2,250" : "$2,000";
 
   async function handleContinue() {

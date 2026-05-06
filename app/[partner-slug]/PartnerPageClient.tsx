@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { buildPartnerTheme, themeToCssVars, buildHeroRecipe, type ThemePresetId, type HeroRecipeId } from "@/lib/partner-pages/theme";
 
 export interface PartnerBranding {
   id: string;
@@ -10,6 +11,11 @@ export interface PartnerBranding {
   productName: string;
   logoUrl: string | null;
   accentColor: string;
+  themePresetId?: ThemePresetId;
+  heroRecipeId?: HeroRecipeId;
+  highlightDark?: string | null;
+  highlightLight?: string | null;
+  ctaTextOverride?: string | null;
   partnerId: string;
 }
 
@@ -75,7 +81,19 @@ function AccordionItem({
 // ─── Full Branded Page ────────────────────────────────────────────────────────
 
 export default function PartnerPageClient({ branding }: { branding: PartnerBranding }) {
-  const { companyName, productName, logoUrl, accentColor, partnerId } = branding;
+  const { companyName, productName, logoUrl, accentColor, themePresetId, heroRecipeId, highlightDark, highlightLight, ctaTextOverride, partnerId } = branding;
+  const theme = useMemo(() => buildPartnerTheme(accentColor, themePresetId ?? "cool"), [accentColor, themePresetId]);
+  const themeVars = useMemo(() => themeToCssVars(theme) as React.CSSProperties, [theme]);
+  const heroRecipe = useMemo(
+    () => buildHeroRecipe(accentColor, heroRecipeId ?? "mesh", { highlightDark, ctaText: ctaTextOverride }),
+    [accentColor, heroRecipeId, highlightDark, ctaTextOverride]
+  );
+  const lightHighlight = highlightLight || theme.palette["800"];
+  const lightTintBg = theme.palette["100"];
+  const heroBgStyle: React.CSSProperties = {
+    background: heroRecipe.background,
+    color: heroRecipe.heroText,
+  };
   const [mobileOpen, setMobileOpen] = useState(false);
   const [openFaq, setOpenFaq] = useState<number | null>(null);
 
@@ -149,7 +167,7 @@ export default function PartnerPageClient({ branding }: { branding: PartnerBrand
   ];
 
   return (
-    <>
+    <div style={themeVars}>
       {/* ── HEADER ─────────────────────────────────────────────────────────── */}
       <header
         className="sticky top-0 z-50 bg-white border-b transition-all duration-300"
@@ -232,45 +250,35 @@ export default function PartnerPageClient({ branding }: { branding: PartnerBrand
 
       <main>
         {/* ── HERO ───────────────────────────────────────────────────────────── */}
-        <section className="relative hero-gradient overflow-hidden">
-          <div className="absolute inset-0 overflow-hidden pointer-events-none">
-            <div className="absolute -top-40 -right-40 w-96 h-96 rounded-full blur-3xl animate-float" style={{ background: accentColor + "0d" }} />
-            <div className="absolute top-1/2 -left-20 w-72 h-72 rounded-full blur-3xl animate-float-delayed" style={{ background: accentColor + "0d" }} />
-            <div className="absolute -bottom-20 right-1/4 w-64 h-64 rounded-full bg-white/3 blur-3xl animate-float-slow" />
-          </div>
-          <div
-            className="absolute inset-0 opacity-[0.03]"
-            style={{
-              backgroundImage: `linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px)`,
-              backgroundSize: "64px 64px",
-            }}
-          />
+        <section className="relative overflow-hidden" style={heroBgStyle}>
+          {heroRecipe.overlay && (
+            <div className="absolute inset-0 pointer-events-none" style={{ background: heroRecipe.overlay }} />
+          )}
 
           <div className="relative z-10 py-24 px-6 md:py-32 lg:py-40">
             <div className="mx-auto max-w-4xl text-center">
-              <div className="inline-flex items-center gap-2 rounded-full bg-white/10 border border-white/10 px-4 py-1.5 mb-8">
+              <div
+                className="inline-flex items-center gap-2 rounded-full px-4 py-1.5 mb-8 border"
+                style={{ background: "rgba(255,255,255,0.08)", borderColor: "rgba(255,255,255,0.14)" }}
+              >
                 <div className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
-                <span className="text-xs font-medium text-white/70 tracking-wide uppercase">
+                <span className="text-xs font-medium tracking-wide uppercase" style={{ color: heroRecipe.heroSubtext }}>
                   {productName}, Trusted by Michigan Families
                 </span>
               </div>
 
-              <h1 className="text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-bold text-white leading-[1.1] tracking-tight">
+              <h1
+                className="text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-bold leading-[1.1] tracking-tight"
+                style={{ color: heroRecipe.heroText, textShadow: "0 2px 24px rgba(0,0,0,0.25)" }}
+              >
                 Protect Your Family.
                 <br />
-                <span
-                  style={{
-                    background: `linear-gradient(135deg, ${accentColor}, ${accentColor}bb)`,
-                    WebkitBackgroundClip: "text",
-                    WebkitTextFillColor: "transparent",
-                    backgroundClip: "text",
-                  }}
-                >
+                <span style={{ color: heroRecipe.heroHighlight }}>
                   Peace of Mind in Minutes.
                 </span>
               </h1>
 
-              <p className="mt-6 text-lg md:text-xl text-white/70 max-w-2xl mx-auto leading-relaxed">
+              <p className="mt-6 text-lg md:text-xl max-w-2xl mx-auto leading-relaxed" style={{ color: heroRecipe.heroSubtext }}>
                 Attorney-reviewed wills and trusts built for Michigan families.
                 Your documents and a secure family vault, all in one place.
               </p>
@@ -298,17 +306,17 @@ export default function PartnerPageClient({ branding }: { branding: PartnerBrand
 
               <div className="mt-12 flex flex-wrap items-center justify-center gap-6 text-sm text-white/50">
                 <div className="flex items-center gap-2">
-                  <svg className="w-4 h-4" style={{ color: accentColor }} fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" /></svg>
+                  <svg className="w-4 h-4" style={{ color: heroRecipe.heroHighlight }} fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" /></svg>
                   SSL Secured
                 </div>
                 <div className="w-px h-4 bg-white/20" />
                 <div className="flex items-center gap-2">
-                  <svg className="w-4 h-4" style={{ color: accentColor }} fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 1a4.5 4.5 0 00-4.5 4.5V9H5a2 2 0 00-2 2v6a2 2 0 002 2h10a2 2 0 002-2v-6a2 2 0 00-2-2h-.5V5.5A4.5 4.5 0 0010 1zm3 8V5.5a3 3 0 10-6 0V9h6z" clipRule="evenodd" /></svg>
+                  <svg className="w-4 h-4" style={{ color: heroRecipe.heroHighlight }} fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 1a4.5 4.5 0 00-4.5 4.5V9H5a2 2 0 00-2 2v6a2 2 0 002 2h10a2 2 0 002-2v-6a2 2 0 00-2-2h-.5V5.5A4.5 4.5 0 0010 1zm3 8V5.5a3 3 0 10-6 0V9h6z" clipRule="evenodd" /></svg>
                   256-bit Encrypted
                 </div>
                 <div className="w-px h-4 bg-white/20" />
                 <div className="flex items-center gap-2">
-                  <svg className="w-4 h-4" style={{ color: accentColor }} fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" /></svg>
+                  <svg className="w-4 h-4" style={{ color: heroRecipe.heroHighlight }} fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" /></svg>
                   Attorney-Reviewed
                 </div>
               </div>
@@ -326,7 +334,7 @@ export default function PartnerPageClient({ branding }: { branding: PartnerBrand
               { label: "Secure Family Vault", icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" /></svg> },
             ].map((item) => (
               <div key={item.label} className="flex items-center gap-2.5 text-navy/60">
-                <span style={{ color: accentColor }}>{item.icon}</span>
+                <span style={{ color: lightHighlight }}>{item.icon}</span>
                 <span className="text-sm font-medium">{item.label}</span>
               </div>
             ))}
@@ -358,7 +366,7 @@ export default function PartnerPageClient({ branding }: { branding: PartnerBrand
                   <div className="relative flex flex-col items-center p-8 rounded-2xl bg-white border border-gray-100 shadow-premium hover:shadow-premium-lg transition-all duration-300 hover:-translate-y-1">
                     <div
                       className="absolute -top-3 left-6 px-3 py-0.5 rounded-full text-xs font-bold"
-                      style={{ background: accentColor + "1a", color: accentColor }}
+                      style={{ background: lightTintBg, color: lightHighlight }}
                     >
                       Step {step.number}
                     </div>
@@ -377,8 +385,8 @@ export default function PartnerPageClient({ branding }: { branding: PartnerBrand
         {/* ── PACKAGE CARDS ──────────────────────────────────────────────────── */}
         <section id="pricing" className="relative bg-gradient-to-b from-gray-50 to-white py-24 px-6">
           <div className="mx-auto max-w-4xl text-center">
-            <div className="inline-flex items-center gap-2 rounded-full px-4 py-1.5 mb-4" style={{ background: accentColor + "1a" }}>
-              <span className="text-xs font-semibold tracking-wide uppercase" style={{ color: accentColor }}>One-Time Payment</span>
+            <div className="inline-flex items-center gap-2 rounded-full px-4 py-1.5 mb-4" style={{ background: lightTintBg }}>
+              <span className="text-xs font-semibold tracking-wide uppercase" style={{ color: lightHighlight }}>One-Time Payment</span>
             </div>
             <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-navy tracking-tight">Simple, Honest Pricing</h2>
             <p className="mt-4 text-lg text-charcoal/60 max-w-xl mx-auto">Pay once. No subscriptions, no hidden fees, no surprises.</p>
@@ -417,7 +425,7 @@ export default function PartnerPageClient({ branding }: { branding: PartnerBrand
                   <ul className="mt-6 space-y-3.5">
                     {pkg.features.map((f) => (
                       <li key={f} className="flex items-start gap-3 text-sm text-charcoal/70">
-                        <svg className="mt-0.5 w-5 h-5 shrink-0" style={{ color: accentColor }} fill="currentColor" viewBox="0 0 20 20">
+                        <svg className="mt-0.5 w-5 h-5 shrink-0" style={{ color: lightHighlight }} fill="currentColor" viewBox="0 0 20 20">
                           <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                         </svg>
                         {f}
@@ -440,7 +448,7 @@ export default function PartnerPageClient({ branding }: { branding: PartnerBrand
         </section>
 
         {/* ── VAULT SECTION ──────────────────────────────────────────────────── */}
-        <section id="vault" className="relative hero-gradient py-24 px-6 overflow-hidden">
+        <section id="vault" className="relative py-24 px-6 overflow-hidden" style={heroBgStyle}>
           <div className="absolute inset-0 overflow-hidden pointer-events-none">
             <div className="absolute top-20 right-10 w-64 h-64 rounded-full blur-3xl animate-float" style={{ background: accentColor + "0d" }} />
             <div className="absolute -bottom-10 left-20 w-48 h-48 rounded-full blur-3xl animate-float-delayed" style={{ background: accentColor + "0d" }} />
@@ -448,15 +456,15 @@ export default function PartnerPageClient({ branding }: { branding: PartnerBrand
 
           <div className="relative z-10 mx-auto max-w-5xl text-center">
             <div className="inline-flex items-center gap-2 rounded-full bg-white/10 border border-white/10 px-4 py-1.5 mb-4">
-              <svg className="w-4 h-4" style={{ color: accentColor }} fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+              <svg className="w-4 h-4" style={{ color: heroRecipe.heroHighlight }} fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
               </svg>
               <span className="text-xs font-semibold text-white/70 tracking-wide uppercase">Secure Vault</span>
             </div>
 
-            <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-white tracking-tight">
+            <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold tracking-tight" style={{ color: heroRecipe.heroText, textShadow: "0 2px 16px rgba(0,0,0,0.25)" }}>
               More Than Documents  <br className="hidden sm:block" />
-              <span style={{ background: `linear-gradient(135deg, ${accentColor}, ${accentColor}bb)`, WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>
+              <span style={{ color: heroRecipe.heroHighlight }}>
                 A Complete Family Vault
               </span>
             </h2>
@@ -469,7 +477,7 @@ export default function PartnerPageClient({ branding }: { branding: PartnerBrand
                 <div key={cat.label} className="group glass rounded-2xl p-6 text-center hover:bg-white/12 transition-all duration-300 hover:-translate-y-0.5">
                   <div
                     className="inline-flex items-center justify-center w-12 h-12 rounded-xl mb-4 group-hover:scale-110 transition-transform duration-300"
-                    style={{ background: accentColor + "1a", color: accentColor }}
+                    style={{ background: "rgba(255,255,255,0.10)", color: heroRecipe.heroHighlight }}
                   >
                     {cat.icon}
                   </div>
@@ -480,8 +488,8 @@ export default function PartnerPageClient({ branding }: { branding: PartnerBrand
 
             <Link
               href={quizHref}
-              className="mt-14 inline-flex items-center gap-2 rounded-full border px-8 py-3.5 text-sm font-semibold transition-all duration-300 hover:text-white group"
-              style={{ borderColor: accentColor + "66", color: accentColor }}
+              className="mt-14 inline-flex items-center gap-2 rounded-full border-2 px-8 py-3.5 text-sm font-semibold transition-all duration-300 hover:bg-white/10 group"
+              style={{ borderColor: heroRecipe.heroHighlight, color: heroRecipe.heroHighlight }}
             >
               Start With the Free Quiz
               <svg className="w-4 h-4 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
@@ -508,7 +516,7 @@ export default function PartnerPageClient({ branding }: { branding: PartnerBrand
                 <div key={t.name} className="group rounded-2xl border border-gray-100 bg-white p-7 text-left shadow-premium hover:shadow-premium-lg transition-all duration-300 hover:-translate-y-0.5">
                   <div className="flex gap-0.5 mb-4">
                     {[...Array(5)].map((_, i) => (
-                      <svg key={i} className="w-4 h-4" style={{ color: accentColor }} fill="currentColor" viewBox="0 0 20 20">
+                      <svg key={i} className="w-4 h-4" style={{ color: lightHighlight }} fill="currentColor" viewBox="0 0 20 20">
                         <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
                       </svg>
                     ))}
@@ -558,15 +566,15 @@ export default function PartnerPageClient({ branding }: { branding: PartnerBrand
         </section>
 
         {/* ── FINAL CTA ──────────────────────────────────────────────────────── */}
-        <section className="relative hero-gradient py-24 px-6 overflow-hidden">
+        <section className="relative py-24 px-6 overflow-hidden" style={heroBgStyle}>
           <div className="absolute inset-0 overflow-hidden pointer-events-none">
             <div className="absolute -top-20 left-1/4 w-80 h-80 rounded-full blur-3xl animate-float" style={{ background: accentColor + "0d" }} />
             <div className="absolute -bottom-20 right-1/3 w-64 h-64 rounded-full blur-3xl animate-float-delayed" style={{ background: accentColor + "0d" }} />
           </div>
           <div className="relative z-10 mx-auto max-w-3xl text-center">
-            <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-white tracking-tight leading-tight">
+            <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold tracking-tight leading-tight" style={{ color: heroRecipe.heroText, textShadow: "0 2px 16px rgba(0,0,0,0.25)" }}>
               Your family is counting<br />on{" "}
-              <span style={{ background: `linear-gradient(135deg, ${accentColor}, ${accentColor}bb)`, WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>
+              <span style={{ color: heroRecipe.heroHighlight }}>
                 you.
               </span>
             </h2>
@@ -574,8 +582,8 @@ export default function PartnerPageClient({ branding }: { branding: PartnerBrand
             <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
               <Link
                 href={quizHref}
-                className="group relative rounded-full px-10 py-4 text-base font-semibold text-white transition-all duration-300 hover:opacity-90 hover:scale-[1.02] active:scale-[0.98] shadow-lg"
-                style={{ background: accentColor }}
+                className="group relative rounded-full px-10 py-4 text-base font-semibold transition-all duration-300 hover:opacity-90 hover:scale-[1.02] active:scale-[0.98] shadow-lg"
+                style={{ background: accentColor, color: heroRecipe.ctaText }}
               >
                 <span className="relative z-10 flex items-center gap-2">
                   Take the Free Quiz
@@ -599,14 +607,11 @@ export default function PartnerPageClient({ branding }: { branding: PartnerBrand
         <div className="mx-auto max-w-6xl">
           <div className="flex flex-col md:flex-row items-start justify-between gap-10">
             <div className="flex flex-col gap-4">
-              {logoUrl ? (
-                <div className="flex items-center gap-3">
-                  <Image src={logoUrl} alt={companyName} width={36} height={36} className="h-9 w-auto" />
-                  <span className="text-lg font-bold text-white">{companyName}</span>
-                </div>
-              ) : (
-                <span className="text-lg font-bold text-white">{companyName}</span>
-              )}
+              <span className="text-lg font-bold text-white">
+                {companyName}
+                <span className="mx-2 font-normal text-white/40">/</span>
+                <span className="text-white/80">Legacy</span>
+              </span>
               <p className="text-sm text-white/50 max-w-xs">{productName}, Estate planning for Michigan families.</p>
             </div>
             <div className="flex gap-16">
@@ -640,6 +645,6 @@ export default function PartnerPageClient({ branding }: { branding: PartnerBrand
           </p>
         </div>
       </footer>
-    </>
+    </div>
   );
 }
