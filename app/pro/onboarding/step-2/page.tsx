@@ -56,7 +56,7 @@ export default function Step2Page() {
         <span className="h-2.5 w-2.5 rounded-full bg-red-400" />
         <span className="h-2.5 w-2.5 rounded-full bg-yellow-400" />
         <span className="h-2.5 w-2.5 rounded-full bg-green-400" />
-        <div className="ml-3 flex-1 rounded bg-white px-2 py-0.5 text-[10px] text-charcoal/50 truncate">{(companyName || "yourbrand").toLowerCase().replace(/\s+/g, "")}.estatevault.com</div>
+        <div className="ml-3 flex-1 rounded bg-white px-2 py-0.5 text-[10px] text-charcoal/50 truncate">legacy.{(companyName || "yourbrand").toLowerCase().replace(/\s+/g, "")}.com</div>
       </div>
       <div className="bg-white px-4 py-2.5 flex items-center justify-between border-b" style={{ borderColor: `${accentColor}33` }}>
         <div className="flex items-center gap-2">
@@ -131,9 +131,9 @@ export default function Step2Page() {
         if (partner.accent_color) setAccentColor(partner.accent_color);
         if (partner.theme_preset) setThemePreset(partner.theme_preset as ThemePresetId);
         if (partner.hero_recipe) setHeroRecipe(partner.hero_recipe as HeroRecipeId);
-        if (partner.highlight_dark) { setHighlightDark(partner.highlight_dark); setCustomizeColors(true); }
-        if (partner.highlight_light) { setHighlightLight(partner.highlight_light); setCustomizeColors(true); }
-        if (partner.cta_text_override) { setCtaTextOverride(partner.cta_text_override); setCustomizeColors(true); }
+        if (partner.highlight_dark) setHighlightDark(partner.highlight_dark);
+        if (partner.highlight_light) setHighlightLight(partner.highlight_light);
+        if (partner.cta_text_override) setCtaTextOverride(partner.cta_text_override);
         if (partner.logo_url) setLogoUrl(partner.logo_url);
       }
     }
@@ -248,7 +248,7 @@ export default function Step2Page() {
           </div>
           <div>
             <label className="block text-sm font-medium text-navy mb-1">Product Name</label>
-            <input type="text" value={productName} onChange={(e) => setProductName(e.target.value)} className="w-full min-h-[44px] rounded-xl border-2 border-gray-200 px-4 py-3 text-sm focus:border-gold focus:outline-none" />
+            <input type="text" value={productName} readOnly disabled className="w-full min-h-[44px] rounded-xl border-2 border-gray-200 bg-gray-50 px-4 py-3 text-sm text-charcoal/60 cursor-not-allowed" />
             <p className="mt-1 text-xs text-charcoal/50">Appears in your URL, emails, and documents</p>
           </div>
           <div>

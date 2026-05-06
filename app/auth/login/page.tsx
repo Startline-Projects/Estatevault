@@ -43,8 +43,11 @@ async function navigate(
       return;
     }
     const { url } = await res.json();
-    // Sign out on origin host so client doesn't keep stale session here
-    await supabase.auth.signOut({ scope: "local" });
+    // Do NOT call supabase.auth.signOut here — even scope:"local" hits the
+    // /logout API and invalidates the current session_id server-side, which
+    // would cause setSession on the target host to fail with
+    // "Auth session missing!" (server can't find session_id in DB).
+    // Origin keeps the session; both hosts end up signed in to same session.
     window.location.href = url;
   } catch {
     window.location.href = fullUrl;

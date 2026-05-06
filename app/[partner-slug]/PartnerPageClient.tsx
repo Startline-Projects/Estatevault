@@ -175,11 +175,19 @@ export default function PartnerPageClient({ branding }: { branding: PartnerBrand
       >
         <div className="mx-auto max-w-7xl flex items-center justify-between px-6 py-3">
           <a href="#" className="flex items-center gap-3 group">
-            <span className="text-xl font-bold text-navy tracking-tight">
-              {companyName}
-              <span className="mx-2 font-normal text-charcoal/50">/</span>
-              <span className="text-charcoal/80">Legacy</span>
-            </span>
+            {logoUrl ? (
+              <span className="flex items-center gap-2 text-xl font-bold text-navy tracking-tight">
+                <img src={logoUrl} alt={companyName} className="h-8 w-auto object-contain" />
+                <span className="mx-1 font-normal text-charcoal/50">/</span>
+                <span className="text-charcoal/80">Legacy</span>
+              </span>
+            ) : (
+              <span className="text-xl font-bold text-navy tracking-tight">
+                {companyName}
+                <span className="mx-2 font-normal text-charcoal/50">/</span>
+                <span className="text-charcoal/80">Legacy</span>
+              </span>
+            )}
           </a>
 
           <nav className="hidden lg:flex items-center gap-8">
@@ -603,48 +611,63 @@ export default function PartnerPageClient({ branding }: { branding: PartnerBrand
       </main>
 
       {/* ── FOOTER ─────────────────────────────────────────────────────────── */}
-      <footer className="bg-navy-900 py-16 px-6">
-        <div className="mx-auto max-w-6xl">
-          <div className="flex flex-col md:flex-row items-start justify-between gap-10">
-            <div className="flex flex-col gap-4">
-              <span className="text-lg font-bold text-white">
-                {companyName}
-                <span className="mx-2 font-normal text-white/40">/</span>
-                <span className="text-white/80">Legacy</span>
-              </span>
-              <p className="text-sm text-white/50 max-w-xs">{productName}, Estate planning for Michigan families.</p>
-            </div>
-            <div className="flex gap-16">
-              <div>
-                <h4 className="text-xs font-semibold text-white/60 uppercase tracking-wider mb-4">Legal</h4>
-                <nav className="flex flex-col gap-3 text-sm">
-                  <Link href="/privacy" className="text-white/50 hover:text-white transition-colors duration-200">Privacy Policy</Link>
-                  <Link href="/terms" className="text-white/50 hover:text-white transition-colors duration-200">Terms of Service</Link>
-                </nav>
+      {(() => {
+        const isDarkFooter = theme.heroText === "#FFFFFF";
+        const rgb = isDarkFooter ? "255,255,255" : "28,53,87";
+        const c = (a: number) => `rgba(${rgb},${a})`;
+        return (
+          <footer className="py-16 px-6" style={{ background: `linear-gradient(180deg, ${theme.heroBg} 0%, ${theme.heroBgEnd} 100%)`, color: theme.heroText }}>
+            <div className="mx-auto max-w-6xl">
+              <div className="flex flex-col md:flex-row items-start justify-between gap-10">
+                <div className="flex flex-col gap-4">
+                  {logoUrl ? (
+                    <span className="flex items-center gap-2 text-lg font-bold" style={{ color: theme.heroText }}>
+                      <img src={logoUrl} alt={companyName} className="h-8 w-auto object-contain rounded p-1" style={{ background: c(0.10) }} />
+                      <span className="mx-1 font-normal" style={{ color: c(0.40) }}>/</span>
+                      <span style={{ color: c(0.80) }}>Legacy</span>
+                    </span>
+                  ) : (
+                    <span className="text-lg font-bold" style={{ color: theme.heroText }}>
+                      {companyName}
+                      <span className="mx-2 font-normal" style={{ color: c(0.40) }}>/</span>
+                      <span style={{ color: c(0.80) }}>Legacy</span>
+                    </span>
+                  )}
+                  <p className="text-sm max-w-xs" style={{ color: c(0.55) }}>{productName}, Estate planning for Michigan families.</p>
+                </div>
+                <div className="flex gap-16">
+                  <div>
+                    <h4 className="text-xs font-semibold uppercase tracking-wider mb-4" style={{ color: c(0.60) }}>Legal</h4>
+                    <nav className="flex flex-col gap-3 text-sm">
+                      <Link href="/privacy" className="transition-colors duration-200" style={{ color: c(0.55) }}>Privacy Policy</Link>
+                      <Link href="/terms" className="transition-colors duration-200" style={{ color: c(0.55) }}>Terms of Service</Link>
+                    </nav>
+                  </div>
+                  <div>
+                    <h4 className="text-xs font-semibold uppercase tracking-wider mb-4" style={{ color: c(0.60) }}>Product</h4>
+                    <nav className="flex flex-col gap-3 text-sm">
+                      <Link href={quizHref} className="transition-colors duration-200" style={{ color: c(0.55) }}>Free Quiz</Link>
+                      <Link href={willHref} className="transition-colors duration-200" style={{ color: c(0.55) }}>Will Package</Link>
+                      <Link href={trustHref} className="transition-colors duration-200" style={{ color: c(0.55) }}>Trust Package</Link>
+                    </nav>
+                  </div>
+                </div>
               </div>
-              <div>
-                <h4 className="text-xs font-semibold text-white/60 uppercase tracking-wider mb-4">Product</h4>
-                <nav className="flex flex-col gap-3 text-sm">
-                  <Link href={quizHref} className="text-white/50 hover:text-white transition-colors duration-200">Free Quiz</Link>
-                  <Link href={willHref} className="text-white/50 hover:text-white transition-colors duration-200">Will Package</Link>
-                  <Link href={trustHref} className="text-white/50 hover:text-white transition-colors duration-200">Trust Package</Link>
-                </nav>
+
+              <div className="my-10 h-px" style={{ background: c(0.12) }} />
+
+              <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+                <p className="text-xs" style={{ color: c(0.55) }}>&copy; {new Date().getFullYear()} {companyName}. All rights reserved.</p>
+                <p className="text-xs" style={{ color: c(0.40) }}>Powered by <span style={{ color: c(0.60) }}>EstateVault</span></p>
               </div>
+
+              <p className="mt-6 text-xs leading-relaxed max-w-4xl" style={{ color: c(0.45) }}>
+                This platform provides document preparation services only. It does not provide legal advice. No attorney-client relationship is created by your use of this platform.
+              </p>
             </div>
-          </div>
-
-          <div className="my-10 h-px bg-white/10" />
-
-          <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-            <p className="text-xs text-white/50">&copy; {new Date().getFullYear()} {companyName}. All rights reserved.</p>
-            <p className="text-xs text-white/30">Powered by <span className="text-white/50">EstateVault</span></p>
-          </div>
-
-          <p className="mt-6 text-xs text-white/40 leading-relaxed max-w-4xl">
-            This platform provides document preparation services only. It does not provide legal advice. No attorney-client relationship is created by your use of this platform.
-          </p>
-        </div>
-      </footer>
+          </footer>
+        );
+      })()}
     </div>
   );
 }

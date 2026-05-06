@@ -13,6 +13,7 @@ export default function Step1Page() {
   const [error, setError] = useState("");
   const [sliderValue, setSliderValue] = useState(5);
   const [partnerId, setPartnerId] = useState("");
+  const [alreadyPaid, setAlreadyPaid] = useState(false);
 
   useEffect(() => {
     async function load() {
@@ -25,9 +26,9 @@ export default function Step1Page() {
         if (partner.tier) setSelectedTier(partner.tier as "standard" | "enterprise" | "basic");
         const isBasic = partner.tier === "basic";
         const nextStep = isBasic ? "/pro/onboarding/step-2-vault" : "/pro/onboarding/step-2";
-        // Skip payment step if platform fee already paid, or promo code waives it
-        if (partner.annual_fee_paid || partner.one_time_fee_paid) { router.push(nextStep); return; }
-        if (partner.promo_code && partner.promo_code.toUpperCase() === "FREE676") {
+        if (partner.annual_fee_paid || partner.one_time_fee_paid) setAlreadyPaid(true);
+        const cameFromInternal = typeof document !== "undefined" && document.referrer.includes(window.location.host);
+        if (!cameFromInternal && partner.promo_code && partner.promo_code.toUpperCase() === "FREE676" && !partner.one_time_fee_paid && !partner.annual_fee_paid) {
           await supabase.from("partners").update({ one_time_fee_paid: true, onboarding_step: 2 }).eq("id", partner.id);
           router.push(nextStep);
           return;
@@ -51,6 +52,12 @@ export default function Step1Page() {
     }
     setLoading(true);
     setError("");
+
+    if (alreadyPaid) {
+      const isBasic = selectedTier === "basic";
+      router.push(isBasic ? "/pro/onboarding/step-2-vault" : "/pro/onboarding/step-2");
+      return;
+    }
 
     try {
       const res = await fetch("/api/checkout/partner", {
