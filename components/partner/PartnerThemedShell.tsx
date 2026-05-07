@@ -56,23 +56,30 @@ export default function PartnerThemedShell({ children, showHeader = true }: Shel
 
   useEffect(() => {
     const partnerId = resolvePartnerIdSync();
-    if (!partnerId) {
+    const host = typeof window !== "undefined" ? window.location.hostname.toLowerCase() : "";
+    const isPartnerHost = !!host && !/(^|\.)estatevault\.com$/.test(host) && !/^localhost$/.test(host) && !/^127\./.test(host);
+    if (!partnerId && !isPartnerHost) {
       setResolved(true);
       return;
     }
-    try {
-      const path = window.location.pathname;
-      if (path.startsWith("/trust")) window.sessionStorage.setItem("trustPartner", partnerId);
-      if (path.startsWith("/will")) window.sessionStorage.setItem("willPartner", partnerId);
-      if (path.startsWith("/quiz")) window.sessionStorage.setItem("quizPartner", partnerId);
-    } catch {}
+    const url = partnerId
+      ? `/api/partners/branding?id=${encodeURIComponent(partnerId)}`
+      : `/api/partners/branding?domain=${encodeURIComponent(host)}`;
     let cancelled = false;
     (async () => {
       try {
-        const res = await fetch(`/api/partners/branding?id=${encodeURIComponent(partnerId)}`, { cache: "no-store" });
+        const res = await fetch(url, { cache: "no-store" });
         if (cancelled) return;
         const next: PartnerBranding | null = res.ok ? await res.json() : null;
         setBranding(next);
+        if (next) {
+          try {
+            const path = window.location.pathname;
+            if (path.startsWith("/trust")) window.sessionStorage.setItem("trustPartner", next.id);
+            if (path.startsWith("/will")) window.sessionStorage.setItem("willPartner", next.id);
+            if (path.startsWith("/quiz")) window.sessionStorage.setItem("quizPartner", next.id);
+          } catch {}
+        }
       } catch {
         setBranding(null);
       } finally {

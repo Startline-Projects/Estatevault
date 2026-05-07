@@ -12,14 +12,20 @@ function createAdminClient() {
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const id = searchParams.get("id");
-  if (!id) return NextResponse.json({ error: "Missing id" }, { status: 400 });
+  const domain = searchParams.get("domain")?.toLowerCase().trim();
+  const slug = searchParams.get("slug");
+  if (!id && !domain && !slug) return NextResponse.json({ error: "Missing id|domain|slug" }, { status: 400 });
 
   const admin = createAdminClient();
-  const { data, error } = await admin
-    .from("partners")
-    .select("id, company_name, product_name, logo_url, accent_color, theme_preset, hero_recipe, highlight_dark, cta_text_override")
-    .eq("id", id)
-    .single();
+  const cols = "id, company_name, product_name, logo_url, accent_color, theme_preset, hero_recipe, highlight_dark, cta_text_override";
+
+  let query = admin.from("partners").select(cols).limit(1);
+  if (id) query = query.eq("id", id);
+  else if (slug) query = query.eq("partner_slug", slug);
+  else if (domain) query = query.or(`subdomain.eq.${domain},custom_domain.eq.${domain}`);
+
+  const { data: rows, error } = await query;
+  const data = rows?.[0];
 
   if (error || !data) return NextResponse.json({ error: "Partner not found" }, { status: 404 });
 
