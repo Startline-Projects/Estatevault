@@ -41,9 +41,9 @@ export default function Hero() {
             Your documents and a secure family vault, all in one place.
           </p>
 
-          <div className="mt-10 flex flex-col items-center gap-4">
+          <div className="mt-10 flex flex-col items-center gap-4 w-full max-w-md sm:max-w-none mx-auto">
             {/* Primary actions */}
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-3 w-full sm:w-auto">
               <Link
                 href="/will"
                 className="group relative w-full sm:w-auto rounded-full bg-white/10 border border-white/25 px-10 py-4 text-base font-semibold text-white transition-all duration-300 hover:bg-white/20 hover:border-white/40 hover:scale-[1.02] active:scale-[0.98] text-center"
@@ -61,9 +61,9 @@ export default function Hero() {
             {/* Quiz CTA */}
             <Link
               href="/quiz"
-              className="group relative w-full sm:w-auto rounded-full bg-gold px-10 py-4 text-base font-semibold text-white transition-all duration-300 shadow-gold hover:shadow-gold-lg hover:scale-[1.02] active:scale-[0.98] text-center overflow-hidden"
+              className="group relative w-full sm:w-auto rounded-full bg-gold px-6 sm:px-10 py-3 sm:py-4 text-sm sm:text-base font-semibold text-white transition-all duration-300 shadow-gold hover:shadow-gold-lg hover:scale-[1.02] active:scale-[0.98] text-center overflow-hidden whitespace-nowrap"
             >
-              <span className="relative z-10 flex items-center justify-center gap-2">
+              <span className="relative z-10 flex flex-wrap items-center justify-center gap-x-2 gap-y-1">
                 <span className="text-white/80 font-normal">Not sure?</span>
                 Take a free quiz
               </span>

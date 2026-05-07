@@ -120,6 +120,7 @@ export default function ProDashboardPage() {
   const tipIndex = Math.floor(Date.now() / (24 * 60 * 60 * 1000)) % TIPS.length;
   const isBasic = tier === "basic";
   const vaultUrl = vaultSubdomain ? `https://${vaultSubdomain}.estatevault.us` : null;
+  const isNorthwood = businessUrl?.toLowerCase().includes("northwoodwealthadvisors");
 
   function timeAgo(date: string) {
     const diff = Date.now() - new Date(date).getTime();
@@ -156,17 +157,17 @@ export default function ProDashboardPage() {
     <div className="max-w-5xl">
       {/* Welcome banner */}
       {!dismissed && (
-        <div className="rounded-xl bg-navy p-6 mb-6 flex items-center justify-between">
+        <div className={`rounded-xl p-6 mb-6 flex items-center justify-between ${isNorthwood ? "" : "bg-navy"}`} style={isNorthwood ? { backgroundColor: "#f7f4ed" } : undefined}>
           <div>
-            <h1 className="text-lg font-bold text-white">Welcome to your live platform, {companyName}!</h1>
+            <h1 className={`text-lg font-bold ${isNorthwood ? "text-black" : "text-white"}`}>Welcome to your live platform, {companyName}!</h1>
             {isBasic && vaultUrl && (
-              <p className="mt-1 text-sm text-blue-100/60">Your vault is live at <span className="text-white/80">{vaultUrl}</span></p>
+              <p className={`mt-1 text-sm ${isNorthwood ? "text-black/70" : "text-blue-100/60"}`}>Your vault is live at <span className={isNorthwood ? "text-black" : "text-white/80"}>{vaultUrl}</span></p>
             )}
             {!isBasic && businessUrl && (
-              <p className="mt-1 text-sm text-blue-100/60">Your white-label URL is live at legacy.{businessUrl}</p>
+              <p className={`mt-1 text-sm ${isNorthwood ? "text-black/70" : "text-blue-100/60"}`}>Your white-label URL is live at legacy.{businessUrl}</p>
             )}
           </div>
-          <button onClick={() => { setDismissed(true); localStorage.setItem("ev_welcome_dismissed", "1"); }} className="text-white/60 hover:text-white text-xl">×</button>
+          <button onClick={() => { setDismissed(true); localStorage.setItem("ev_welcome_dismissed", "1"); }} className={`text-xl ${isNorthwood ? "text-black/60 hover:text-black" : "text-white/60 hover:text-white"}`}>×</button>
         </div>
       )}
 

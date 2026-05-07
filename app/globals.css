@@ -2,6 +2,44 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Northwood partner — swap navy backgrounds with light cream. Text colors untouched. */
+body.theme-northwood .bg-navy,
+body.theme-northwood .hover\:bg-navy:hover,
+body.theme-northwood .bg-navy\/95,
+body.theme-northwood .bg-navy\/90,
+body.theme-northwood .bg-navy\/80,
+body.theme-northwood .bg-navy\/70,
+body.theme-northwood .bg-navy\/60,
+body.theme-northwood .bg-navy\/50,
+body.theme-northwood .bg-navy\/40,
+body.theme-northwood .bg-navy\/30,
+body.theme-northwood .bg-navy\/20,
+body.theme-northwood .bg-navy\/10,
+body.theme-northwood .bg-navy-700,
+body.theme-northwood .from-navy,
+body.theme-northwood .to-navy,
+body.theme-northwood .via-navy,
+body.theme-northwood [class*="bg-navy"] {
+  background-color: #f7f4ed !important;
+  background-image: none !important;
+}
+body.theme-northwood .border-navy {
+  border-color: #f7f4ed !important;
+}
+/* On Northwood, white text inside originally-navy containers — swap to navy.
+   Buttons with bg-gold keep their white text. */
+body.theme-northwood [class*="bg-navy"] .text-white,
+body.theme-northwood [class*="bg-navy"] [class*="text-white"],
+body.theme-northwood [class*="bg-navy"] .text-blue-100,
+body.theme-northwood [class*="bg-navy"] [class*="text-blue-100"] {
+  color: #1C3557 !important;
+}
+/* All navy text → black on Northwood */
+body.theme-northwood .text-navy,
+body.theme-northwood [class*="text-navy"] {
+  color: #000000 !important;
+}
+
 @layer base {
   html {
     scroll-behavior: smooth;

@@ -18,6 +18,7 @@ export interface PartnerBranding {
   ctaTextOverride?: string | null;
   landingTextColor?: string | null;
   partnerId: string;
+  partnerSlug?: string | null;
 }
 
 // ─── FAQ Accordion ────────────────────────────────────────────────────────────
@@ -82,8 +83,25 @@ function AccordionItem({
 // ─── Full Branded Page ────────────────────────────────────────────────────────
 
 export default function PartnerPageClient({ branding }: { branding: PartnerBranding }) {
-  const { companyName, productName, logoUrl, accentColor, themePresetId, heroRecipeId, highlightDark, highlightLight, ctaTextOverride, landingTextColor, partnerId } = branding;
-  const textColor = landingTextColor || "#1C3557";
+  const { companyName, productName, logoUrl, accentColor, themePresetId, heroRecipeId, highlightDark, highlightLight, ctaTextOverride, landingTextColor, partnerId, partnerSlug } = branding;
+  const heroBgOverride = partnerSlug === "northwoodwealthadvisors-com" ? "#F7F4ED" : null;
+  const heroColors = heroBgOverride
+    ? {
+        text: "#000000",
+        subtext: "rgba(0,0,0,0.72)",
+        highlight: accentColor,
+        ctaBorder: "rgba(0,0,0,0.25)",
+        ctaText: "#000000",
+        ctaBg: "rgba(0,0,0,0.04)",
+        divider: "rgba(0,0,0,0.18)",
+        badgeBg: "rgba(0,0,0,0.05)",
+        badgeBorder: "rgba(0,0,0,0.12)",
+        trustText: "rgba(0,0,0,0.55)",
+        textShadow: "none",
+      }
+    : null;
+  const isNorthwood = partnerSlug === "northwoodwealthadvisors-com";
+  const textColor = isNorthwood ? "#000000" : (landingTextColor || "#1C3557");
   const theme = useMemo(() => buildPartnerTheme(accentColor, themePresetId ?? "cool"), [accentColor, themePresetId]);
   const themeVars = useMemo(() => ({ ...(themeToCssVars(theme) as React.CSSProperties), ["--lt" as any]: textColor }), [theme, textColor]);
   const heroRecipe = useMemo(
@@ -96,6 +114,9 @@ export default function PartnerPageClient({ branding }: { branding: PartnerBrand
     background: heroRecipe.background,
     color: heroRecipe.heroText,
   };
+  const topHeroBgStyle: React.CSSProperties = heroBgOverride
+    ? { background: heroBgOverride, color: heroColors!.text }
+    : heroBgStyle;
   const [mobileOpen, setMobileOpen] = useState(false);
   const [openFaq, setOpenFaq] = useState<number | null>(null);
 
@@ -276,8 +297,8 @@ export default function PartnerPageClient({ branding }: { branding: PartnerBrand
 
       <main>
         {/* ── HERO ───────────────────────────────────────────────────────────── */}
-        <section className="relative overflow-hidden" style={heroBgStyle}>
-          {heroRecipe.overlay && (
+        <section className="relative overflow-hidden" style={topHeroBgStyle}>
+          {heroRecipe.overlay && !heroColors && (
             <div className="absolute inset-0 pointer-events-none" style={{ background: heroRecipe.overlay }} />
           )}
 
@@ -285,64 +306,80 @@ export default function PartnerPageClient({ branding }: { branding: PartnerBrand
             <div className="mx-auto max-w-4xl text-center">
               <div
                 className="inline-flex items-center gap-2 rounded-full px-4 py-1.5 mb-8 border"
-                style={{ background: "rgba(255,255,255,0.08)", borderColor: "rgba(255,255,255,0.14)" }}
+                style={{
+                  background: heroColors?.badgeBg || "rgba(255,255,255,0.08)",
+                  borderColor: heroColors?.badgeBorder || "rgba(255,255,255,0.14)",
+                }}
               >
                 <div className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
-                <span className="text-xs font-medium tracking-wide uppercase" style={{ color: heroRecipe.heroSubtext }}>
+                <span className="text-xs font-medium tracking-wide uppercase" style={{ color: heroColors?.subtext || heroRecipe.heroSubtext }}>
                   {productName}, Trusted by Michigan Families
                 </span>
               </div>
 
               <h1
                 className="text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-bold leading-[1.1] tracking-tight"
-                style={{ color: heroRecipe.heroText, textShadow: "0 2px 24px rgba(0,0,0,0.25)" }}
+                style={{ color: heroColors?.text || heroRecipe.heroText, textShadow: heroColors?.textShadow ?? "0 2px 24px rgba(0,0,0,0.25)" }}
               >
                 Protect Your Family.
                 <br />
-                <span style={{ color: heroRecipe.heroHighlight }}>
+                <span style={{ color: heroColors?.highlight || heroRecipe.heroHighlight }}>
                   Peace of Mind in Minutes.
                 </span>
               </h1>
 
-              <p className="mt-6 text-lg md:text-xl max-w-2xl mx-auto leading-relaxed" style={{ color: heroRecipe.heroSubtext }}>
+              <p className="mt-6 text-lg md:text-xl max-w-2xl mx-auto leading-relaxed" style={{ color: heroColors?.subtext || heroRecipe.heroSubtext }}>
                 Attorney-reviewed wills and trusts built for Michigan families.
                 Your documents and a secure family vault, all in one place.
               </p>
 
-              <div className="mt-10 flex flex-col items-center gap-4">
-                <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-                  <Link href={willHref} className="w-full sm:w-auto rounded-full bg-white/10 border border-white/25 px-10 py-4 text-base font-semibold text-white transition-all duration-300 hover:bg-white/20 hover:border-white/40 hover:scale-[1.02] active:scale-[0.98] text-center">
-                    Create a Will
-                  </Link>
-                  <Link href={trustHref} className="w-full sm:w-auto rounded-full bg-white/10 border border-white/25 px-10 py-4 text-base font-semibold text-white transition-all duration-300 hover:bg-white/20 hover:border-white/40 hover:scale-[1.02] active:scale-[0.98] text-center">
-                    Create a Trust
-                  </Link>
+              <div className="mt-10 flex flex-col items-center gap-4 w-full max-w-md sm:max-w-none mx-auto">
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-3 w-full sm:w-auto">
+                  {heroColors ? (
+                    <>
+                      <Link href={willHref} className="w-full sm:w-auto rounded-full px-10 py-4 text-base font-semibold transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] text-center border" style={{ background: heroColors.ctaBg, borderColor: heroColors.ctaBorder, color: heroColors.ctaText }}>
+                        Create a Will
+                      </Link>
+                      <Link href={trustHref} className="w-full sm:w-auto rounded-full px-10 py-4 text-base font-semibold transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] text-center border" style={{ background: heroColors.ctaBg, borderColor: heroColors.ctaBorder, color: heroColors.ctaText }}>
+                        Create a Trust
+                      </Link>
+                    </>
+                  ) : (
+                    <>
+                      <Link href={willHref} className="w-full sm:w-auto rounded-full bg-white/10 border border-white/25 px-10 py-4 text-base font-semibold text-white transition-all duration-300 hover:bg-white/20 hover:border-white/40 hover:scale-[1.02] active:scale-[0.98] text-center">
+                        Create a Will
+                      </Link>
+                      <Link href={trustHref} className="w-full sm:w-auto rounded-full bg-white/10 border border-white/25 px-10 py-4 text-base font-semibold text-white transition-all duration-300 hover:bg-white/20 hover:border-white/40 hover:scale-[1.02] active:scale-[0.98] text-center">
+                        Create a Trust
+                      </Link>
+                    </>
+                  )}
                 </div>
                 <Link
                   href={quizHref}
-                  className="group relative w-full sm:w-auto rounded-full px-10 py-4 text-base font-semibold text-white transition-all duration-300 hover:opacity-90 hover:scale-[1.02] active:scale-[0.98] text-center shadow-lg overflow-hidden"
+                  className="group relative w-full sm:w-auto rounded-full px-6 sm:px-10 py-3 sm:py-4 text-sm sm:text-base font-semibold text-white transition-all duration-300 hover:opacity-90 hover:scale-[1.02] active:scale-[0.98] text-center shadow-lg overflow-hidden whitespace-nowrap"
                   style={{ background: accentColor }}
                 >
-                  <span className="relative z-10 flex items-center justify-center gap-2">
+                  <span className="relative z-10 flex flex-wrap items-center justify-center gap-x-2 gap-y-1">
                     <span className="text-white/80 font-normal">Not sure?</span>
                     Take a free quiz
                   </span>
                 </Link>
               </div>
 
-              <div className="mt-12 flex flex-wrap items-center justify-center gap-6 text-sm text-white/50">
+              <div className="mt-12 flex flex-wrap items-center justify-center gap-6 text-sm" style={{ color: heroColors?.trustText || "rgba(255,255,255,0.5)" }}>
                 <div className="flex items-center gap-2">
-                  <svg className="w-4 h-4" style={{ color: heroRecipe.heroHighlight }} fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" /></svg>
+                  <svg className="w-4 h-4" style={{ color: heroColors?.highlight || heroRecipe.heroHighlight }} fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" /></svg>
                   SSL Secured
                 </div>
-                <div className="w-px h-4 bg-white/20" />
+                <div className="w-px h-4" style={{ background: heroColors?.divider || "rgba(255,255,255,0.2)" }} />
                 <div className="flex items-center gap-2">
-                  <svg className="w-4 h-4" style={{ color: heroRecipe.heroHighlight }} fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 1a4.5 4.5 0 00-4.5 4.5V9H5a2 2 0 00-2 2v6a2 2 0 002 2h10a2 2 0 002-2v-6a2 2 0 00-2-2h-.5V5.5A4.5 4.5 0 0010 1zm3 8V5.5a3 3 0 10-6 0V9h6z" clipRule="evenodd" /></svg>
+                  <svg className="w-4 h-4" style={{ color: heroColors?.highlight || heroRecipe.heroHighlight }} fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 1a4.5 4.5 0 00-4.5 4.5V9H5a2 2 0 00-2 2v6a2 2 0 002 2h10a2 2 0 002-2v-6a2 2 0 00-2-2h-.5V5.5A4.5 4.5 0 0010 1zm3 8V5.5a3 3 0 10-6 0V9h6z" clipRule="evenodd" /></svg>
                   256-bit Encrypted
                 </div>
-                <div className="w-px h-4 bg-white/20" />
+                <div className="w-px h-4" style={{ background: heroColors?.divider || "rgba(255,255,255,0.2)" }} />
                 <div className="flex items-center gap-2">
-                  <svg className="w-4 h-4" style={{ color: heroRecipe.heroHighlight }} fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" /></svg>
+                  <svg className="w-4 h-4" style={{ color: heroColors?.highlight || heroRecipe.heroHighlight }} fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" /></svg>
                   Attorney-Reviewed
                 </div>
               </div>

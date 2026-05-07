@@ -53,6 +53,7 @@ export default async function PartnerLandingPage({
         ctaTextOverride: partner.cta_text_override || null,
         landingTextColor: partner.landing_text_color || null,
         partnerId: partner.id,
+        partnerSlug: partner.partner_slug || null,
       }}
     />
   );
