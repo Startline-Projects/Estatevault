@@ -10,10 +10,8 @@ import PartnerThemedShell, { usePartnerBranding } from "@/components/partner/Par
 
 function BrandedWordmark({ className = "" }: { className?: string }) {
   const branding = usePartnerBranding();
-  if (branding?.logoUrl) {
-    return <img src={branding.logoUrl} alt={branding.companyName} className={`h-12 w-auto object-contain ${className}`} />;
-  }
-  return <span className={className}>{branding?.companyName || "EstateVault"}</span>;
+  if (branding) return null;
+  return <span className={className}>EstateVault</span>;
 }
 
 async function navigate(
