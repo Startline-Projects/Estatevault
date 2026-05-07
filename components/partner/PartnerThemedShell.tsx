@@ -60,6 +60,12 @@ export default function PartnerThemedShell({ children, showHeader = true }: Shel
       setResolved(true);
       return;
     }
+    try {
+      const path = window.location.pathname;
+      if (path.startsWith("/trust")) window.sessionStorage.setItem("trustPartner", partnerId);
+      if (path.startsWith("/will")) window.sessionStorage.setItem("willPartner", partnerId);
+      if (path.startsWith("/quiz")) window.sessionStorage.setItem("quizPartner", partnerId);
+    } catch {}
     let cancelled = false;
     (async () => {
       try {
