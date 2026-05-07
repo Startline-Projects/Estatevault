@@ -7,6 +7,7 @@ import PartnerThemedShell from "@/components/partner/PartnerThemedShell";
 import ChoiceTile from "@/components/quiz/ChoiceTile";
 import YesNoTiles from "@/components/quiz/YesNoTiles";
 import TextInput from "@/components/quiz/TextInput";
+import NameInput from "@/components/quiz/NameInput";
 import QuestionLabel from "@/components/quiz/QuestionLabel";
 import HardStopCard from "@/components/quiz/HardStopCard";
 import ProcessingScreen from "@/components/quiz/ProcessingScreen";
@@ -165,18 +166,22 @@ export default function QuizPage() {
   }, [totalCards, currentCard]);
 
   // ── Special screens ──────────────────────────────────────────────
-  if (screen === "hardstop") return <HardStopCard />;
+  if (screen === "hardstop") return <PartnerThemedShell showHeader={false}><HardStopCard /></PartnerThemedShell>;
   if (screen === "processing")
     return (
-      <ProcessingScreen onComplete={() => setScreen("result")} />
+      <PartnerThemedShell showHeader={false}>
+        <ProcessingScreen onComplete={() => setScreen("result")} />
+      </PartnerThemedShell>
     );
   if (screen === "result")
     return (
-      <ResultScreen
-        recommendation={getRecommendation(answers)}
-        answers={answers}
-        onUpdateAnswers={update}
-      />
+      <PartnerThemedShell showHeader={false}>
+        <ResultScreen
+          recommendation={getRecommendation(answers)}
+          answers={answers}
+          onUpdateAnswers={update}
+        />
+      </PartnerThemedShell>
     );
 
   // ── Module titles ────────────────────────────────────────────────
@@ -405,20 +410,18 @@ export default function QuizPage() {
             <QuestionLabel>
               Who would manage your finances if you were unable to?
             </QuestionLabel>
-            <TextInput
+            <NameInput
               value={answers.financeManager}
               onChange={(val) => update({ financeManager: val })}
-              placeholder="Full name"
             />
 
             <div className="mt-6">
               <QuestionLabel>
                 Who would make medical decisions for you?
               </QuestionLabel>
-              <TextInput
+              <NameInput
                 value={answers.medicalDecisionMaker}
                 onChange={(val) => update({ medicalDecisionMaker: val })}
-                placeholder="Full name"
               />
             </div>
 
@@ -426,10 +429,9 @@ export default function QuizPage() {
               <QuestionLabel>
                 If you and your spouse both pass away, who would you like to serve as guardian of your minor children?
               </QuestionLabel>
-              <TextInput
+              <NameInput
                 value={answers.childGuardian}
                 onChange={(val) => update({ childGuardian: val })}
-                placeholder="Full name or N/A"
               />
             </div>
           </>

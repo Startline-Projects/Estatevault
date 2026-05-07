@@ -16,6 +16,7 @@ export interface PartnerBranding {
   highlightDark?: string | null;
   highlightLight?: string | null;
   ctaTextOverride?: string | null;
+  landingTextColor?: string | null;
   partnerId: string;
 }
 
@@ -48,7 +49,7 @@ function AccordionItem({
       >
         <span
           className={`text-base font-medium transition-colors duration-200 ${
-            isOpen ? "text-navy" : "text-charcoal/80"
+            isOpen ? "[color:var(--lt)]" : "text-charcoal/80"
           }`}
         >
           {q}
@@ -81,9 +82,10 @@ function AccordionItem({
 // ─── Full Branded Page ────────────────────────────────────────────────────────
 
 export default function PartnerPageClient({ branding }: { branding: PartnerBranding }) {
-  const { companyName, productName, logoUrl, accentColor, themePresetId, heroRecipeId, highlightDark, highlightLight, ctaTextOverride, partnerId } = branding;
+  const { companyName, productName, logoUrl, accentColor, themePresetId, heroRecipeId, highlightDark, highlightLight, ctaTextOverride, landingTextColor, partnerId } = branding;
+  const textColor = landingTextColor || "#1C3557";
   const theme = useMemo(() => buildPartnerTheme(accentColor, themePresetId ?? "cool"), [accentColor, themePresetId]);
-  const themeVars = useMemo(() => themeToCssVars(theme) as React.CSSProperties, [theme]);
+  const themeVars = useMemo(() => ({ ...(themeToCssVars(theme) as React.CSSProperties), ["--lt" as any]: textColor }), [theme, textColor]);
   const heroRecipe = useMemo(
     () => buildHeroRecipe(accentColor, heroRecipeId ?? "mesh", { highlightDark, ctaText: ctaTextOverride }),
     [accentColor, heroRecipeId, highlightDark, ctaTextOverride]
@@ -192,13 +194,13 @@ export default function PartnerPageClient({ branding }: { branding: PartnerBrand
         <div className="mx-auto max-w-7xl flex items-center justify-between px-6 py-3">
           <a href="#" className="flex items-center gap-3 group">
             {logoUrl ? (
-              <span className="flex items-center gap-2 text-xl font-bold text-navy tracking-tight">
+              <span className="flex items-center gap-2 text-xl font-bold [color:var(--lt)] tracking-tight">
                 <img src={logoUrl} alt={companyName} className="h-8 w-auto object-contain" />
                 <span className="mx-1 font-normal text-charcoal/50">/</span>
                 <span className="text-charcoal/80">Legacy</span>
               </span>
             ) : (
-              <span className="text-xl font-bold text-navy tracking-tight">
+              <span className="text-xl font-bold [color:var(--lt)] tracking-tight">
                 {companyName}
                 <span className="mx-2 font-normal text-charcoal/50">/</span>
                 <span className="text-charcoal/80">Legacy</span>
@@ -211,7 +213,7 @@ export default function PartnerPageClient({ branding }: { branding: PartnerBrand
               <a
                 key={link.href}
                 href={link.href}
-                className="relative text-sm font-medium text-charcoal/70 hover:text-navy transition-colors duration-200"
+                className="relative text-sm font-medium text-charcoal/70 hover:[color:var(--lt)] transition-colors duration-200"
               >
                 {link.label}
               </a>
@@ -219,7 +221,7 @@ export default function PartnerPageClient({ branding }: { branding: PartnerBrand
           </nav>
 
           <div className="hidden lg:flex items-center gap-3">
-            <Link href="/auth/login" className="text-sm font-medium text-navy hover:text-navy/70 transition-colors px-4 py-2">
+            <Link href="/auth/login" className="text-sm font-medium [color:var(--lt)] hover:opacity-70 transition-colors px-4 py-2">
               Sign In
             </Link>
             <Link
@@ -250,13 +252,13 @@ export default function PartnerPageClient({ branding }: { branding: PartnerBrand
                   key={link.href}
                   href={link.href}
                   onClick={() => setMobileOpen(false)}
-                  className="text-sm font-medium text-charcoal/70 hover:text-navy rounded-lg px-3 py-2.5 transition-colors"
+                  className="text-sm font-medium text-charcoal/70 hover:[color:var(--lt)] rounded-lg px-3 py-2.5 transition-colors"
                 >
                   {link.label}
                 </a>
               ))}
               <div className="mt-3 flex flex-col gap-2">
-                <Link href="/auth/login" className="text-center rounded-lg border border-navy/20 px-4 py-2.5 text-sm font-medium text-navy">
+                <Link href="/auth/login" className="text-center rounded-lg border border-navy/20 px-4 py-2.5 text-sm font-medium [color:var(--lt)]">
                   Sign In
                 </Link>
                 <Link
@@ -357,7 +359,7 @@ export default function PartnerPageClient({ branding }: { branding: PartnerBrand
               { label: "State-Specific Documents", icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" /></svg> },
               { label: "Secure Family Vault", icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" /></svg> },
             ].map((item) => (
-              <div key={item.label} className="flex items-center gap-2.5 text-navy/60">
+              <div key={item.label} className="flex items-center gap-2.5 [color:var(--lt)] opacity-60">
                 <span style={{ color: lightHighlight }}>{item.icon}</span>
                 <span className="text-sm font-medium">{item.label}</span>
               </div>
@@ -369,9 +371,9 @@ export default function PartnerPageClient({ branding }: { branding: PartnerBrand
         <section id="how-it-works" className="bg-white py-24 px-6">
           <div className="mx-auto max-w-5xl text-center">
             <div className="inline-flex items-center gap-2 rounded-full bg-navy-50 px-4 py-1.5 mb-4">
-              <span className="text-xs font-semibold text-navy tracking-wide uppercase">Three Steps</span>
+              <span className="text-xs font-semibold [color:var(--lt)] tracking-wide uppercase">Three Steps</span>
             </div>
-            <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-navy tracking-tight">Built Around Your Life</h2>
+            <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold [color:var(--lt)] tracking-tight">Built Around Your Life</h2>
             <p className="mt-4 text-lg text-charcoal/60 max-w-xl mx-auto">From first question to fully protected, in about 15 minutes.</p>
 
             <div className="mt-16 grid grid-cols-1 md:grid-cols-3 gap-8 md:gap-6">
@@ -394,10 +396,10 @@ export default function PartnerPageClient({ branding }: { branding: PartnerBrand
                     >
                       Step {step.number}
                     </div>
-                    <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-navy to-navy-800 text-white shadow-lg group-hover:scale-105 transition-transform duration-300">
+                    <div className="flex h-16 w-16 items-center justify-center rounded-2xl text-white shadow-lg group-hover:scale-105 transition-transform duration-300" style={{ background: `linear-gradient(135deg, ${accentColor}, ${theme.palette["700"]})` }}>
                       {step.icon}
                     </div>
-                    <h3 className="mt-6 text-lg font-bold text-navy">{step.title}</h3>
+                    <h3 className="mt-6 text-lg font-bold [color:var(--lt)]">{step.title}</h3>
                     <p className="mt-3 text-sm text-charcoal/60 leading-relaxed max-w-xs">{step.description}</p>
                   </div>
                 </div>
@@ -412,7 +414,7 @@ export default function PartnerPageClient({ branding }: { branding: PartnerBrand
             <div className="inline-flex items-center gap-2 rounded-full px-4 py-1.5 mb-4" style={{ background: lightTintBg }}>
               <span className="text-xs font-semibold tracking-wide uppercase" style={{ color: lightHighlight }}>One-Time Payment</span>
             </div>
-            <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-navy tracking-tight">Simple, Honest Pricing</h2>
+            <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold [color:var(--lt)] tracking-tight">Simple, Honest Pricing</h2>
             <p className="mt-4 text-lg text-charcoal/60 max-w-xl mx-auto">Pay once. No subscriptions, no hidden fees, no surprises.</p>
 
             <div className="mt-16 grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -439,10 +441,10 @@ export default function PartnerPageClient({ branding }: { branding: PartnerBrand
                       </span>
                     </div>
                   )}
-                  <h3 className="text-xl font-bold text-navy">{pkg.title}</h3>
+                  <h3 className="text-xl font-bold [color:var(--lt)]">{pkg.title}</h3>
                   <p className="mt-1 text-sm text-charcoal/50">{pkg.descriptor}</p>
                   <div className="mt-4 flex items-baseline gap-1">
-                    <span className="text-5xl font-bold text-navy tracking-tight">{pkg.price}</span>
+                    <span className="text-5xl font-bold [color:var(--lt)] tracking-tight">{pkg.price}</span>
                     <span className="text-sm text-charcoal/50 ml-1">one-time</span>
                   </div>
                   <div className="mt-6 h-px bg-gradient-to-r from-transparent via-gray-200 to-transparent" />
@@ -460,7 +462,7 @@ export default function PartnerPageClient({ branding }: { branding: PartnerBrand
                     <Link
                       href={pkg.href}
                       className="block w-full rounded-xl py-3.5 text-center text-sm font-semibold text-white transition-all duration-200 hover:opacity-90 hover:scale-[1.01]"
-                      style={{ background: pkg.popular ? accentColor : "#1C3557" }}
+                      style={{ background: accentColor }}
                     >
                       {pkg.cta}
                     </Link>
@@ -531,7 +533,7 @@ export default function PartnerPageClient({ branding }: { branding: PartnerBrand
                 <div className="h-2 w-2 rounded-full bg-emerald-500" />
                 <span className="text-xs font-semibold text-emerald-700 tracking-wide uppercase">Families Protected</span>
               </div>
-              <p className="text-6xl md:text-7xl font-bold text-navy tracking-tight">2,847</p>
+              <p className="text-6xl md:text-7xl font-bold [color:var(--lt)] tracking-tight">2,847</p>
               <p className="mt-2 text-lg text-charcoal/60">Michigan families protected and counting</p>
             </div>
 
@@ -554,7 +556,7 @@ export default function PartnerPageClient({ branding }: { branding: PartnerBrand
                       {t.initials}
                     </div>
                     <div>
-                      <p className="text-sm font-semibold text-navy">{t.name}</p>
+                      <p className="text-sm font-semibold [color:var(--lt)]">{t.name}</p>
                       <p className="text-xs text-charcoal/50">{t.city}</p>
                     </div>
                   </div>
@@ -569,9 +571,9 @@ export default function PartnerPageClient({ branding }: { branding: PartnerBrand
           <div className="mx-auto max-w-3xl">
             <div className="text-center mb-14">
               <div className="inline-flex items-center gap-2 rounded-full bg-navy-50 px-4 py-1.5 mb-4">
-                <span className="text-xs font-semibold text-navy tracking-wide uppercase">FAQ</span>
+                <span className="text-xs font-semibold [color:var(--lt)] tracking-wide uppercase">FAQ</span>
               </div>
-              <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-navy tracking-tight">Questions We Hear Most</h2>
+              <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold [color:var(--lt)] tracking-tight">Questions We Hear Most</h2>
               <p className="mt-4 text-lg text-charcoal/60">Honest answers about how this works.</p>
             </div>
             <div className="space-y-2">
@@ -630,7 +632,7 @@ export default function PartnerPageClient({ branding }: { branding: PartnerBrand
       {(() => {
         const c = (a: number) => `rgba(28,53,87,${a})`;
         return (
-          <footer className="py-16 px-6 bg-white border-t border-gray-100" style={{ color: "#1C3557" }}>
+          <footer className="py-16 px-6 bg-white border-t border-gray-100" style={{ color: textColor }}>
             <div className="mx-auto max-w-6xl">
               <div className="flex flex-col md:flex-row items-start justify-between gap-10">
                 <div className="flex flex-col gap-4">

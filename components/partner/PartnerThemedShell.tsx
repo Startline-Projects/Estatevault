@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import PartnerLoadingScreen from "./PartnerLoadingScreen";
 import {
   buildPartnerTheme,
   buildHeroRecipe,
@@ -27,8 +28,6 @@ interface ShellProps {
   showHeader?: boolean;
 }
 
-const partnerCache = new Map<string, PartnerBranding | null>();
-
 const PartnerBrandingContext = createContext<PartnerBranding | null>(null);
 
 export function usePartnerBranding(): PartnerBranding | null {
@@ -51,16 +50,6 @@ function resolvePartnerIdSync(): string {
   );
 }
 
-function readBrandingFromSessionStorage(id: string): PartnerBranding | null {
-  if (typeof window === "undefined" || !id) return null;
-  try {
-    const raw = window.sessionStorage.getItem(`partner-branding-${id}`);
-    return raw ? (JSON.parse(raw) as PartnerBranding) : null;
-  } catch {
-    return null;
-  }
-}
-
 export default function PartnerThemedShell({ children, showHeader = true }: ShellProps) {
   const [branding, setBranding] = useState<PartnerBranding | null>(null);
   const [resolved, setResolved] = useState(false);
@@ -71,28 +60,14 @@ export default function PartnerThemedShell({ children, showHeader = true }: Shel
       setResolved(true);
       return;
     }
-    if (partnerCache.has(partnerId)) {
-      setBranding(partnerCache.get(partnerId) || null);
-      setResolved(true);
-      return;
-    }
-    const stored = readBrandingFromSessionStorage(partnerId);
-    if (stored) {
-      partnerCache.set(partnerId, stored);
-      setBranding(stored);
-      setResolved(true);
-      return;
-    }
     let cancelled = false;
     (async () => {
       try {
-        const res = await fetch(`/api/partners/branding?id=${encodeURIComponent(partnerId)}`);
+        const res = await fetch(`/api/partners/branding?id=${encodeURIComponent(partnerId)}`, { cache: "no-store" });
         if (cancelled) return;
         const next: PartnerBranding | null = res.ok ? await res.json() : null;
-        partnerCache.set(partnerId, next);
         setBranding(next);
       } catch {
-        partnerCache.set(partnerId, null);
         setBranding(null);
       } finally {
         if (!cancelled) setResolved(true);
@@ -115,7 +90,7 @@ export default function PartnerThemedShell({ children, showHeader = true }: Shel
   }, [branding]);
 
   if (!resolved) {
-    return <div className="min-h-screen" style={{ background: "#0E1420" }} />;
+    return <PartnerLoadingScreen />;
   }
 
   if (!branding || !themed) {

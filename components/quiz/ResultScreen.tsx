@@ -1,8 +1,10 @@
 "use client";
 
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { useState } from "react";
 import type { QuizAnswers, Recommendation } from "@/lib/quiz-types";
+import { usePartnerBranding } from "@/components/partner/PartnerThemedShell";
 import YesNoTiles from "./YesNoTiles";
 
 interface ResultScreenProps {
@@ -53,18 +55,25 @@ export default function ResultScreen({
   const bullets = isWill ? willBullets : trustBullets;
   const price = isWill ? "$400" : "$600";
   const features = isWill ? willFeatures : trustFeatures;
-  const href = isWill ? "/will?recommendation=will" : "/trust?recommendation=trust";
+  const searchParams = useSearchParams();
+  const partnerParam = searchParams?.get("partner");
+  const partnerQs = partnerParam ? `&partner=${partnerParam}` : "";
+  const href = isWill ? `/will?recommendation=will${partnerQs}` : `/trust?recommendation=trust${partnerQs}`;
   const [showAdvisorFollow, setShowAdvisorFollow] = useState(false);
+  const branding = usePartnerBranding();
+  const accent = branding?.accentColor || "#C9A84C";
 
   return (
     <div className="min-h-screen bg-navy px-6 py-12">
       <div className="mx-auto max-w-2xl">
         {/* Result heading */}
         <div className="text-center">
-          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-gold/20">
-            <span className="text-3xl">✓</span>
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full" style={{ background: `${accent}33` }}>
+            <svg className="h-8 w-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" style={{ color: accent }}>
+              <polyline points="20 6 9 17 4 12" />
+            </svg>
           </div>
-          <p className="mt-3 text-sm font-medium uppercase tracking-wider text-gold">
+          <p className="mt-3 text-sm font-medium uppercase tracking-wider" style={{ color: accent }}>
             Based on your answers
           </p>
           <h1 className="mt-4 text-2xl md:text-3xl font-bold text-white leading-snug">
@@ -76,7 +85,7 @@ export default function ResultScreen({
         <ul className="mt-8 space-y-3">
           {bullets.map((b) => (
             <li key={b} className="flex items-start gap-3 text-blue-100/80 text-sm">
-              <span className="mt-0.5 text-gold">&#10003;</span>
+              <span className="mt-0.5" style={{ color: accent }}>&#10003;</span>
               {b}
             </li>
           ))}
@@ -89,7 +98,7 @@ export default function ResultScreen({
               {isWill ? "Will Package" : "Trust Package"}
             </h3>
             {!isWill && (
-              <span className="rounded-full bg-gold px-3 py-1 text-xs font-semibold text-white">
+              <span className="rounded-full px-3 py-1 text-xs font-semibold text-white" style={{ background: accent }}>
                 Most Popular
               </span>
             )}
@@ -99,7 +108,7 @@ export default function ResultScreen({
           <ul className="mt-6 space-y-2.5">
             {features.map((f) => (
               <li key={f} className="flex items-start gap-2 text-sm text-charcoal/80">
-                <span className="mt-0.5 text-gold font-bold">&#10003;</span>
+                <span className="mt-0.5 font-bold" style={{ color: accent }}>&#10003;</span>
                 {f}
               </li>
             ))}
@@ -107,7 +116,8 @@ export default function ResultScreen({
 
           <Link
             href={href}
-            className="mt-8 block w-full min-h-[44px] rounded-full bg-gold py-3.5 text-center text-sm font-semibold text-white hover:bg-gold/90 transition-colors"
+            className="mt-8 block w-full min-h-[44px] rounded-full py-3.5 text-center text-sm font-semibold text-white hover:opacity-90 transition-opacity"
+            style={{ background: accent }}
           >
             Continue With {isWill ? "Will" : "Trust"} Package, {price}
           </Link>

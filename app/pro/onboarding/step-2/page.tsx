@@ -24,6 +24,7 @@ export default function Step2Page() {
   const [saving, setSaving] = useState(false);
   const [partnerId, setPartnerId] = useState("");
   const [textColorOverride, setTextColorOverride] = useState("");
+  const [landingTextColor, setLandingTextColor] = useState("#1C3557");
   const [customGradient, setCustomGradient] = useState(false);
   const [gradFrom, setGradFrom] = useState("#1C3557");
   const [gradTo, setGradTo] = useState("#C9A84C");
@@ -65,7 +66,7 @@ export default function Step2Page() {
           ) : (
             <div className="h-6 w-6 rounded" style={{ background: accentColor }} />
           )}
-          <span className="text-xs font-bold text-navy">{companyName || "Your Brand"}</span>
+          <span className="text-xs font-bold" style={{ color: landingTextColor }}>{companyName || "Your Brand"}</span>
         </div>
         <div className="flex items-center gap-3">
           <span className="text-[10px] text-charcoal/60">Wills</span>
@@ -92,21 +93,21 @@ export default function Step2Page() {
       </div>
       <div className="px-5 py-6" style={{ background: previewTheme.sectionAlt }}>
         <p className="text-center text-[10px] font-semibold uppercase tracking-wider mb-3" style={{ color: effectiveLightHL }}>How It Works</p>
-        <p className="text-center text-sm font-bold text-navy mb-4">Estate planning made simple</p>
+        <p className="text-center text-sm font-bold mb-4" style={{ color: landingTextColor }}>Estate planning made simple</p>
         <div className="grid grid-cols-3 gap-2">
           {["Answer", "Review", "Sign"].map((t, i) => (
             <div key={t} className="rounded-lg bg-white p-3 text-center border border-gray-100">
               <div className="mx-auto mb-1.5 flex h-7 w-7 items-center justify-center rounded-full text-[10px] font-bold" style={{ background: previewTheme.palette["100"], color: effectiveLightHL }}>{i + 1}</div>
-              <p className="text-[10px] font-semibold text-navy">{t}</p>
+              <p className="text-[10px] font-semibold" style={{ color: landingTextColor }}>{t}</p>
             </div>
           ))}
         </div>
       </div>
       <div className="px-5 py-6 bg-white">
-        <p className="text-center text-sm font-bold text-navy mb-3">Simple Pricing</p>
+        <p className="text-center text-sm font-bold mb-3" style={{ color: landingTextColor }}>Simple Pricing</p>
         <div className="rounded-xl border-2 p-4 text-center" style={{ borderColor: accentColor }}>
           <p className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: effectiveLightHL }}>Will Package</p>
-          <p className="mt-1 text-2xl font-bold text-navy">$400</p>
+          <p className="mt-1 text-2xl font-bold" style={{ color: landingTextColor }}>$400</p>
           <p className="mt-0.5 text-[10px] text-charcoal/60">Attorney-reviewed · State-specific</p>
           <span className="mt-3 inline-block rounded-full px-4 py-1.5 text-[10px] font-semibold" style={{ background: accentColor, color: previewHero.ctaText }}>Get Started</span>
         </div>
@@ -123,7 +124,7 @@ export default function Step2Page() {
       const supabase = createClient();
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
-      const { data: partner } = await supabase.from("partners").select("id, company_name, product_name, accent_color, theme_preset, hero_recipe, highlight_dark, highlight_light, cta_text_override, logo_url").eq("profile_id", user.id).single();
+      const { data: partner } = await supabase.from("partners").select("id, company_name, product_name, accent_color, theme_preset, hero_recipe, highlight_dark, highlight_light, cta_text_override, landing_text_color, logo_url").eq("profile_id", user.id).single();
       if (partner) {
         setPartnerId(partner.id);
         setCompanyName(partner.company_name || "");
@@ -134,6 +135,7 @@ export default function Step2Page() {
         if (partner.highlight_dark) setHighlightDark(partner.highlight_dark);
         if (partner.highlight_light) setHighlightLight(partner.highlight_light);
         if (partner.cta_text_override) setCtaTextOverride(partner.cta_text_override);
+        if (partner.landing_text_color) setLandingTextColor(partner.landing_text_color);
         if (partner.logo_url) setLogoUrl(partner.logo_url);
       }
     }
@@ -227,6 +229,7 @@ export default function Step2Page() {
       highlight_dark: customizeColors && highlightDark ? highlightDark : null,
       highlight_light: customizeColors && highlightLight ? highlightLight : null,
       cta_text_override: customizeColors && ctaTextOverride ? ctaTextOverride : null,
+      landing_text_color: landingTextColor,
       logo_url: logoUrl || null,
       onboarding_step: 3,
     }).eq("id", partnerId);
@@ -299,6 +302,15 @@ export default function Step2Page() {
             <div className="flex items-center gap-3">
               <input type="color" value={accentColor} onChange={(e) => setAccentColor(e.target.value)} className="h-10 w-14 rounded border-0 cursor-pointer" />
               <input type="text" value={accentColor} onChange={(e) => setAccentColor(e.target.value)} className="flex-1 min-h-[44px] rounded-xl border-2 border-gray-200 px-4 py-3 text-sm focus:border-gold focus:outline-none" />
+            </div>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-navy mb-1">Landing Text & Icon Color</label>
+            <p className="text-xs text-charcoal/60 mb-2">Headings, body labels, and icon strokes on your landing page.</p>
+            <div className="flex items-center gap-3">
+              <input type="color" value={landingTextColor} onChange={(e) => setLandingTextColor(e.target.value)} className="h-10 w-14 rounded border-0 cursor-pointer" />
+              <input type="text" value={landingTextColor} onChange={(e) => setLandingTextColor(e.target.value)} className="flex-1 min-h-[44px] rounded-xl border-2 border-gray-200 px-4 py-3 text-sm focus:border-gold focus:outline-none" />
+              <button type="button" onClick={() => setLandingTextColor("#1C3557")} className="text-xs text-charcoal/60 underline">Reset</button>
             </div>
           </div>
           <div>

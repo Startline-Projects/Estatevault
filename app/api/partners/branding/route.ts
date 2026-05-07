@@ -19,7 +19,6 @@ export async function GET(request: Request) {
     .from("partners")
     .select("id, company_name, product_name, logo_url, accent_color, theme_preset, hero_recipe, highlight_dark, cta_text_override")
     .eq("id", id)
-    .in("status", ["active", "onboarding"])
     .single();
 
   if (error || !data) return NextResponse.json({ error: "Partner not found" }, { status: 404 });

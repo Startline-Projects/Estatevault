@@ -31,7 +31,7 @@ export default async function PartnerLandingPage({
   const supabase = createAdminClient();
   const { data: partner } = await supabase
     .from("partners")
-    .select("id, company_name, product_name, logo_url, accent_color, theme_preset, hero_recipe, highlight_dark, highlight_light, cta_text_override, partner_slug")
+    .select("id, company_name, product_name, logo_url, accent_color, theme_preset, hero_recipe, highlight_dark, highlight_light, cta_text_override, landing_text_color, partner_slug")
     .eq("partner_slug", slug)
     .in("status", ["active", "onboarding"])
     .single();
@@ -51,6 +51,7 @@ export default async function PartnerLandingPage({
         highlightDark: partner.highlight_dark || null,
         highlightLight: partner.highlight_light || null,
         ctaTextOverride: partner.cta_text_override || null,
+        landingTextColor: partner.landing_text_color || null,
         partnerId: partner.id,
       }}
     />
