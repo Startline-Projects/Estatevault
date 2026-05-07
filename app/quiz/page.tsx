@@ -3,6 +3,7 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import Link from "next/link";
 import { type QuizAnswers, initialAnswers, getRecommendation } from "@/lib/quiz-types";
+import PartnerThemedShell from "@/components/partner/PartnerThemedShell";
 import ChoiceTile from "@/components/quiz/ChoiceTile";
 import YesNoTiles from "@/components/quiz/YesNoTiles";
 import TextInput from "@/components/quiz/TextInput";
@@ -463,6 +464,7 @@ export default function QuizPage() {
   }
 
   return (
+    <PartnerThemedShell showHeader={false}>
     <div className="min-h-screen bg-navy">
       {/* Progress bar */}
       <div className="fixed top-0 left-0 right-0 z-40 h-1.5 bg-navy/80">
@@ -526,5 +528,6 @@ export default function QuizPage() {
         </div>
       </div>
     </div>
+    </PartnerThemedShell>
   );
 }

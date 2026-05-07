@@ -7,13 +7,8 @@ export interface WillIntake {
   executorName: string;
   executorRelationship: string;
   successorExecutorName: string;
-  primaryBeneficiaryName: string;
-  primaryBeneficiaryRelationship: string;
-  hasSecondBeneficiary: string;
-  secondBeneficiaryName: string;
-  secondBeneficiaryRelationship: string;
-  estateSplit: string;
-  customSplit: string;
+  beneficiaries: Array<{ name: string; relationship: string; share: string }>;
+  beneficiariesEqualShares: string;
   guardianName: string;
   guardianRelationship: string;
   successorGuardianName: string;
@@ -34,13 +29,8 @@ export const initialWillIntake: WillIntake = {
   executorName: "",
   executorRelationship: "",
   successorExecutorName: "",
-  primaryBeneficiaryName: "",
-  primaryBeneficiaryRelationship: "",
-  hasSecondBeneficiary: "",
-  secondBeneficiaryName: "",
-  secondBeneficiaryRelationship: "",
-  estateSplit: "",
-  customSplit: "",
+  beneficiaries: [{ name: "", relationship: "", share: "" }],
+  beneficiariesEqualShares: "",
   guardianName: "",
   guardianRelationship: "",
   successorGuardianName: "",

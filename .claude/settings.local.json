@@ -22,7 +22,25 @@
       "Bash(npm run *)",
       "Bash(openssl rand *)",
       "Bash(grep -nE \"Basic|Standard|Enterprise|will_payout|trust_payout|price|Price|\\\\\\\\\\\\$[0-9]\" \"/Users/xamir/Desktop/Glo Staffing/Estatevault/app/professionals/page.tsx\")",
-      "Bash(grep *)"
+      "Bash(grep *)",
+      "mcp__claude_ai_Supabase__list_projects",
+      "mcp__claude_ai_Supabase__execute_sql",
+      "mcp__claude_ai_Supabase__apply_migration",
+      "Bash(awk 'NR<466 || NR>544' \"/Users/xamir/Desktop/Glo Staffing/Estatevault/app/pro/onboarding/step-2/page.tsx\")",
+      "Bash(mv /tmp/step2.tsx \"/Users/xamir/Desktop/Glo Staffing/Estatevault/app/pro/onboarding/step-2/page.tsx\")",
+      "Bash(sed -n '460,470p' \"/Users/xamir/Desktop/Glo Staffing/Estatevault/app/pro/onboarding/step-2/page.tsx\")",
+      "Bash(qlmanage -t -s 800 -o public public/logo.svg)",
+      "Bash(sips -g pixelWidth -g pixelHeight public/logo.png)",
+      "Bash(qlmanage -t -s 2048 -o /tmp public/logo.svg)",
+      "Bash(sips -g pixelWidth -g pixelHeight /tmp/logo.svg.png)",
+      "Bash(sips --cropToHeightWidth 730 800 --padToHeightWidth 730 800 public/logo.png --out /tmp/logo_cropped.png)",
+      "Bash(sips -g pixelWidth -g pixelHeight /tmp/logo_cropped.png)",
+      "Bash(python3 -c ' *)",
+      "Bash(python3 -c \"import PIL\")",
+      "Bash(sips --cropToHeightWidth 760 760 public/logo.png --out /tmp/logo_v2.png)",
+      "Bash(sips -g pixelWidth -g pixelHeight /tmp/logo_v2.png)",
+      "Bash(cp /tmp/logo_v2.png \"/Users/xamir/Desktop/Glo Staffing/Estatevault/public/logo.png\")",
+      "Bash(sips -g pixelWidth -g pixelHeight \"/Users/xamir/Desktop/Glo Staffing/Estatevault/public/logo.png\")"
     ]
   }
 }

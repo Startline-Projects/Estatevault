@@ -10,15 +10,10 @@ export interface TrustIntake {
   trusteeName: string;
   successorTrusteeName: string;
   successorTrusteeRelationship: string;
-  secondSuccessorTrusteeName: string;
+  additionalSuccessorTrustees: Array<{ name: string; relationship: string }>;
   // Beneficiaries
-  primaryBeneficiaryName: string;
-  primaryBeneficiaryRelationship: string;
-  hasSecondBeneficiary: string;
-  secondBeneficiaryName: string;
-  secondBeneficiaryRelationship: string;
-  estateSplit: string;
-  customSplit: string;
+  beneficiaries: Array<{ name: string; relationship: string; share: string }>;
+  beneficiariesEqualShares: string;
   distributionAge: string;
   // Guardian
   hasMinorChildren: string;
@@ -62,14 +57,9 @@ export const initialTrustIntake: TrustIntake = {
   trusteeName: "",
   successorTrusteeName: "",
   successorTrusteeRelationship: "",
-  secondSuccessorTrusteeName: "",
-  primaryBeneficiaryName: "",
-  primaryBeneficiaryRelationship: "",
-  hasSecondBeneficiary: "",
-  secondBeneficiaryName: "",
-  secondBeneficiaryRelationship: "",
-  estateSplit: "",
-  customSplit: "",
+  additionalSuccessorTrustees: [],
+  beneficiaries: [{ name: "", relationship: "", share: "" }],
+  beneficiariesEqualShares: "",
   distributionAge: "",
   hasMinorChildren: "",
   guardianName: "",
@@ -110,11 +100,7 @@ export function checkComplexity(intake: TrustIntake): ComplexityResult {
   if (intake.assetTypes.includes("Business interests")) {
     reasons.push("Business interests in trust");
   }
-  if (
-    intake.hasSecondBeneficiary === "Yes" &&
-    intake.estateSplit !== "50/50" &&
-    intake.estateSplit !== ""
-  ) {
+  if (intake.beneficiaries.length > 1 && intake.beneficiariesEqualShares === "No") {
     reasons.push("Unequal beneficiary split");
   }
   if (intake.hasHealthcareWishes === "Yes" && intake.healthcareWishesDescription.trim() !== "") {

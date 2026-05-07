@@ -5,6 +5,15 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import type { ComplexityResult } from "@/lib/trust-types";
+import PartnerThemedShell, { usePartnerBranding } from "@/components/partner/PartnerThemedShell";
+
+function BrandedWordmark({ className = "" }: { className?: string }) {
+  const branding = usePartnerBranding();
+  if (branding?.logoUrl) {
+    return <img src={branding.logoUrl} alt={branding.companyName} className={`h-10 w-auto object-contain ${className}`} />;
+  }
+  return <span className={className}>{branding?.companyName || "EstateVault"}</span>;
+}
 
 const trustFeatures = [
   "Revocable Living Trust",
@@ -151,9 +160,10 @@ export default function TrustCheckoutPage() {
   // Acknowledgment modal
   if (showAcknowledgment) {
     return (
+      <PartnerThemedShell showHeader={false}>
       <div className="min-h-screen bg-navy flex items-center justify-center px-6 py-12">
         <div className="w-full max-w-lg">
-          <p className="text-center text-2xl font-bold text-white mb-8">EstateVault</p>
+          <div className="mb-8 flex justify-center"><BrandedWordmark className="text-2xl font-bold text-white" /></div>
           <div className="rounded-2xl bg-white p-8 shadow-xl">
             <h1 className="text-xl font-bold text-navy">Before We Begin</h1>
             <div className="mt-6 space-y-4 text-sm text-charcoal/70 leading-relaxed">
@@ -173,15 +183,17 @@ export default function TrustCheckoutPage() {
           </div>
         </div>
       </div>
+      </PartnerThemedShell>
     );
   }
 
   return (
+    <PartnerThemedShell showHeader={false}>
     <div className="min-h-screen bg-gray-50">
-      <div className="bg-navy px-6 py-4">
+      <div className="bg-white border-b border-gray-200 px-6 py-4">
         <div className="mx-auto max-w-2xl flex items-center justify-between">
-          <Link href="/" className="text-lg font-bold text-white">EstateVault</Link>
-          <span className="text-sm text-white/60">Secure Checkout</span>
+          <Link href="/" className="flex items-center"><BrandedWordmark className="text-lg font-bold text-navy" /></Link>
+          <span className="text-sm text-charcoal/60">Secure Checkout</span>
         </div>
       </div>
 
@@ -246,7 +258,9 @@ export default function TrustCheckoutPage() {
 
         {/* Attorney review, hide when promo applied */}
         {!promoApplied && (
-          <div className={`mt-6 rounded-2xl bg-white border ${complexity.flagged ? "border-amber-300" : "border-gray-200"} p-6 shadow-sm`}>
+          <div
+            className={`mt-6 rounded-2xl bg-white border ${complexity.flagged ? "border-[color:var(--brand-accent,#FCD34D)]" : "border-gray-200"} p-6 shadow-sm`}
+          >
             {complexity.flagged ? (
               <>
                 <div className="flex items-start gap-3">
@@ -302,5 +316,6 @@ export default function TrustCheckoutPage() {
         {!promoApplied && <p className="mt-3 text-center text-xs text-charcoal/60">Secure payment powered by Stripe</p>}
       </div>
     </div>
+    </PartnerThemedShell>
   );
 }

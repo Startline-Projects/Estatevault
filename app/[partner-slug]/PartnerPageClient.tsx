@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { buildPartnerTheme, themeToCssVars, buildHeroRecipe, type ThemePresetId, type HeroRecipeId } from "@/lib/partner-pages/theme";
@@ -96,6 +96,22 @@ export default function PartnerPageClient({ branding }: { branding: PartnerBrand
   };
   const [mobileOpen, setMobileOpen] = useState(false);
   const [openFaq, setOpenFaq] = useState<number | null>(null);
+
+  useEffect(() => {
+    try {
+      sessionStorage.setItem(`partner-branding-${partnerId}`, JSON.stringify({
+        id: partnerId,
+        companyName,
+        productName,
+        logoUrl,
+        accentColor,
+        themePresetId: themePresetId ?? "cool",
+        heroRecipeId: heroRecipeId ?? "mesh",
+        highlightDark: highlightDark ?? null,
+        ctaTextOverride: ctaTextOverride ?? null,
+      }));
+    } catch {}
+  }, [partnerId, companyName, productName, logoUrl, accentColor, themePresetId, heroRecipeId, highlightDark, ctaTextOverride]);
 
   const quizHref = `/quiz?partner=${partnerId}`;
   const willHref = `/will?partner=${partnerId}`;

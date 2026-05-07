@@ -1,26 +1,25 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { type WillIntake, initialWillIntake } from "@/lib/will-types";
+import PartnerThemedShell, { BrandedLoadingWordmark } from "@/components/partner/PartnerThemedShell";
+import AcknowledgmentCard from "@/components/intake/AcknowledgmentCard";
 import ChoiceTile from "@/components/quiz/ChoiceTile";
 import YesNoTiles from "@/components/quiz/YesNoTiles";
 import TextInput from "@/components/quiz/TextInput";
+import NameInput from "@/components/quiz/NameInput";
 import QuestionLabel from "@/components/quiz/QuestionLabel";
 
-type Stage = "loading" | "acknowledgment" | "intake" | "redirecting";
+type Stage = "acknowledgment" | "intake" | "redirecting";
 
 export default function WillPage() {
   const router = useRouter();
   const [partnerParam, setPartnerParam] = useState("");
-  const [stage, setStage] = useState<Stage>("loading");
+  const [stage, setStage] = useState<Stage>("acknowledgment");
   const [userId, setUserId] = useState<string | null>(null);
-
-  // Acknowledgment
-  const [ackChecked, setAckChecked] = useState(false);
-  const [ackLoading, setAckLoading] = useState(false);
 
   // Intake
   const [intake, setIntake] = useState<WillIntake>(initialWillIntake);
@@ -34,6 +33,23 @@ export default function WillPage() {
       setIntake((prev) => ({ ...prev, ...updates })),
     []
   );
+
+  const partialNamesRef = useRef<Set<string>>(new Set());
+  const [hasPartialName, setHasPartialName] = useState(false);
+  const partialHandlersRef = useRef<Map<string, (p: boolean) => void>>(new Map());
+  function partialHandler(key: string) {
+    let h = partialHandlersRef.current.get(key);
+    if (!h) {
+      h = (partial: boolean) => {
+        const set = partialNamesRef.current;
+        const prev = set.size;
+        if (partial) set.add(key); else set.delete(key);
+        if ((prev > 0) !== (set.size > 0)) setHasPartialName(set.size > 0);
+      };
+      partialHandlersRef.current.set(key, h);
+    }
+    return h;
+  }
 
   useEffect(() => {
     async function init() {
@@ -67,7 +83,6 @@ export default function WillPage() {
           }
         } catch {}
       }
-      setStage("acknowledgment");
     }
     init();
   }, [update]);
@@ -97,27 +112,18 @@ export default function WillPage() {
       case "executor":
         return (
           intake.executorName.trim() !== "" &&
-          intake.executorRelationship !== "" &&
-          intake.successorExecutorName.trim() !== ""
+          intake.executorRelationship !== ""
         );
       case "beneficiaries": {
-        const base =
-          intake.primaryBeneficiaryName.trim() !== "" &&
-          intake.primaryBeneficiaryRelationship !== "" &&
-          intake.hasSecondBeneficiary !== "" &&
-          intake.hasContingentBeneficiary !== "";
-        if (!base) return false;
-        if (intake.hasSecondBeneficiary === "Yes") {
-          if (
-            intake.secondBeneficiaryName.trim() === "" ||
-            intake.secondBeneficiaryRelationship === "" ||
-            intake.estateSplit === ""
-          )
-            return false;
-          if (intake.estateSplit === "Other") {
-            if (!intake.customSplit.trim()) return false;
-            const sp = intake.customSplit.split("/");
-            if (Math.round((parseFloat(sp[0]) || 0) + (parseFloat(sp[1]) || 0)) !== 100) return false;
+        if (intake.beneficiaries.length === 0) return false;
+        if (intake.beneficiaries.some((b) => !b.name.trim() || !b.relationship)) return false;
+        if (intake.hasContingentBeneficiary === "") return false;
+        if (intake.beneficiaries.length > 1) {
+          if (!intake.beneficiariesEqualShares) return false;
+          if (intake.beneficiariesEqualShares === "No") {
+            if (intake.beneficiaries.some((b) => !b.share?.trim())) return false;
+            const t = intake.beneficiaries.reduce((s, b) => s + (parseFloat(b.share) || 0), 0);
+            if (Math.round(t) !== 100) return false;
           }
         }
         if (intake.hasContingentBeneficiary === "Yes" && intake.contingentBeneficiaries.length === 0)
@@ -139,8 +145,7 @@ export default function WillPage() {
       case "guardian":
         return (
           intake.guardianName.trim() !== "" &&
-          intake.guardianRelationship !== "" &&
-          intake.successorGuardianName.trim() !== ""
+          intake.guardianRelationship !== ""
         );
       case "gifts":
         return (
@@ -166,7 +171,7 @@ export default function WillPage() {
   }
 
   function handleContinue() {
-    if (!isCardComplete()) return;
+    if (!isCardComplete() || hasPartialName) return;
     if (activeCardId === "review") {
       // Save intake to sessionStorage and go to checkout
       sessionStorage.setItem("willIntake", JSON.stringify(intake));
@@ -223,84 +228,23 @@ export default function WillPage() {
     "Other",
   ];
 
-  // ── LOADING ───────────────────────────────────────────────────
-  if (stage === "loading" || stage === "redirecting") {
+  // ── REDIRECTING ───────────────────────────────────────────────
+  if (stage === "redirecting") {
     return (
-      <div className="min-h-screen bg-navy flex items-center justify-center">
-        <div className="animate-pulse text-gold text-xl font-bold">
-          EstateVault
+      <PartnerThemedShell showHeader={false}>
+        <div className="min-h-screen bg-navy flex items-center justify-center">
+          <BrandedLoadingWordmark />
         </div>
-      </div>
+      </PartnerThemedShell>
     );
   }
 
   // ── STAGE 1: ACKNOWLEDGMENT ───────────────────────────────────
   if (stage === "acknowledgment") {
     return (
-      <div className="min-h-screen bg-navy flex items-center justify-center px-6 py-12">
-        <div className="w-full max-w-lg">
-          <Link
-            href="/"
-            className="block text-center text-2xl font-bold text-white mb-8"
-          >
-            EstateVault
-          </Link>
-
-          <div className="rounded-2xl bg-white p-8 shadow-xl">
-            <h1 className="text-xl font-bold text-navy">Before We Begin</h1>
-
-            <div className="mt-6 space-y-4 text-sm text-charcoal/70 leading-relaxed">
-              <p>
-                This platform provides document preparation services only. It
-                does not provide legal advice. No attorney-client relationship is
-                created by your use of this platform.
-              </p>
-              <p>
-                The documents generated are based solely on the information you
-                provide. You are responsible for ensuring all information is
-                accurate and complete. You are responsible for properly executing
-                your documents in accordance with Michigan law requirements.
-              </p>
-              <p>
-                If your situation is complex, we recommend consulting a licensed
-                Michigan estate planning attorney.
-              </p>
-            </div>
-
-            <label className="mt-8 flex items-start gap-3 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={ackChecked}
-                onChange={(e) => setAckChecked(e.target.checked)}
-                className="mt-0.5 h-5 w-5 rounded border-gray-300 accent-gold"
-              />
-              <span className="text-sm text-charcoal leading-relaxed">
-                I understand and agree that this is a document preparation
-                service, not legal advice, and no attorney-client relationship is
-                created.
-              </span>
-            </label>
-
-            <button
-              onClick={() => {
-                if (!ackChecked) return;
-                setAckLoading(true);
-                // Acknowledgment saved when order is created at checkout
-                setStage("intake");
-                setAckLoading(false);
-              }}
-              disabled={!ackChecked || ackLoading}
-              className={`mt-6 w-full min-h-[44px] rounded-full py-3.5 text-sm font-semibold transition-all ${
-                ackChecked
-                  ? "bg-gold text-white hover:bg-gold/90 shadow-md"
-                  : "bg-gray-200 text-gray-400 cursor-not-allowed"
-              }`}
-            >
-              {ackLoading ? "Loading..." : "I Understand, Continue"}
-            </button>
-          </div>
-        </div>
-      </div>
+      <PartnerThemedShell showHeader={false}>
+        <AcknowledgmentCard onContinue={() => setStage("intake")} />
+      </PartnerThemedShell>
     );
   }
 
@@ -319,31 +263,37 @@ export default function WillPage() {
       case "about":
         return (
           <>
-            <QuestionLabel>First name</QuestionLabel>
-            <TextInput
-              value={intake.firstName}
-              onChange={(v) => update({ firstName: v })}
-              placeholder="First name"
-            />
-            <div className="mt-5">
-              <QuestionLabel>Last name</QuestionLabel>
-              <TextInput
-                value={intake.lastName}
-                onChange={(v) => update({ lastName: v })}
-                placeholder="Last name"
-              />
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <QuestionLabel required>First name</QuestionLabel>
+                <TextInput
+                  value={intake.firstName}
+                  onChange={(v) => update({ firstName: v })}
+                  placeholder="First name"
+                />
+              </div>
+              <div>
+                <QuestionLabel required>Last name</QuestionLabel>
+                <TextInput
+                  value={intake.lastName}
+                  onChange={(v) => update({ lastName: v })}
+                  placeholder="Last name"
+                />
+              </div>
             </div>
             <div className="mt-5">
-              <QuestionLabel>Date of birth</QuestionLabel>
+              <QuestionLabel required>Date of birth</QuestionLabel>
               <input
                 type="date"
+                required
+                aria-required="true"
                 value={intake.dateOfBirth}
                 onChange={(e) => update({ dateOfBirth: e.target.value })}
                 className="min-h-[44px] w-full rounded-xl border-2 border-gray-200 bg-white px-4 py-3 text-sm text-charcoal focus:border-gold focus:outline-none focus:ring-1 focus:ring-gold/30 transition-colors"
               />
             </div>
             <div className="mt-5">
-              <QuestionLabel>City of residence</QuestionLabel>
+              <QuestionLabel required>City of residence</QuestionLabel>
               <TextInput
                 value={intake.city}
                 onChange={(v) => update({ city: v })}
@@ -351,7 +301,7 @@ export default function WillPage() {
               />
             </div>
             <div className="mt-5">
-              <QuestionLabel>Do you have minor children (under 18)?</QuestionLabel>
+              <QuestionLabel required>Do you have minor children (under 18)?</QuestionLabel>
               <YesNoTiles
                 value={intake.hasMinorChildren}
                 onChange={(v) =>
@@ -378,11 +328,10 @@ export default function WillPage() {
               Your executor is the person who will carry out the instructions in
               your will.
             </p>
-            <QuestionLabel>Executor full name</QuestionLabel>
-            <TextInput
+            <QuestionLabel required>Executor name</QuestionLabel>
+            <NameInput
               value={intake.executorName}
               onChange={(v) => update({ executorName: v })}
-              placeholder="Full name"
             />
             <div className="mt-5">
               <QuestionLabel>Executor relationship to you</QuestionLabel>
@@ -398,14 +347,15 @@ export default function WillPage() {
               </div>
             </div>
             <div className="mt-5">
-              <QuestionLabel>Successor executor full name</QuestionLabel>
+              <QuestionLabel>Successor executor name</QuestionLabel>
               <p className="mb-2 text-xs text-charcoal/50">
                 Backup if your first choice is unable to serve
               </p>
-              <TextInput
+              <NameInput
                 value={intake.successorExecutorName}
                 onChange={(v) => update({ successorExecutorName: v })}
-                placeholder="Full name"
+                optional
+                onPartialChange={partialHandler("successor-executor")}
               />
             </div>
           </>
@@ -417,132 +367,98 @@ export default function WillPage() {
             <p className="mb-5 text-xs text-charcoal/60">
               Who should inherit your estate?
             </p>
-            <QuestionLabel>Primary beneficiary full name</QuestionLabel>
-            <TextInput
-              value={intake.primaryBeneficiaryName}
-              onChange={(v) => update({ primaryBeneficiaryName: v })}
-              placeholder="Full name"
-            />
-            <div className="mt-5">
-              <QuestionLabel>Relationship</QuestionLabel>
-              <div className="grid grid-cols-2 gap-3">
-                {beneficiaryRelOptions.map((opt) => (
-                  <ChoiceTile
-                    key={opt}
-                    label={opt}
-                    selected={intake.primaryBeneficiaryRelationship === opt}
-                    onClick={() =>
-                      update({ primaryBeneficiaryRelationship: opt })
-                    }
-                  />
-                ))}
-              </div>
-            </div>
-            <div className="mt-5">
-              <QuestionLabel>Add another beneficiary?</QuestionLabel>
-              <YesNoTiles
-                value={intake.hasSecondBeneficiary}
-                onChange={(v) =>
-                  update({
-                    hasSecondBeneficiary: v,
-                    ...(v === "No"
-                      ? {
-                          secondBeneficiaryName: "",
-                          secondBeneficiaryRelationship: "",
-                          estateSplit: "",
-                          customSplit: "",
-                        }
-                      : {}),
-                  })
-                }
-              />
-            </div>
-            {intake.hasSecondBeneficiary === "Yes" && (
-              <>
-                <div className="mt-5">
-                  <QuestionLabel>Second beneficiary full name</QuestionLabel>
-                  <TextInput
-                    value={intake.secondBeneficiaryName}
-                    onChange={(v) => update({ secondBeneficiaryName: v })}
-                    placeholder="Full name"
-                  />
+            {intake.beneficiaries.map((b, idx) => (
+              <div key={idx} className={idx === 0 ? "" : "mt-5 rounded-lg bg-gray-50 p-4"}>
+                <div className={idx === 0 ? "" : "mb-2 flex items-center justify-between"}>
+                  <QuestionLabel required>Beneficiary {idx + 1} name</QuestionLabel>
+                  {idx > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => update({ beneficiaries: intake.beneficiaries.filter((_, i) => i !== idx) })}
+                      className="text-xs text-red-500 hover:text-red-600 font-medium"
+                    >
+                      Remove
+                    </button>
+                  )}
                 </div>
-                <div className="mt-5">
-                  <QuestionLabel>Relationship</QuestionLabel>
-                  <div className="grid grid-cols-2 gap-3">
+                <NameInput
+                  value={b.name}
+                  onChange={(v) => {
+                    const u = [...intake.beneficiaries];
+                    u[idx] = { ...u[idx], name: v };
+                    update({ beneficiaries: u });
+                  }}
+                />
+                <div className="mt-3">
+                  <QuestionLabel required>Relationship</QuestionLabel>
+                  <div className="grid grid-cols-2 gap-2">
                     {beneficiaryRelOptions.map((opt) => (
                       <ChoiceTile
                         key={opt}
                         label={opt}
-                        selected={intake.secondBeneficiaryRelationship === opt}
-                        onClick={() =>
-                          update({ secondBeneficiaryRelationship: opt })
-                        }
+                        selected={b.relationship === opt}
+                        onClick={() => {
+                          const u = [...intake.beneficiaries];
+                          u[idx] = { ...u[idx], relationship: opt };
+                          update({ beneficiaries: u });
+                        }}
                       />
                     ))}
                   </div>
                 </div>
-                <div className="mt-5">
-                  <QuestionLabel>
-                    Split equally between both beneficiaries?
-                  </QuestionLabel>
-                  <div className="grid grid-cols-2 gap-3">
-                    {["Yes, equal split", "No, custom split"].map((opt) => (
-                      <ChoiceTile
-                        key={opt}
-                        label={opt}
-                        selected={
-                          opt === "Yes, equal split"
-                            ? intake.estateSplit === "50/50"
-                            : intake.estateSplit !== "" && intake.estateSplit !== "50/50"
-                        }
-                        onClick={() =>
-                          update({
-                            estateSplit: opt === "Yes, equal split" ? "50/50" : "Other",
-                            customSplit: opt === "Yes, equal split" ? "" : intake.customSplit,
-                          })
-                        }
-                      />
-                    ))}
-                  </div>
-                  {intake.estateSplit !== "" && intake.estateSplit !== "50/50" && (() => {
-                    const parts = (intake.customSplit || "").split("/");
-                    const pPct = parts[0] ?? "";
-                    const sPct = parts[1] ?? "";
-                    const total = (parseFloat(pPct) || 0) + (parseFloat(sPct) || 0);
-                    return (
-                      <div className="mt-3 space-y-2">
-                        {[
-                          { label: intake.primaryBeneficiaryName || "Primary beneficiary", pct: pPct, side: "primary" as const },
-                          { label: intake.secondBeneficiaryName || "Second beneficiary", pct: sPct, side: "secondary" as const },
-                        ].map(({ label, pct, side }) => (
-                          <div key={side} className="flex items-center gap-3 rounded-xl border-2 border-gray-200 bg-white px-4 py-3">
-                            <span className="flex-1 truncate text-sm font-medium text-navy">{label}</span>
-                            <div className="flex items-center gap-1.5">
-                              <input
-                                type="number"
-                                min={0}
-                                max={100}
-                                value={pct}
-                                onChange={(e) => {
-                                  const v = e.target.value;
-                                  update({ customSplit: side === "primary" ? `${v}/${sPct}` : `${pPct}/${v}`, estateSplit: "Other" });
-                                }}
-                                className="w-16 rounded-lg border-2 border-gray-200 px-2 py-1.5 text-center text-sm font-medium focus:border-gold focus:outline-none transition-colors"
-                                placeholder="0"
-                              />
-                              <span className="text-sm text-charcoal/50">%</span>
-                            </div>
+              </div>
+            ))}
+            <button
+              type="button"
+              onClick={() => update({ beneficiaries: [...intake.beneficiaries, { name: "", relationship: "", share: "" }] })}
+              className="mt-3 text-sm text-gold font-medium hover:text-gold/80"
+            >
+              + Add another beneficiary
+            </button>
+            {intake.beneficiaries.length > 1 && (
+              <div className="mt-5">
+                <QuestionLabel required>Should beneficiaries receive equal shares?</QuestionLabel>
+                <YesNoTiles
+                  value={intake.beneficiariesEqualShares}
+                  onChange={(v) => {
+                    update({
+                      beneficiariesEqualShares: v,
+                      beneficiaries: intake.beneficiaries.map((b) => ({ ...b, share: "" })),
+                    });
+                  }}
+                />
+                {intake.beneficiariesEqualShares === "No" && (() => {
+                  const total = intake.beneficiaries.reduce((sum, b) => sum + (parseFloat(b.share) || 0), 0);
+                  return (
+                    <div className="mt-3 space-y-2">
+                      {intake.beneficiaries.map((b, idx) => (
+                        <div key={idx} className="flex items-center gap-3 rounded-xl border-2 border-gray-200 bg-white px-4 py-3">
+                          <span className="flex-1 truncate text-sm font-medium text-navy">{b.name || `Beneficiary ${idx + 1}`}</span>
+                          <div className="flex items-center gap-1.5">
+                            <input
+                              type="number"
+                              min={0}
+                              max={100}
+                              value={b.share}
+                              onChange={(e) => {
+                                const u = [...intake.beneficiaries];
+                                u[idx] = { ...u[idx], share: e.target.value };
+                                update({ beneficiaries: u });
+                              }}
+                              className="w-16 rounded-lg border-2 border-gray-200 px-2 py-1.5 text-center text-sm font-medium focus:border-gold focus:outline-none transition-colors"
+                              placeholder="0"
+                            />
+                            <span className="text-sm text-charcoal/50">%</span>
                           </div>
-                        ))}
-                        <p className={`text-sm font-medium ${Math.round(total) === 100 ? "text-green-600" : "text-red-500"}`}>
-                          Total: {total % 1 === 0 ? total : total.toFixed(1)}%{Math.round(total) === 100 ? ", all set" : ", must equal 100%"}
-                        </p>
-                      </div>
-                    );
-                  })()}
-                </div>
-              </>
+                        </div>
+                      ))}
+                      <p className={`text-sm font-medium ${Math.round(total) === 100 ? "text-green-600" : "text-red-500"}`}>
+                        Total: {total % 1 === 0 ? total : total.toFixed(1)}%{Math.round(total) === 100 ? ", all set" : ", must equal 100%"}
+                      </p>
+                    </div>
+                  );
+                })()}
+              </div>
             )}
             {/* Contingent beneficiary */}
             <div className="mt-5">
@@ -563,15 +479,14 @@ export default function WillPage() {
               <>
                 {intake.contingentBeneficiaries.map((cb, idx) => (
                   <div key={idx} className="mt-5 rounded-lg bg-gray-50 p-4">
-                    <QuestionLabel>Contingent beneficiary {idx + 1} full name</QuestionLabel>
-                    <TextInput
+                    <QuestionLabel required>Contingent beneficiary {idx + 1} name</QuestionLabel>
+                    <NameInput
                       value={cb.name}
                       onChange={(v) => {
                         const updated = [...intake.contingentBeneficiaries];
                         updated[idx] = { ...updated[idx], name: v };
                         update({ contingentBeneficiaries: updated });
                       }}
-                      placeholder="Full name"
                     />
                     <div className="mt-3">
                       <QuestionLabel>Relationship</QuestionLabel>
@@ -661,11 +576,10 @@ export default function WillPage() {
               This person would raise your children if something happened to
               you.
             </p>
-            <QuestionLabel>Guardian full name</QuestionLabel>
-            <TextInput
+            <QuestionLabel required>Guardian name</QuestionLabel>
+            <NameInput
               value={intake.guardianName}
               onChange={(v) => update({ guardianName: v })}
-              placeholder="Full name"
             />
             <div className="mt-5">
               <QuestionLabel>Guardian relationship</QuestionLabel>
@@ -681,11 +595,12 @@ export default function WillPage() {
               </div>
             </div>
             <div className="mt-5">
-              <QuestionLabel>Successor guardian full name</QuestionLabel>
-              <TextInput
+              <QuestionLabel>Successor guardian name</QuestionLabel>
+              <NameInput
                 value={intake.successorGuardianName}
                 onChange={(v) => update({ successorGuardianName: v })}
-                placeholder="Full name"
+                optional
+                onPartialChange={partialHandler("successor-guardian")}
               />
             </div>
           </>
@@ -761,23 +676,14 @@ export default function WillPage() {
             </div>
             <hr className="border-gray-100" />
             <div>
-              <p className="font-medium text-navy">Primary Beneficiary</p>
-              <p className="text-charcoal/70">
-                {intake.primaryBeneficiaryName} (
-                {intake.primaryBeneficiaryRelationship})
-              </p>
-              {intake.hasSecondBeneficiary === "Yes" && (
-                <>
-                  <p className="text-charcoal/70 mt-1">
-                    {intake.secondBeneficiaryName} ({intake.secondBeneficiaryRelationship}) &middot;{" "}
-                    {intake.estateSplit === "50/50"
-                      ? "50% each"
-                      : (() => {
-                          const sp = (intake.customSplit || "").split("/");
-                          return `${intake.primaryBeneficiaryName} ${sp[0] || "?"}% / ${intake.secondBeneficiaryName} ${sp[1] || "?"}%`;
-                        })()}
-                  </p>
-                </>
+              <p className="font-medium text-navy">Beneficiaries</p>
+              {intake.beneficiaries.map((b, i) => (
+                <p key={i} className="text-charcoal/70">
+                  {b.name} ({b.relationship}){intake.beneficiaries.length > 1 && intake.beneficiariesEqualShares === "No" && b.share ? ` — ${b.share}%` : ""}
+                </p>
+              ))}
+              {intake.beneficiaries.length > 1 && intake.beneficiariesEqualShares !== "No" && (
+                <p className="text-charcoal/50 text-xs">Equal shares</p>
               )}
               {intake.hasContingentBeneficiary === "Yes" && intake.contingentBeneficiaries.length > 0 ? (
                 <div className="mt-2">
@@ -834,6 +740,7 @@ export default function WillPage() {
   }
 
   return (
+    <PartnerThemedShell showHeader={false}>
     <div className="min-h-screen bg-navy">
       {/* Progress bar */}
       <div className="fixed top-0 left-0 right-0 z-40 h-1.5 bg-navy/80">
@@ -892,9 +799,9 @@ export default function WillPage() {
             ) : (
               <button
                 onClick={handleContinue}
-                disabled={!isCardComplete()}
+                disabled={!isCardComplete() || hasPartialName}
                 className={`mt-8 flex w-full min-h-[44px] items-center justify-center rounded-full py-3.5 text-sm font-semibold transition-all ${
-                  isCardComplete()
+                  isCardComplete() && !hasPartialName
                     ? "bg-gold text-white hover:bg-gold/90 shadow-md"
                     : "bg-gray-200 text-gray-400 cursor-not-allowed"
                 }`}
@@ -906,5 +813,6 @@ export default function WillPage() {
         </div>
       </div>
     </div>
+    </PartnerThemedShell>
   );
 }

@@ -3,6 +3,7 @@
 import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import PartnerThemedShell from "@/components/partner/PartnerThemedShell";
 
 function HandoffInner() {
   const params = useSearchParams();
@@ -37,6 +38,7 @@ function HandoffInner() {
   }, [token]);
 
   return (
+    <PartnerThemedShell showHeader={false}>
     <div className="min-h-screen bg-navy flex items-center justify-center px-6 py-12">
       <div className="w-full max-w-md rounded-2xl bg-white p-8 shadow-xl text-center">
         {error ? (
@@ -55,6 +57,7 @@ function HandoffInner() {
         )}
       </div>
     </div>
+    </PartnerThemedShell>
   );
 }
 

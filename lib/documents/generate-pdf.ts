@@ -6,6 +6,20 @@
  */
 
 import { PDFDocument, StandardFonts, rgb, PageSizes } from "pdf-lib";
+import fs from "fs";
+import path from "path";
+
+let cachedLogoBytes: Buffer | null = null;
+function loadLogoBytes(): Buffer | null {
+  if (cachedLogoBytes) return cachedLogoBytes;
+  try {
+    const p = path.join(process.cwd(), "public", "logo.png");
+    cachedLogoBytes = fs.readFileSync(p);
+    return cachedLogoBytes;
+  } catch {
+    return null;
+  }
+}
 
 const TYPE_NAMES: Record<string, string> = {
   will: "Last Will and Testament",
@@ -134,6 +148,9 @@ export async function generatePDF(
   const timesBold = await pdfDoc.embedFont(StandardFonts.TimesRomanBold);
   const helvetica = await pdfDoc.embedFont(StandardFonts.Helvetica);
 
+  const logoBytes = loadLogoBytes();
+  const logoImage = logoBytes ? await pdfDoc.embedPng(logoBytes) : null;
+
   const [pageWidth, pageHeight] = PageSizes.Letter;
   const margin = 72;
   const contentWidth = pageWidth - 2 * margin;
@@ -157,8 +174,15 @@ const today = new Date().toLocaleDateString("en-US", { year: "numeric", month: "
   }
 
   function addHeaderFooter() {
-    // Header
-    currentPage.drawText(`${clientName}, ${title}`, { x: margin, y: pageHeight - 30, size: 8, font: helvetica, color: rgb(0.5, 0.5, 0.5) });
+    // Logo (top-left header)
+    if (logoImage) {
+      const logoH = 22;
+      const logoW = (logoImage.width / logoImage.height) * logoH;
+      currentPage.drawImage(logoImage, { x: margin, y: pageHeight - 36, width: logoW, height: logoH });
+      currentPage.drawText(`${clientName}, ${title}`, { x: margin + logoW + 8, y: pageHeight - 30, size: 8, font: helvetica, color: rgb(0.5, 0.5, 0.5) });
+    } else {
+      currentPage.drawText(`${clientName}, ${title}`, { x: margin, y: pageHeight - 30, size: 8, font: helvetica, color: rgb(0.5, 0.5, 0.5) });
+    }
     // Footer
     currentPage.drawText(footerText, { x: margin, y: 22, size: 6.5, font: helvetica, color: rgb(0.6, 0.6, 0.6) });
     currentPage.drawText(`Page ${pageNum}`, { x: pageWidth - margin - 30, y: 22, size: 7, font: helvetica, color: rgb(0.6, 0.6, 0.6) });
@@ -246,6 +270,16 @@ const today = new Date().toLocaleDateString("en-US", { year: "numeric", month: "
 
   // ── TITLE PAGE ──────────────────────────
   pageNum++;
+  if (logoImage) {
+    const logoH = 90;
+    const logoW = (logoImage.width / logoImage.height) * logoH;
+    currentPage.drawImage(logoImage, {
+      x: (pageWidth - logoW) / 2,
+      y: pageHeight - 180,
+      width: logoW,
+      height: logoH,
+    });
+  }
   yPos = pageHeight - 280;
   currentPage.drawText(title.toUpperCase(), { x: (pageWidth - timesBold.widthOfTextAtSize(title.toUpperCase(), 20)) / 2, y: yPos, size: 20, font: timesBold, color: rgb(0.11, 0.21, 0.34) });
   yPos -= 30;

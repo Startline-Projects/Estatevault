@@ -6,6 +6,15 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { clientUrl, partnerUrl, adminUrl, salesUrl } from "@/lib/hosts";
 import { createClient as createBrowserSupabase } from "@/lib/supabase/client";
+import PartnerThemedShell, { usePartnerBranding } from "@/components/partner/PartnerThemedShell";
+
+function BrandedWordmark({ className = "" }: { className?: string }) {
+  const branding = usePartnerBranding();
+  if (branding?.logoUrl) {
+    return <img src={branding.logoUrl} alt={branding.companyName} className={`h-12 w-auto object-contain ${className}`} />;
+  }
+  return <span className={className}>{branding?.companyName || "EstateVault"}</span>;
+}
 
 async function navigate(
   router: ReturnType<typeof useRouter>,
@@ -191,11 +200,12 @@ function LoginForm() {
 
 export default function LoginPage() {
   return (
+    <PartnerThemedShell showHeader={false}>
     <div className="min-h-screen bg-navy flex items-center justify-center px-6 py-12">
       <div className="w-full max-w-md">
-        <p className="text-center text-2xl font-bold text-white mb-8">
-          EstateVault
-        </p>
+        <div className="mb-8 flex justify-center">
+          <BrandedWordmark className="text-2xl font-bold text-white" />
+        </div>
         <Suspense fallback={
           <div className="rounded-2xl bg-white p-8 shadow-xl animate-pulse">
             <div className="h-6 w-24 bg-gray-200 rounded" />
@@ -209,5 +219,6 @@ export default function LoginPage() {
         </Suspense>
       </div>
     </div>
+    </PartnerThemedShell>
   );
 }

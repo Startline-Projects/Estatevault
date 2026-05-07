@@ -2,6 +2,9 @@ import { createServerClient } from "@supabase/ssr";
 import { redirect } from "next/navigation";
 import PartnerPageClient from "./PartnerPageClient";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 function createAdminClient() {
   return createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,

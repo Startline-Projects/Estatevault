@@ -175,7 +175,8 @@ export default function Step5Page() {
               <div className="bg-white border border-gray-100 p-4">
                 <p className="text-xs text-charcoal/70">Dear [Client Name],</p>
                 <p className="text-xs text-charcoal/70 mt-2">Your Will Package is ready to review and download.</p>
-                <div className="mt-3"><span className="rounded-full bg-gold px-4 py-1 text-xs text-white font-semibold">Download Your Documents</span></div>
+                <div className="mt-3"><a href="/sample-will.pdf" download="Sample-Will.pdf" className="inline-block rounded-full bg-gold px-4 py-1 text-xs text-white font-semibold hover:bg-gold/90">Download Your Documents</a></div>
+                <p className="mt-2 text-[10px] text-charcoal/50">Preview a sample will to see how the document will look to your clients.</p>
               </div>
               <div className="bg-gray-50 px-4 py-2 text-xs text-charcoal/60">{companyName} | Powered by EstateVault</div>
             </div>

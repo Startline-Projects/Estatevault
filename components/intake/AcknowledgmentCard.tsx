@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { usePartnerBranding } from "@/components/partner/PartnerThemedShell";
 
 interface AcknowledgmentCardProps {
   onContinue: () => void;
@@ -9,14 +10,18 @@ interface AcknowledgmentCardProps {
 
 export default function AcknowledgmentCard({ onContinue }: AcknowledgmentCardProps) {
   const [checked, setChecked] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const branding = usePartnerBranding();
 
   return (
     <div className="min-h-screen bg-navy flex items-center justify-center px-6 py-12">
       <div className="w-full max-w-lg">
-        <Link href="/" className="block text-center text-2xl font-bold text-white mb-8">
-          EstateVault
-        </Link>
+        {/* <Link href={branding ? `/?partner=${branding.id}` : "/"} className="mb-8 flex justify-center">
+          {branding?.logoUrl ? (
+            <img src={branding.logoUrl} alt={branding.companyName} className="h-12 w-auto object-contain" />
+          ) : (
+            <span className="text-2xl font-bold text-white">{branding?.companyName || "EstateVault"}</span>
+          )}
+        </Link> */}
 
         <div className="rounded-2xl bg-white p-8 shadow-xl">
           <h1 className="text-xl font-bold text-navy">Before We Begin</h1>
@@ -53,19 +58,15 @@ export default function AcknowledgmentCard({ onContinue }: AcknowledgmentCardPro
           </label>
 
           <button
-            onClick={() => {
-              if (!checked) return;
-              setLoading(true);
-              onContinue();
-            }}
-            disabled={!checked || loading}
+            onClick={() => { if (checked) onContinue(); }}
+            disabled={!checked}
             className={`mt-6 w-full min-h-[44px] rounded-full py-3.5 text-sm font-semibold transition-all ${
               checked
                 ? "bg-gold text-white hover:bg-gold/90 shadow-md"
                 : "bg-gray-200 text-gray-400 cursor-not-allowed"
             }`}
           >
-            {loading ? "Loading..." : "I Understand, Continue"}
+            I Understand, Continue
           </button>
         </div>
       </div>

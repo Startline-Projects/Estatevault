@@ -84,10 +84,10 @@ export function buildWillPrompt(intake: Record<string, unknown>): string {
   const executor_name = (i.executor_name || i.executorName || "") as string;
   const executor_relationship = (i.executor_relationship || i.executorRelationship || "") as string;
   const successor_executor = (i.successor_executor || i.successorExecutorName || "") as string;
-  const primary_beneficiary = (i.primary_beneficiary || i.primaryBeneficiaryName || "") as string;
-  const primary_beneficiary_relationship = (i.primary_beneficiary_relationship || i.primaryBeneficiaryRelationship || "") as string;
-  const secondary_beneficiary = (i.secondary_beneficiary || i.secondBeneficiaryName || "") as string;
-  const estate_split = (i.estate_split || i.estateSplit || "100% to primary beneficiary") as string;
+  const beneficiaries = (i.beneficiaries || []) as Array<{ name: string; relationship: string; share?: string }>;
+  const beneficiariesEqualShares = (i.beneficiariesEqualShares ?? "Yes") as string;
+  const primary_beneficiary = (i.primary_beneficiary || i.primaryBeneficiaryName || beneficiaries[0]?.name || "") as string;
+  const primary_beneficiary_relationship = (i.primary_beneficiary_relationship || i.primaryBeneficiaryRelationship || beneficiaries[0]?.relationship || "") as string;
   const guardian_name = (i.guardian_name || i.guardianName || "") as string;
   const guardian_relationship = (i.guardian_relationship || i.guardianRelationship || "") as string;
   const successor_guardian = (i.successor_guardian || i.successorGuardianName || "") as string;
@@ -106,28 +106,24 @@ EXECUTOR APPOINTMENT:
 - Primary Executor: ${executor_name} (${executor_relationship})
 - Successor Executor: ${successor_executor}
 
-BENEFICIARY DESIGNATIONS:
-- Primary Beneficiary: ${primary_beneficiary} (${primary_beneficiary_relationship})`;
+BENEFICIARY DESIGNATIONS:`;
 
-  if (secondary_beneficiary) {
-    prompt += `\n- Secondary Beneficiary: ${secondary_beneficiary}`;
-    if (estate_split === "50/50") {
-      prompt += `\n- Estate Distribution: Equal split, ${primary_beneficiary} 50%, ${secondary_beneficiary} 50%`;
+  if (beneficiaries.length > 0) {
+    beneficiaries.forEach((b, idx) => {
+      const shareLabel = beneficiaries.length > 1 && beneficiariesEqualShares === "No" && b.share ? ` — ${b.share}%` : "";
+      prompt += `\n- Beneficiary ${idx + 1}: ${b.name} (${b.relationship})${shareLabel}`;
+    });
+    if (beneficiaries.length > 1) {
+      prompt += beneficiariesEqualShares === "No"
+        ? `\n- Estate Distribution: Custom percentages (see above)`
+        : `\n- Estate Distribution: Equal shares (${(100 / beneficiaries.length).toFixed(beneficiaries.length === 3 ? 2 : 0)}% each)`;
     } else {
-      const customSplitStr = (i.customSplit || i.custom_split || "") as string;
-      const sp = customSplitStr.split("/");
-      const pPct = sp[0]?.trim();
-      const sPct = sp[1]?.trim();
-      prompt += pPct && sPct
-        ? `\n- Estate Distribution: ${primary_beneficiary} receives ${pPct}%, ${secondary_beneficiary} receives ${sPct}%`
-        : `\n- Estate Distribution: ${estate_split}`;
+      prompt += `\n- Estate Distribution: 100% to ${primary_beneficiary}`;
     }
     prompt += `\n\nRESIDUARY CLAUSE INSTRUCTIONS:
-If the primary beneficiary does not survive the testator by thirty (30) days, the entire residuary estate shall pass to the secondary beneficiary, ${secondary_beneficiary}. If neither the primary nor secondary beneficiary survives the testator by thirty (30) days, then the estate shall pass to the testator's heirs at law under Michigan intestate succession.`;
+If a primary beneficiary does not survive the testator by thirty (30) days, that beneficiary's share shall pass to the surviving primary beneficiaries pro rata. If none survive, the estate shall pass to the testator's heirs at law under Michigan intestate succession.`;
   } else {
-    prompt += `\n- Estate Distribution: 100% to primary beneficiary`;
-    prompt += `\n\nRESIDUARY CLAUSE INSTRUCTIONS:
-If the primary beneficiary does not survive the testator by thirty (30) days, the entire residuary estate shall pass to the testator's heirs at law as determined under the laws of intestate succession of the State of Michigan.`;
+    prompt += `\n- Primary Beneficiary: ${primary_beneficiary} (${primary_beneficiary_relationship})`;
   }
 
   if (contingent_beneficiaries.length > 0) {

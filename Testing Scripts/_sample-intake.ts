@@ -12,16 +12,14 @@ export const sampleIntake: Record<string, unknown> = {
   trusteeName: "John Smith",
   successorTrusteeName: "Jane Smith",
   successorTrusteeRelationship: "Spouse",
-  secondSuccessorTrusteeName: "Michael Smith",
+  additionalSuccessorTrustees: [{ name: "Michael Smith", relationship: "Sibling" }],
 
   // Beneficiaries
-  primaryBeneficiaryName: "Jane Smith",
-  primaryBeneficiaryRelationship: "Spouse",
-  hasSecondBeneficiary: "Yes",
-  secondBeneficiaryName: "Emma Smith",
-  secondBeneficiaryRelationship: "Daughter",
-  estateSplit: "50/50",
-  customSplit: "",
+  beneficiaries: [
+    { name: "Jane Smith", relationship: "Spouse", share: "" },
+    { name: "Emma Smith", relationship: "Daughter", share: "" },
+  ],
+  beneficiariesEqualShares: "Yes",
   distributionAge: "25",
 
   // Guardian (for minor children)

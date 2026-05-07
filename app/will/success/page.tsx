@@ -6,6 +6,7 @@ import { useSearchParams } from "next/navigation";
 import AnimatedCheckmark from "@/components/success/AnimatedCheckmark";
 import PasswordSetup from "@/components/success/PasswordSetup";
 import { createClient } from "@/lib/supabase/client";
+import PartnerThemedShell, { BrandedLoadingWordmark } from "@/components/partner/PartnerThemedShell";
 
 type Step = { label: string; status: "done" | "active" | "pending" };
 
@@ -176,13 +177,20 @@ function SuccessContent() {
 
   async function handleDownload(doc: DocumentRecord) {
     try {
-      const supabase = createClient();
       if (!doc.storage_path) return;
-      const { data } = await supabase.storage.from("documents").createSignedUrl(doc.storage_path, 3600);
-      if (data?.signedUrl) {
-        window.open(data.signedUrl, "_blank");
+      const params = new URLSearchParams({ id: doc.id });
+      if (sessionId) params.set("session_id", sessionId);
+      if (orderId) params.set("order_id", orderId);
+      const res = await fetch(`/api/documents/download-by-session?${params.toString()}`);
+      const data = await res.json();
+      if (!res.ok || !data.url) {
+        setError(data.error || "Download failed.");
+        return;
       }
-    } catch { /* ignore */ }
+      window.open(data.url, "_blank");
+    } catch {
+      setError("Download failed.");
+    }
   }
 
   const docTypeLabels: Record<string, string> = {
@@ -193,14 +201,17 @@ function SuccessContent() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-navy flex items-center justify-center">
-        <div className="animate-pulse text-gold text-xl font-bold">EstateVault</div>
-      </div>
+      <PartnerThemedShell showHeader={false}>
+        <div className="min-h-screen bg-navy flex items-center justify-center">
+          <BrandedLoadingWordmark />
+        </div>
+      </PartnerThemedShell>
     );
   }
 
   if (error) {
     return (
+      <PartnerThemedShell showHeader={false}>
       <div className="min-h-screen bg-navy flex items-center justify-center px-6">
         <div className="w-full max-w-md rounded-2xl bg-white p-8 text-center shadow-xl">
           <h1 className="text-xl font-bold text-navy">Something went wrong</h1>
@@ -210,10 +221,12 @@ function SuccessContent() {
           </Link>
         </div>
       </div>
+      </PartnerThemedShell>
     );
   }
 
   return (
+    <PartnerThemedShell showHeader={false}>
     <div className="min-h-screen bg-navy px-6 py-12">
       <div className="mx-auto max-w-2xl">
         <AnimatedCheckmark />
@@ -333,12 +346,13 @@ function SuccessContent() {
         )}
       </div>
     </div>
+    </PartnerThemedShell>
   );
 }
 
 export default function WillSuccessPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen bg-navy flex items-center justify-center"><div className="animate-pulse text-gold text-xl font-bold">EstateVault</div></div>}>
+    <Suspense fallback={<PartnerThemedShell showHeader={false}><div className="min-h-screen bg-navy flex items-center justify-center"><BrandedLoadingWordmark /></div></PartnerThemedShell>}>
       <SuccessContent />
     </Suspense>
   );
