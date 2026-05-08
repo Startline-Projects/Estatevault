@@ -161,7 +161,7 @@ export async function POST(request: Request) {
                     <li>Once verified, your platform will be fully activated</li>
                   </ul>
                   <p style="margin-top:24px;font-size:14px;color:#2D2D2D;line-height:1.6;">
-                    If you have any questions, reply to this email or contact us at support@estatevault.us.
+                    If you have any questions, reply to this email or contact us at info@estatevault.us.
                   </p>
                 </div>
                 <div style="background:#f8f9fa;padding:24px 32px;border-top:1px solid #e5e5e5;">

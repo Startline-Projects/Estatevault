@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import Link from "next/link";
 import SubscriptionBanner from "@/components/dashboard/SubscriptionBanner";
 import FarewellRecorder from "@/components/dashboard/FarewellRecorder";
 import FarewellUploader from "@/components/dashboard/FarewellUploader";
@@ -24,13 +25,14 @@ export default function FarewellMessagesPage() {
   const [loading, setLoading] = useState(true);
   const [mode, setMode] = useState<Mode>("list");
   const [showCreateForm, setShowCreateForm] = useState(false);
-  const [activeMessageId, setActiveMessageId] = useState<string | null>(null);
+  const [pendingTitle, setPendingTitle] = useState("");
+  const [pendingRecipient, setPendingRecipient] = useState("");
   const [newTitle, setNewTitle] = useState("");
   const [newRecipient, setNewRecipient] = useState("");
-  const [creating, setCreating] = useState(false);
   const [error, setError] = useState("");
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [previewTitle, setPreviewTitle] = useState("");
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const handleStatusLoaded = useCallback((status: { canUseFarewell: boolean }) => {
     setIsSubscribed(status.canUseFarewell);
@@ -47,45 +49,32 @@ export default function FarewellMessagesPage() {
 
   useEffect(() => { fetchMessages(); }, []);
 
-  async function handleCreateMessage() {
+  function handleCreateMessage() {
     if (!newTitle.trim() || !newRecipient.trim()) {
       setError("Title and recipient email are required.");
       return;
     }
-    setCreating(true);
     setError("");
-
-    try {
-      const res = await fetch("/api/vault/farewell", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title: newTitle, recipientEmail: newRecipient }),
-      });
-      const data = await res.json();
-      if (!res.ok) { setError(data.error || "Failed to create"); setCreating(false); return; }
-
-      setActiveMessageId(data.messageId);
-      setShowCreateForm(false);
-      // Ask user to choose record or upload
-      setMode("new");
-    } catch {
-      setError("Something went wrong.");
-    }
-    setCreating(false);
+    setPendingTitle(newTitle);
+    setPendingRecipient(newRecipient);
+    setShowCreateForm(false);
+    setMode("new");
   }
 
   async function handleDelete(messageId: string, title: string) {
     const confirmed = window.confirm(`Are you sure you want to delete "${title}"? This cannot be undone. Your designated recipient will no longer be able to access it.`);
     if (!confirmed) return;
 
+    setDeletingId(messageId);
     try {
       await fetch("/api/vault/farewell", {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ messageId }),
       });
-      fetchMessages();
+      await fetchMessages();
     } catch { /* ignore */ }
+    setDeletingId(null);
   }
 
   async function handlePreview(messageId: string, title: string) {
@@ -101,7 +90,8 @@ export default function FarewellMessagesPage() {
 
   function handleUploadComplete() {
     setMode("list");
-    setActiveMessageId(null);
+    setPendingTitle("");
+    setPendingRecipient("");
     setNewTitle("");
     setNewRecipient("");
     fetchMessages();
@@ -127,6 +117,7 @@ export default function FarewellMessagesPage() {
   if (!loading && !isSubscribed) {
     return (
       <div className="space-y-6">
+        <Link href="/dashboard/vault" className="inline-block text-sm text-navy hover:text-gold transition-colors">&larr; Back to Vault</Link>
         <div>
           <h1 className="text-2xl font-bold text-navy">Farewell Messages</h1>
           <p className="text-sm text-charcoal/60 mt-1">Record personal video messages for your loved ones.</p>
@@ -163,31 +154,31 @@ export default function FarewellMessagesPage() {
   }
 
   // Record or Upload mode
-  if (mode === "record" && activeMessageId) {
+  if (mode === "record" && pendingTitle && pendingRecipient) {
     return (
       <div className="space-y-4">
-        <button onClick={() => setMode("list")} className="text-sm text-navy hover:text-gold">&larr; Back</button>
+        <button onClick={() => setMode("new")} className="text-sm text-navy hover:text-gold">&larr; Back</button>
         <h2 className="text-lg font-bold text-navy">Record Your Message</h2>
-        <FarewellRecorder messageId={activeMessageId} onComplete={handleUploadComplete} onCancel={() => setMode("list")} />
+        <FarewellRecorder title={pendingTitle} recipientEmail={pendingRecipient} onComplete={handleUploadComplete} onCancel={() => setMode("new")} />
       </div>
     );
   }
 
-  if (mode === "upload" && activeMessageId) {
+  if (mode === "upload" && pendingTitle && pendingRecipient) {
     return (
       <div className="space-y-4">
-        <button onClick={() => setMode("list")} className="text-sm text-navy hover:text-gold">&larr; Back</button>
+        <button onClick={() => setMode("new")} className="text-sm text-navy hover:text-gold">&larr; Back</button>
         <h2 className="text-lg font-bold text-navy">Upload Your Video</h2>
-        <FarewellUploader messageId={activeMessageId} onComplete={handleUploadComplete} onCancel={() => setMode("list")} />
+        <FarewellUploader title={pendingTitle} recipientEmail={pendingRecipient} onComplete={handleUploadComplete} onCancel={() => setMode("new")} />
       </div>
     );
   }
 
-  // Choose record or upload after creating message
-  if (mode === "new" && activeMessageId) {
+  // Choose record or upload after entering details
+  if (mode === "new" && pendingTitle && pendingRecipient) {
     return (
       <div className="space-y-4">
-        <button onClick={() => { setMode("list"); setActiveMessageId(null); }} className="text-sm text-navy hover:text-gold">&larr; Back</button>
+        <button onClick={() => { setMode("list"); setPendingTitle(""); setPendingRecipient(""); }} className="text-sm text-navy hover:text-gold">&larr; Back</button>
         <h2 className="text-lg font-bold text-navy">How would you like to add your video?</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <button onClick={() => setMode("record")} className="rounded-xl border-2 border-gray-200 hover:border-gold p-8 text-center transition-colors">
@@ -214,6 +205,7 @@ export default function FarewellMessagesPage() {
   // Main list view
   return (
     <div className="space-y-6">
+      <Link href="/dashboard/vault" className="inline-block text-sm text-navy hover:text-gold transition-colors">&larr; Back to Vault</Link>
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-navy">Farewell Messages</h1>
@@ -249,8 +241,8 @@ export default function FarewellMessagesPage() {
               <input type="email" value={newRecipient} onChange={(e) => setNewRecipient(e.target.value)} placeholder="recipient@email.com" className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-navy/20 focus:border-navy" />
             </div>
           </div>
-          <button onClick={handleCreateMessage} disabled={creating || !newTitle.trim() || !newRecipient.trim()} className="mt-3 px-4 py-2 rounded-lg bg-navy text-sm font-medium text-white hover:bg-navy/90 transition-colors disabled:opacity-50">
-            {creating ? "Creating..." : "Continue"}
+          <button onClick={handleCreateMessage} disabled={!newTitle.trim() || !newRecipient.trim()} className="mt-3 px-4 py-2 rounded-lg bg-navy text-sm font-medium text-white hover:bg-navy/90 transition-colors disabled:opacity-50">
+            Continue
           </button>
         </div>
       )}
@@ -284,8 +276,19 @@ export default function FarewellMessagesPage() {
                   </button>
                 )}
                 {msg.vault_farewell_status !== "unlocked" && (
-                  <button onClick={() => handleDelete(msg.id, msg.title)} className="text-xs font-medium px-3 py-1.5 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition-colors">
-                    Delete
+                  <button
+                    onClick={() => handleDelete(msg.id, msg.title)}
+                    disabled={deletingId === msg.id}
+                    className="text-xs font-medium px-3 py-1.5 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition-colors disabled:opacity-60 disabled:cursor-not-allowed inline-flex items-center gap-1.5"
+                  >
+                    {deletingId === msg.id ? (
+                      <>
+                        <span className="w-3 h-3 border-2 border-red-600 border-t-transparent rounded-full animate-spin" />
+                        Deleting...
+                      </>
+                    ) : (
+                      "Delete"
+                    )}
                   </button>
                 )}
               </div>

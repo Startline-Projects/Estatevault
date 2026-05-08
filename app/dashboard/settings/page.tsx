@@ -13,6 +13,19 @@ interface Profile {
   };
 }
 
+function Section({ id, title, openSection, setOpenSection, children }: { id: string; title: string; openSection: string | null; setOpenSection: (v: string | null) => void; children: React.ReactNode }) {
+  const isOpen = openSection === id;
+  return (
+    <div className="rounded-xl bg-white border border-gray-200 overflow-hidden">
+      <button onClick={() => setOpenSection(isOpen ? null : id)} className="w-full flex items-center justify-between px-6 py-4 text-left">
+        <span className="text-sm font-semibold text-navy">{title}</span>
+        <span className="text-gold">{isOpen ? "−" : "+"}</span>
+      </button>
+      {isOpen && <div className="px-6 pb-6">{children}</div>}
+    </div>
+  );
+}
+
 export default function SettingsPage() {
   const [profile, setProfile] = useState<Profile>({ full_name: "", phone: "", notification_preferences: { documents_delivered: true, annual_review: true, life_event_reminders: true } });
   const [email, setEmail] = useState("");
@@ -100,26 +113,13 @@ export default function SettingsPage() {
 
   if (loading) return <div className="py-20 text-center text-charcoal/50">Loading...</div>;
 
-  function Section({ id, title, children }: { id: string; title: string; children: React.ReactNode }) {
-    const isOpen = openSection === id;
-    return (
-      <div className="rounded-xl bg-white border border-gray-200 overflow-hidden">
-        <button onClick={() => setOpenSection(isOpen ? null : id)} className="w-full flex items-center justify-between px-6 py-4 text-left">
-          <span className="text-sm font-semibold text-navy">{title}</span>
-          <span className="text-gold">{isOpen ? "−" : "+"}</span>
-        </button>
-        {isOpen && <div className="px-6 pb-6">{children}</div>}
-      </div>
-    );
-  }
-
   return (
     <div className="max-w-2xl">
       <h1 className="text-2xl font-bold text-navy">Settings</h1>
       {saved && <div className="mt-4 rounded-lg bg-green-50 border border-green-200 px-4 py-2 text-sm text-green-700">Saved!</div>}
 
       <div className="mt-6 space-y-3">
-        <Section id="account" title="Account">
+        <Section id="account" title="Account" openSection={openSection} setOpenSection={setOpenSection}>
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-navy mb-1">Full name</label>
@@ -140,7 +140,7 @@ export default function SettingsPage() {
           </div>
         </Section>
 
-        <Section id="pin" title="Vault PIN">
+        <Section id="pin" title="Vault PIN" openSection={openSection} setOpenSection={setOpenSection}>
           <div className="space-y-3">
             {pinMsg && <p className={`text-sm ${pinMsg.includes("success") ? "text-green-600" : "text-red-600"}`}>{pinMsg}</p>}
             <input type="password" maxLength={4} inputMode="numeric" value={currentPin} onChange={(e) => setCurrentPin(e.target.value.replace(/\D/g, ""))} placeholder="Current PIN" className="w-full min-h-[44px] rounded-xl border-2 border-gray-200 px-4 py-3 text-sm focus:border-gold focus:outline-none" />
@@ -150,7 +150,7 @@ export default function SettingsPage() {
           </div>
         </Section>
 
-        <Section id="notifications" title="Notifications">
+        <Section id="notifications" title="Notifications" openSection={openSection} setOpenSection={setOpenSection}>
           <div className="space-y-4">
             {([["documents_delivered", "Email me when my documents are delivered"], ["annual_review", "Annual review reminder"], ["life_event_reminders", "Life event check-in reminders"]] as const).map(([key, label]) => (
               <label key={key} className="flex items-center justify-between cursor-pointer">
@@ -162,7 +162,7 @@ export default function SettingsPage() {
           </div>
         </Section>
 
-        <Section id="advisor" title="Linked Advisor">
+        <Section id="advisor" title="Linked Advisor" openSection={openSection} setOpenSection={setOpenSection}>
           <div className="space-y-4">
             <p className="text-sm text-charcoal/60">Do you work with a financial advisor or CPA?</p>
             <div>

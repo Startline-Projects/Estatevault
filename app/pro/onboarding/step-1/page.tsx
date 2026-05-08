@@ -47,7 +47,7 @@ export default function Step1Page() {
   async function handleGetStarted() {
     if (!agreed) return;
     if (!partnerId) {
-      setError("Partner profile not found. Please contact support@estatevault.com.");
+      setError("Partner profile not found. Please contact info@estatevault.us.");
       return;
     }
     setLoading(true);

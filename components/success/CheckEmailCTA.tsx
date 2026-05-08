@@ -21,7 +21,7 @@ export default function CheckEmailCTA({ email }: CheckEmailCTAProps) {
       </p>
       <p className="mt-6 text-xs text-blue-100/40">
         Didn&apos;t get it? Check your spam folder or contact
-        support@estatevault.com
+        info@estatevault.us
       </p>
     </div>
   );

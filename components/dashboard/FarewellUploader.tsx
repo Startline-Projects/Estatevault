@@ -4,26 +4,26 @@ import { useState, useRef } from "react";
 import { createClient } from "@/lib/supabase/client";
 
 interface FarewellUploaderProps {
-  messageId: string;
+  title: string;
+  recipientEmail: string;
   onComplete: () => void;
   onCancel: () => void;
 }
 
-export default function FarewellUploader({ messageId, onComplete, onCancel }: FarewellUploaderProps) {
+export default function FarewellUploader({ title, recipientEmail, onComplete, onCancel }: FarewellUploaderProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState("");
+  const [dragActive, setDragActive] = useState(false);
 
   const MAX_SIZE = 500 * 1024 * 1024; // 500MB
   const VALID_TYPES = ["video/mp4", "video/quicktime", "video/webm"];
 
-  function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
+  function acceptFile(file: File | undefined) {
     if (!file) return;
     setError("");
-
     if (!VALID_TYPES.includes(file.type)) {
       setError("Please select an MP4, MOV, or WebM file.");
       return;
@@ -33,6 +33,10 @@ export default function FarewellUploader({ messageId, onComplete, onCancel }: Fa
       return;
     }
     setSelectedFile(file);
+  }
+
+  function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
+    acceptFile(e.target.files?.[0]);
   }
 
   async function handleUpload() {
@@ -49,7 +53,6 @@ export default function FarewellUploader({ messageId, onComplete, onCancel }: Fa
       if (!client) throw new Error("No client record");
 
       const ext = selectedFile.name.split(".").pop() || "mp4";
-      const filePath = `${client.id}/${messageId}/upload.${ext}`;
 
       // Get video duration via HTML5 video element BEFORE uploading
       let duration = 0;
@@ -70,6 +73,17 @@ export default function FarewellUploader({ messageId, onComplete, onCancel }: Fa
         setUploading(false);
         return;
       }
+
+      // Create message row now (deferred until file is validated)
+      const createRes = await fetch("/api/vault/farewell", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title, recipientEmail }),
+      });
+      const createData = await createRes.json();
+      if (!createRes.ok) throw new Error(createData.error || "Failed to create message");
+      const messageId = createData.messageId as string;
+      const filePath = `${client.id}/${messageId}/upload.${ext}`;
 
       setProgress(20);
 
@@ -131,14 +145,23 @@ export default function FarewellUploader({ messageId, onComplete, onCancel }: Fa
       {!selectedFile ? (
         <div
           onClick={() => fileInputRef.current?.click()}
-          className="rounded-xl border-2 border-dashed border-gray-300 p-12 text-center cursor-pointer hover:border-gold/50 transition-colors"
+          onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); setDragActive(true); }}
+          onDragEnter={(e) => { e.preventDefault(); e.stopPropagation(); setDragActive(true); }}
+          onDragLeave={(e) => { e.preventDefault(); e.stopPropagation(); setDragActive(false); }}
+          onDrop={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            setDragActive(false);
+            acceptFile(e.dataTransfer.files?.[0]);
+          }}
+          className={`rounded-xl border-2 border-dashed p-12 text-center cursor-pointer transition-colors ${dragActive ? "border-gold bg-gold/5" : "border-gray-300 hover:border-gold/50"}`}
         >
           <div className="mx-auto w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center mb-3">
             <svg className="w-6 h-6 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
             </svg>
           </div>
-          <p className="text-sm font-medium text-charcoal">Click to select a video file</p>
+          <p className="text-sm font-medium text-charcoal">Click to select or drag &amp; drop a video file</p>
           <p className="text-xs text-gray-400 mt-1">MP4, MOV, WebM, max 500MB, 30 minutes</p>
         </div>
       ) : (

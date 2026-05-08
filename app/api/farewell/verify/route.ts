@@ -107,7 +107,7 @@ export async function POST(request: Request) {
     try {
       await resend.emails.send({
         from: "EstateVault <info@estatevault.us>",
-        to: "support@estatevault.us",
+        to: "info@estatevault.us",
         subject: `Farewell Verification Request, ${trustee.trustee_name}`,
         html: `<p>A death certificate has been submitted for verification.</p><p>Trustee: ${trustee.trustee_name} (${trusteeEmail})</p><p>Client ID: ${clientId}</p><p>Please review in the admin portal.</p>`,
       });

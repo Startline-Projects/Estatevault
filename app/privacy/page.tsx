@@ -95,10 +95,10 @@ export default function PrivacyPage() {
                 If you have questions about this Privacy Policy or how we handle
                 your information, please contact us at{" "}
                 <a
-                  href="mailto:support@estatevault.us"
+                  href="mailto:info@estatevault.us"
                   className="text-gold hover:underline"
                 >
-                  support@estatevault.us
+                  info@estatevault.us
                 </a>
                 .
               </p>

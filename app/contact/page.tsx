@@ -10,16 +10,29 @@ export default function ContactPage() {
   const [message, setMessage] = useState("");
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setLoading(true);
+    setError(null);
 
-    // Simulate submission delay
-    await new Promise((resolve) => setTimeout(resolve, 800));
-
-    setSubmitted(true);
-    setLoading(false);
+    try {
+      const res = await fetch("/api/contact", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, email, message }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || "Send failed");
+      }
+      setSubmitted(true);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Send failed");
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
@@ -36,10 +49,10 @@ export default function ContactPage() {
           <p className="text-charcoal mb-12">
             Email us directly at{" "}
             <a
-              href="mailto:support@estatevault.us"
+              href="mailto:info@estatevault.us"
               className="text-gold hover:underline font-medium"
             >
-              support@estatevault.us
+              info@estatevault.us
             </a>
           </p>
 
@@ -112,6 +125,9 @@ export default function ContactPage() {
                 />
               </div>
 
+              {error && (
+                <p className="text-sm text-red-600">{error}</p>
+              )}
               <button
                 type="submit"
                 disabled={loading}

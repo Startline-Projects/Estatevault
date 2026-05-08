@@ -59,7 +59,7 @@ export async function POST(request: Request) {
       </div>
       <p style="margin:32px 0 0;font-size:13px;color:#999;line-height:1.5;">
         If you have any questions, contact us at
-        <a href="mailto:support@estatevault.com" style="color:#1C3557;">support@estatevault.com</a>.
+        <a href="mailto:info@estatevault.us" style="color:#1C3557;">info@estatevault.us</a>.
       </p>
     </div>
     <div style="background:#f8f9fa;padding:24px 32px;border-top:1px solid #e5e5e5;">

@@ -210,8 +210,8 @@ function AttorneyWelcomeContent() {
             {/* Support note */}
             <p className="mt-10 text-center text-sm text-charcoal/50">
               Questions? Email us at{' '}
-              <a href="mailto:support@estatevault.us" className="text-navy underline underline-offset-2">
-                support@estatevault.us
+              <a href="mailto:info@estatevault.us" className="text-navy underline underline-offset-2">
+                info@estatevault.us
               </a>
             </p>
           </div>

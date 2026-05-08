@@ -902,7 +902,7 @@ export default function AttorneyPartnerPage() {
                 ))}
               </ul>
               <a
-                href="mailto:support@estatevault.us?subject=Enterprise%20Attorney%20Partnership%20Inquiry"
+                href="mailto:info@estatevault.us?subject=Enterprise%20Attorney%20Partnership%20Inquiry"
                 className={`${styles.planCta} ${styles.planCtaOutline}`}
               >
                 Talk to sales
@@ -927,7 +927,7 @@ export default function AttorneyPartnerPage() {
               </ul>
             </div>
             <div className={styles.referralCta}>
-              <a href="mailto:support@estatevault.us?subject=Referral%20Partner%20Inquiry">
+              <a href="mailto:info@estatevault.us?subject=Referral%20Partner%20Inquiry">
                 Learn more <ArrowRight />
               </a>
             </div>
@@ -1179,7 +1179,7 @@ export default function AttorneyPartnerPage() {
             <button onClick={() => scrollTo('pricing')} className={`${styles.btnLg} ${styles.btnGold}`}>
               Get started now
             </button>
-            <a href="mailto:support@estatevault.us" className={`${styles.btnLg} ${styles.btnGlass}`}>
+            <a href="mailto:info@estatevault.us" className={`${styles.btnLg} ${styles.btnGlass}`}>
               Talk to sales
             </a>
           </div>
@@ -1214,16 +1214,16 @@ export default function AttorneyPartnerPage() {
               <ul>
                 <li><Link href="/partners/attorneys">Attorneys</Link></li>
                 <li><Link href="/partners/attorneys/review-network">Review attorney network</Link></li>
-                <li><a href="mailto:support@estatevault.us?subject=Referral%20Partner%20Inquiry">Referral partners</a></li>
+                <li><a href="mailto:info@estatevault.us?subject=Referral%20Partner%20Inquiry">Referral partners</a></li>
               </ul>
             </div>
             <div className={styles.footCol}>
               <h4>Company</h4>
               <ul>
-                <li><a href="mailto:support@estatevault.us">Contact</a></li>
+                <li><a href="mailto:info@estatevault.us">Contact</a></li>
                 <li><Link href="/privacy">Privacy</Link></li>
                 <li><Link href="/terms">Terms</Link></li>
-                <li><a href="mailto:support@estatevault.us">Security</a></li>
+                <li><a href="mailto:info@estatevault.us">Security</a></li>
               </ul>
             </div>
           </div>

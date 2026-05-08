@@ -113,7 +113,7 @@ export async function POST(request: Request) {
       try {
         const { Resend } = await import("resend");
         const resend = new Resend(process.env.RESEND_API_KEY);
-        const salesEmail = process.env.SALES_NOTIFICATION_EMAIL || "support@estatevault.us";
+        const salesEmail = process.env.SALES_NOTIFICATION_EMAIL || "info@estatevault.us";
 
         await resend.emails.send({
           from: "EstateVault <info@estatevault.us>",

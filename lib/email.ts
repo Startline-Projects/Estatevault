@@ -135,7 +135,7 @@ function buildEmailHtml({
 
       <p style="margin:32px 0 0;font-size:13px;color:#999;line-height:1.5;">
         If you didn&rsquo;t make this purchase, please contact
-        <a href="mailto:support@estatevault.com" style="color:#1C3557;">support@estatevault.com</a>.
+        <a href="mailto:info@estatevault.us" style="color:#1C3557;">info@estatevault.us</a>.
       </p>
     </div>
 
@@ -184,7 +184,7 @@ export async function sendApprovalEmail({ to, productType, dashboardUrl, partner
         </a>
       </div>
       <p style="margin:24px 0 0;font-size:13px;color:#999;line-height:1.5;">
-        If you have any questions, contact <a href="mailto:support@estatevault.com" style="color:#1C3557;">support@estatevault.com</a>.
+        If you have any questions, contact <a href="mailto:info@estatevault.us" style="color:#1C3557;">info@estatevault.us</a>.
       </p>
     </div>
     <div style="background:#f8f9fa;padding:24px 32px;border-top:1px solid #e5e5e5;">

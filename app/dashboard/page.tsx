@@ -2,6 +2,10 @@ import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import DocumentActions from "@/components/dashboard/DocumentActions";
+import PackageStatusCard from "@/components/dashboard/PackageStatusCard";
+
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 function CompletionRing({ percent }: { percent: number }) {
   const r = 50;
@@ -88,6 +92,7 @@ export default async function DashboardHome() {
   const latestOrder = orders[0];
   const packageName = latestOrder?.product_type === "trust" ? "Trust Package" : "Will Package";
 
+
   return (
     <div className="max-w-4xl">
       {/* Welcome banner */}
@@ -125,35 +130,12 @@ export default async function DashboardHome() {
 
       {/* Documents summary */}
       {latestOrder && (
-        <div className="mt-6 rounded-xl bg-white border border-gray-200 p-6">
-          <div className="flex items-center justify-between">
-            <h2 className="text-base font-bold text-navy">{packageName}</h2>
-            {(() => {
-              const allDocsReady = documents.length > 0 && documents.every((d) => d.status === "generated" || d.status === "delivered");
-              const isReview = latestOrder.status === "review";
-              const isDelivered = latestOrder.status === "delivered" || allDocsReady;
-              const isPreparing = latestOrder.status === "generating" || latestOrder.status === "paid";
-              return (
-                <span className={`rounded-full px-3 py-1 text-xs font-medium ${isDelivered ? "bg-green-100 text-green-700" : isReview ? "bg-amber-100 text-amber-700" : isPreparing ? "bg-blue-100 text-blue-700" : "bg-gray-100 text-gray-700"}`}>
-                  {isDelivered ? "Generated" : isReview ? "Under Review" : isPreparing ? "Preparing" : "Processing"}
-                </span>
-              );
-            })()}
-          </div>
-          <div className="mt-4 space-y-2">
-            {documents.map((doc) => (
-              <div key={doc.id} className="flex items-center justify-between text-sm">
-                <span className="text-charcoal/80">{doc.document_type.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())}</span>
-                <span className={`text-xs font-medium ${doc.status === "delivered" || doc.status === "generated" ? "text-green-600" : doc.status === "under_review" ? "text-amber-600" : "text-blue-600"}`}>
-                  {doc.status === "delivered" || doc.status === "generated" ? "✅ Ready" : doc.status === "under_review" ? "⏳ Under Review" : "⏳ Preparing"}
-                </span>
-              </div>
-            ))}
-          </div>
-          <Link href="/dashboard/documents" className="mt-4 inline-block text-sm text-navy/60 hover:text-navy transition-colors">
-            View all documents →
-          </Link>
-        </div>
+        <PackageStatusCard
+          orderId={latestOrder.id}
+          packageName={packageName}
+          initialOrderStatus={latestOrder.status}
+          initialDocuments={documents.map((d) => ({ type: d.document_type, status: d.status }))}
+        />
       )}
 
       {/* Document downloads + email + generation status */}

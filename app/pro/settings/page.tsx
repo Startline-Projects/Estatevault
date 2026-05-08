@@ -880,7 +880,7 @@ export default function ProSettingsPage() {
             {partner.professional_type === "attorney" && !partner.has_inhouse_estate_attorney && (
               <p className="text-xs text-charcoal/60">
                 If your firm has a licensed estate planning attorney who can handle reviews,
-                contact support@estatevault.com to enable in-house attorney reviews.
+                contact info@estatevault.us to enable in-house attorney reviews.
               </p>
             )}
           </div>
@@ -960,7 +960,7 @@ export default function ProSettingsPage() {
             </p>
             {vaultSubdomainDisplay && (
               <p className="text-xs text-charcoal/50 mt-1">
-                Subdomain cannot be changed. Contact support@estatevault.com to request a change.
+                Subdomain cannot be changed. Contact info@estatevault.us to request a change.
               </p>
             )}
           </div>

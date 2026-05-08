@@ -116,10 +116,10 @@ export default function ReviewNetworkPage() {
             </Link>
             <span className="text-gray-300">|</span>
             <a
-              href="mailto:support@estatevault.us"
+              href="mailto:info@estatevault.us"
               className="text-gray-500 hover:text-charcoal transition-colors"
             >
-              support@estatevault.us
+              info@estatevault.us
             </a>
           </div>
         </div>

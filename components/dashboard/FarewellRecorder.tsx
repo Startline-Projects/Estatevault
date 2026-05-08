@@ -4,12 +4,13 @@ import { useState, useRef, useCallback, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
 
 interface FarewellRecorderProps {
-  messageId: string;
+  title: string;
+  recipientEmail: string;
   onComplete: () => void;
   onCancel: () => void;
 }
 
-export default function FarewellRecorder({ messageId, onComplete, onCancel }: FarewellRecorderProps) {
+export default function FarewellRecorder({ title, recipientEmail, onComplete, onCancel }: FarewellRecorderProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
@@ -26,17 +27,41 @@ export default function FarewellRecorder({ messageId, onComplete, onCancel }: Fa
 
   const startCamera = useCallback(async () => {
     try {
+      if (typeof window === "undefined" || !window.isSecureContext) {
+        setError("Camera requires a secure context (HTTPS or localhost). Current page is not secure.");
+        return;
+      }
+      if (!navigator.mediaDevices?.getUserMedia) {
+        setError("Your browser does not support camera recording. Try Chrome, Edge, Safari, or Firefox.");
+        return;
+      }
+
       const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
       streamRef.current = stream;
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
         videoRef.current.muted = true;
-        await videoRef.current.play();
+        try {
+          await videoRef.current.play();
+        } catch { /* autoplay block ignored — user can press play */ }
       }
       setStatus("previewing");
       setError("");
-    } catch {
-      setError("Unable to access camera/microphone. Please check permissions.");
+    } catch (err) {
+      const e = err as DOMException;
+      const name = e?.name || "";
+      console.error("[FarewellRecorder] getUserMedia failed:", name, e?.message, e);
+      if (name === "NotAllowedError" || name === "SecurityError") {
+        setError(
+          "Camera/microphone blocked. Site permission may be allowed but OS or another app blocking it. Check: (1) macOS → System Settings → Privacy & Security → Camera + Microphone → enable your browser. (2) Quit Zoom/Meet/Teams/FaceTime. (3) Browser site settings → reset camera/mic for localhost → reload. Open DevTools console for exact error name."
+        );
+      } else if (name === "NotFoundError" || name === "OverconstrainedError") {
+        setError("No camera or microphone found on this device.");
+      } else if (name === "NotReadableError" || name === "AbortError") {
+        setError("Camera/microphone is in use by another app. Close other apps (Zoom, Meet, etc.) and try again.");
+      } else {
+        setError(`Unable to access camera/microphone: ${e?.message || name || "unknown error"}`);
+      }
     }
   }, []);
 
@@ -111,6 +136,16 @@ export default function FarewellRecorder({ messageId, onComplete, onCancel }: Fa
 
       const { data: client } = await supabase.from("clients").select("id").eq("profile_id", user.id).single();
       if (!client) throw new Error("No client record");
+
+      // Create message row now (deferred until video is ready)
+      const createRes = await fetch("/api/vault/farewell", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title, recipientEmail }),
+      });
+      const createData = await createRes.json();
+      if (!createRes.ok) throw new Error(createData.error || "Failed to create message");
+      const messageId = createData.messageId as string;
 
       const ext = recordedBlob.type.includes("mp4") ? "mp4" : "webm";
       const filePath = `${client.id}/${messageId}/recording.${ext}`;

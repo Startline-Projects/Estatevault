@@ -102,6 +102,8 @@ export default function VaultPage() {
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState("");
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
+  const [viewItem, setViewItem] = useState<VaultItem | null>(null);
+  const [revealedFields, setRevealedFields] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     async function check() {
@@ -281,7 +283,19 @@ export default function VaultPage() {
           {/* File upload */}
           <div>
             <label className="block text-sm font-medium text-navy mb-1.5">PDF File <span className="text-red-500">*</span></label>
-            <label className={`flex flex-col items-center justify-center w-full h-36 rounded-xl border-2 border-dashed cursor-pointer transition-colors ${uploadFile ? "border-gold bg-gold/5" : "border-gray-200 hover:border-gold/50 bg-gray-50"}`}>
+            <label
+              onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
+              onDrop={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                const f = e.dataTransfer.files?.[0];
+                if (!f) return;
+                if (f.type !== "application/pdf") { setUploadError("Only PDF files are allowed."); return; }
+                if (f.size > 20 * 1024 * 1024) { setUploadError("File must be under 20MB."); return; }
+                setUploadError("");
+                setUploadFile(f);
+              }}
+              className={`flex flex-col items-center justify-center w-full h-36 rounded-xl border-2 border-dashed cursor-pointer transition-colors ${uploadFile ? "border-gold bg-gold/5" : "border-gray-200 hover:border-gold/50 bg-gray-50"}`}>
               <input
                 type="file"
                 accept="application/pdf"
@@ -308,7 +322,7 @@ export default function VaultPage() {
                   <svg className="w-8 h-8 text-charcoal/30 mx-auto mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
                   </svg>
-                  <p className="text-sm text-charcoal/50">Click to select a PDF</p>
+                  <p className="text-sm text-charcoal/50">Click to select or drag &amp; drop a PDF</p>
                   <p className="text-xs text-charcoal/30 mt-0.5">PDF only · Max 20MB</p>
                 </div>
               )}
@@ -370,6 +384,63 @@ export default function VaultPage() {
           <p className="mt-2 text-sm text-charcoal/50">Upload PDFs of your signed and executed estate documents to keep them securely stored in your vault.</p>
         )}
 
+        {viewItem && (() => {
+          const fields = CATEGORY_FIELDS[viewItem.category] || [];
+          const data = viewItem.data as Record<string, unknown>;
+          const fieldMap = new Map(fields.map((f) => [f.name, f]));
+          const extraKeys = Object.keys(data).filter((k) => !fieldMap.has(k) && k !== "label");
+          const sensitive = new Set(["password", "access_instructions"]);
+          const renderValue = (key: string, raw: unknown) => {
+            const val = raw == null || raw === "" ? "—" : String(raw);
+            if (sensitive.has(key) && val !== "—") {
+              const shown = revealedFields[key];
+              return (
+                <div className="flex items-center gap-2">
+                  <span className="font-mono text-sm text-charcoal break-all">{shown ? val : "•".repeat(Math.min(val.length, 12))}</span>
+                  <button
+                    type="button"
+                    onClick={() => setRevealedFields((p) => ({ ...p, [key]: !p[key] }))}
+                    className="text-xs text-navy/60 hover:text-navy underline"
+                  >
+                    {shown ? "Hide" : "Show"}
+                  </button>
+                </div>
+              );
+            }
+            return <span className="text-sm text-charcoal whitespace-pre-wrap break-words">{val}</span>;
+          };
+          return (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4" onClick={() => setViewItem(null)}>
+              <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl max-h-[85vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <h2 className="text-lg font-bold text-navy">{viewItem.label}</h2>
+                    <p className="text-xs text-charcoal/50 mt-1">Added {new Date(viewItem.created_at).toLocaleDateString()}</p>
+                  </div>
+                  <button onClick={() => setViewItem(null)} className="text-charcoal/50 hover:text-charcoal text-2xl leading-none">×</button>
+                </div>
+                <div className="mt-5 space-y-4">
+                  {fields.filter((f) => f.name !== "label").map((f) => (
+                    <div key={f.name}>
+                      <p className="text-xs font-medium text-charcoal/50 mb-1">{f.label}</p>
+                      {renderValue(f.name, data[f.name])}
+                    </div>
+                  ))}
+                  {extraKeys.map((k) => (
+                    <div key={k}>
+                      <p className="text-xs font-medium text-charcoal/50 mb-1">{k}</p>
+                      {renderValue(k, data[k])}
+                    </div>
+                  ))}
+                </div>
+                <button onClick={() => setViewItem(null)} className="mt-6 w-full min-h-[44px] rounded-full bg-navy py-2.5 text-sm font-semibold text-white hover:bg-navy/90 transition-colors">
+                  Close
+                </button>
+              </div>
+            </div>
+          );
+        })()}
+
         {catItems.length === 0 ? (
           <div className="mt-10 text-center">
             <div className="mx-auto w-14 h-14 rounded-full bg-gray-100 flex items-center justify-center mb-3">
@@ -404,6 +475,18 @@ export default function VaultPage() {
                     </p>
                   </div>
                   <div className="flex items-center gap-2 flex-shrink-0">
+                    {!isEstateDoc && (
+                      <button
+                        onClick={() => { setViewItem(item); setRevealedFields({}); }}
+                        className="inline-flex items-center gap-1.5 rounded-lg bg-navy/10 px-3.5 py-2 text-xs font-semibold text-navy hover:bg-navy/20 transition-colors"
+                      >
+                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                        </svg>
+                        View
+                      </button>
+                    )}
                     {isUploaded && (
                       <button
                         onClick={() => handleDownloadDoc(item)}

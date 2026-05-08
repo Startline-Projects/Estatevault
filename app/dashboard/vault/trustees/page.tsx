@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 
 interface Trustee {
@@ -70,6 +71,7 @@ export default function TrusteesPage() {
 
   return (
     <div className="max-w-2xl">
+      <Link href="/dashboard/vault" className="inline-block text-sm text-navy hover:text-gold transition-colors mb-4">&larr; Back to Vault</Link>
       <h1 className="text-2xl font-bold text-navy">Emergency Vault Access</h1>
       <p className="mt-2 text-sm text-charcoal/60 leading-relaxed">
         In the event of your passing or incapacity, your designated Vault Trustee can request access to your vault after a 72-hour review period and identity verification.

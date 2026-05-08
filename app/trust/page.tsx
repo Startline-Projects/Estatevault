@@ -232,7 +232,10 @@ export default function TrustPage() {
   function togglePower(power: string) {
     if (power === "Banking and finances") return; // cannot uncheck
     if (power === "All of the above") {
-      setIntake((prev) => ({ ...prev, poaPowers: [...ALL_POA_POWERS] }));
+      setIntake((prev) => ({
+        ...prev,
+        poaPowers: prev.poaPowers.length === ALL_POA_POWERS.length ? ["Banking and finances"] : [...ALL_POA_POWERS],
+      }));
       return;
     }
     setIntake((prev) => ({
