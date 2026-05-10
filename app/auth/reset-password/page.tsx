@@ -21,17 +21,26 @@ export default function ResetPasswordPage() {
   const passwordsMatch = password === confirmPassword && confirmPassword.length > 0;
   const isValid = hasMinLength && hasNumber && passwordsMatch;
 
-  // Supabase puts the session in the URL hash after a password reset link click.
-  // The client SDK picks it up automatically on mount.
   useEffect(() => {
     const supabase = createClient();
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) {
-        setSessionReady(true);
-      }
-    });
 
-    // Also listen for the session arriving from the hash
+    async function bootstrap() {
+      // PKCE flow: token_hash in query params must be exchanged first
+      const params = new URLSearchParams(window.location.search);
+      const tokenHash = params.get("token_hash");
+      const type = params.get("type");
+      if (tokenHash && type === "recovery") {
+        const { error } = await supabase.auth.verifyOtp({ token_hash: tokenHash, type: "recovery" });
+        if (!error) { setSessionReady(true); return; }
+      }
+
+      // Fallback: session already exists (hash-based flow)
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) { setSessionReady(true); return; }
+    }
+
+    bootstrap();
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if ((event === "PASSWORD_RECOVERY" || event === "SIGNED_IN") && session) {
         setSessionReady(true);
@@ -58,7 +67,11 @@ export default function ResetPasswordPage() {
     }
 
     setDone(true);
-    setTimeout(() => router.push("/dashboard"), 2000);
+    const supabase2 = createClient();
+    const { data: { user } } = await supabase2.auth.getUser();
+    const role = user?.user_metadata?.role;
+    const dest = role === "partner" ? "/pro" : role === "admin" ? "/admin" : "/dashboard";
+    setTimeout(() => router.push(dest), 2000);
   }
 
   if (done) {
@@ -132,7 +145,7 @@ export default function ResetPasswordPage() {
               {password.length > 0 && (
                 <div className="mt-2 space-y-1">
                   <p className={`text-xs ${hasMinLength ? "text-green-600" : "text-charcoal/40"}`}>
-                    {hasMinLength ? "&#10003;" : "&#9675;"} At least 8 characters
+                    {hasMinLength ? "✓" : "○"} At least 8 characters
                   </p>
                   <p className={`text-xs ${hasNumber ? "text-green-600" : "text-charcoal/40"}`}>
                     {hasNumber ? "&#10003;" : "&#9675;"} At least one number
