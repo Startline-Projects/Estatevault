@@ -229,7 +229,10 @@ export async function updateSession(request: NextRequest) {
     const partnerOnlyPath =
       pathname.startsWith("/pro") && pathname !== "/pro-partners";
     const salesPath = pathname.startsWith("/sales");
-    const adminOnlyPath = pathname.startsWith("/admin");
+    const adminOnlyPath =
+      pathname.startsWith("/admin") ||
+      pathname === "/attorney" ||
+      pathname.startsWith("/attorney/");
     const clientOnlyPath =
       pathname.startsWith("/dashboard") ||
       pathname.startsWith("/quiz") ||

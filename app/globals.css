@@ -40,6 +40,51 @@ body.theme-northwood [class*="text-navy"] {
   color: #000000 !important;
 }
 
+/* Northwood — swap gold accent (#C9A84C) with green accent (#4D714C) site-wide */
+body.theme-northwood .bg-gold,
+body.theme-northwood .hover\:bg-gold:hover,
+body.theme-northwood [class*="bg-gold"] {
+  background-color: #4D714C !important;
+}
+body.theme-northwood .text-gold,
+body.theme-northwood [class*="text-gold"] {
+  color: #4D714C !important;
+}
+body.theme-northwood .border-gold,
+body.theme-northwood [class*="border-gold"] {
+  border-color: #4D714C !important;
+}
+body.theme-northwood .from-gold { --tw-gradient-from: #4D714C !important; }
+body.theme-northwood .to-gold { --tw-gradient-to: #4D714C !important; }
+body.theme-northwood .via-gold { --tw-gradient-via: #4D714C !important; }
+body.theme-northwood .ring-gold,
+body.theme-northwood [class*="ring-gold"] {
+  --tw-ring-color: #4D714C !important;
+}
+body.theme-northwood .fill-gold { fill: #4D714C !important; }
+body.theme-northwood .stroke-gold { stroke: #4D714C !important; }
+
+/* Cards using bg-gold/* tints become solid green on Northwood — force white text inside */
+body.theme-northwood .bg-gold\/10,
+body.theme-northwood .bg-gold\/20,
+body.theme-northwood .bg-gold\/5 {
+  color: #ffffff !important;
+}
+body.theme-northwood .bg-gold\/10 *,
+body.theme-northwood .bg-gold\/20 *,
+body.theme-northwood .bg-gold\/5 * {
+  color: #ffffff !important;
+}
+/* Nested light containers inside green cards keep their own dark text */
+body.theme-northwood .bg-gold\/5 .bg-white,
+body.theme-northwood .bg-gold\/10 .bg-white,
+body.theme-northwood .bg-gold\/20 .bg-white,
+body.theme-northwood .bg-gold\/5 .bg-white *,
+body.theme-northwood .bg-gold\/10 .bg-white *,
+body.theme-northwood .bg-gold\/20 .bg-white * {
+  color: #2D2D2D !important;
+}
+
 @layer base {
   html {
     scroll-behavior: smooth;

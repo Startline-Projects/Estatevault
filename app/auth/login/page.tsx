@@ -4,7 +4,7 @@ import { Suspense, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { clientUrl, partnerUrl, adminUrl, salesUrl } from "@/lib/hosts";
+import { clientUrl, partnerUrl, adminUrl, salesUrl, isClientHost, isPartnerHost, isAdminHost, isSalesHost } from "@/lib/hosts";
 import { createClient as createBrowserSupabase } from "@/lib/supabase/client";
 import PartnerThemedShell, { usePartnerBranding } from "@/components/partner/PartnerThemedShell";
 
@@ -105,6 +105,34 @@ function LoginForm() {
 
     const userType = profile?.user_type || "client";
 
+    // Restrict client host login to client-side roles only.
+    // Admin/partner/sales must log in from their own subdomain.
+    const currentHost = window.location.host;
+    const onClientHost = isClientHost(currentHost);
+    const onPartnerHost = isPartnerHost(currentHost);
+    const onAdminHost = isAdminHost(currentHost);
+    const onSalesHost = isSalesHost(currentHost);
+
+    const wrongHost =
+      (onClientHost && (userType === "partner" || userType === "admin" || userType === "sales_rep" || userType === "review_attorney")) ||
+      (onPartnerHost && userType !== "partner") ||
+      (onAdminHost && userType !== "admin" && userType !== "review_attorney") ||
+      (onSalesHost && userType !== "sales_rep");
+
+    if (wrongHost) {
+      await supabase.auth.signOut();
+      let portalUrl = "";
+      if (userType === "partner") portalUrl = partnerUrl("/auth/login");
+      else if (userType === "admin" || userType === "review_attorney") portalUrl = adminUrl("/auth/login");
+      else if (userType === "sales_rep") portalUrl = salesUrl("/auth/login");
+      else portalUrl = clientUrl("/auth/login");
+      setError(
+        `This account is not allowed on this site. Please sign in at ${portalUrl}`
+      );
+      setLoading(false);
+      return;
+    }
+
     if (userType === "partner") {
       // Check partner onboarding status
       const { data: partner } = await supabase
@@ -125,7 +153,7 @@ function LoginForm() {
     } else if (userType === "admin") {
       await navigate(router, adminUrl("/sales/dashboard"), "admin", "/sales/dashboard");
     } else if (userType === "review_attorney") {
-      await navigate(router, clientUrl("/attorney"), "client", "/attorney");
+      await navigate(router, adminUrl("/attorney"), "admin", "/attorney");
     } else if (userType === "affiliate") {
       await navigate(router, clientUrl("/affiliate"), "client", "/affiliate");
     } else {

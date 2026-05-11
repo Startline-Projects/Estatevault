@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import Footer from "@/components/Footer";
+import { partnerUrl } from "@/lib/hosts";
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -1189,12 +1190,20 @@ function ProNav() {
             EstateVault
           </span>
         </Link>
-        <a
-          href="#request-access"
-          className="inline-flex items-center gap-1.5 rounded-full bg-gold px-5 py-2 text-sm font-semibold text-navy shadow-md shadow-gold/20 transition-all hover:-translate-y-0.5 hover:shadow-lg hover:shadow-gold/30"
-        >
-          Request Access
-        </a>
+        <div className="flex items-center gap-2 sm:gap-3">
+          <a
+            href={partnerUrl("/auth/login")}
+            className="inline-flex items-center rounded-full px-4 py-2 text-sm font-semibold text-white/90 transition-colors hover:text-white hover:bg-white/10"
+          >
+            Login
+          </a>
+          <a
+            href="#request-access"
+            className="inline-flex items-center gap-1.5 rounded-full bg-gold px-5 py-2 text-sm font-semibold text-navy shadow-md shadow-gold/20 transition-all hover:-translate-y-0.5 hover:shadow-lg hover:shadow-gold/30"
+          >
+            Request Access
+          </a>
+        </div>
       </div>
     </header>
   );
