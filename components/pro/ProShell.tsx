@@ -59,12 +59,55 @@ interface ProShellProps {
 
 export default function ProShell({ companyName, userName, tier, logoUrl, onboardingComplete, certificationComplete, onboardingStep, businessUrl, children }: ProShellProps) {
   const isNorthwood = !!businessUrl?.toLowerCase().includes("northwoodwealthadvisors");
-  const sidebarBgClass = isNorthwood ? "border-r border-[#e6dfd0]" : "bg-navy";
-  const sidebarBgStyle = isNorthwood ? { background: "linear-gradient(180deg, #f7f4ed 0%, #f7f4ed 100%)" } : undefined;
-  const txt = isNorthwood ? "text-black" : "text-white";
-  const txtMuted = isNorthwood ? "text-black/60" : "text-white/50";
-  const txtMutedHover = isNorthwood ? "text-black/60 hover:text-black/80" : "text-white/50 hover:text-white/60";
-  const divider = isNorthwood ? "bg-black/10" : "bg-white/10";
+
+  // Sidebar theme tokens — same layout for all partners, only colors differ.
+  const theme = isNorthwood
+    ? {
+        bgClass: "border-r border-[#e6dfd0]",
+        bgStyle: { background: "linear-gradient(180deg, #f7f4ed 0%, #f7f4ed 100%)" } as React.CSSProperties,
+        divider: "bg-black/10",
+        txt: "text-black",
+        txtMuted: "text-black/60",
+        txtMutedHover: "text-black/60 hover:text-black/80",
+        sectionLabel: "text-black/35",
+        subLabel: "text-black/40",
+        activePillCls: "bg-white text-black shadow-[0_2px_8px_-2px_rgba(107,94,63,0.18)]",
+        idlePillCls: "text-black/55 hover:text-black hover:bg-white/60 hover:translate-x-0.5",
+        accentBar: "bg-gradient-to-b from-[#1a1a1a] to-[#4D714C]",
+        accentDot: "bg-[#4D714C]",
+        iconActive: "bg-[#f7f4ed] text-[#6b5e3f]",
+        iconIdle: "text-black/45 group-hover:text-black/75",
+        logoBox: "bg-gradient-to-br from-[#1a1a1a] to-[#6b5e3f] text-white",
+        avatarBg: "bg-gradient-to-br from-[#6b5e3f] to-[#c9a84c]",
+        footerBorder: "border-t border-black/5",
+        mobileBtnTxt: "text-black/70",
+      }
+    : {
+        bgClass: "bg-navy",
+        bgStyle: undefined as React.CSSProperties | undefined,
+        divider: "bg-white/10",
+        txt: "text-white",
+        txtMuted: "text-white/50",
+        txtMutedHover: "text-white/50 hover:text-white/80",
+        sectionLabel: "text-white/35",
+        subLabel: "text-white/40",
+        activePillCls: "bg-white/10 text-white shadow-[0_2px_8px_-2px_rgba(0,0,0,0.35)]",
+        idlePillCls: "text-white/55 hover:text-white hover:bg-white/5 hover:translate-x-0.5",
+        accentBar: "bg-gradient-to-b from-gold to-white",
+        accentDot: "bg-gold",
+        iconActive: "bg-white/15 text-gold",
+        iconIdle: "text-white/55 group-hover:text-white/85",
+        logoBox: "bg-gold/20 text-gold",
+        avatarBg: "bg-gradient-to-br from-gold/70 to-gold",
+        footerBorder: "border-t border-white/10",
+        mobileBtnTxt: "text-white/70",
+      };
+  const sidebarBgClass = theme.bgClass;
+  const sidebarBgStyle = theme.bgStyle;
+  const txt = theme.txt;
+  const txtMuted = theme.txtMuted;
+  const txtMutedHover = theme.txtMutedHover;
+  const divider = theme.divider;
   const pathname = usePathname();
   const router = useRouter();
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -126,23 +169,15 @@ export default function ProShell({ companyName, userName, tier, logoUrl, onboard
 
   function NavLink({ item }: { item: { icon: string; label: string; href: string; basicHidden: boolean; basicOnly: boolean } }) {
     const active = isActive(item.href);
-    if (isNorthwood) {
-      return (
-        <Link href={item.href} onClick={(e) => handleNavClick(e, item.href)}
-          className={`group relative flex items-center gap-3 mx-2 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200 ${active ? "bg-white text-black shadow-[0_2px_8px_-2px_rgba(107,94,63,0.18)]" : "text-black/55 hover:text-black hover:bg-white/60 hover:translate-x-0.5"}`}>
-          <span className={`absolute left-0 top-1/2 -translate-y-1/2 h-5 w-[3px] rounded-r-full transition-all duration-200 ${active ? "opacity-100 bg-gradient-to-b from-[#1a1a1a] to-[#c9a84c]" : "opacity-0"}`} />
-          <span className={`flex h-7 w-7 items-center justify-center rounded-md transition-colors ${active ? "bg-[#f7f4ed] text-[#6b5e3f]" : "text-black/45 group-hover:text-black/75"}`}>
-            <NavIcon label={item.label} />
-          </span>
-          <span className="tracking-tight">{item.label}</span>
-          {active && <span className="ml-auto h-1.5 w-1.5 rounded-full bg-[#c9a84c]" />}
-        </Link>
-      );
-    }
     return (
       <Link href={item.href} onClick={(e) => handleNavClick(e, item.href)}
-        className={`flex items-center gap-3 rounded-r-lg px-4 py-2.5 text-sm font-medium transition-colors ${active ? "bg-white/10 text-white border-l-2 border-gold" : "text-white/50 hover:bg-white/5 hover:text-white/80 border-l-2 border-transparent"}`}>
-        <span className="text-base">{item.icon}</span>{item.label}
+        className={`group relative flex items-center gap-3 mx-2 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200 ${active ? theme.activePillCls : theme.idlePillCls}`}>
+        <span className={`absolute left-0 top-1/2 -translate-y-1/2 h-5 w-[3px] rounded-r-full transition-all duration-200 ${active ? `opacity-100 ${theme.accentBar}` : "opacity-0"}`} />
+        <span className={`flex h-7 w-7 items-center justify-center rounded-md transition-colors ${active ? theme.iconActive : theme.iconIdle}`}>
+          <NavIcon label={item.label} />
+        </span>
+        <span className="tracking-tight">{item.label}</span>
+        {active && <span className={`ml-auto h-1.5 w-1.5 rounded-full ${theme.accentDot}`} />}
       </Link>
     );
   }
@@ -155,40 +190,33 @@ export default function ProShell({ companyName, userName, tier, logoUrl, onboard
             <img src={logoUrl} alt={companyName} className="h-9 max-w-full rounded object-contain" />
           ) : (
             <>
-              <div className={`h-9 w-9 rounded-lg flex items-center justify-center text-xs font-bold ${isNorthwood ? "bg-gradient-to-br from-[#1a1a1a] to-[#6b5e3f] text-white" : "bg-gold/20 text-gold"}`}>{initials}</div>
+              <div className={`h-9 w-9 rounded-lg flex items-center justify-center text-xs font-bold ${theme.logoBox}`}>{initials}</div>
               <div className="min-w-0">
                 <p className={`text-sm font-bold truncate ${txt}`}>{companyName}</p>
-                {isNorthwood && <p className="text-[10px] uppercase tracking-[0.14em] text-black/40">Partner Portal</p>}
+                <p className={`text-[10px] uppercase tracking-[0.14em] ${theme.subLabel}`}>Partner Portal</p>
               </div>
             </>
           )}
         </div>
         <div className={`mt-5 h-px ${divider}`} />
       </div>
-      <nav className={`flex-1 ${isNorthwood ? "px-0" : "px-2"} space-y-0.5 overflow-y-auto`}>
-        {isNorthwood && <p className="px-5 mb-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-black/35">Workspace</p>}
+      <nav className="flex-1 px-0 space-y-0.5 overflow-y-auto">
+        <p className={`px-5 mb-2 text-[10px] font-semibold uppercase tracking-[0.16em] ${theme.sectionLabel}`}>Workspace</p>
         {navItems.filter(item => !(tier === "basic" && item.basicHidden) && !(tier !== "basic" && item.basicOnly)).map((item) => <NavLink key={item.href} item={item} />)}
         <div className={`my-4 mx-5 h-px ${divider}`} />
-        {isNorthwood && <p className="px-5 mb-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-black/35">Resources</p>}
+        <p className={`px-5 mb-2 text-[10px] font-semibold uppercase tracking-[0.16em] ${theme.sectionLabel}`}>Resources</p>
         {secondaryNav.filter(item => !(tier === "basic" && item.basicHidden)).map((item) => <NavLink key={item.href} item={item} />)}
       </nav>
-      <div className={`px-5 pb-5 pt-4 ${isNorthwood ? "border-t border-black/5 mt-2 mx-2" : ""}`}>
-        {isNorthwood ? (
-          <div className="flex items-center gap-3">
-            <div className="h-8 w-8 rounded-full bg-gradient-to-br from-[#6b5e3f] to-[#c9a84c] flex items-center justify-center text-[10px] font-bold text-white">
-              {userName.split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase() || "U"}
-            </div>
-            <div className="min-w-0 flex-1">
-              <p className="text-xs font-medium text-black truncate">{userName}</p>
-              <button onClick={handleSignOut} className="text-[11px] text-black/45 hover:text-black transition-colors">Sign Out →</button>
-            </div>
+      <div className={`px-5 pb-5 pt-4 ${theme.footerBorder} mt-2 mx-2`}>
+        <div className="flex items-center gap-3">
+          <div className={`h-8 w-8 rounded-full flex items-center justify-center text-[10px] font-bold text-white ${theme.avatarBg}`}>
+            {userName.split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase() || "U"}
           </div>
-        ) : (
-          <>
-            <p className={`text-xs truncate ${txtMuted}`}>{userName}</p>
-            <button onClick={handleSignOut} className={`mt-1 text-xs ${txtMutedHover}`}>Sign Out</button>
-          </>
-        )}
+          <div className="min-w-0 flex-1">
+            <p className={`text-xs font-medium truncate ${txt}`}>{userName}</p>
+            <button onClick={handleSignOut} className={`text-[11px] transition-colors ${txtMutedHover}`}>Sign Out →</button>
+          </div>
+        </div>
       </div>
     </>
   );
@@ -200,7 +228,7 @@ export default function ProShell({ companyName, userName, tier, logoUrl, onboard
 
       {/* Mobile header */}
       <header style={sidebarBgStyle} className={`md:hidden fixed top-0 left-0 right-0 z-40 px-4 py-3 flex items-center justify-between ${sidebarBgClass}`}>
-        <button onClick={() => setDrawerOpen(true)} className={`text-xl ${isNorthwood ? "text-black/70" : "text-white/70"}`}>☰</button>
+        <button onClick={() => setDrawerOpen(true)} className={`text-xl ${theme.mobileBtnTxt}`}>☰</button>
         {logoUrl ? <img src={logoUrl} alt={companyName} className="h-7 object-contain" /> : <span className={`text-sm font-bold ${txt}`}>{companyName}</span>}
         <div className="w-6" />
       </header>

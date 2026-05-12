@@ -196,7 +196,7 @@ export async function updateSession(request: NextRequest) {
 
     // Sales portal, only sales_rep and admin
     if (pathname.startsWith("/sales/") || pathname === "/sales") {
-      const salesTypes = ["sales_rep", "admin"];
+      const salesTypes = ["sales_rep", "admin", "review_attorney"];
       if (!salesTypes.includes(userType)) {
         if (userType === "partner") {
           const url = request.nextUrl.clone();

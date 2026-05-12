@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { usePortalBase } from "@/lib/portal-base";
 
 type TabKey = "overview" | "performance" | "activity" | "notes";
 
@@ -80,6 +81,7 @@ const TIER_STYLES: Record<string, { label: string; cls: string }> = {
 };
 
 export default function PartnerDetailPage() {
+  const base = usePortalBase();
   const params = useParams();
   const partnerId = params["partner-id"] as string;
 
@@ -248,7 +250,7 @@ export default function PartnerDetailPage() {
     return (
       <div className="py-16 text-center">
         <h2 className="text-lg font-semibold text-charcoal">Partner not found</h2>
-        <Link href="/sales/partners" className="text-gold text-sm mt-2 inline-block">Back to partners</Link>
+        <Link href={`${base}/partners`} className="text-gold text-sm mt-2 inline-block">Back to partners</Link>
       </div>
     );
   }
@@ -270,7 +272,7 @@ export default function PartnerDetailPage() {
     <div>
       {/* Breadcrumb */}
       <nav className="flex items-center gap-2 text-sm text-gray-400 mb-4">
-        <Link href="/sales/partners" className="hover:text-gold transition">Partners</Link>
+        <Link href={`${base}/partners`} className="hover:text-gold transition">Partners</Link>
         <span>/</span>
         <span className="text-charcoal font-medium">{partner.company_name}</span>
       </nav>

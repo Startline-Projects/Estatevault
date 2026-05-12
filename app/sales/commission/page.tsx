@@ -6,7 +6,8 @@ import { createClient } from "@/lib/supabase/client";
 interface PartnerRow {
   id: string;
   company_name: string;
-  platform_fee_amount: number;
+  tier: string | null;
+  platform_fee_amount: number | null;
   one_time_fee_paid: boolean;
   created_at: string;
   created_by: string;
@@ -17,6 +18,20 @@ interface BreakdownRow {
   platformFee: number;
   commission: number;
   paidAt: string;
+  status: "Paid" | "Pending";
+}
+
+// Expected platform fee by tier (cents). Used when partner hasn't paid yet.
+const TIER_FEE_CENTS: Record<string, number> = {
+  basic: 50000,
+  standard: 120000,
+  enterprise: 600000,
+};
+
+function effectiveFeeCents(p: PartnerRow): number {
+  if (p.one_time_fee_paid && p.platform_fee_amount) return p.platform_fee_amount;
+  const tier = (p.tier || "standard").toLowerCase();
+  return TIER_FEE_CENTS[tier] ?? TIER_FEE_CENTS.standard;
 }
 
 interface HistoryRow {
@@ -68,11 +83,10 @@ function AdminCommissionView() {
         return;
       }
 
-      // Fetch all partners that have paid their platform fee
+      // Fetch all partners (paid + pending) so newly-added partners count toward projected commission
       const { data: partners } = await supabase
         .from("partners")
-        .select("id, company_name, platform_fee_amount, one_time_fee_paid, created_at, created_by")
-        .eq("one_time_fee_paid", true)
+        .select("id, company_name, tier, platform_fee_amount, one_time_fee_paid, created_at, created_by")
         .order("created_at", { ascending: false });
 
       const typedPartners = (partners || []) as PartnerRow[];
@@ -82,8 +96,8 @@ function AdminCommissionView() {
       const summaries: RepSummaryRow[] = reps.map((rep) => {
         const repPartners = typedPartners.filter((p) => p.created_by === rep.id);
         const mtdPartners = repPartners.filter((p) => new Date(p.created_at) >= monthStart);
-        const rate = rep.commission_rate ?? 0.05;
-        const mtdFees = mtdPartners.reduce((sum, p) => sum + (p.platform_fee_amount || 0), 0) / 100;
+        const rate = rep.commission_rate ?? 0.5;
+        const mtdFees = mtdPartners.reduce((sum, p) => sum + effectiveFeeCents(p), 0) / 100;
         return {
           repId: rep.id,
           repName: rep.full_name || "Unknown",
@@ -193,7 +207,7 @@ function AdminCommissionView() {
 // ─── SALES REP VIEW ────────────────────────────────────────────────────────────
 function RepCommissionView() {
   const [loading, setLoading] = useState(true);
-  const [commissionRate, setCommissionRate] = useState(0.05);
+  const [commissionRate, setCommissionRate] = useState(0.5);
   const [mtdCommission, setMtdCommission] = useState(0);
   const [breakdown, setBreakdown] = useState<BreakdownRow[]>([]);
   const [history, setHistory] = useState<HistoryRow[]>([]);
@@ -210,13 +224,12 @@ function RepCommissionView() {
         .eq("id", user.id)
         .single();
 
-      const rate = profileData?.commission_rate ?? 0.05;
+      const rate = profileData?.commission_rate ?? 0.5;
       setCommissionRate(rate);
 
       const { data: partners } = await supabase
         .from("partners")
-        .select("id, company_name, platform_fee_amount, one_time_fee_paid, created_at")
-        .eq("one_time_fee_paid", true)
+        .select("id, company_name, tier, platform_fee_amount, one_time_fee_paid, created_at, created_by")
         .eq("created_by", user.id)
         .order("created_at", { ascending: false });
 
@@ -230,16 +243,17 @@ function RepCommissionView() {
       const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
 
       const mtdPartners = typedPartners.filter((p) => new Date(p.created_at) >= monthStart);
-      const mtdFees = mtdPartners.reduce((sum, p) => sum + (p.platform_fee_amount || 0), 0) / 100;
+      const mtdFees = mtdPartners.reduce((sum, p) => sum + effectiveFeeCents(p), 0) / 100;
       setMtdCommission(mtdFees * rate);
 
       const breakdownRows: BreakdownRow[] = mtdPartners.map((p) => {
-        const fee = (p.platform_fee_amount || 0) / 100;
+        const fee = effectiveFeeCents(p) / 100;
         return {
           partnerName: p.company_name,
           platformFee: fee,
           commission: fee * rate,
           paidAt: new Date(p.created_at).toLocaleDateString(),
+          status: p.one_time_fee_paid ? "Paid" : "Pending",
         };
       });
       breakdownRows.sort((a, b) => b.platformFee - a.platformFee);
@@ -253,7 +267,7 @@ function RepCommissionView() {
           const d = new Date(p.created_at);
           return d >= mDate && d < mEnd;
         });
-        const fees = monthPartners.reduce((sum, p) => sum + (p.platform_fee_amount || 0), 0) / 100;
+        const fees = monthPartners.reduce((sum, p) => sum + effectiveFeeCents(p), 0) / 100;
         historyRows.push({
           month: getMonthLabel(mDate),
           platformFees: fees,
@@ -311,6 +325,7 @@ function RepCommissionView() {
                   <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Signed Up</th>
                   <th className="text-right px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Platform Fee</th>
                   <th className="text-right px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Your Commission</th>
+                  <th className="text-center px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Status</th>
                 </tr>
               </thead>
               <tbody>
@@ -320,12 +335,18 @@ function RepCommissionView() {
                     <td className="px-5 py-3 text-gray-600">{row.paidAt}</td>
                     <td className="px-5 py-3 text-right text-gray-600">{formatCurrency(row.platformFee)}</td>
                     <td className="px-5 py-3 text-right font-medium text-navy">{formatCurrency(row.commission)}</td>
+                    <td className="px-5 py-3 text-center">
+                      <span className={`inline-block px-2.5 py-0.5 rounded-full text-xs font-medium ${row.status === "Paid" ? "bg-green-100 text-green-700" : "bg-amber-100 text-amber-700"}`}>
+                        {row.status}
+                      </span>
+                    </td>
                   </tr>
                 ))}
                 <tr className="bg-gray-50 font-semibold">
                   <td className="px-5 py-3 text-charcoal" colSpan={2}>Total</td>
                   <td className="px-5 py-3 text-right text-charcoal">{formatCurrency(breakdown.reduce((s, r) => s + r.platformFee, 0))}</td>
                   <td className="px-5 py-3 text-right text-navy">{formatCurrency(mtdCommission)}</td>
+                  <td className="px-5 py-3" />
                 </tr>
               </tbody>
             </table>

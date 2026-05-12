@@ -133,6 +133,54 @@ function LoginForm() {
       return;
     }
 
+    // Partner-scoped client lockout:
+    // A client who belongs to a partner may only sign in from that partner's
+    // whitelabel host (subdomain / custom_domain / vault_subdomain). Block
+    // login on the generic estatevault.us host so partner clients can't
+    // bypass the whitelabel.
+    if (userType === "client") {
+      const { data: clientRow } = await supabase
+        .from("clients")
+        .select("partner_id")
+        .eq("profile_id", user.id)
+        .not("partner_id", "is", null)
+        .limit(1)
+        .maybeSingle();
+
+      if (clientRow?.partner_id) {
+        const { data: partner } = await supabase
+          .from("partners")
+          .select("subdomain, custom_domain, vault_subdomain, business_name")
+          .eq("id", clientRow.partner_id)
+          .single();
+
+        const allowedHosts = [
+          partner?.subdomain,
+          partner?.custom_domain,
+          partner?.vault_subdomain ? `${partner.vault_subdomain}.estatevault.us` : null,
+        ]
+          .filter(Boolean)
+          .map((h) => String(h).toLowerCase());
+
+        const hostLower = currentHost.toLowerCase();
+        const onAllowedHost = allowedHosts.some(
+          (h) => hostLower === h || hostLower === `www.${h}`
+        );
+
+        if (!onAllowedHost) {
+          await supabase.auth.signOut();
+          const target = partner?.custom_domain || partner?.subdomain ||
+            (partner?.vault_subdomain ? `${partner.vault_subdomain}.estatevault.us` : null);
+          const targetUrl = target ? `https://${target}/auth/login` : "your firm's portal";
+          setError(
+            `This account is managed by ${partner?.business_name || "your advisor"}. Please sign in at ${targetUrl}.`
+          );
+          setLoading(false);
+          return;
+        }
+      }
+    }
+
     if (userType === "partner") {
       // Check partner onboarding status
       const { data: partner } = await supabase
