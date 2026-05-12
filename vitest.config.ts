@@ -8,7 +8,11 @@ export default defineConfig({
     environment: "jsdom",
     globals: true,
     setupFiles: ["./tests/setup.ts"],
-    include: ["tests/unit/**/*.test.{ts,tsx}", "tests/api/**/*.test.{ts,tsx}"],
+    include: [
+      "tests/unit/**/*.test.{ts,tsx}",
+      "tests/api/**/*.test.{ts,tsx}",
+      "lib/crypto/__tests__/**/*.test.ts",
+    ],
     exclude: ["tests/e2e/**", "node_modules/**"],
   },
   resolve: {

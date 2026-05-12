@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createServerClient } from "@supabase/ssr";
 import { Resend } from "resend";
 import { randomUUID } from "crypto";
+import { bytesToBytea } from "@/lib/api/crypto";
 
 function createAdminClient() {
   return createServerClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, { cookies: { getAll: () => [], setAll: () => {} } });
@@ -66,8 +67,26 @@ export async function POST(request: Request) {
   const body = await request.json();
   const admin = createAdminClient();
 
-  const { data: client } = await admin.from("clients").select("id").eq("profile_id", user.id).single();
+  const { data: client } = await admin
+    .from("clients")
+    .select("id, vault_shamir_initialized_at, crypto_setup_at")
+    .eq("profile_id", user.id)
+    .single();
   if (!client) return NextResponse.json({ error: "No client record" }, { status: 400 });
+
+  // Trustee access requires Shamir setup so we can release Share C at approval.
+  if (!client.vault_shamir_initialized_at) {
+    return NextResponse.json(
+      {
+        error: "Trustee access not initialized",
+        action: "setup_shamir",
+        message: client.crypto_setup_at
+          ? "Initialize trustee access first (one-time, requires recovery words)."
+          : "Vault must be set up before adding trustees.",
+      },
+      { status: 409 },
+    );
+  }
 
   const { data: profile } = await admin.from("profiles").select("full_name, email").eq("id", user.id).single();
 
@@ -77,25 +96,58 @@ export async function POST(request: Request) {
   const invite_token = randomUUID();
   const ownerName = profile?.full_name || profile?.email || user.email || "Your contact";
 
-  const { error } = await admin.from("vault_trustees").insert({
+  // E2EE path: persist ciphertext + email_blind. invite_email/name passed
+  // transiently (used once for Resend, never persisted).
+  const isE2EE = !!(body.ciphertext && body.nonce && body.emailBlind);
+  const inviteEmail: string | undefined = body.invite_email ?? body.trustee_email;
+  const inviteName: string | undefined = body.invite_name ?? body.trustee_name;
+
+  const insertRow: Record<string, unknown> = {
     client_id: client.id,
-    trustee_name: body.trustee_name,
-    trustee_email: body.trustee_email,
-    trustee_relationship: body.trustee_relationship,
     status: "pending",
     invite_token,
     invite_sent_at: new Date().toISOString(),
-  });
+  };
+
+  if (isE2EE) {
+    try {
+      const ct = Buffer.from(body.ciphertext, "base64");
+      const nonce = Buffer.from(body.nonce, "base64");
+      const emailBlind = Buffer.from(body.emailBlind, "base64");
+      if (nonce.length !== 24) throw new Error("bad nonce");
+      if (emailBlind.length !== 32) throw new Error("bad email_blind");
+      insertRow.ciphertext = bytesToBytea(new Uint8Array(ct));
+      insertRow.nonce = bytesToBytea(new Uint8Array(nonce));
+      insertRow.email_blind = bytesToBytea(new Uint8Array(emailBlind));
+      insertRow.enc_version = body.encVersion ?? 1;
+      insertRow.trustee_name = "";
+      insertRow.trustee_email = (inviteEmail || "").trim().toLowerCase();
+      insertRow.trustee_relationship = "";
+      insertRow.backfilled_at = new Date().toISOString();
+    } catch (e) {
+      return NextResponse.json({ error: `bad e2ee payload: ${(e as Error).message}` }, { status: 400 });
+    }
+    if (!inviteEmail || !inviteName) {
+      return NextResponse.json({ error: "invite_email + invite_name required (transient, not persisted)" }, { status: 400 });
+    }
+  } else {
+    insertRow.trustee_name = body.trustee_name;
+    insertRow.trustee_email = body.trustee_email;
+    insertRow.trustee_relationship = body.trustee_relationship;
+  }
+
+  const { error } = await admin.from("vault_trustees").insert(insertRow);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
   try {
-    await sendInviteEmail(body.trustee_name, body.trustee_email, ownerName, invite_token);
-  } catch (emailErr: any) {
+    await sendInviteEmail(inviteName!, inviteEmail!, ownerName, invite_token);
+  } catch (emailErr: unknown) {
     console.error("Trustee invite email failed:", emailErr);
-    return NextResponse.json({ success: true, emailError: emailErr?.message || "Email send failed" });
+    const msg = emailErr instanceof Error ? emailErr.message : "Email send failed";
+    return NextResponse.json({ success: true, emailError: msg, encrypted: isE2EE });
   }
 
-  return NextResponse.json({ success: true });
+  return NextResponse.json({ success: true, encrypted: isE2EE });
 }
 
 export async function PATCH(request: Request) {

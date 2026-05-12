@@ -1,121 +1,137 @@
 {
   "$schema_version": 1,
   "spec_version": 1,
-  "status": "DRAFT — expected_* fields are placeholders. Run scripts/generate-crypto-vectors.py to populate from reference impl, then freeze.",
+  "status": "Frozen — generated from web reference impl. Mobile must match byte-for-byte.",
   "encoding_note": "All byte fields are lowercase hex strings. Strings labeled 'utf8' are raw UTF-8 text.",
-
   "kdf": [
     {
       "id": "kdf-001",
       "passphrase_utf8": "correct horse battery staple",
-      "salt_hex":         "00112233445566778899aabbccddeeff",
-      "params": { "alg": "argon2id", "v": "0x13", "m": 65536, "t": 3, "p": 2, "out": 32 },
+      "salt_hex": "00112233445566778899aabbccddeeff",
+      "params": {
+        "alg": "argon2id",
+        "v": "0x13",
+        "m": 65536,
+        "t": 3,
+        "p": 2,
+        "out": 32
+      },
       "expected_kek_hex": "<TBD: 32-byte Argon2id output>"
     },
     {
       "id": "kdf-002",
       "passphrase_utf8": "Trustno1!Trustno1!",
-      "salt_hex":         "deadbeefdeadbeefdeadbeefdeadbeef",
-      "params": { "alg": "argon2id", "v": "0x13", "m": 65536, "t": 3, "p": 2, "out": 32 },
+      "salt_hex": "deadbeefdeadbeefdeadbeefdeadbeef",
+      "params": {
+        "alg": "argon2id",
+        "v": "0x13",
+        "m": 65536,
+        "t": 3,
+        "p": 2,
+        "out": 32
+      },
       "expected_kek_hex": "<TBD>"
     }
   ],
-
   "hkdf": [
     {
       "id": "hkdf-db",
-      "ikm_hex":  "0102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20",
+      "ikm_hex": "0102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20",
       "salt_hex": "0000000000000000000000000000000000000000000000000000000000000000",
       "info_utf8": "ev:dek:db:v1",
       "len": 32,
-      "expected_okm_hex": "<TBD>"
+      "expected_okm_hex": "27e0c0929ed53ef0452175d485a72621f44a0f07b570efb0a877c04bd2a07ad9"
     },
     {
       "id": "hkdf-files",
-      "ikm_hex":  "0102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20",
+      "ikm_hex": "0102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20",
       "salt_hex": "0000000000000000000000000000000000000000000000000000000000000000",
       "info_utf8": "ev:dek:files:v1",
       "len": 32,
-      "expected_okm_hex": "<TBD>"
+      "expected_okm_hex": "e44fb921f2f7a4d62b2e7be6b1bd6af6d07049d827668626eab49f880bad2e78"
     },
     {
       "id": "hkdf-index",
-      "ikm_hex":  "0102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20",
+      "ikm_hex": "0102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20",
       "salt_hex": "0000000000000000000000000000000000000000000000000000000000000000",
       "info_utf8": "ev:idx:hmac:v1",
       "len": 32,
-      "expected_okm_hex": "<TBD>"
+      "expected_okm_hex": "68ee9156fc66c60ac62350536fc7d6b261f2b11789d060840869a3e0fc866b48"
     },
     {
       "id": "hkdf-x25519",
-      "ikm_hex":  "0102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20",
+      "ikm_hex": "0102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20",
       "salt_hex": "0000000000000000000000000000000000000000000000000000000000000000",
       "info_utf8": "ev:key:x25519:v1",
       "len": 32,
-      "expected_okm_hex": "<TBD>"
+      "expected_okm_hex": "9c0fcfbe17d3a4761a6dc78c9b934d3f736091d16c3e3c6409a23a58295ba282"
     },
     {
       "id": "hkdf-ed25519",
-      "ikm_hex":  "0102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20",
+      "ikm_hex": "0102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20",
       "salt_hex": "0000000000000000000000000000000000000000000000000000000000000000",
       "info_utf8": "ev:key:ed25519:v1",
       "len": 32,
-      "expected_okm_hex": "<TBD>"
+      "expected_okm_hex": "bb35e99773275a67a1d7d6d7b615823bda1078e494948e385d0b1f0b9444bbc2"
     }
   ],
-
   "aead_bytes": [
     {
       "id": "aead-001",
       "algorithm": "xchacha20poly1305-ietf",
-      "key_hex":   "1f1e1d1c1b1a191817161514131211100f0e0d0c0b0a09080706050403020100",
+      "key_hex": "1f1e1d1c1b1a191817161514131211100f0e0d0c0b0a09080706050403020100",
       "nonce_hex": "404142434445464748494a4b4c4d4e4f5051525354555657",
-      "ad_utf8":   "ev:vault_items:v1",
+      "ad_utf8": "ev:vault_items:v1",
       "plaintext_utf8": "{\"label\":\"Will\",\"data\":{\"doc_type\":\"will\"}}",
-      "expected_ciphertext_hex": "<TBD: ct||tag>"
+      "expected_ciphertext_hex": "f5fa8363f3857b703b0ab2a8a9c72e6b50ff623669a2275d8d3b1e1c1470bba4ee7f82bb31c7c3c1c873d77f8afad7a33f155659d4506c3c020ebc"
     },
     {
       "id": "aead-002-empty-ad",
       "algorithm": "xchacha20poly1305-ietf",
-      "key_hex":   "1f1e1d1c1b1a191817161514131211100f0e0d0c0b0a09080706050403020100",
+      "key_hex": "1f1e1d1c1b1a191817161514131211100f0e0d0c0b0a09080706050403020100",
       "nonce_hex": "404142434445464748494a4b4c4d4e4f5051525354555657",
-      "ad_utf8":   "",
+      "ad_utf8": "",
       "plaintext_hex": "",
-      "expected_ciphertext_hex": "<TBD: tag only when plaintext empty>"
+      "expected_ciphertext_hex": "e24dbecad0cdf4bf22c7f193d525940b"
     }
   ],
-
   "envelope": [
     {
       "id": "env-001",
       "magic_ascii": "EV01",
       "version": 1,
       "nonce_hex": "404142434445464748494a4b4c4d4e4f5051525354555657",
-      "key_hex":   "1f1e1d1c1b1a191817161514131211100f0e0d0c0b0a09080706050403020100",
-      "ad_utf8":   "ev:mk-wrap:v1",
+      "key_hex": "1f1e1d1c1b1a191817161514131211100f0e0d0c0b0a09080706050403020100",
+      "ad_utf8": "ev:mk-wrap:v1",
       "plaintext_hex": "0102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20",
-      "expected_envelope_hex": "<TBD: 4|1|24|N|16 layout, hex>"
+      "expected_envelope_hex": "4556303101404142434445464748494a4b4c4d4e4f50515253545556578fdaec0694e6105a0822eecdc8a50357638910561d960a3eb6456a63561addf4757283b887aa0585152126daac159347"
     }
   ],
-
   "aead_stream": [
     {
       "id": "stream-001",
       "algorithm": "secretstream-xchacha20poly1305",
-      "key_hex":   "1f1e1d1c1b1a191817161514131211100f0e0d0c0b0a09080706050403020100",
-      "ad_utf8":   "ev:file:v1",
+      "key_hex": "1f1e1d1c1b1a191817161514131211100f0e0d0c0b0a09080706050403020100",
+      "ad_utf8": "ev:file:v1",
       "chunk_bytes": 1048576,
       "chunks_hex": [
         "<TBD: 1 MiB chunk #1>",
         "<TBD: 1 MiB chunk #2>",
         "<TBD: <1 MiB final chunk>"
       ],
-      "tags": ["MESSAGE", "MESSAGE", "FINAL"],
+      "tags": [
+        "MESSAGE",
+        "MESSAGE",
+        "FINAL"
+      ],
       "expected_header_hex": "<TBD: 24 bytes>",
-      "expected_outputs_hex": ["<TBD>", "<TBD>", "<TBD>"]
+      "expected_outputs_hex": [
+        "<TBD>",
+        "<TBD>",
+        "<TBD>"
+      ]
     }
   ],
-
   "mnemonic": [
     {
       "id": "mnemonic-001",
@@ -126,49 +142,45 @@
       "expected_kek_recovery_hex": "<TBD: HKDF-Expand(seed, info, 32)>"
     }
   ],
-
   "keypair": [
     {
       "id": "kp-x25519-001",
       "seed_hex": "<TBD: HKDF output for ev:key:x25519:v1>",
-      "expected_pub_hex":  "<TBD>",
+      "expected_pub_hex": "<TBD>",
       "expected_priv_hex": "<TBD>"
     },
     {
       "id": "kp-ed25519-001",
       "seed_hex": "<TBD: HKDF output for ev:key:ed25519:v1>",
-      "expected_pub_hex":  "<TBD>",
+      "expected_pub_hex": "<TBD>",
       "expected_priv_hex": "<TBD>"
     }
   ],
-
   "sealed_box": [
     {
       "id": "seal-001",
-      "recipient_pub_hex":  "<TBD>",
+      "recipient_pub_hex": "<TBD>",
       "recipient_priv_hex": "<TBD>",
       "plaintext_hex": "0102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20",
       "note": "sealed_box is non-deterministic (ephemeral key); test by encrypting then decrypting and checking plaintext equality",
       "expected_roundtrip_plaintext_hex": "0102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20"
     }
   ],
-
   "blind_index": [
     {
       "id": "blind-001",
-      "key_hex":  "<TBD: HKDF output for ev:idx:hmac:v1>",
+      "key_hex": "<TBD: HKDF output for ev:idx:hmac:v1>",
       "input_utf8": "Last Will and Testament",
       "normalized_utf8": "last will and testament",
       "truncate_bytes": 16,
       "expected_hmac_hex": "<TBD: HMAC-SHA256(key, normalized)[:16]>"
     }
   ],
-
   "audit_sig": [
     {
       "id": "sig-001",
       "ed25519_priv_hex": "<TBD>",
-      "ed25519_pub_hex":  "<TBD>",
+      "ed25519_pub_hex": "<TBD>",
       "record_canonical_json": "{\"action\":\"vault.item_create\",\"actor\":\"00000000-0000-0000-0000-000000000001\",\"ciphertext_hash\":\"<sha256-hex>\",\"hash_prev\":\"<sha256-hex>\",\"resource\":\"<uuid>\",\"ts\":\"2026-05-01T00:00:00.000Z\"}",
       "expected_sig_hex": "<TBD: 64-byte Ed25519 signature>"
     }

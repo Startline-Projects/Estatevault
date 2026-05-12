@@ -1,3 +1,26 @@
 {
-  "extends": "next/core-web-vitals"
+  "extends": "next/core-web-vitals",
+  "overrides": [
+    {
+      "files": ["**/*.{ts,tsx}"],
+      "excludedFiles": ["**/*.test.ts", "**/*.test.tsx", "tests/**", "scripts/**", "lib/repos/**", "app/api/**"],
+      "rules": {
+        "no-restricted-syntax": [
+          "warn",
+          {
+            "selector": "CallExpression[callee.name='fetch'][arguments.0.value=/^\\/api\\/(vault|share|crypto)/]",
+            "message": "Direct fetch to /api/(vault|share|crypto) — use lib/repos/."
+          },
+          {
+            "selector": "CallExpression[callee.property.name='from'][arguments.0.value=/^(vault_items|vault_trustees|farewell_messages|item_shares)$/]",
+            "message": "Direct supabase.from('<vault table>') outside lib/repos/ + API routes."
+          },
+          {
+            "selector": "CallExpression[callee.object.name='console'][callee.property.name='log'] > Identifier[name=/^(mk|dek|kek|masterKey|secretKey|privKey|secX|secEd|wrappedMk)$/]",
+            "message": "Banned: logging key material."
+          }
+        ]
+      }
+    }
+  ]
 }

@@ -11,6 +11,14 @@
     {
       "path": "/api/documents/cleanup-test-orders",
       "schedule": "0 6 * * *"
+    },
+    {
+      "path": "/api/cron/farewell-veto-reminder",
+      "schedule": "0 */12 * * *"
+    },
+    {
+      "path": "/api/cron/farewell-window-expired",
+      "schedule": "*/15 * * * *"
     }
   ],
   "functions": {

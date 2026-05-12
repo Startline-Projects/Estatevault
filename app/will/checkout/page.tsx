@@ -35,6 +35,10 @@ export default function WillCheckoutPage() {
   const [showAcknowledgment, setShowAcknowledgment] = useState(false);
   const [ackChecked, setAckChecked] = useState(false);
   const [partnerId, setPartnerId] = useState("");
+  const [customerEmail, setCustomerEmail] = useState("");
+  const [conflictMsg, setConflictMsg] = useState("");
+  const [conflictBlocked, setConflictBlocked] = useState(false);
+  const [conflictChecking, setConflictChecking] = useState(false);
 
   const total = promoApplied ? 0 : (attorneyReview ? 700 : 400);
 
@@ -45,6 +49,7 @@ export default function WillCheckoutPage() {
       if (user) {
         setUserId(user.id);
         setPromoEmail(user.email || "");
+        setCustomerEmail(user.email || "");
       }
       const intake = sessionStorage.getItem("willIntake");
       if (!intake) router.push("/will");
@@ -138,7 +143,32 @@ export default function WillCheckoutPage() {
     }
   }
 
+  async function checkConflict(email: string) {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      setConflictMsg(""); setConflictBlocked(false); return;
+    }
+    setConflictChecking(true);
+    try {
+      const res = await fetch("/api/checkout/check-conflict", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, productType: "will" }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        if (data.action === "block") { setConflictBlocked(true); setConflictMsg(data.message); }
+        else { setConflictBlocked(false); setConflictMsg(""); }
+      }
+    } catch { /* ignore network errors, server will re-check */ }
+    finally { setConflictChecking(false); }
+  }
+
   async function handlePayment() {
+    if (!customerEmail.trim()) { setError("Please enter your email."); return; }
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(customerEmail)) { setError("Please enter a valid email."); return; }
+    if (conflictBlocked) return;
     setLoading(true);
     setError("");
 
@@ -154,6 +184,7 @@ export default function WillCheckoutPage() {
           attorneyReview,
           intakeAnswers: JSON.parse(intake),
           partnerId: partnerId || null,
+          customerEmail,
         }),
       });
 
@@ -258,6 +289,26 @@ export default function WillCheckoutPage() {
           </div>
         </div>
 
+        {/* Email */}
+        {!promoApplied && (
+          <div className="mt-6 rounded-2xl bg-white border border-gray-200 p-6 shadow-sm">
+            <h3 className="text-sm font-semibold text-navy mb-3">Your Email</h3>
+            <p className="text-xs text-charcoal/50 mb-3">We&apos;ll use this to create or link your account.</p>
+            <input
+              type="email"
+              value={customerEmail}
+              onChange={(e) => { setCustomerEmail(e.target.value); setConflictMsg(""); setConflictBlocked(false); }}
+              onBlur={(e) => checkConflict(e.target.value.trim())}
+              placeholder="your@email.com"
+              className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gold/30 focus:border-gold"
+            />
+            {conflictChecking && <p className="mt-2 text-xs text-charcoal/50">Checking…</p>}
+            {conflictBlocked && conflictMsg && (
+              <div className="mt-3 rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">{conflictMsg}</div>
+            )}
+          </div>
+        )}
+
         {/* Promo code */}
         <div className="mt-6 rounded-2xl bg-white border border-gray-200 p-6 shadow-sm">
           <h3 className="text-sm font-semibold text-navy mb-3">Promo Code</h3>
@@ -302,7 +353,7 @@ export default function WillCheckoutPage() {
 
         <button
           onClick={isTestMode ? handleTestSubmit : (promoApplied ? handlePromoSubmit : handlePayment)}
-          disabled={loading || (promoApplied && !isTestMode && !promoEmail.trim())}
+          disabled={loading || conflictBlocked || (promoApplied && !isTestMode && !promoEmail.trim()) || (!promoApplied && !customerEmail.trim())}
           className="mt-8 w-full min-h-[44px] rounded-full bg-gold py-4 text-base font-semibold text-white hover:bg-gold/90 transition-colors shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {loading

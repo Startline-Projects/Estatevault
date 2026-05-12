@@ -2,7 +2,12 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
 export async function updateSession(request: NextRequest) {
-  let supabaseResponse = NextResponse.next({ request });
+  // Forward pathname as a request header so server components (e.g. layouts)
+  // can read it via `headers().get("x-url")`. Setting only on response leaves
+  // the request header undefined inside RSC.
+  const forwardedHeaders = new Headers(request.headers);
+  forwardedHeaders.set("x-url", request.nextUrl.pathname);
+  let supabaseResponse = NextResponse.next({ request: { headers: forwardedHeaders } });
 
   // Skip auth checks if Supabase is not configured yet
   if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {

@@ -3,6 +3,8 @@ import { redirect } from "next/navigation";
 import { headers } from "next/headers";
 import DashboardShell from "@/components/dashboard/DashboardShell";
 import PasswordChangeBanner from "@/components/dashboard/PasswordChangeBanner";
+import { UnlockModal } from "@/components/vault/UnlockModal";
+import { BackfillBanner } from "@/components/vault/BackfillBanner";
 
 export default async function DashboardLayout({
   children,
@@ -43,6 +45,9 @@ export default async function DashboardLayout({
   const isVaultOnlyClient =
     client?.vault_subscription_status === "active" && !hasEstatePlanOrder;
 
+  const vaultEntitled =
+    client?.vault_subscription_status === "active" || hasEstatePlanOrder;
+
   const pathname = headers().get("x-url") || "/dashboard";
   const vaultOnlyAllowedPaths = ["/dashboard/vault", "/dashboard/settings"];
   const isVaultOnlyPathAllowed = vaultOnlyAllowedPaths.some(
@@ -59,7 +64,11 @@ export default async function DashboardLayout({
   return (
     <DashboardShell userName={name} vaultOnly={isVaultOnlyClient}>
       {requiresPasswordChange && <PasswordChangeBanner />}
+      <BackfillBanner />
       {children}
+      {pathname.startsWith("/dashboard/vault") && (
+        <UnlockModal entitled={vaultEntitled} />
+      )}
     </DashboardShell>
   );
 }

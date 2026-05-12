@@ -152,25 +152,19 @@ export default function DocumentsPage() {
     if (!doc.storage_path) return;
     setDownloadingId(doc.id);
     try {
-      const res = await fetch(`/api/documents/download?id=${doc.id}`);
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        alert(data.error || "Unable to download document.");
-        return;
-      }
-      const { url } = await res.json();
-      if (!url) return;
-
-      const response = await fetch(url);
-      const blob = await response.blob();
+      const filename = `${doc.document_type.replace(/_/g, "-")}.pdf`;
+      const { downloadGeneratedDocument } = await import("@/lib/repos/documentSealedRepo");
+      const { blob } = await downloadGeneratedDocument(doc.id, filename);
       const blobUrl = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = blobUrl;
-      a.download = `${doc.document_type.replace(/_/g, "-")}.pdf`;
+      a.download = filename;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(blobUrl);
+    } catch (e) {
+      alert(`Unable to download document: ${(e as Error).message}`);
     } finally {
       setDownloadingId(null);
     }

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createServerClient } from "@supabase/ssr";
 import { Resend } from "resend";
+import { bytesToBytea } from "@/lib/api/crypto";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
@@ -21,7 +22,7 @@ export async function GET() {
 
     const { data: messages } = await admin
       .from("farewell_messages")
-      .select("id, title, recipient_email, file_size_mb, duration_seconds, vault_farewell_status, created_at, updated_at")
+      .select("id, title, recipient_email, file_size_mb, duration_seconds, vault_farewell_status, created_at, updated_at, ciphertext, nonce, enc_version, storage_path, storage_header")
       .eq("client_id", client.id)
       .not("vault_farewell_status", "in", '("deleted","replaced","expired")')
       .order("created_at", { ascending: false });
@@ -51,8 +52,10 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Vault subscription required" }, { status: 403 });
     }
 
-    const { title, recipientEmail } = await request.json();
-    if (!title || !recipientEmail) {
+    const body = await request.json();
+    const isE2EE = !!(body.ciphertext && body.nonce && body.recipientBlind && body.storageHeader && body.storagePath);
+    const { title, recipientEmail } = body as { title?: string; recipientEmail?: string };
+    if (!isE2EE && (!title || !recipientEmail)) {
       return NextResponse.json({ error: "Title and recipient email are required" }, { status: 400 });
     }
 
@@ -64,14 +67,41 @@ export async function POST(request: Request) {
       .single();
     const senderName = senderProfile?.full_name || "Someone you know";
 
+    const insertRow: Record<string, unknown> = {
+      client_id: client.id,
+      vault_farewell_status: "locked",
+    };
+    if (isE2EE) {
+      try {
+        const ct = Buffer.from(body.ciphertext, "base64");
+        const nonce = Buffer.from(body.nonce, "base64");
+        const recipientBlind = Buffer.from(body.recipientBlind, "base64");
+        const storageHeader = Buffer.from(body.storageHeader, "base64");
+        if (storageHeader.length !== 24) throw new Error("bad storage header");
+        if (nonce.length !== 24) throw new Error("bad nonce");
+        if (recipientBlind.length !== 32) throw new Error("bad recipient blind");
+        insertRow.ciphertext = bytesToBytea(new Uint8Array(ct));
+        insertRow.nonce = bytesToBytea(new Uint8Array(nonce));
+        insertRow.recipient_blind = bytesToBytea(new Uint8Array(recipientBlind));
+        insertRow.storage_header = bytesToBytea(new Uint8Array(storageHeader));
+        insertRow.storage_path = body.storagePath;
+        insertRow.enc_version = body.encVersion ?? 1;
+        insertRow.title = "";
+        insertRow.recipient_email = "";
+        insertRow.file_size_mb = body.fileSizeMb ?? null;
+        insertRow.duration_seconds = body.durationSeconds ?? null;
+        insertRow.backfilled_at = new Date().toISOString();
+      } catch (e) {
+        return NextResponse.json({ error: `bad e2ee payload: ${(e as Error).message}` }, { status: 400 });
+      }
+    } else {
+      insertRow.title = title;
+      insertRow.recipient_email = recipientEmail;
+    }
+
     const { data: message, error: insertErr } = await admin
       .from("farewell_messages")
-      .insert({
-        client_id: client.id,
-        title,
-        recipient_email: recipientEmail,
-        vault_farewell_status: "locked",
-      })
+      .insert(insertRow)
       .select("id")
       .single();
 
@@ -80,12 +110,13 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Failed to create message" }, { status: 500 });
     }
 
-    // Send notification email to recipient so they know the link exists
+    // E2EE path: server has no plaintext recipient_email, so notification is
+    // skipped. Owner shares the access link out-of-band.
     const accessLink = `https://www.estatevault.us/farewell/${client.id}`;
-    try {
+    if (!isE2EE) try {
       await resend.emails.send({
         from: "EstateVault <info@estatevault.us>",
-        to: recipientEmail,
+        to: recipientEmail!,
         subject: `${senderName} has left you a farewell message`,
         html: `
           <div style="font-family:Inter,sans-serif;max-width:520px;margin:0 auto;padding:32px;">
@@ -126,10 +157,10 @@ export async function POST(request: Request) {
       action: "farewell.created",
       resource_type: "farewell_message",
       resource_id: message.id,
-      metadata: { title, recipient_email: recipientEmail },
+      metadata: isE2EE ? { encrypted: true } : { title, recipient_email: recipientEmail },
     });
 
-    return NextResponse.json({ messageId: message.id });
+    return NextResponse.json({ id: message.id, messageId: message.id });
   } catch (error) {
     console.error("Farewell create error:", error);
     return NextResponse.json({ error: "Failed to create message" }, { status: 500 });

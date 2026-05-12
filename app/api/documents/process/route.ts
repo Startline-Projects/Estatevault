@@ -147,6 +147,14 @@ export async function GET() {
         await supabase.from("documents").update({ status: "delivered", delivered_at: new Date().toISOString() }).eq("order_id", order.id);
       }
 
+      // E2EE Phase 12b: purge plaintext quiz answers once PDFs are generated.
+      // PDFs are sealed to user pubkey (Phase 12); server no longer needs intake.
+      if (order.quiz_session_id) {
+        await supabase.from("quiz_sessions")
+          .update({ answers: {}, answers_purged_at: new Date().toISOString() })
+          .eq("id", order.quiz_session_id);
+      }
+
       return NextResponse.json({ message: "Order processed directly", order_id: order.id });
     }
 
@@ -198,6 +206,20 @@ export async function GET() {
       } catch (docError) {
         console.error(`Error generating ${docType}:`, docError);
         // Continue with other documents
+      }
+    }
+
+    // E2EE Phase 12b: purge plaintext quiz answers once PDFs generated.
+    if (job.order_id) {
+      const { data: jobOrder } = await supabase
+        .from("orders")
+        .select("quiz_session_id")
+        .eq("id", job.order_id)
+        .maybeSingle();
+      if (jobOrder?.quiz_session_id) {
+        await supabase.from("quiz_sessions")
+          .update({ answers: {}, answers_purged_at: new Date().toISOString() })
+          .eq("id", jobOrder.quiz_session_id);
       }
     }
 

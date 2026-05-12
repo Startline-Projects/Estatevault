@@ -39,6 +39,11 @@ export default function TrustCheckoutPage() {
   const [showAcknowledgment, setShowAcknowledgment] = useState(false);
   const [ackChecked, setAckChecked] = useState(false);
   const [partnerId, setPartnerId] = useState("");
+  const [customerEmail, setCustomerEmail] = useState("");
+  const [conflictMsg, setConflictMsg] = useState("");
+  const [conflictAction, setConflictAction] = useState<"none" | "block" | "override">("none");
+  const [overrideAck, setOverrideAck] = useState(false);
+  const [conflictChecking, setConflictChecking] = useState(false);
 
   const total = promoApplied ? 0 : (attorneyReview ? 900 : 600);
 
@@ -46,7 +51,7 @@ export default function TrustCheckoutPage() {
     async function init() {
       const supabase = createClient();
       const { data: { user } } = await supabase.auth.getUser();
-      if (user) { setUserId(user.id); setPromoEmail(user.email || ""); }
+      if (user) { setUserId(user.id); setPromoEmail(user.email || ""); setCustomerEmail(user.email || ""); }
       const intake = sessionStorage.getItem("trustIntake");
       if (!intake) { router.push("/trust"); return; }
       setPartnerId(sessionStorage.getItem("trustPartner") || "");
@@ -131,8 +136,35 @@ export default function TrustCheckoutPage() {
     }
   }
 
+  async function checkConflict(email: string) {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      setConflictMsg(""); setConflictAction("none"); setOverrideAck(false); return;
+    }
+    setConflictChecking(true);
+    try {
+      const res = await fetch("/api/checkout/check-conflict", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, productType: "trust" }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setConflictAction(data.action);
+        setConflictMsg(data.message || "");
+        if (data.action !== "override") setOverrideAck(false);
+      }
+    } catch { /* server re-checks */ }
+    finally { setConflictChecking(false); }
+  }
+
   async function handlePayment() {
     if (showDeclineWarning && !declineAck) return;
+    if (!customerEmail.trim()) { setError("Please enter your email."); return; }
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(customerEmail)) { setError("Please enter a valid email."); return; }
+    if (conflictAction === "block") return;
+    if (conflictAction === "override" && !overrideAck) return;
     setLoading(true);
     setError("");
     try {
@@ -146,6 +178,8 @@ export default function TrustCheckoutPage() {
           intakeAnswers: JSON.parse(intake),
           complexityFlag: complexity.flagged, complexityReasons: complexity.reasons,
           declinedAttorneyReview: complexity.flagged && !attorneyReview, partnerId: partnerId || null,
+          customerEmail,
+          confirmOverride: conflictAction === "override" && overrideAck,
         }),
       });
       const data = await res.json();
@@ -236,6 +270,35 @@ export default function TrustCheckoutPage() {
           </div>
         </div>
 
+        {/* Email */}
+        {!promoApplied && (
+          <div className="mt-6 rounded-2xl bg-white border border-gray-200 p-6 shadow-sm">
+            <h3 className="text-sm font-semibold text-navy mb-3">Your Email</h3>
+            <p className="text-xs text-charcoal/50 mb-3">We&apos;ll use this to create or link your account.</p>
+            <input
+              type="email"
+              value={customerEmail}
+              onChange={(e) => { setCustomerEmail(e.target.value); setConflictMsg(""); setConflictAction("none"); setOverrideAck(false); }}
+              onBlur={(e) => checkConflict(e.target.value.trim())}
+              placeholder="your@email.com"
+              className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gold/30 focus:border-gold"
+            />
+            {conflictChecking && <p className="mt-2 text-xs text-charcoal/50">Checking…</p>}
+            {conflictAction === "block" && conflictMsg && (
+              <div className="mt-3 rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">{conflictMsg}</div>
+            )}
+            {conflictAction === "override" && conflictMsg && (
+              <div className="mt-3 rounded-lg bg-amber-50 border border-amber-200 px-4 py-3">
+                <p className="text-sm text-amber-800">{conflictMsg}</p>
+                <label className="mt-3 flex items-start gap-3 cursor-pointer">
+                  <input type="checkbox" checked={overrideAck} onChange={(e) => setOverrideAck(e.target.checked)} className="mt-0.5 h-5 w-5 rounded border-gray-300 accent-gold" />
+                  <span className="text-sm text-amber-900">I understand my existing Will Package will be replaced by the Trust Package.</span>
+                </label>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Promo code */}
         <div className="mt-6 rounded-2xl bg-white border border-gray-200 p-6 shadow-sm">
           <h3 className="text-sm font-semibold text-navy mb-3">Promo Code</h3>
@@ -308,7 +371,14 @@ export default function TrustCheckoutPage() {
 
         <button
           onClick={isTestMode ? handleTestSubmit : (promoApplied ? handlePromoSubmit : handlePayment)}
-          disabled={loading || (showDeclineWarning && !declineAck) || (promoApplied && !isTestMode && !promoEmail.trim())}
+          disabled={
+            loading ||
+            (showDeclineWarning && !declineAck) ||
+            (promoApplied && !isTestMode && !promoEmail.trim()) ||
+            (!promoApplied && !customerEmail.trim()) ||
+            conflictAction === "block" ||
+            (conflictAction === "override" && !overrideAck)
+          }
           className="mt-8 w-full min-h-[44px] rounded-full bg-gold py-4 text-base font-semibold text-white hover:bg-gold/90 transition-colors shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {loading ? "Processing..." : isTestMode ? "Generate Test Documents" : promoApplied ? "Get Your Documents, Free" : `Proceed to Payment, $${total}`}

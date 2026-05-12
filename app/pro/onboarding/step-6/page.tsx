@@ -82,12 +82,24 @@ export default function Step6Page() {
         </div>
         <div onClick={() => setMethod("ach")} className={`rounded-xl border-2 p-6 cursor-pointer transition-all ${method === "ach" ? "border-gold bg-gold/5" : "border-gray-200 hover:border-gold/40"}`}>
           <h3 className="text-base font-bold text-navy">Bank Transfer (ACH)</h3>
-          <p className="mt-2 text-sm text-charcoal/60">Direct bank deposit. Requires 2-3 day verification.</p>
+          <p className="mt-2 text-sm text-charcoal/60">Connect your bank instantly. Verified in seconds via your bank login. Payouts in 2-3 business days.</p>
           {method === "ach" && (
-            <div className="mt-4 rounded-lg bg-amber-50 border border-amber-200 px-4 py-3">
-              <p className="text-sm text-amber-800 font-medium">Coming soon</p>
-              <p className="text-xs text-amber-700 mt-1">ACH bank transfers are not yet available. Please use Stripe Connect for now.</p>
-            </div>
+            stripeConnected ? (
+              <p className="mt-4 text-sm text-green-600 font-medium">&#10003; Bank account connected</p>
+            ) : (
+              <>
+                <button
+                  onClick={handleStripeConnect}
+                  disabled={connecting}
+                  className="mt-4 rounded-full bg-navy px-5 py-2 text-sm font-semibold text-white hover:bg-navy/90 transition-colors disabled:opacity-50"
+                >
+                  {connecting ? "Connecting..." : "Connect bank"}
+                </button>
+                {connectError && (
+                  <p className="mt-2 text-xs text-red-600">{connectError}</p>
+                )}
+              </>
+            )
           )}
         </div>
       </div>

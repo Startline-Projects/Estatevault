@@ -149,6 +149,14 @@ export async function GET(request: Request) {
       log.push("8. Order and documents set to 'delivered'");
     }
 
+    // E2EE Phase 12b: purge plaintext quiz answers once PDFs generated.
+    if (order.quiz_session_id) {
+      await supabase.from("quiz_sessions")
+        .update({ answers: {}, answers_purged_at: new Date().toISOString() })
+        .eq("id", order.quiz_session_id);
+      log.push("9. Quiz answers purged (E2EE)");
+    }
+
     return NextResponse.json({
       success: true,
       order_id: orderId,

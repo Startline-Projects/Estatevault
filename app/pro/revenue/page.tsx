@@ -86,7 +86,7 @@ export default function ProRevenuePage() {
       // Fetch all orders for this partner
       const { data: allOrders } = await supabase
         .from("orders")
-        .select("id, client_id, product_type, partner_cut, status, transfer_id, created_at")
+        .select("id, client_id, product_type, partner_cut, status, stripe_transfer_id, created_at")
         .eq("partner_id", partner.id)
         .in("status", ["paid", "delivered", "generating", "review"]);
 
@@ -118,7 +118,7 @@ export default function ProRevenuePage() {
             product_type: "vault_subscription",
             partner_cut: partnerCutCents,
             status: "paid",
-            transfer_id: null,
+            stripe_transfer_id: null,
             created_at: c.updated_at || c.created_at,
           });
         }
@@ -143,7 +143,7 @@ export default function ProRevenuePage() {
       setAllTime(orders.reduce((sum, o) => sum + (o.partner_cut || 0), 0));
 
       // Pending balance: any order without a transfer_id is owed to partner.
-      const pendingOrders = orders.filter((o) => !o.transfer_id);
+      const pendingOrders = orders.filter((o) => !o.stripe_transfer_id);
       setPendingBalance(
         pendingOrders.reduce((sum, o) => sum + (o.partner_cut || 0), 0)
       );
@@ -209,7 +209,7 @@ export default function ProRevenuePage() {
 
       // Synthesize pending payout entries for orders without transfer or payout row
       for (const o of orders) {
-        if (o.transfer_id) continue;
+        if (o.stripe_transfer_id) continue;
         if (referencedOrderIds.has(o.id)) continue;
         if ((o.partner_cut || 0) <= 0) continue;
         payoutsList.push({

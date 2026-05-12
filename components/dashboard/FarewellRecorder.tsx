@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useRef, useCallback, useEffect } from "react";
-import { createClient } from "@/lib/supabase/client";
 
 interface FarewellRecorderProps {
   title: string;
@@ -130,50 +129,16 @@ export default function FarewellRecorder({ title, recipientEmail, onComplete, on
     setError("");
 
     try {
-      const supabase = createClient();
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("Not authenticated");
-
-      const { data: client } = await supabase.from("clients").select("id").eq("profile_id", user.id).single();
-      if (!client) throw new Error("No client record");
-
-      // Create message row now (deferred until video is ready)
-      const createRes = await fetch("/api/vault/farewell", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title, recipientEmail }),
-      });
-      const createData = await createRes.json();
-      if (!createRes.ok) throw new Error(createData.error || "Failed to create message");
-      const messageId = createData.messageId as string;
-
-      const ext = recordedBlob.type.includes("mp4") ? "mp4" : "webm";
-      const filePath = `${client.id}/${messageId}/recording.${ext}`;
-
+      // E2EE: encrypt + stream + create row in one repo call. Server never sees
+      // title, recipient_email, or video bytes.
       setUploadProgress(10);
-
-      const { error: uploadErr } = await supabase.storage
-        .from("farewell-videos")
-        .upload(filePath, recordedBlob, { contentType: recordedBlob.type, upsert: true });
-
-      if (uploadErr) throw new Error("Upload failed");
-
-      setUploadProgress(80);
-
-      // Notify server upload is complete
-      const res = await fetch("/api/vault/farewell/upload-complete", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          messageId,
-          storagePath: filePath,
-          fileSize: recordedBlob.size,
-          duration: elapsedSeconds,
-        }),
+      const { uploadFarewell } = await import("@/lib/repos/videoRepo");
+      await uploadFarewell({
+        blob: recordedBlob,
+        title,
+        recipientEmail,
+        durationSeconds: elapsedSeconds,
       });
-
-      if (!res.ok) throw new Error("Failed to finalize upload");
-
       setUploadProgress(100);
       onComplete();
     } catch (err) {

@@ -5,23 +5,20 @@ import Link from "next/link";
 import SubscriptionBanner from "@/components/dashboard/SubscriptionBanner";
 import FarewellRecorder from "@/components/dashboard/FarewellRecorder";
 import FarewellUploader from "@/components/dashboard/FarewellUploader";
-
-interface FarewellMessage {
-  id: string;
-  title: string;
-  recipient_email: string;
-  file_size_mb: number | null;
-  duration_seconds: number | null;
-  vault_farewell_status: string;
-  created_at: string;
-  updated_at: string;
-}
+import {
+  listFarewellMessages,
+  deleteFarewellMessage,
+  downloadFarewell,
+  type FarewellMessagePlaintext,
+} from "@/lib/repos/videoRepo";
+import { useVaultLock } from "@/hooks/useVaultLock";
 
 type Mode = "list" | "new" | "record" | "upload";
 
 export default function FarewellMessagesPage() {
+  const { isLocked } = useVaultLock();
   const [isSubscribed, setIsSubscribed] = useState(false);
-  const [messages, setMessages] = useState<FarewellMessage[]>([]);
+  const [messages, setMessages] = useState<FarewellMessagePlaintext[]>([]);
   const [loading, setLoading] = useState(true);
   const [mode, setMode] = useState<Mode>("list");
   const [showCreateForm, setShowCreateForm] = useState(false);
@@ -32,22 +29,26 @@ export default function FarewellMessagesPage() {
   const [error, setError] = useState("");
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [previewTitle, setPreviewTitle] = useState("");
+  const [previewLoading, setPreviewLoading] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const handleStatusLoaded = useCallback((status: { canUseFarewell: boolean }) => {
     setIsSubscribed(status.canUseFarewell);
   }, []);
 
-  async function fetchMessages() {
+  const fetchMessages = useCallback(async () => {
+    if (isLocked) { setLoading(false); return; }
     try {
-      const res = await fetch("/api/vault/farewell");
-      const data = await res.json();
-      setMessages(data.messages || []);
-    } catch { /* ignore */ }
-    setLoading(false);
-  }
+      const list = await listFarewellMessages();
+      setMessages(list);
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setLoading(false);
+    }
+  }, [isLocked]);
 
-  useEffect(() => { fetchMessages(); }, []);
+  useEffect(() => { fetchMessages(); }, [fetchMessages]);
 
   function handleCreateMessage() {
     if (!newTitle.trim() || !newRecipient.trim()) {
@@ -64,28 +65,43 @@ export default function FarewellMessagesPage() {
   async function handleDelete(messageId: string, title: string) {
     const confirmed = window.confirm(`Are you sure you want to delete "${title}"? This cannot be undone. Your designated recipient will no longer be able to access it.`);
     if (!confirmed) return;
-
     setDeletingId(messageId);
     try {
-      await fetch("/api/vault/farewell", {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messageId }),
-      });
+      await deleteFarewellMessage(messageId);
       await fetchMessages();
-    } catch { /* ignore */ }
-    setDeletingId(null);
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setDeletingId(null);
+    }
   }
 
-  async function handlePreview(messageId: string, title: string) {
+  async function handlePreview(msg: FarewellMessagePlaintext) {
+    setPreviewLoading(true);
+    setPreviewTitle(msg.title);
     try {
-      const res = await fetch(`/api/vault/farewell/${messageId}/signed-url`);
-      const data = await res.json();
-      if (data.signedUrl) {
-        setPreviewUrl(data.signedUrl);
-        setPreviewTitle(title);
+      if (msg.encrypted && msg.storagePath && msg.storageHeader) {
+        const blob = await downloadFarewell({
+          storagePath: msg.storagePath,
+          storageHeader: msg.storageHeader,
+        });
+        setPreviewUrl(URL.createObjectURL(blob));
+      } else {
+        const res = await fetch(`/api/vault/farewell/${msg.id}/signed-url`);
+        const data = await res.json();
+        if (data.signedUrl) setPreviewUrl(data.signedUrl);
       }
-    } catch { /* ignore */ }
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setPreviewLoading(false);
+    }
+  }
+
+  function closePreview() {
+    if (previewUrl?.startsWith("blob:")) URL.revokeObjectURL(previewUrl);
+    setPreviewUrl(null);
+    setPreviewTitle("");
   }
 
   function handleUploadComplete() {
@@ -113,7 +129,10 @@ export default function FarewellMessagesPage() {
     }
   }
 
-  // Show subscription gate if not subscribed
+  if (isLocked) {
+    return <div className="py-20 text-center text-charcoal/60 text-sm">Unlock your vault to view farewell messages.</div>;
+  }
+
   if (!loading && !isSubscribed) {
     return (
       <div className="space-y-6">
@@ -135,11 +154,10 @@ export default function FarewellMessagesPage() {
     );
   }
 
-  // Preview modal
   if (previewUrl) {
     return (
       <div className="space-y-4">
-        <button onClick={() => { setPreviewUrl(null); setPreviewTitle(""); }} className="text-sm text-navy hover:text-gold transition-colors">
+        <button onClick={closePreview} className="text-sm text-navy hover:text-gold transition-colors">
           &larr; Back to messages
         </button>
         <div className="rounded-xl bg-white border border-gray-200 p-6">
@@ -153,7 +171,6 @@ export default function FarewellMessagesPage() {
     );
   }
 
-  // Record or Upload mode
   if (mode === "record" && pendingTitle && pendingRecipient) {
     return (
       <div className="space-y-4">
@@ -174,7 +191,6 @@ export default function FarewellMessagesPage() {
     );
   }
 
-  // Choose record or upload after entering details
   if (mode === "new" && pendingTitle && pendingRecipient) {
     return (
       <div className="space-y-4">
@@ -202,7 +218,6 @@ export default function FarewellMessagesPage() {
     );
   }
 
-  // Main list view
   return (
     <div className="space-y-6">
       <Link href="/dashboard/vault" className="inline-block text-sm text-navy hover:text-gold transition-colors">&larr; Back to Vault</Link>
@@ -226,7 +241,6 @@ export default function FarewellMessagesPage() {
 
       <SubscriptionBanner onStatusLoaded={handleStatusLoaded} />
 
-      {/* Create message form, shown when user clicks "+ New Message" */}
       {showCreateForm && (
         <div className="rounded-xl bg-white border border-gray-200 p-5">
           <h3 className="text-sm font-semibold text-navy mb-3">Create a New Farewell Message</h3>
@@ -247,7 +261,6 @@ export default function FarewellMessagesPage() {
         </div>
       )}
 
-      {/* Messages list */}
       {loading ? (
         <div className="flex justify-center py-12">
           <div className="w-6 h-6 border-2 border-navy border-t-transparent rounded-full animate-spin" />
@@ -263,19 +276,22 @@ export default function FarewellMessagesPage() {
               <div>
                 <div className="flex items-center gap-2">
                   <p className="text-sm font-semibold text-navy">{msg.title}</p>
-                  {statusBadge(msg.vault_farewell_status)}
+                  {statusBadge(msg.status)}
+                  {msg.encrypted && (
+                    <span className="rounded-full bg-[#1C3557]/10 text-[#1C3557] text-[10px] font-semibold px-2 py-0.5" title="End-to-end encrypted">E2EE</span>
+                  )}
                 </div>
                 <p className="text-xs text-gray-400 mt-1">
-                  To: {msg.recipient_email} · {formatDuration(msg.duration_seconds)} · {new Date(msg.created_at).toLocaleDateString()}
+                  To: {msg.recipientEmail || "—"} · {formatDuration(msg.durationSeconds)} · {new Date(msg.createdAt).toLocaleDateString()}
                 </p>
               </div>
               <div className="flex items-center gap-2">
-                {msg.file_size_mb && (
-                  <button onClick={() => handlePreview(msg.id, msg.title)} className="text-xs font-medium px-3 py-1.5 rounded-lg bg-navy/10 text-navy hover:bg-navy/20 transition-colors">
-                    Preview
+                {msg.fileSizeMb != null && (
+                  <button onClick={() => handlePreview(msg)} disabled={previewLoading} className="text-xs font-medium px-3 py-1.5 rounded-lg bg-navy/10 text-navy hover:bg-navy/20 transition-colors disabled:opacity-50">
+                    {previewLoading ? "Loading…" : "Preview"}
                   </button>
                 )}
-                {msg.vault_farewell_status !== "unlocked" && (
+                {msg.status !== "unlocked" && (
                   <button
                     onClick={() => handleDelete(msg.id, msg.title)}
                     disabled={deletingId === msg.id}

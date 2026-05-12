@@ -3,6 +3,9 @@
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import SubscriptionBanner from "@/components/dashboard/SubscriptionBanner";
+import { listItems, createItem, deleteItem, type VaultCategory } from "@/lib/repos/vaultRepo";
+import { downloadDocument } from "@/lib/repos/documentRepo";
+import { useVaultLock } from "@/hooks/useVaultLock";
 
 interface VaultItem {
   id: string;
@@ -10,6 +13,8 @@ interface VaultItem {
   label: string;
   data: Record<string, unknown>;
   created_at: string;
+  encrypted?: boolean;
+  storage_path?: string | null;
 }
 
 const CATEGORIES = [
@@ -83,6 +88,7 @@ const DOC_TYPE_OPTIONS = ["Will", "Trust", "Power of Attorney", "Healthcare Dire
 type Screen = "pin-check" | "pin-create" | "pin-enter" | "vault" | "category" | "add-item" | "upload-doc";
 
 export default function VaultPage() {
+  const { isLocked } = useVaultLock();
   const [screen, setScreen] = useState<Screen>("pin-check");
   const [pin, setPin] = useState("");
   const [confirmPin, setConfirmPin] = useState("");
@@ -102,19 +108,41 @@ export default function VaultPage() {
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState("");
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const [viewItem, setViewItem] = useState<VaultItem | null>(null);
   const [revealedFields, setRevealedFields] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     async function check() {
+      const justSubscribed = typeof window !== "undefined" && new URLSearchParams(window.location.search).get("subscribed") === "true";
+
       const [pinRes, subRes] = await Promise.all([
         fetch("/api/vault/pin", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "check" }) }),
         fetch("/api/subscription/status"),
       ]);
       const pinData = await pinRes.json();
-      const subData = await subRes.json();
+      let subData = await subRes.json();
+
+      // If post-checkout redirect or status not active, reconcile with Stripe
+      // (webhook may have been missed — localhost dev, retry storms, etc.)
+      if (justSubscribed || subData.status !== "active") {
+        try {
+          const syncRes = await fetch("/api/subscription/sync", { method: "POST" });
+          if (syncRes.ok) {
+            const syncData = await syncRes.json();
+            if (syncData.status === "active") subData = { ...subData, status: "active" };
+          }
+        } catch { /* ignore */ }
+      }
+
       setIsSubscribed(subData.status === "active");
       setScreen(pinData.hasPin ? "pin-enter" : "pin-create");
+
+      if (justSubscribed && typeof window !== "undefined") {
+        const url = new URL(window.location.href);
+        url.searchParams.delete("subscribed");
+        window.history.replaceState({}, "", url.toString());
+      }
     }
     check();
   }, []);
@@ -130,10 +158,22 @@ export default function VaultPage() {
   }, [screen, pinExpiry]);
 
   const loadItems = useCallback(async () => {
-    const res = await fetch("/api/vault/items");
-    const data = await res.json();
-    setItems(data.items || []);
-  }, []);
+    if (isLocked) return;
+    try {
+      const list = await listItems();
+      setItems(list.map((i) => ({
+        id: i.id,
+        category: i.category,
+        label: i.label,
+        data: i.storagePath ? { ...i.data, storage_path: i.storagePath } : i.data,
+        created_at: i.createdAt,
+        encrypted: i.encrypted,
+        storage_path: i.storagePath,
+      })));
+    } catch (e) {
+      console.error("vault list failed:", (e as Error).message);
+    }
+  }, [isLocked]);
 
   async function handleCreatePin() {
     if (pin.length !== 4 || !/^\d{4}$/.test(pin)) { setPinError("PIN must be exactly 4 digits"); return; }
@@ -156,53 +196,103 @@ export default function VaultPage() {
   async function handleAddItem() {
     if (!addForm.label?.trim()) return;
     setSaving(true);
-    const { label, ...rest } = addForm;
-    await fetch("/api/vault/items", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ category: selectedCategory, label, data: rest }) });
-    await loadItems();
-    setAddForm({});
-    setSaving(false);
-    setScreen("category");
+    try {
+      const { label, ...rest } = addForm;
+      await createItem({
+        category: selectedCategory as VaultCategory,
+        label,
+        data: rest,
+      });
+      await loadItems();
+      setAddForm({});
+      setScreen("category");
+    } catch (e) {
+      console.error("create item failed:", (e as Error).message);
+    } finally {
+      setSaving(false);
+    }
   }
 
   async function handleDelete(id: string) {
-    await fetch(`/api/vault/items?id=${id}`, { method: "DELETE" });
-    await loadItems();
+    if (deletingId) return;
+    setDeletingId(id);
+    try {
+      await deleteItem(id);
+      await loadItems();
+    } catch (e) {
+      console.error("delete failed:", (e as Error).message);
+    } finally {
+      setDeletingId(null);
+    }
   }
 
   async function handleUploadDoc() {
     if (!uploadFile || !uploadLabel.trim()) return;
+    if (uploadFile.type !== "application/pdf") {
+      setUploadError("Only PDF files are allowed.");
+      return;
+    }
+    if (uploadFile.size > 20 * 1024 * 1024) {
+      setUploadError("File must be under 20MB.");
+      return;
+    }
     setUploading(true);
     setUploadError("");
 
-    const form = new FormData();
-    form.append("file", uploadFile);
-    form.append("label", uploadLabel.trim());
-    form.append("doc_type", uploadDocType);
-
-    const res = await fetch("/api/vault/upload-document", { method: "POST", body: form });
-    const data = await res.json();
-
-    if (!res.ok) {
-      setUploadError(data.error || "Upload failed. Please try again.");
+    try {
+      const { uploadDocument } = await import("@/lib/repos/documentRepo");
+      await uploadDocument({
+        file: uploadFile,
+        label: uploadLabel.trim(),
+        docType: uploadDocType,
+      });
+      await loadItems();
+      setUploadFile(null);
+      setUploadLabel("");
+      setUploadDocType("Other");
+      setScreen("category");
+    } catch (err) {
+      setUploadError(err instanceof Error ? err.message : "Upload failed. Please try again.");
+    } finally {
       setUploading(false);
-      return;
     }
-
-    await loadItems();
-    setUploadFile(null);
-    setUploadLabel("");
-    setUploadDocType("Other");
-    setUploading(false);
-    setScreen("category");
   }
 
   async function handleDownloadDoc(item: VaultItem) {
     setDownloadingId(item.id);
     try {
+      // E2EE path: item has storage_path + was created via repo (browser-encrypted).
+      // Fetch ciphertext via signed URL, decrypt in worker, surface as Blob URL.
+      if (item.encrypted && item.storage_path) {
+        const blob = await downloadDocument({
+          id: item.id,
+          category: item.category as VaultCategory,
+          label: item.label,
+          data: item.data,
+          storagePath: item.storage_path,
+          encrypted: true,
+          createdAt: item.created_at,
+        });
+        const url = URL.createObjectURL(blob);
+        const fileName =
+          (item.data as { file_name?: string })?.file_name ||
+          `${item.label || "document"}.pdf`;
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = fileName;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 60_000);
+        return;
+      }
+      // Legacy plaintext PDF path
       const res = await fetch(`/api/vault/download-document?item_id=${item.id}`);
       if (!res.ok) { alert("Unable to download file."); return; }
       const { url } = await res.json();
       window.open(url, "_blank");
+    } catch (e) {
+      alert(`Download failed: ${(e as Error).message}`);
     } finally {
       setDownloadingId(null);
     }
@@ -504,8 +594,15 @@ export default function VaultPage() {
                       </button>
                     )}
                     {!isAuto && (
-                      <button onClick={() => handleDelete(item.id)} className="text-xs text-red-500 hover:text-red-700 transition-colors">
-                        Delete
+                      <button
+                        onClick={() => handleDelete(item.id)}
+                        disabled={deletingId === item.id}
+                        className="text-xs text-red-500 hover:text-red-700 transition-colors inline-flex items-center gap-1 disabled:opacity-60 disabled:cursor-not-allowed"
+                      >
+                        {deletingId === item.id && (
+                          <span className="w-3 h-3 border-2 border-red-300 border-t-red-600 rounded-full animate-spin" />
+                        )}
+                        {deletingId === item.id ? "Deleting..." : "Delete"}
                       </button>
                     )}
                   </div>

@@ -1,21 +1,17 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/client";
-
-interface Trustee {
-  id: string;
-  trustee_name: string;
-  trustee_email: string;
-  trustee_relationship: string;
-  status: "pending" | "active";
-}
+import { useRouter } from "next/navigation";
+import { listTrustees, addTrustee, deleteTrustee, type TrusteePlaintext } from "@/lib/repos/trusteeRepo";
+import { useVaultLock } from "@/hooks/useVaultLock";
 
 const REL_OPTIONS = ["Spouse/Partner", "Adult Child", "Sibling", "Parent", "Attorney", "Friend", "Other"];
 
 export default function TrusteesPage() {
-  const [trustees, setTrustees] = useState<Trustee[]>([]);
+  const { isLocked, state } = useVaultLock();
+  const router = useRouter();
+  const [trustees, setTrustees] = useState<TrusteePlaintext[]>([]);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [relationship, setRelationship] = useState("");
@@ -24,17 +20,23 @@ export default function TrusteesPage() {
   const [error, setError] = useState("");
   const [justAdded, setJustAdded] = useState(false);
 
-  async function loadTrustees() {
-    const supabase = createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
-    const res = await fetch("/api/vault/trustees");
-    const data = await res.json();
-    setTrustees(data.trustees || []);
-    setLoading(false);
-  }
+  const loadTrustees = useCallback(async () => {
+    if (isLocked) { setLoading(false); return; }
+    try {
+      const list = await listTrustees();
+      setTrustees(list);
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setLoading(false);
+    }
+  }, [isLocked]);
 
-  useEffect(() => { loadTrustees(); }, []);
+  useEffect(() => { loadTrustees(); }, [loadTrustees]);
+
+  useEffect(() => {
+    if (isLocked) router.replace("/dashboard/vault?next=/dashboard/vault/trustees");
+  }, [isLocked, router]);
 
   async function handleAdd() {
     if (!name.trim() || !email.trim() || !relationship) return;
@@ -42,31 +44,36 @@ export default function TrusteesPage() {
     setSaving(true);
     setError("");
 
-    const res = await fetch("/api/vault/trustees", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ trustee_name: name, trustee_email: email, trustee_relationship: relationship }),
-    });
-
-    if (!res.ok) {
-      const d = await res.json();
-      setError(d.error || "Failed to add trustee");
+    try {
+      await addTrustee({ name: name.trim(), email: email.trim(), relationship });
+      setName(""); setEmail(""); setRelationship("");
+      setJustAdded(true);
+      await loadTrustees();
+    } catch (e) {
+      const err = e as Error & { action?: string };
+      if (err.action === "setup_shamir") {
+        window.location.href = "/dashboard/vault/trustees/init";
+        return;
+      }
+      setError(err.message || "Failed to add trustee");
+    } finally {
       setSaving(false);
-      return;
     }
-
-    setName(""); setEmail(""); setRelationship("");
-    setJustAdded(true);
-    await loadTrustees();
-    setSaving(false);
   }
 
   async function handleRemove(id: string) {
-    await fetch(`/api/vault/trustees?id=${id}`, { method: "DELETE" });
-    setJustAdded(false);
-    await loadTrustees();
+    try {
+      await deleteTrustee(id);
+      setJustAdded(false);
+      await loadTrustees();
+    } catch (e) {
+      setError((e as Error).message);
+    }
   }
 
+  if (isLocked) {
+    return <div className="py-20 text-center text-charcoal/50">{state === "uninitialized" ? "Loading..." : "Redirecting to unlock..."}</div>;
+  }
   if (loading) return <div className="py-20 text-center text-charcoal/50">Loading...</div>;
 
   return (
@@ -89,14 +96,17 @@ export default function TrusteesPage() {
             <div key={t.id} className="rounded-xl bg-white border border-gray-200 p-5 flex items-center justify-between">
               <div>
                 <div className="flex items-center gap-2">
-                  <p className="text-sm font-semibold text-navy">{t.trustee_name}</p>
+                  <p className="text-sm font-semibold text-navy">{t.name}</p>
                   {t.status === "pending" ? (
                     <span className="rounded-full bg-amber-100 text-amber-700 text-[11px] font-semibold px-2 py-0.5">Pending</span>
                   ) : (
                     <span className="rounded-full bg-green-100 text-green-700 text-[11px] font-semibold px-2 py-0.5">Confirmed</span>
                   )}
+                  {t.encrypted && (
+                    <span className="rounded-full bg-[#1C3557]/10 text-[#1C3557] text-[10px] font-semibold px-2 py-0.5" title="End-to-end encrypted">E2EE</span>
+                  )}
                 </div>
-                <p className="text-xs text-charcoal/50 mt-0.5">{t.trustee_email} · {t.trustee_relationship}</p>
+                <p className="text-xs text-charcoal/50 mt-0.5">{t.email} · {t.relationship}</p>
                 {t.status === "pending" && (
                   <p className="text-xs text-amber-600 mt-1">Awaiting email confirmation from trustee</p>
                 )}

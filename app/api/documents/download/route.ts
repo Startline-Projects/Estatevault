@@ -19,7 +19,11 @@ export async function GET(request: Request) {
   const admin = createAdminClient();
 
   // Get document
-  const { data: doc } = await admin.from("documents").select("storage_path, client_id, order_id").eq("id", documentId).single();
+  const { data: doc } = await admin
+    .from("documents")
+    .select("storage_path, client_id, order_id, sealed, sealed_for_user_id, attorney_sealed_path, attorney_sealed_for")
+    .eq("id", documentId)
+    .single();
   if (!doc || !doc.storage_path) return NextResponse.json({ error: "Document not found" }, { status: 404 });
 
   // Verify access: client owns it OR partner has access
@@ -64,11 +68,22 @@ export async function GET(request: Request) {
     }
   }
 
-  const url = await getDocumentDownloadUrl(doc.storage_path);
+  // Sealed routing: review attorneys get the attorney-sealed copy if one exists.
+  let path = doc.storage_path as string;
+  if (doc.sealed && isReviewAttorney && doc.attorney_sealed_path && doc.attorney_sealed_for === user.id) {
+    path = doc.attorney_sealed_path as string;
+  }
+
+  const url = await getDocumentDownloadUrl(path);
   if (!url) return NextResponse.json({ error: "File not available" }, { status: 404 });
 
-  // Audit log
-  await admin.from("audit_log").insert({ actor_id: user.id, action: "document.downloaded", resource_type: "document", resource_id: documentId });
+  await admin.from("audit_log").insert({
+    actor_id: user.id,
+    action: "document.downloaded",
+    resource_type: "document",
+    resource_id: documentId,
+    metadata: { sealed: !!doc.sealed },
+  });
 
-  return NextResponse.json({ url });
+  return NextResponse.json({ url, sealed: !!doc.sealed, encVersion: 1 });
 }

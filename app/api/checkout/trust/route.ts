@@ -4,6 +4,7 @@ import { stripe } from "@/lib/stripe";
 import { createServerClient } from "@supabase/ssr";
 import { calculateSplit } from "@/lib/stripe-payouts";
 import { AFFILIATE_COOKIE } from "@/lib/affiliate";
+import { checkPlanConflict } from "@/lib/orders/plan-conflict";
 
 function createAdminClient() {
   return createServerClient(
@@ -16,17 +17,39 @@ function createAdminClient() {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { userId, attorneyReview, intakeAnswers, complexityFlag, complexityReasons, declinedAttorneyReview, promoCode, email: promoEmail, partnerId } = body;
+    const { userId, attorneyReview, intakeAnswers, complexityFlag, complexityReasons, declinedAttorneyReview, promoCode, email: promoEmail, partnerId, customerEmail, confirmOverride } = body;
 
     if (!intakeAnswers) {
       return NextResponse.json({ error: "Missing intake answers" }, { status: 400 });
     }
+
+    const conflictEmail: string | undefined =
+      (typeof customerEmail === "string" && customerEmail) ||
+      (typeof promoEmail === "string" && promoEmail) ||
+      intakeAnswers?.email;
 
     const VALID_PROMO_CODES: Record<string, boolean> = { FREE134: true };
     const isPromoFree = promoCode && VALID_PROMO_CODES[promoCode.toUpperCase()];
     const isTestCode = promoCode && promoCode.toUpperCase() === "TEST";
 
     const supabase = createAdminClient();
+
+    // Plan conflict check (skip for test promo)
+    if (!isTestCode && conflictEmail) {
+      const conflict = await checkPlanConflict(supabase, conflictEmail, "trust");
+      if (conflict.action === "block") {
+        return NextResponse.json(
+          { error: conflict.message, conflict },
+          { status: 409 }
+        );
+      }
+      if (conflict.action === "override" && !confirmOverride) {
+        return NextResponse.json(
+          { error: conflict.message, conflict, requiresOverrideConfirm: true },
+          { status: 409 }
+        );
+      }
+    }
 
     // ── TEST PROMO CODE ────────────────────────────────────
     if (isTestCode) {
@@ -327,7 +350,7 @@ export async function POST(request: Request) {
     const session = await stripe.checkout.sessions.create({
       mode: "payment",
       line_items: lineItems,
-      customer_email: intakeAnswers.email || undefined,
+      customer_email: conflictEmail || intakeAnswers.email || undefined,
       success_url: `${origin}/trust/success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${origin}/trust/checkout`,
       metadata: {

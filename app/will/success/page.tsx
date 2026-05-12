@@ -15,6 +15,7 @@ interface DocumentRecord {
   document_type: string;
   status: string;
   storage_path: string | null;
+  sealed?: boolean;
 }
 
 function SuccessContent() {
@@ -187,6 +188,28 @@ function SuccessContent() {
         setError(data.error || "Download failed.");
         return;
       }
+
+      // Sealed: ciphertext at signed URL — must decrypt in browser worker.
+      // Vault must be unlocked (user must have completed onboarding passphrase).
+      if (data.sealed) {
+        try {
+          const cipherRes = await fetch(data.url);
+          if (!cipherRes.ok) throw new Error(`storage fetch ${cipherRes.status}`);
+          const bytes = new Uint8Array(await cipherRes.arrayBuffer());
+          const { getCryptoWorker } = await import("@/lib/crypto/worker/client");
+          const pt = await getCryptoWorker().openSealedBox(bytes);
+          const ab = new ArrayBuffer(pt.byteLength);
+          new Uint8Array(ab).set(pt);
+          const blob = new Blob([ab], { type: "application/pdf" });
+          const blobUrl = URL.createObjectURL(blob);
+          window.open(blobUrl, "_blank");
+          setTimeout(() => URL.revokeObjectURL(blobUrl), 60_000);
+        } catch (e) {
+          setError(`Your documents are encrypted. Set up your vault passphrase first: ${(e as Error).message}`);
+        }
+        return;
+      }
+
       window.open(data.url, "_blank");
     } catch {
       setError("Download failed.");
@@ -293,6 +316,13 @@ function SuccessContent() {
                 const fn = parsed.firstName || "Test";
                 const ln = parsed.lastName || "User";
                 const zipName = `Test ${fn} ${ln}.zip`;
+                // Sealed PDFs cannot be zipped server-side (server has no key).
+                // Fall back to per-document downloads via the list above.
+                const hasSealed = documents.some((d) => d.sealed);
+                if (hasSealed) {
+                  setError("Your documents are encrypted. Use the buttons below to download each one. Set up your vault passphrase first if prompted.");
+                  return;
+                }
                 const res = await fetch(`/api/documents/download-zip?order_id=${orderId}&first_name=${encodeURIComponent(fn)}&last_name=${encodeURIComponent(ln)}`);
                 if (!res.ok) return;
                 const blob = await res.blob();

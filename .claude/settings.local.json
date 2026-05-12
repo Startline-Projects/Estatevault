@@ -41,7 +41,22 @@
       "Bash(sips -g pixelWidth -g pixelHeight /tmp/logo_v2.png)",
       "Bash(cp /tmp/logo_v2.png \"/Users/xamir/Desktop/Glo Staffing/Estatevault/public/logo.png\")",
       "Bash(sips -g pixelWidth -g pixelHeight \"/Users/xamir/Desktop/Glo Staffing/Estatevault/public/logo.png\")",
-      "Bash(perl -i -pe 's{text-navy/60}{[color:var\\(--lt\\)] opacity-60}g; s{hover:text-navy/70}{hover:opacity-70}g; s{hover:text-navy\\(?![-/\\\\w]\\)}{hover:[color:var\\(--lt\\)]}g; s{text-navy\\(?![-/\\\\w]\\)}{[color:var\\(--lt\\)]}g;' \"app/[partner-slug]/PartnerPageClient.tsx\")"
+      "Bash(perl -i -pe 's{text-navy/60}{[color:var\\(--lt\\)] opacity-60}g; s{hover:text-navy/70}{hover:opacity-70}g; s{hover:text-navy\\(?![-/\\\\w]\\)}{hover:[color:var\\(--lt\\)]}g; s{text-navy\\(?![-/\\\\w]\\)}{[color:var\\(--lt\\)]}g;' \"app/[partner-slug]/PartnerPageClient.tsx\")",
+      "Bash(cat vitest.config.*)",
+      "Bash(ls vitest.config.*)",
+      "Bash(python3 -c \"import json,sys;p=json.load\\(sys.stdin\\);print\\(p['version']\\);print\\(list\\(p['exports'].keys\\(\\)\\)[:40]\\)\")",
+      "Bash(ls next.config.* .eslintrc*)",
+      "Bash(cat next.config.mjs)",
+      "Bash(cat next.config.js)",
+      "Bash(stripe --version)",
+      "Bash(stripe listen *)",
+      "Bash(sed -n '1,60p' hooks/useVaultLock.ts)",
+      "Bash(sed -n '1,80p' lib/crypto/keySession.ts)",
+      "Bash(cat)",
+      "Bash(node /tmp/sham_dbg.mjs)",
+      "Bash(TEST_MODE=1 TEST_ALLOW_SHARED_DB=1 npx tsx scripts/test-db-seed.ts)",
+      "Bash(TEST_MODE=1 TEST_ALLOW_SHARED_DB=1 npx tsx --import ./scripts/_ws-polyfill.ts scripts/test-db-seed.ts)",
+      "Bash(git restore *)"
     ]
   }
 }

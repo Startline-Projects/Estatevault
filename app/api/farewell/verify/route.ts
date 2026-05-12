@@ -12,7 +12,7 @@ export async function POST(request: Request) {
   try {
     const formData = await request.formData();
     const clientId = formData.get("clientId") as string;
-    const trusteeEmail = formData.get("trusteeEmail") as string;
+    const trusteeEmail = ((formData.get("trusteeEmail") as string) || "").trim().toLowerCase();
     const certificate = formData.get("certificate") as File;
 
     if (!clientId || !trusteeEmail || !certificate) {
@@ -37,8 +37,8 @@ export async function POST(request: Request) {
       .from("vault_trustees")
       .select("id, trustee_name")
       .eq("client_id", clientId)
-      .eq("trustee_email", trusteeEmail)
-      .single();
+      .ilike("trustee_email", trusteeEmail)
+      .maybeSingle();
 
     if (!trustee) {
       return NextResponse.json({ error: "No trustee found with this email for this account" }, { status: 404 });
@@ -61,9 +61,9 @@ export async function POST(request: Request) {
       .from("farewell_verification_requests")
       .select("id")
       .eq("client_id", clientId)
-      .eq("trustee_email", trusteeEmail)
+      .ilike("trustee_email", trusteeEmail)
       .eq("status", "pending")
-      .single();
+      .maybeSingle();
 
     if (existingRequest) {
       return NextResponse.json({ error: "A verification request is already pending" }, { status: 400 });

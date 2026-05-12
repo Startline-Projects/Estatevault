@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useRef } from "react";
-import { createClient } from "@/lib/supabase/client";
 
 interface FarewellUploaderProps {
   title: string;
@@ -45,13 +44,6 @@ export default function FarewellUploader({ title, recipientEmail, onComplete, on
     setError("");
 
     try {
-      const supabase = createClient();
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("Not authenticated");
-
-      const { data: client } = await supabase.from("clients").select("id").eq("profile_id", user.id).single();
-      if (!client) throw new Error("No client record");
-
       const ext = selectedFile.name.split(".").pop() || "mp4";
 
       // Get video duration via HTML5 video element BEFORE uploading
@@ -74,40 +66,17 @@ export default function FarewellUploader({ title, recipientEmail, onComplete, on
         return;
       }
 
-      // Create message row now (deferred until file is validated)
-      const createRes = await fetch("/api/vault/farewell", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title, recipientEmail }),
-      });
-      const createData = await createRes.json();
-      if (!createRes.ok) throw new Error(createData.error || "Failed to create message");
-      const messageId = createData.messageId as string;
-      const filePath = `${client.id}/${messageId}/upload.${ext}`;
-
+      // E2EE path: encrypt + stream to storage + create DB row in one repo call.
+      // Server never sees title, recipient_email, or video bytes.
+      void ext;
       setProgress(20);
-
-      const { error: uploadErr } = await supabase.storage
-        .from("farewell-videos")
-        .upload(filePath, selectedFile, { contentType: selectedFile.type, upsert: true });
-
-      if (uploadErr) throw new Error("Upload failed");
-
-      setProgress(80);
-
-      const res = await fetch("/api/vault/farewell/upload-complete", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          messageId,
-          storagePath: filePath,
-          fileSize: selectedFile.size,
-          duration,
-        }),
+      const { uploadFarewell } = await import("@/lib/repos/videoRepo");
+      await uploadFarewell({
+        blob: selectedFile,
+        title,
+        recipientEmail,
+        durationSeconds: duration,
       });
-
-      if (!res.ok) throw new Error("Failed to finalize upload");
-
       setProgress(100);
       onComplete();
     } catch (err) {
