@@ -26,7 +26,7 @@ export default async function ProLayout({ children }: { children: React.ReactNod
   // Only partners get the ProShell
   if (profile.user_type !== "partner") return <>{children}</>;
 
-  const { data: partner } = await supabase.from("partners").select("company_name, tier, logo_url, onboarding_completed, certification_completed, onboarding_step, business_url").eq("profile_id", user.id).single();
+  const { data: partner } = await supabase.from("partners").select("company_name, tier, logo_url, onboarding_completed, certification_completed, onboarding_step, business_url, accent_color").eq("profile_id", user.id).single();
   if (!partner) return <>{children}</>;
 
   return (
@@ -39,6 +39,7 @@ export default async function ProLayout({ children }: { children: React.ReactNod
       certificationComplete={partner.certification_completed || false}
       onboardingStep={partner.onboarding_step || 1}
       businessUrl={partner.business_url || ""}
+      accentColor={partner.accent_color || "#C9A84C"}
     >
       {children}
     </ProShell>

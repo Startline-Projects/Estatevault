@@ -28,12 +28,32 @@ export default async function AffiliateLayout({
 
   return (
     <div className="min-h-screen bg-gray-50 font-sans">
-      <header className="bg-white border-b border-gray-200 px-6 py-4">
+      <header
+        className="border-b px-6 py-4"
+        style={{
+          background: "linear-gradient(180deg, #fdfbf5 0%, #f7f0d9 100%)",
+          borderColor: "color-mix(in srgb, #C9A84C 22%, #ffffff)",
+        }}
+      >
         <div className="mx-auto max-w-5xl flex items-center justify-between">
-          <Link href="/" className="text-xl font-bold text-navy">
-            EstateVault
+          <Link href="/" className="flex items-center gap-3">
+            <span
+              className="h-9 w-9 rounded-lg flex items-center justify-center text-xs font-bold text-white"
+              style={{ background: "linear-gradient(135deg, #1C3557 0%, #C9A84C 100%)" }}
+            >
+              EV
+            </span>
+            <div>
+              <p className="text-sm font-bold text-black leading-tight">EstateVault</p>
+              <p className="text-[10px] uppercase tracking-[0.14em] text-black/45">Affiliate Portal</p>
+            </div>
           </Link>
-          <span className="text-sm text-charcoal/50">Affiliate Dashboard</span>
+          <span
+            className="inline-flex items-center gap-1.5 rounded-full bg-white/70 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-black/60"
+            style={{ border: "1px solid color-mix(in srgb, #C9A84C 22%, #ffffff)" }}
+          >
+            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" /> Dashboard
+          </span>
         </div>
       </header>
       {children}

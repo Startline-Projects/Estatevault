@@ -27,6 +27,7 @@ export default function ProDashboardPage() {
   const [tier, setTier] = useState<"standard" | "enterprise" | "basic" | "">("");
   const [vaultSubdomain, setVaultSubdomain] = useState("");
   const [businessUrl, setBusinessUrl] = useState("");
+  const [accentColor, setAccentColor] = useState("#C9A84C");
   const [stats, setStats] = useState({ clients: 0, docsThisMonth: 0, mtdEarnings: 0, referralFees: 0 });
   const [vaultStats, setVaultStats] = useState({ vaultClients: 0, activeSubscriptions: 0 });
   const [recentActivity, setRecentActivity] = useState<Array<{ action: string; created_at: string }>>([]);
@@ -44,7 +45,7 @@ export default function ProDashboardPage() {
 
       const { data: partner } = await supabase
         .from("partners")
-        .select("id, company_name, business_url, certification_completed, tier, vault_subdomain")
+        .select("id, company_name, business_url, certification_completed, tier, vault_subdomain, accent_color")
         .eq("profile_id", user.id)
         .single();
       if (!partner) { setLoading(false); return; }
@@ -55,6 +56,7 @@ export default function ProDashboardPage() {
       setCertified(partner.certification_completed || false);
       setTier(partner.tier || "standard");
       setVaultSubdomain(partner.vault_subdomain || "");
+      setAccentColor(partner.accent_color || "#C9A84C");
 
       const isBasic = partner.tier === "basic";
 
@@ -122,6 +124,16 @@ export default function ProDashboardPage() {
   const vaultUrl = vaultSubdomain ? `https://${vaultSubdomain}.estatevault.us` : null;
   const isNorthwood = businessUrl?.toLowerCase().includes("northwoodwealthadvisors");
 
+  // Northwood keeps brand green; everyone else pure partner.accent_color.
+  const accent = isNorthwood ? "#4D714C" : accentColor;
+  const accentDark = isNorthwood ? "#1a1a1a" : `color-mix(in srgb, ${accent} 60%, #1a1a1a)`;
+  const surfaceLight = `color-mix(in srgb, ${accent} 6%, #ffffff)`;
+  const surfaceTinted = `color-mix(in srgb, ${accent} 12%, #ffffff)`;
+  const borderTinted = `color-mix(in srgb, ${accent} 22%, #ffffff)`;
+  const cardBorder: React.CSSProperties = { borderColor: borderTinted };
+  const accentStripe: React.CSSProperties = { background: `linear-gradient(180deg, ${accentDark} 0%, ${accent} 100%)` };
+  const accentBtn: React.CSSProperties = { backgroundColor: accent };
+
   function timeAgo(date: string) {
     const diff = Date.now() - new Date(date).getTime();
     const mins = Math.floor(diff / 60000);
@@ -158,26 +170,24 @@ export default function ProDashboardPage() {
       {/* Welcome banner */}
       {!dismissed && (
         <div
-          className={`relative overflow-hidden rounded-2xl p-7 mb-6 flex items-center justify-between ${isNorthwood ? "border border-[#e6dfd0] shadow-sm" : "bg-navy"}`}
-          style={isNorthwood ? { background: "linear-gradient(135deg, #f7f4ed 0%, #f7f4ed 100%)" } : undefined}
+          className="relative overflow-hidden rounded-2xl p-7 mb-6 flex items-center justify-between border shadow-sm"
+          style={{ background: `linear-gradient(135deg, ${surfaceLight} 0%, ${surfaceTinted} 100%)`, ...cardBorder }}
         >
-          {isNorthwood && (
-            <div className="absolute left-0 top-0 h-full w-1.5" style={{ background: "linear-gradient(180deg, #4D714C 0%, #6b5e3f 100%)" }} />
-          )}
+          <div className="absolute left-0 top-0 h-full w-1.5" style={accentStripe} />
           <div className="relative">
             <div className="flex items-center gap-2">
-              <span className={`inline-flex h-2 w-2 rounded-full ${isNorthwood ? "" : "bg-emerald-400"} animate-pulse`} style={isNorthwood ? { backgroundColor: "#4D714C" } : undefined} />
-              <span className={`text-[11px] font-semibold uppercase tracking-[0.14em] ${isNorthwood ? "text-black/60" : "text-blue-100/70"}`}>Live</span>
+              <span className="inline-flex h-2 w-2 rounded-full animate-pulse" style={{ backgroundColor: accent }} />
+              <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-black/60">Live</span>
             </div>
-            <h1 className={`mt-1.5 text-xl font-bold tracking-tight ${isNorthwood ? "text-black" : "text-white"}`}>Welcome back, {companyName}</h1>
+            <h1 className="mt-1.5 text-xl font-bold tracking-tight text-black">Welcome back, {companyName}</h1>
             {isBasic && vaultUrl && (
-              <p className={`mt-1.5 text-sm ${isNorthwood ? "text-black/70" : "text-blue-100/60"}`}>Your vault is live at <span className={isNorthwood ? "font-medium text-black" : "text-white/80"}>{vaultUrl}</span></p>
+              <p className="mt-1.5 text-sm text-black/70">Your vault is live at <span className="font-medium text-black">{vaultUrl}</span></p>
             )}
             {!isBasic && businessUrl && (
-              <p className={`mt-1.5 text-sm ${isNorthwood ? "text-black/70" : "text-blue-100/60"}`}>White-label live at <span className={isNorthwood ? "font-medium text-black" : "text-white/80"}>legacy.{businessUrl}</span></p>
+              <p className="mt-1.5 text-sm text-black/70">White-label live at <span className="font-medium text-black">legacy.{businessUrl}</span></p>
             )}
           </div>
-          <button onClick={() => { setDismissed(true); localStorage.setItem("ev_welcome_dismissed", "1"); }} className={`relative text-xl leading-none ${isNorthwood ? "text-black/40 hover:text-black" : "text-white/60 hover:text-white"}`}>×</button>
+          <button onClick={() => { setDismissed(true); localStorage.setItem("ev_welcome_dismissed", "1"); }} className="relative text-xl leading-none text-black/40 hover:text-black">×</button>
         </div>
       )}
 
@@ -199,75 +209,63 @@ export default function ProDashboardPage() {
       )}
 
       {/* Stat cards */}
-      {isBasic ? (
-        <div className="grid grid-cols-2 gap-4">
-          {[
-            { label: "Vault Clients", value: vaultStats.vaultClients, icon: "👥" },
-            { label: "Active Subscriptions", value: vaultStats.activeSubscriptions, icon: "✓" },
-          ].map((s) => (
-            <div
-              key={s.label}
-              className={`group relative overflow-hidden rounded-2xl p-5 transition-all duration-200 ${isNorthwood ? "border border-[#e6dfd0] bg-white hover:-translate-y-0.5 hover:shadow-[0_8px_24px_-12px_rgba(107,94,63,0.25)]" : "bg-white border border-gray-200"}`}
-            >
-              {isNorthwood && <div className="absolute left-0 top-0 h-full w-0.5 bg-gradient-to-b from-[#4D714C] to-[#6b5e3f] opacity-0 group-hover:opacity-100 transition-opacity" />}
-              <div className="flex items-start justify-between">
-                <p className={`text-[10px] font-semibold uppercase tracking-[0.14em] ${isNorthwood ? "text-black/50" : "text-charcoal/50"}`}>{s.label}</p>
-                {isNorthwood && <span className="text-base opacity-60">{s.icon}</span>}
+      {(() => {
+        const cards = isBasic
+          ? [
+              { label: "Vault Clients", value: vaultStats.vaultClients, icon: "👥" },
+              { label: "Active Subscriptions", value: vaultStats.activeSubscriptions, icon: "✓" },
+            ]
+          : [
+              { label: "Active Clients", value: stats.clients, icon: "👥" },
+              { label: "Documents This Month", value: stats.docsThisMonth, icon: "📄" },
+              { label: "MTD Earnings", value: `$${stats.mtdEarnings.toLocaleString()}`, icon: "💰" },
+              { label: "Referral Fees", value: `$${stats.referralFees.toLocaleString()}`, icon: "↗" },
+            ];
+        return (
+          <div className={`grid gap-4 ${isBasic ? "grid-cols-2" : "grid-cols-2 md:grid-cols-4"}`}>
+            {cards.map((s) => (
+              <div
+                key={s.label}
+                className="group relative overflow-hidden rounded-2xl p-5 bg-white border transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_8px_24px_-12px_rgba(0,0,0,0.18)]"
+                style={cardBorder}
+              >
+                <div className="absolute left-0 top-0 h-full w-0.5 opacity-0 group-hover:opacity-100 transition-opacity" style={accentStripe} />
+                <div className="flex items-start justify-between">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-black/50">{s.label}</p>
+                  <span className="text-base opacity-60">{s.icon}</span>
+                </div>
+                <p className="mt-3 text-3xl font-bold tracking-tight text-black">{s.value}</p>
               </div>
-              <p className={`mt-3 text-3xl font-bold tracking-tight ${isNorthwood ? "text-black" : "text-navy"}`}>{s.value}</p>
-            </div>
-          ))}
-        </div>
-      ) : (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {[
-            { label: "Active Clients", value: stats.clients, icon: "👥" },
-            { label: "Documents This Month", value: stats.docsThisMonth, icon: "📄" },
-            { label: "MTD Earnings", value: `$${stats.mtdEarnings.toLocaleString()}`, icon: "💰" },
-            { label: "Referral Fees", value: `$${stats.referralFees.toLocaleString()}`, icon: "↗" },
-          ].map((s) => (
-            <div
-              key={s.label}
-              className={`group relative overflow-hidden rounded-2xl p-5 transition-all duration-200 ${isNorthwood ? "border border-[#e6dfd0] bg-white hover:-translate-y-0.5 hover:shadow-[0_8px_24px_-12px_rgba(107,94,63,0.25)]" : "bg-white border border-gray-200"}`}
-            >
-              {isNorthwood && <div className="absolute left-0 top-0 h-full w-0.5 bg-gradient-to-b from-[#4D714C] to-[#6b5e3f] opacity-0 group-hover:opacity-100 transition-opacity" />}
-              <div className="flex items-start justify-between">
-                <p className={`text-[10px] font-semibold uppercase tracking-[0.14em] ${isNorthwood ? "text-black/50" : "text-charcoal/50"}`}>{s.label}</p>
-                {isNorthwood && <span className="text-base opacity-60">{s.icon}</span>}
-              </div>
-              <p className={`mt-3 text-3xl font-bold tracking-tight ${isNorthwood ? "text-black" : "text-navy"}`}>{s.value}</p>
-            </div>
-          ))}
-        </div>
-      )}
+            ))}
+          </div>
+        );
+      })()}
 
       {/* Recent activity */}
-      <div className={`mt-6 rounded-2xl p-6 ${isNorthwood ? "border border-[#e6dfd0] bg-white" : "rounded-xl bg-white border border-gray-200"}`}>
+      <div className="mt-6 rounded-2xl p-6 bg-white border" style={cardBorder}>
         <div className="flex items-center justify-between">
-          <h2 className={`text-base font-bold tracking-tight ${isNorthwood ? "text-black" : "text-navy"}`}>Recent Activity</h2>
-          {isNorthwood && <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-black/40">Live feed</span>}
+          <h2 className="text-base font-bold tracking-tight text-black">Recent Activity</h2>
+          <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-black/40">Live feed</span>
         </div>
         {recentActivity.length === 0 ? (
           <div className="mt-8 text-center">
-            {isNorthwood && (
-              <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full" style={{ background: "#f7f4ed" }}>
-                <span className="text-xl opacity-70">📋</span>
-              </div>
-            )}
-            <p className={`text-sm ${isNorthwood ? "text-black/60" : "text-charcoal/50"}`}>
+            <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full" style={{ background: surfaceLight }}>
+              <span className="text-xl opacity-70">📋</span>
+            </div>
+            <p className="text-sm text-black/60">
               {isBasic
                 ? "No activity yet. Share your vault URL to get your first client."
                 : "No activity yet. Create your first client session to get started."}
             </p>
             {!isBasic && (
               certified ? (
-                <Link href="/pro/clients" className={`mt-4 inline-flex items-center rounded-full px-5 py-2 text-sm font-semibold text-white transition ${isNorthwood ? "bg-[#4D714C] hover:bg-[#3f5e3e]" : "bg-gold hover:bg-gold/90"}`}>+ New Client Session</Link>
+                <Link href="/pro/clients" style={accentBtn} className="mt-4 inline-flex items-center rounded-full px-5 py-2 text-sm font-semibold text-white transition hover:brightness-95">+ New Client Session</Link>
               ) : (
                 <button disabled className="mt-4 inline-flex items-center rounded-full bg-gray-200 px-5 py-2 text-sm font-semibold text-gray-400 cursor-not-allowed" title="Complete certification to unlock">🔒 New Client Session</button>
               )
             )}
             {isBasic && vaultUrl && (
-              <button onClick={handleCopy} className={`mt-4 inline-flex items-center rounded-full px-5 py-2 text-sm font-semibold text-white transition ${isNorthwood ? "bg-[#4D714C] hover:bg-[#3f5e3e]" : "bg-gold hover:bg-gold/90"}`}>
+              <button onClick={handleCopy} style={accentBtn} className="mt-4 inline-flex items-center rounded-full px-5 py-2 text-sm font-semibold text-white transition hover:brightness-95">
                 {copied ? "Copied!" : "Copy Vault Link"}
               </button>
             )}
@@ -289,12 +287,12 @@ export default function ProDashboardPage() {
 
       {/* Insight tip */}
       <div
-        className={`mt-6 relative overflow-hidden rounded-2xl p-6 ${isNorthwood ? "border border-[#e6dfd0]" : "bg-gray-50 border border-gray-200"}`}
-        style={isNorthwood ? { background: "linear-gradient(135deg, #fbf9f4 0%, #f7f4ed 100%)" } : undefined}
+        className="mt-6 relative overflow-hidden rounded-2xl p-6 border"
+        style={{ background: `linear-gradient(135deg, ${surfaceLight} 0%, ${surfaceTinted} 100%)`, ...cardBorder }}
       >
-        {isNorthwood && <div className="absolute left-0 top-0 h-full w-1" style={{ background: "linear-gradient(180deg, #4D714C 0%, #6b5e3f 100%)" }} />}
-        <p className={`text-[10px] font-semibold uppercase tracking-[0.14em] ${isNorthwood ? "text-[#4D714C]" : "text-gold"}`}>💡 {isBasic ? "Vault Tip" : "Partner Insight"}</p>
-        <p className={`mt-2 text-sm leading-relaxed ${isNorthwood ? "text-black/75" : "text-charcoal/70"}`}>
+        <div className="absolute left-0 top-0 h-full w-1" style={accentStripe} />
+        <p className="text-[10px] font-semibold uppercase tracking-[0.14em]" style={{ color: accentDark }}>💡 {isBasic ? "Vault Tip" : "Partner Insight"}</p>
+        <p className="mt-2 text-sm leading-relaxed text-black/75">
           {isBasic ? VAULT_TIPS[tipIndex] : TIPS[tipIndex]}
         </p>
       </div>
@@ -304,7 +302,8 @@ export default function ProDashboardPage() {
         certified ? (
           <Link
             href="/pro/clients"
-            className={`fixed bottom-6 right-6 z-30 flex items-center gap-2 rounded-full px-6 py-3 text-sm font-semibold shadow-lg transition-all hover:-translate-y-0.5 ${isNorthwood ? "bg-[#4D714C] text-white hover:bg-[#3f5e3e] shadow-[0_10px_30px_-10px_rgba(77,113,76,0.5)]" : "bg-gold text-white hover:bg-gold/90"}`}
+            style={{ ...accentBtn, boxShadow: `0 10px 30px -10px ${accent}` }}
+            className="fixed bottom-6 right-6 z-30 flex items-center gap-2 rounded-full px-6 py-3 text-sm font-semibold text-white transition-all hover:-translate-y-0.5 hover:brightness-95"
           >
             + New Client
           </Link>

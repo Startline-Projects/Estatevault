@@ -54,60 +54,44 @@ interface ProShellProps {
   certificationComplete: boolean;
   onboardingStep: number;
   businessUrl?: string;
+  accentColor?: string;
   children: React.ReactNode;
 }
 
-export default function ProShell({ companyName, userName, tier, logoUrl, onboardingComplete, certificationComplete, onboardingStep, businessUrl, children }: ProShellProps) {
+export default function ProShell({ companyName, userName, tier, logoUrl, onboardingComplete, certificationComplete, onboardingStep, businessUrl, accentColor, children }: ProShellProps) {
   const isNorthwood = !!businessUrl?.toLowerCase().includes("northwoodwealthadvisors");
+  const accent = accentColor || "#C9A84C";
+  const accentDark = isNorthwood ? "#1a1a1a" : `color-mix(in srgb, ${accent} 60%, #1a1a1a)`;
 
-  // Sidebar theme tokens — same layout for all partners, only colors differ.
-  const theme = isNorthwood
-    ? {
-        bgClass: "border-r border-[#e6dfd0]",
-        bgStyle: { background: "linear-gradient(180deg, #f7f4ed 0%, #f7f4ed 100%)" } as React.CSSProperties,
-        divider: "bg-black/10",
-        txt: "text-black",
-        txtMuted: "text-black/60",
-        txtMutedHover: "text-black/60 hover:text-black/80",
-        sectionLabel: "text-black/35",
-        subLabel: "text-black/40",
-        activePillCls: "bg-white text-black shadow-[0_2px_8px_-2px_rgba(107,94,63,0.18)]",
-        idlePillCls: "text-black/55 hover:text-black hover:bg-white/60 hover:translate-x-0.5",
-        accentBar: "bg-gradient-to-b from-[#1a1a1a] to-[#4D714C]",
-        accentDot: "bg-[#4D714C]",
-        iconActive: "bg-[#f7f4ed] text-[#6b5e3f]",
-        iconIdle: "text-black/45 group-hover:text-black/75",
-        logoBox: "bg-gradient-to-br from-[#1a1a1a] to-[#6b5e3f] text-white",
-        avatarBg: "bg-gradient-to-br from-[#6b5e3f] to-[#c9a84c]",
-        footerBorder: "border-t border-black/5",
-        mobileBtnTxt: "text-black/70",
-      }
-    : {
-        bgClass: "bg-navy",
-        bgStyle: undefined as React.CSSProperties | undefined,
-        divider: "bg-white/10",
-        txt: "text-white",
-        txtMuted: "text-white/50",
-        txtMutedHover: "text-white/50 hover:text-white/80",
-        sectionLabel: "text-white/35",
-        subLabel: "text-white/40",
-        activePillCls: "bg-white/10 text-white shadow-[0_2px_8px_-2px_rgba(0,0,0,0.35)]",
-        idlePillCls: "text-white/55 hover:text-white hover:bg-white/5 hover:translate-x-0.5",
-        accentBar: "bg-gradient-to-b from-gold to-white",
-        accentDot: "bg-gold",
-        iconActive: "bg-white/15 text-gold",
-        iconIdle: "text-white/55 group-hover:text-white/85",
-        logoBox: "bg-gold/20 text-gold",
-        avatarBg: "bg-gradient-to-br from-gold/70 to-gold",
-        footerBorder: "border-t border-white/10",
-        mobileBtnTxt: "text-white/70",
-      };
-  const sidebarBgClass = theme.bgClass;
-  const sidebarBgStyle = theme.bgStyle;
-  const txt = theme.txt;
-  const txtMuted = theme.txtMuted;
-  const txtMutedHover = theme.txtMutedHover;
-  const divider = theme.divider;
+  // Northwood keeps explicit beige theme; everyone else accent-tinted.
+  const surface = isNorthwood ? "#f7f4ed" : `color-mix(in srgb, ${accent} 8%, #ffffff)`;
+  const surface2 = isNorthwood ? "#efeadc" : `color-mix(in srgb, ${accent} 14%, #ffffff)`;
+  const borderCol = isNorthwood ? "#e6dfd0" : `color-mix(in srgb, ${accent} 22%, #ffffff)`;
+  const iconActiveBg = isNorthwood ? "#f7f4ed" : `color-mix(in srgb, ${accent} 14%, #ffffff)`;
+
+  const sidebarBgStyle: React.CSSProperties = {
+    background: `linear-gradient(180deg, ${surface} 0%, ${surface2} 100%)`,
+    borderRight: `1px solid ${borderCol}`,
+  };
+  const sidebarBgClass = "";
+  const txt = "text-black";
+  const txtMuted = "text-black/60";
+  const txtMutedHover = "text-black/55 hover:text-black";
+  const divider = "bg-black/10";
+  const theme = {
+    sectionLabel: "text-black/35",
+    subLabel: "text-black/40",
+    activePillCls: "bg-white text-black shadow-[0_2px_10px_-3px_rgba(0,0,0,0.18)]",
+    idlePillCls: "text-black/55 hover:text-black hover:bg-white/60 hover:translate-x-0.5",
+    footerBorder: "border-t border-black/5",
+    mobileBtnTxt: "text-black/70",
+    iconActiveStyle: { backgroundColor: iconActiveBg, color: accentDark } as React.CSSProperties,
+    iconIdleCls: "text-black/45 group-hover:text-black/80",
+    accentBarStyle: { background: `linear-gradient(180deg, ${accentDark} 0%, ${accent} 100%)` } as React.CSSProperties,
+    accentDotStyle: { backgroundColor: accent } as React.CSSProperties,
+    logoBoxStyle: { background: `linear-gradient(135deg, ${accentDark} 0%, ${accent} 100%)`, color: "#ffffff" } as React.CSSProperties,
+    avatarStyle: { background: `linear-gradient(135deg, ${accent} 0%, ${accentDark} 100%)` } as React.CSSProperties,
+  };
   const pathname = usePathname();
   const router = useRouter();
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -122,9 +106,8 @@ export default function ProShell({ companyName, userName, tier, logoUrl, onboard
   }, [pathname, pendingHref]);
 
   useEffect(() => {
-    if (isNorthwood) document.body.classList.add("theme-northwood");
-    return () => { document.body.classList.remove("theme-northwood"); };
-  }, [isNorthwood]);
+    document.body.classList.remove("theme-northwood");
+  }, []);
 
   // Prefetch every nav route on mount so the first click is instant.
   // Without this, the first navigation pays the JS-bundle + RSC payload cost
@@ -172,12 +155,18 @@ export default function ProShell({ companyName, userName, tier, logoUrl, onboard
     return (
       <Link href={item.href} onClick={(e) => handleNavClick(e, item.href)}
         className={`group relative flex items-center gap-3 mx-2 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200 ${active ? theme.activePillCls : theme.idlePillCls}`}>
-        <span className={`absolute left-0 top-1/2 -translate-y-1/2 h-5 w-[3px] rounded-r-full transition-all duration-200 ${active ? `opacity-100 ${theme.accentBar}` : "opacity-0"}`} />
-        <span className={`flex h-7 w-7 items-center justify-center rounded-md transition-colors ${active ? theme.iconActive : theme.iconIdle}`}>
+        <span
+          className="absolute left-0 top-1/2 -translate-y-1/2 h-5 w-[3px] rounded-r-full transition-all duration-200"
+          style={{ ...theme.accentBarStyle, opacity: active ? 1 : 0 }}
+        />
+        <span
+          className={`flex h-7 w-7 items-center justify-center rounded-md transition-colors ${active ? "" : theme.iconIdleCls}`}
+          style={active ? theme.iconActiveStyle : undefined}
+        >
           <NavIcon label={item.label} />
         </span>
         <span className="tracking-tight">{item.label}</span>
-        {active && <span className={`ml-auto h-1.5 w-1.5 rounded-full ${theme.accentDot}`} />}
+        {active && <span className="ml-auto h-1.5 w-1.5 rounded-full" style={theme.accentDotStyle} />}
       </Link>
     );
   }
@@ -190,7 +179,7 @@ export default function ProShell({ companyName, userName, tier, logoUrl, onboard
             <img src={logoUrl} alt={companyName} className="h-9 max-w-full rounded object-contain" />
           ) : (
             <>
-              <div className={`h-9 w-9 rounded-lg flex items-center justify-center text-xs font-bold ${theme.logoBox}`}>{initials}</div>
+              <div className="h-9 w-9 rounded-lg flex items-center justify-center text-xs font-bold" style={theme.logoBoxStyle}>{initials}</div>
               <div className="min-w-0">
                 <p className={`text-sm font-bold truncate ${txt}`}>{companyName}</p>
                 <p className={`text-[10px] uppercase tracking-[0.14em] ${theme.subLabel}`}>Partner Portal</p>
@@ -209,7 +198,7 @@ export default function ProShell({ companyName, userName, tier, logoUrl, onboard
       </nav>
       <div className={`px-5 pb-5 pt-4 ${theme.footerBorder} mt-2 mx-2`}>
         <div className="flex items-center gap-3">
-          <div className={`h-8 w-8 rounded-full flex items-center justify-center text-[10px] font-bold text-white ${theme.avatarBg}`}>
+          <div className="h-8 w-8 rounded-full flex items-center justify-center text-[10px] font-bold text-white" style={theme.avatarStyle}>
             {userName.split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase() || "U"}
           </div>
           <div className="min-w-0 flex-1">
@@ -236,7 +225,7 @@ export default function ProShell({ companyName, userName, tier, logoUrl, onboard
       {/* Mobile drawer */}
       {drawerOpen && (
         <div className="md:hidden fixed inset-0 z-50">
-          <div className="absolute inset-0 bg-black/50" onClick={(e) => handleNavClick(e, item.href)} />
+          <div className="absolute inset-0 bg-black/50" onClick={() => setDrawerOpen(false)} />
           <div style={sidebarBgStyle} className={`absolute left-0 top-0 h-full w-64 flex flex-col ${sidebarBgClass}`}>{sidebar}</div>
         </div>
       )}
