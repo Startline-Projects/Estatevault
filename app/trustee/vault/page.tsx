@@ -445,7 +445,7 @@ export default function TrusteeVaultPage() {
       let final = false;
       const plainChunks: Uint8Array[] = [];
 
-      async function fill(min: number) {
+      const fill = async (min: number) => {
         while (buffer.length < min && !done) {
           const c = await reader.read();
           if (c.done) { done = true; break; }
@@ -455,7 +455,7 @@ export default function TrusteeVaultPage() {
           buffer = next;
         }
         return buffer.length >= min;
-      }
+      };
 
       while (!final) {
         if (!(await fill(4))) break;
