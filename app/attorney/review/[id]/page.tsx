@@ -92,7 +92,7 @@ export default function AttorneyReviewPage() {
       }
 
       setSubmitted(true);
-      setTimeout(() => router.push("/attorney"), 2000);
+      setTimeout(() => router.push("/attorney/reviews"), 2000);
     } catch {
       alert("Failed to submit review. Please try again.");
       setSubmitting(false);
@@ -115,7 +115,7 @@ export default function AttorneyReviewPage() {
       <div className="min-h-screen bg-gray-50 flex items-center justify-center px-6">
         <div className="text-center">
           <p className="text-sm text-red-600">{error || "Review not found."}</p>
-          <Link href="/attorney" className="mt-4 inline-flex text-sm text-navy hover:underline">← Back to Queue</Link>
+          <Link href="/attorney/reviews" className="mt-4 inline-flex text-sm text-navy hover:underline">← Back to Queue</Link>
         </div>
       </div>
     );
@@ -153,7 +153,7 @@ export default function AttorneyReviewPage() {
       {/* Top bar */}
       <div className="bg-white border-b border-gray-200 px-6 py-4">
         <div className="mx-auto max-w-4xl flex items-center justify-between">
-          <Link href="/attorney" className="inline-flex items-center gap-2 text-sm text-charcoal/60 hover:text-navy transition-colors">
+          <Link href="/attorney/reviews" className="inline-flex items-center gap-2 text-sm text-charcoal/60 hover:text-navy transition-colors">
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
             </svg>

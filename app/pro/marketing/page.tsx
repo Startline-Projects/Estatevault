@@ -205,6 +205,7 @@ export default function MarketingPage() {
     return <button onClick={onClick} className={className}>{children}</button>;
   }
 
+  const isNorthwood = !!partner?.businessUrl?.toLowerCase().includes("northwoodwealthadvisors");
   const showScripts = tab === "All" || tab === "Scripts";
   const showEmail = tab === "All" || tab === "Email";
   const showSocial = tab === "All" || tab === "Social Media";
@@ -225,26 +226,86 @@ export default function MarketingPage() {
 
       {/* Tabs */}
       <div className="mt-6 flex gap-2 overflow-x-auto pb-2">
-        {TABS.map((t) => <button key={t} onClick={() => setTab(t)} className={`rounded-full px-4 py-1.5 text-sm font-medium whitespace-nowrap ${tab === t ? "bg-navy text-white" : "bg-gray-100 text-charcoal/60 hover:bg-gray-200"}`}>{t}</button>)}
+        {TABS.map((t) => {
+          const selected = tab === t;
+          const selectedCls = isNorthwood
+            ? "bg-[#4D714C] text-white shadow-[0_4px_12px_-4px_rgba(77,113,76,0.45)]"
+            : "bg-navy text-white";
+          return (
+            <button
+              key={t}
+              onClick={() => setTab(t)}
+              className={`rounded-full px-4 py-1.5 text-sm font-medium whitespace-nowrap transition-all ${selected ? selectedCls : "bg-gray-100 text-charcoal/60 hover:bg-gray-200"}`}
+            >
+              {t}
+            </button>
+          );
+        })}
       </div>
 
       {/* SCRIPTS */}
       {showScripts && (
         <div className="mt-8">
           <h2 className="text-lg font-bold text-navy">Compliance Script Card</h2>
-          <div className="mt-3 rounded-xl border-2 border-gold bg-gold/5 p-6">
-            <div className="flex items-center gap-2 mb-3">
-              <span className="rounded-full bg-gold px-3 py-0.5 text-xs font-bold text-white">START HERE</span>
-              <span className="text-xs text-charcoal/50">Always available, no certification required</span>
-            </div>
-            <h3 className="text-base font-bold text-navy">Compliance Script Card</h3>
-            <p className="mt-1 text-sm text-charcoal/60">Word-for-word approved scripts for introducing estate planning. What to say. What NOT to say. Print and keep at your desk.</p>
-            <button onClick={() => setExpandScript(!expandScript)} className="mt-3 text-sm text-gold font-medium">{expandScript ? "Hide Preview ▲" : "Show Preview ▼"}</button>
-            {expandScript && (
-              <pre className="mt-4 whitespace-pre-wrap text-sm text-charcoal/80 bg-white rounded-lg p-4 border border-gray-200 leading-relaxed">{sub(SCRIPT_CONTENT)}</pre>
+          <div
+            className={`mt-3 relative overflow-hidden rounded-2xl p-7 shadow-[0_12px_32px_-12px_rgba(77,113,76,0.4)] ${isNorthwood ? "" : "border-2 border-gold bg-gold/5"}`}
+            style={isNorthwood ? { background: "linear-gradient(135deg, #4D714C 0%, #3f5e3e 60%, #2f4a30 100%)" } : undefined}
+          >
+            {isNorthwood && (
+              <>
+                <div className="pointer-events-none absolute -top-16 -right-16 h-56 w-56 rounded-full bg-white/10 blur-3xl" />
+                <div className="pointer-events-none absolute -bottom-20 -left-10 h-48 w-48 rounded-full bg-[#c9a84c]/15 blur-3xl" />
+                <div className="pointer-events-none absolute inset-0 opacity-[0.05]" style={{ backgroundImage: "radial-gradient(circle at 1px 1px, white 1px, transparent 0)", backgroundSize: "18px 18px" }} />
+              </>
             )}
-            <div className="mt-4 flex gap-3">
-              <a href={`/api/marketing/script-card`} className="rounded-full bg-gold px-5 py-2 text-sm font-semibold text-white hover:bg-gold/90">Download PDF</a>
+            <div className="relative">
+              <div className="flex items-center gap-3 mb-4">
+                <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-[0.16em] ${isNorthwood ? "bg-white text-[#4D714C]" : "bg-gold text-white"}`}>
+                  <span className={`inline-block h-1.5 w-1.5 rounded-full ${isNorthwood ? "bg-[#4D714C]" : "bg-white"} animate-pulse`} />
+                  Start Here
+                </span>
+                <span className={`text-xs ${isNorthwood ? "text-white/75" : "text-charcoal/50"}`}>Always available · No certification required</span>
+              </div>
+              <div className="flex items-start gap-4">
+                <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl ${isNorthwood ? "bg-white/15 backdrop-blur-sm ring-1 ring-white/25" : "bg-gold/15"}`}>
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={isNorthwood ? "#fff" : "#C9A84C"} strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                    <path d="M14 2v6h6M9 13h6M9 17h4" />
+                  </svg>
+                </div>
+                <div className="min-w-0 flex-1">
+                  <h3 className={`text-lg font-bold tracking-tight ${isNorthwood ? "text-white" : "text-navy"}`}>Compliance Script Card</h3>
+                  <p className={`mt-1 text-sm leading-relaxed ${isNorthwood ? "text-white/80" : "text-charcoal/60"}`}>
+                    Word-for-word approved scripts for introducing estate planning. What to say. What NOT to say. Print and keep at your desk.
+                  </p>
+                  <div className={`mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] ${isNorthwood ? "text-white/70" : "text-charcoal/55"}`}>
+                    <span className="inline-flex items-center gap-1.5">✓ Compliance-reviewed</span>
+                    <span className="inline-flex items-center gap-1.5">✓ Print-ready PDF</span>
+                    <span className="inline-flex items-center gap-1.5">✓ Updated 2026</span>
+                  </div>
+                </div>
+              </div>
+              <button
+                onClick={() => setExpandScript(!expandScript)}
+                className={`mt-4 inline-flex items-center gap-1 text-sm font-medium transition-colors ${isNorthwood ? "text-white/90 hover:text-white" : "text-gold hover:text-gold/80"}`}
+              >
+                {expandScript ? "Hide Preview" : "Show Preview"}
+                <span className={`inline-block transition-transform ${expandScript ? "rotate-180" : ""}`}>▾</span>
+              </button>
+              {expandScript && (
+                <pre className="mt-4 whitespace-pre-wrap text-sm bg-white text-charcoal/80 rounded-lg p-4 border border-gray-200 leading-relaxed">{sub(SCRIPT_CONTENT)}</pre>
+              )}
+              <div className="mt-5 flex flex-wrap gap-3">
+                <a
+                  href={`/api/marketing/script-card`}
+                  className={`group inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold transition-all hover:-translate-y-0.5 ${isNorthwood ? "bg-white text-[#4D714C] hover:bg-white/95 shadow-[0_6px_18px_-6px_rgba(0,0,0,0.35)]" : "bg-gold text-white hover:bg-gold/90"}`}
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3" />
+                  </svg>
+                  Download PDF
+                </a>
+              </div>
             </div>
           </div>
         </div>

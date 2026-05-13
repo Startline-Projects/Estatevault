@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
+import { usePortalBase } from "@/lib/portal-base";
 
 type PartnerStatus = "onboarding" | "active" | "suspended" | "cancelled";
 type PlanTier = "standard" | "enterprise";
@@ -35,6 +36,7 @@ const TIER_STYLES: Record<PlanTier, { label: string; cls: string }> = {
 };
 
 export default function PartnersListPage() {
+  const base = usePortalBase();
   const [partners, setPartners] = useState<Partner[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -52,7 +54,7 @@ export default function PartnersListPage() {
         .select("user_type")
         .eq("id", user.id)
         .single();
-      const isAdmin = profileData?.user_type === "admin";
+      const isAdmin = profileData?.user_type === "admin" || profileData?.user_type === "review_attorney";
 
       let partnersQuery = supabase
         .from("partners")
@@ -135,7 +137,7 @@ export default function PartnersListPage() {
           </h1>
         </div>
         <Link
-          href="/sales/new-partner"
+          href={`${base}/new-partner`}
           className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-gold text-white text-sm font-semibold hover:bg-gold-600 transition"
         >
           <span className="text-base leading-none">+</span> New Partner
@@ -195,7 +197,7 @@ export default function PartnersListPage() {
           </p>
           {!search && statusFilter === "all" && tierFilter === "all" && (
             <Link
-              href="/sales/new-partner"
+              href={`${base}/new-partner`}
               className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-gold text-white text-sm font-semibold hover:bg-gold-600 transition"
             >
               <span className="text-base leading-none">+</span> New Partner
@@ -285,7 +287,7 @@ export default function PartnersListPage() {
                       </td>
                       <td className="px-4 py-3 text-right">
                         <Link
-                          href={`/sales/partners/${p.id}`}
+                          href={`${base}/partners/${p.id}`}
                           className="text-gold hover:text-gold-600 text-xs font-semibold transition"
                         >
                           View

@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
+import { usePortalBase } from "@/lib/portal-base";
 import TeamManagement from "@/components/sales/TeamManagement";
 import TestControls from "@/components/sales/TestControls";
 
@@ -94,6 +95,7 @@ function formatCurrency(amount: number): string {
 }
 
 export default function SalesDashboardPage() {
+  const base = usePortalBase();
   const [repName, setRepName] = useState("");
   const [userType, setUserType] = useState("");
   const [loading, setLoading] = useState(true);
@@ -134,7 +136,7 @@ export default function SalesDashboardPage() {
       if (profileData?.user_type) setUserType(profileData.user_type);
 
       // Fetch partners, admin sees all, reps see only their own
-      const isAdmin = profileData?.user_type === "admin";
+      const isAdmin = profileData?.user_type === "admin" || profileData?.user_type === "review_attorney";
       let partnersQuery = supabase
         .from("partners")
         .select("id, company_name, tier, status, created_at, updated_at, onboarding_completed, onboarding_step, platform_fee_amount, one_time_fee_paid");
@@ -684,7 +686,7 @@ export default function SalesDashboardPage() {
         <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
           <h2 className="text-sm font-semibold text-charcoal">Recent Partners</h2>
           <Link
-            href="/sales/partners"
+            href={`${base}/partners`}
             className="text-xs font-medium text-gold hover:underline"
           >
             View All
