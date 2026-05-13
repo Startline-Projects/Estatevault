@@ -26,7 +26,8 @@ export default async function ProLayout({ children }: { children: React.ReactNod
   // Only partners get the ProShell
   if (profile.user_type !== "partner") return <>{children}</>;
 
-  const { data: partner } = await supabase.from("partners").select("company_name, tier, logo_url, onboarding_completed, certification_completed, onboarding_step, business_url, accent_color").eq("profile_id", user.id).single();
+  const { data: partnerRows } = await supabase.from("partners").select("company_name, tier, logo_url, onboarding_completed, certification_completed, onboarding_step, business_url, accent_color, created_at").eq("profile_id", user.id).order("created_at", { ascending: false }).limit(1);
+  const partner = partnerRows?.[0];
   if (!partner) return <>{children}</>;
 
   return (

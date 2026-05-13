@@ -20,19 +20,26 @@ export default function Step1Page() {
       const supabase = createClient();
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { router.push("/auth/login"); return; }
-      const { data: partner } = await supabase.from("partners").select("id, tier, annual_fee_paid, one_time_fee_paid, professional_type, promo_code").eq("profile_id", user.id).single();
-      if (partner) {
-        setPartnerId(partner.id);
-        if (partner.tier) setSelectedTier(partner.tier as "standard" | "enterprise" | "basic");
-        const isBasic = partner.tier === "basic";
-        const nextStep = isBasic ? "/pro/onboarding/step-2-vault" : "/pro/onboarding/step-2";
-        if (partner.annual_fee_paid || partner.one_time_fee_paid) setAlreadyPaid(true);
-        const cameFromInternal = typeof document !== "undefined" && document.referrer.includes(window.location.host);
-        if (!cameFromInternal && partner.promo_code && partner.promo_code.toUpperCase() === "FREE676" && !partner.one_time_fee_paid && !partner.annual_fee_paid) {
-          await supabase.from("partners").update({ one_time_fee_paid: true, onboarding_step: 2 }).eq("id", partner.id);
-          router.push(nextStep);
-          return;
-        }
+      const { data: partnerRows, error: partnerErr } = await supabase.from("partners").select("id, tier, annual_fee_paid, one_time_fee_paid, professional_type, promo_code, created_at").eq("profile_id", user.id).order("created_at", { ascending: false }).limit(1);
+      if (partnerErr) {
+        setError(`Could not load partner profile: ${partnerErr.message}`);
+        return;
+      }
+      const partner = partnerRows?.[0];
+      if (!partner) {
+        setError("No partner profile found for this account. Contact info@estatevault.us.");
+        return;
+      }
+      setPartnerId(partner.id);
+      if (partner.tier) setSelectedTier(partner.tier as "standard" | "enterprise" | "basic");
+      const isBasic = partner.tier === "basic";
+      const nextStep = isBasic ? "/pro/onboarding/step-2-vault" : "/pro/onboarding/step-2";
+      if (partner.annual_fee_paid || partner.one_time_fee_paid) setAlreadyPaid(true);
+      const cameFromInternal = typeof document !== "undefined" && document.referrer.includes(window.location.host);
+      if (!cameFromInternal && partner.promo_code && partner.promo_code.toUpperCase() === "FREE676" && !partner.one_time_fee_paid && !partner.annual_fee_paid) {
+        await supabase.from("partners").update({ one_time_fee_paid: true, onboarding_step: 2 }).eq("id", partner.id);
+        router.push(nextStep);
+        return;
       }
     }
     load();

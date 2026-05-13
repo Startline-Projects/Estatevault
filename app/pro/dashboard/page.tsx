@@ -43,11 +43,13 @@ export default function ProDashboardPage() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      const { data: partner } = await supabase
+      const { data: partnerRows } = await supabase
         .from("partners")
-        .select("id, company_name, business_url, certification_completed, tier, vault_subdomain, accent_color")
+        .select("id, company_name, business_url, certification_completed, tier, vault_subdomain, accent_color, created_at")
         .eq("profile_id", user.id)
-        .single();
+        .order("created_at", { ascending: false })
+        .limit(1);
+      const partner = partnerRows?.[0];
       if (!partner) { setLoading(false); return; }
 
       setPartnerId(partner.id);
