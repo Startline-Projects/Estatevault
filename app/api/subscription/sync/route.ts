@@ -38,7 +38,8 @@ export async function POST() {
       s.items.data.some((it) => it.price.unit_amount === 9900 && it.price.recurring?.interval === "year")
     );
     if (vaultSub) {
-      const expiry = new Date((vaultSub.current_period_end || (Date.now() / 1000 + 365 * 86400)) * 1000);
+      const periodEnd = vaultSub.items.data[0]?.current_period_end ?? (Date.now() / 1000 + 365 * 86400);
+      const expiry = new Date(periodEnd * 1000);
       await db.from("clients").update({
         vault_subscription_status: "active",
         vault_subscription_expiry: expiry.toISOString(),
