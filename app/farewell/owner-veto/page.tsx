@@ -1,7 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
+
+export const dynamic = "force-dynamic";
 
 type State =
   | { kind: "loading" }
@@ -12,6 +14,14 @@ type State =
   | { kind: "done" };
 
 export default function OwnerVetoPage() {
+  return (
+    <Suspense fallback={<div style={{ padding: 24 }}>Loading…</div>}>
+      <OwnerVetoInner />
+    </Suspense>
+  );
+}
+
+function OwnerVetoInner() {
   const params = useSearchParams();
   const token = params.get("token") || "";
   const [state, setState] = useState<State>({ kind: "loading" });
