@@ -4,9 +4,14 @@ import { createClient } from "@/lib/supabase/server";
 import { createServerClient } from "@supabase/ssr";
 import { Resend } from "resend";
 import { issueVetoToken } from "@/lib/security/vetoToken";
+import { issueTrusteeToken } from "@/lib/security/trusteeToken";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
-const VAULT_UNLOCK_WINDOW_HOURS = 72;
+// TESTING SHORTCUT: set TRUSTEE_BYPASS_VETO_WINDOW=true in .env.local to
+// collapse the 72-hour owner-veto window to 0 and immediately issue the
+// trustee unlock-link email on admin approval. Remove or set to "false"
+// before production.
+const VAULT_UNLOCK_WINDOW_HOURS = process.env.TRUSTEE_BYPASS_VETO_WINDOW === "true" ? 0 : 72;
 
 function hashToken(t: string): string {
   return createHash("sha256").update(t).digest("hex");
@@ -195,6 +200,40 @@ export async function POST(request: Request) {
         resource_id: requestId,
         metadata: { client_id: verReq.client_id, messages_unlocked: unlockedMessages?.length || 0 },
       });
+
+      // Bypass: when veto-window collapsed to 0, immediately issue trustee unlock token + email
+      // so testers don't have to wait for the cron sweep.
+      if (VAULT_UNLOCK_WINDOW_HOURS === 0) {
+        try {
+          const ACCESS_TTL_SECONDS = 7 * 24 * 3600;
+          const trusteeToken = issueTrusteeToken(requestId, verReq.trustee_email, ACCESS_TTL_SECONDS);
+          const accessExpiresAt = new Date(now.getTime() + ACCESS_TTL_SECONDS * 1000);
+
+          await admin.from("farewell_verification_requests").update({
+            trustee_access_token_hash: hashToken(trusteeToken),
+            access_expires_at: accessExpiresAt.toISOString(),
+            trustee_email_notified_at: now.toISOString(),
+          }).eq("id", requestId);
+
+          const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+          const unlockUrl = `${baseUrl}/trustee/unlock?token=${trusteeToken}`;
+          await resend.emails.send({
+            from: "EstateVault <info@estatevault.us>",
+            to: verReq.trustee_email,
+            subject: "Vault Access Approved — Open Within 7 Days",
+            html: `<div style="font-family:Inter,sans-serif;max-width:520px;margin:0 auto;padding:32px;color:#2D2D2D;">
+              <h1 style="color:#1C3557;">Vault Access Approved</h1>
+              <p>Your request has been approved. You can now open the vault.</p>
+              <div style="text-align:center;margin:32px 0;">
+                <a href="${unlockUrl}" style="background:#C9A84C;color:#fff;text-decoration:none;padding:14px 28px;border-radius:9999px;font-weight:600;">Open Vault</a>
+              </div>
+              <p style="color:#6b7280;font-size:13px;">This link expires on <strong>${accessExpiresAt.toUTCString()}</strong>.</p>
+            </div>`,
+          });
+        } catch (e) {
+          console.error("[bypass] inline trustee token issuance failed:", e);
+        }
+      }
 
       return NextResponse.json({ success: true, action: "approved" });
     }

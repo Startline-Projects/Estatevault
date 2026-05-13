@@ -35,7 +35,7 @@ export async function POST(request: Request) {
     // Verify trustee exists for this client
     const { data: trustee } = await supabase
       .from("vault_trustees")
-      .select("id, trustee_name")
+      .select("id, trustee_name, access_scope")
       .eq("client_id", clientId)
       .ilike("trustee_email", trusteeEmail)
       .maybeSingle();
@@ -44,16 +44,36 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "No trustee found with this email for this account" }, { status: 404 });
     }
 
-    // Check that client has farewell messages
-    const { data: messages } = await supabase
-      .from("farewell_messages")
-      .select("id")
-      .eq("client_id", clientId)
-      .eq("vault_farewell_status", "locked")
-      .limit(1);
+    // Scope-aware availability check. If trustee has any granted scope and the
+    // client has matching content, request can proceed. Legacy (null scope) =
+    // full access, original "needs farewell" rule kept for that path.
+    const scope = trustee.access_scope as { categories?: string[]; documents?: boolean; farewell?: boolean } | null;
+    let hasAccessibleContent = false;
 
-    if (!messages || messages.length === 0) {
-      return NextResponse.json({ error: "No farewell messages available" }, { status: 404 });
+    if (!scope) {
+      const { data: messages } = await supabase
+        .from("farewell_messages").select("id").eq("client_id", clientId)
+        .eq("vault_farewell_status", "locked").limit(1);
+      hasAccessibleContent = !!(messages && messages.length > 0);
+    } else {
+      if (scope.farewell) {
+        const { data: m } = await supabase.from("farewell_messages").select("id")
+          .eq("client_id", clientId).eq("vault_farewell_status", "locked").limit(1);
+        if (m && m.length > 0) hasAccessibleContent = true;
+      }
+      if (!hasAccessibleContent && scope.documents) {
+        const { data: d } = await supabase.from("documents").select("id").eq("client_id", clientId).limit(1);
+        if (d && d.length > 0) hasAccessibleContent = true;
+      }
+      if (!hasAccessibleContent && scope.categories && scope.categories.length > 0) {
+        const { data: i } = await supabase.from("vault_items").select("id")
+          .eq("client_id", clientId).in("category", scope.categories).limit(1);
+        if (i && i.length > 0) hasAccessibleContent = true;
+      }
+    }
+
+    if (!hasAccessibleContent) {
+      return NextResponse.json({ error: "No accessible content for this trustee" }, { status: 404 });
     }
 
     // Check for existing pending request

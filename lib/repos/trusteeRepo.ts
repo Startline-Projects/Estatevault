@@ -32,6 +32,21 @@ function decodeBytea(raw: string | Uint8Array | null): Uint8Array | null {
   return null;
 }
 
+export type AccessScope = {
+  categories: string[];
+  documents: boolean;
+  farewell: boolean;
+};
+
+export const FULL_SCOPE: AccessScope = {
+  categories: [
+    "estate_document", "financial_account", "insurance", "digital_account",
+    "physical_location", "contact", "business", "final_wishes",
+  ],
+  documents: true,
+  farewell: true,
+};
+
 export type TrusteePlaintext = {
   id: string;
   name: string;
@@ -41,6 +56,7 @@ export type TrusteePlaintext = {
   encrypted: boolean;
   invite_sent_at: string | null;
   confirmed_at: string | null;
+  accessScope: AccessScope;
 };
 
 type RawRow = {
@@ -55,7 +71,17 @@ type RawRow = {
   status: string;
   invite_sent_at: string | null;
   confirmed_at: string | null;
+  access_scope: AccessScope | null;
 };
+
+function normalizeScope(s: AccessScope | null | undefined): AccessScope {
+  if (!s) return FULL_SCOPE;
+  return {
+    categories: Array.isArray(s.categories) ? s.categories : [],
+    documents: !!s.documents,
+    farewell: !!s.farewell,
+  };
+}
 
 export async function listTrustees(): Promise<TrusteePlaintext[]> {
   const res = await fetch("/api/vault/trustees");
@@ -78,12 +104,14 @@ export async function listTrustees(): Promise<TrusteePlaintext[]> {
           status: r.status,
           encrypted: true,
           invite_sent_at: r.invite_sent_at, confirmed_at: r.confirmed_at,
+          accessScope: normalizeScope(r.access_scope),
         });
       } catch {
         out.push({
           id: r.id, name: "[decryption failed]", email: "", relationship: "",
           status: r.status, encrypted: true,
           invite_sent_at: r.invite_sent_at, confirmed_at: r.confirmed_at,
+          accessScope: normalizeScope(r.access_scope),
         });
       }
     } else {
@@ -95,6 +123,7 @@ export async function listTrustees(): Promise<TrusteePlaintext[]> {
         status: r.status,
         encrypted: false,
         invite_sent_at: r.invite_sent_at, confirmed_at: r.confirmed_at,
+        accessScope: normalizeScope(r.access_scope),
       });
     }
   }
@@ -105,6 +134,7 @@ export type AddTrusteeArgs = {
   name: string;
   email: string;
   relationship: string;
+  accessScope: AccessScope;
 };
 
 export async function addTrustee(args: AddTrusteeArgs): Promise<void> {
@@ -128,6 +158,7 @@ export async function addTrustee(args: AddTrusteeArgs): Promise<void> {
       // Transient — server uses for invite email send, does NOT persist.
       invite_email: args.email,
       invite_name: args.name,
+      access_scope: args.accessScope,
     }),
   });
 

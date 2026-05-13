@@ -1,5 +1,11 @@
 import { NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
+import { Resend } from "resend";
+import { issueTrusteeToken, hashToken } from "@/lib/security/trusteeToken";
+
+const resend = new Resend(process.env.RESEND_API_KEY);
+const ACCESS_TTL_SECONDS = 7 * 24 * 3600;
+const RESEND_COOLDOWN_MS = 60 * 1000;
 
 function createAdminClient() {
   return createServerClient(
@@ -25,7 +31,7 @@ export async function POST(request: Request) {
     // 1. Verify this email is a registered trustee for this client
     const { data: trustee } = await admin
       .from("vault_trustees")
-      .select("id, trustee_name")
+      .select("id, trustee_name, status, confirmed_at, access_scope")
       .eq("client_id", clientId)
       .eq("trustee_email", trusteeEmail.toLowerCase().trim())
       .single();
@@ -37,64 +43,91 @@ export async function POST(request: Request) {
       );
     }
 
-    // 2. Check if there are unlocked messages for this client
-    const { data: messages } = await admin
-      .from("farewell_messages")
-      .select("id, title, duration_seconds, storage_path")
+    // Trustee must have accepted invite email first.
+    if (!trustee.confirmed_at || trustee.status === "pending") {
+      return NextResponse.json({ state: "trustee_not_confirmed" });
+    }
+
+    // 2. Per-trustee gate: must have an approved verification request (cert uploaded + admin-approved + not vetoed).
+    const { data: req } = await admin
+      .from("farewell_verification_requests")
+      .select("id, status, vault_unlock_approved, owner_vetoed_at, certificate_storage_path, submitted_at, unlock_window_expires_at, access_expires_at, trustee_email_notified_at")
       .eq("client_id", clientId)
-      .eq("vault_farewell_status", "unlocked");
+      .ilike("trustee_email", trusteeEmail)
+      .order("submitted_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
 
-    if (!messages || messages.length === 0) {
-      // Check if there are pending verification messages instead
-      const { data: pending } = await admin
-        .from("farewell_messages")
-        .select("id")
-        .eq("client_id", clientId)
-        .in("vault_farewell_status", ["locked", "pending_verification"])
-        .limit(1);
-
-      if (pending && pending.length > 0) {
-        return NextResponse.json({ state: "pending" });
-      }
-
-      return NextResponse.json({ state: "no_messages" });
+    if (!req) {
+      return NextResponse.json({ state: "no_request" });
+    }
+    if (req.owner_vetoed_at) {
+      return NextResponse.json({ state: "vetoed" });
+    }
+    if (req.status === "rejected") {
+      return NextResponse.json({ state: "rejected" });
+    }
+    if (req.status !== "approved" || !req.vault_unlock_approved) {
+      return NextResponse.json({ state: "pending_approval" });
     }
 
-    // 3. Generate signed URLs for all unlocked messages with video
-    const videoMessages = [];
-    for (const msg of messages) {
-      if (!msg.storage_path) continue;
-
-      const { data: signedUrl } = await admin.storage
-        .from("farewell-videos")
-        .createSignedUrl(msg.storage_path, 3600); // 1-hour expiry
-
-      if (signedUrl?.signedUrl) {
-        videoMessages.push({
-          id: msg.id,
-          title: msg.title,
-          duration_seconds: msg.duration_seconds,
-          signedUrl: signedUrl.signedUrl,
-        });
-      }
+    // Approved → do NOT return vault content from this endpoint. Issue a fresh
+    // trustee unlock token, email the sign-in link, and tell the UI to show a
+    // "check your email" state. Real vault content is only accessible via the
+    // /trustee/unlock OTP flow.
+    const now = Date.now();
+    const lastSentAt = req.trustee_email_notified_at ? new Date(req.trustee_email_notified_at).getTime() : 0;
+    if (now - lastSentAt < RESEND_COOLDOWN_MS) {
+      return NextResponse.json({
+        state: "email_sent",
+        cooldown: true,
+        trusteeEmail,
+      });
     }
 
-    if (videoMessages.length === 0) {
-      return NextResponse.json({ state: "no_messages" });
+    const token = issueTrusteeToken(req.id, trusteeEmail, ACCESS_TTL_SECONDS);
+    const accessExpiresAt = new Date(now + ACCESS_TTL_SECONDS * 1000);
+
+    await admin.from("farewell_verification_requests").update({
+      trustee_access_token_hash: hashToken(token),
+      access_expires_at: accessExpiresAt.toISOString(),
+      trustee_email_notified_at: new Date(now).toISOString(),
+    }).eq("id", req.id);
+
+    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+    const unlockUrl = `${baseUrl}/trustee/unlock?token=${token}`;
+
+    try {
+      await resend.emails.send({
+        from: "EstateVault <info@estatevault.us>",
+        to: trusteeEmail,
+        subject: "Your Vault Sign-In Link",
+        html: `<div style="font-family:Inter,sans-serif;max-width:520px;margin:0 auto;padding:32px;color:#2D2D2D;">
+          <h1 style="color:#1C3557;">Sign In to View the Vault</h1>
+          <p>You requested access to the vault associated with this email. Click the button below to verify your identity and open the vault.</p>
+          <div style="text-align:center;margin:32px 0;">
+            <a href="${unlockUrl}" style="background:#C9A84C;color:#fff;text-decoration:none;padding:14px 28px;border-radius:9999px;font-weight:600;">Open Vault</a>
+          </div>
+          <p style="color:#6b7280;font-size:13px;">This link expires on <strong>${accessExpiresAt.toUTCString()}</strong>. You will receive a one-time code by email to confirm your identity once you open the link.</p>
+          <p style="color:#9ca3af;font-size:11px;margin-top:24px;">If you didn't request this, you can ignore this email.</p>
+        </div>`,
+      });
+    } catch (e) {
+      console.error("[farewell/access] sign-in email failed:", e);
+      return NextResponse.json({ error: "Failed to send sign-in email" }, { status: 500 });
     }
 
-    // 4. Audit the access
-    await admin.from("audit_log").insert({
-      action: "farewell.trustee_accessed",
-      resource_type: "farewell_message",
-      resource_id: messages[0].id,
-      metadata: { client_id: clientId, trustee_email: trusteeEmail, messages_accessed: videoMessages.length },
+    await admin.from("trustee_access_audit").insert({
+      trustee_id: trustee.id,
+      client_id: clientId,
+      request_id: req.id,
+      action: "signin_email_sent",
+      metadata: { trustee_email: trusteeEmail },
     });
 
     return NextResponse.json({
-      state: "unlocked",
-      trusteeName: trustee.trustee_name,
-      messages: videoMessages,
+      state: "email_sent",
+      trusteeEmail,
     });
   } catch (error) {
     console.error("Farewell access error:", error);

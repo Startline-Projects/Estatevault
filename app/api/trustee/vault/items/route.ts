@@ -49,23 +49,47 @@ export async function GET(req: Request) {
     return res;
   }
 
-  const { data: items } = await db
+  // Load trustee scope. NULL = legacy full access.
+  const { data: trusteeRow } = await db
+    .from("vault_trustees")
+    .select("access_scope")
+    .eq("id", sess.trusteeId)
+    .maybeSingle();
+  const scope = trusteeRow?.access_scope as { categories?: string[]; documents?: boolean; farewell?: boolean } | null;
+  const allowAll = !scope;
+  const allowCategories = allowAll ? null : (scope.categories ?? []);
+  const allowDocuments = allowAll ? true : !!scope.documents;
+  const allowFarewell = allowAll ? true : !!scope.farewell;
+
+  let itemsQuery = db
     .from("vault_items")
     .select("id, category, ciphertext, nonce, enc_version, label_blind, storage_path, created_at, updated_at")
-    .eq("client_id", sess.clientId)
+    .eq("client_id", sess.clientId);
+  if (allowCategories !== null) {
+    if (allowCategories.length === 0) {
+      itemsQuery = itemsQuery.eq("id", "00000000-0000-0000-0000-000000000000"); // force empty
+    } else {
+      itemsQuery = itemsQuery.in("category", allowCategories);
+    }
+  }
+  const { data: items } = await itemsQuery
     .order("category", { ascending: true })
     .order("updated_at", { ascending: false });
 
-  const { data: docs } = await db
-    .from("documents")
-    .select("id, filename, mime_type, size_bytes, storage_path, ciphertext, nonce, enc_version, created_at")
-    .eq("client_id", sess.clientId)
-    .order("created_at", { ascending: false });
+  const { data: docs } = allowDocuments
+    ? await db
+        .from("documents")
+        .select("id, filename, mime_type, size_bytes, storage_path, ciphertext, nonce, enc_version, created_at")
+        .eq("client_id", sess.clientId)
+        .order("created_at", { ascending: false })
+    : { data: [] as never[] };
 
-  const { data: farewell } = await db
-    .from("farewell_messages")
-    .select("id, title, duration_seconds, storage_path, vault_farewell_status, created_at")
-    .eq("client_id", sess.clientId);
+  const { data: farewell } = allowFarewell
+    ? await db
+        .from("farewell_messages")
+        .select("id, title, duration_seconds, storage_path, storage_header, enc_version, vault_farewell_status, created_at")
+        .eq("client_id", sess.clientId)
+    : { data: [] as never[] };
 
   // Audit list view.
   const ua = req.headers.get("user-agent") || null;
@@ -116,6 +140,8 @@ export async function GET(req: Request) {
     farewell: (farewell || []).map(f => ({
       id: f.id, title: f.title, durationSeconds: f.duration_seconds,
       storagePath: f.storage_path, status: f.vault_farewell_status, createdAt: f.created_at,
+      storageHeader: maybeB64(f.storage_header),
+      encVersion: f.enc_version,
     })),
     sessionExpiresAt: new Date(fresh.expiresAt).toISOString(),
   });

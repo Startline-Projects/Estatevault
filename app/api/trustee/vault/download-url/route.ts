@@ -26,7 +26,7 @@ export async function GET(req: Request) {
   const type = searchParams.get("type");
   const id = searchParams.get("id");
   if (!type || !id) return NextResponse.json({ error: "missing params" }, { status: 400 });
-  if (type !== "document" && type !== "farewell") {
+  if (type !== "document" && type !== "farewell" && type !== "vault_item") {
     return NextResponse.json({ error: "bad type" }, { status: 400 });
   }
 
@@ -47,6 +47,11 @@ export async function GET(req: Request) {
   let bucket: string, storagePath: string | null = null;
   if (type === "document") {
     const { data } = await db.from("documents").select("storage_path, client_id").eq("id", id).single();
+    if (!data || data.client_id !== sess.clientId) return NextResponse.json({ error: "not found" }, { status: 404 });
+    bucket = "documents";
+    storagePath = data.storage_path;
+  } else if (type === "vault_item") {
+    const { data } = await db.from("vault_items").select("storage_path, client_id").eq("id", id).single();
     if (!data || data.client_id !== sess.clientId) return NextResponse.json({ error: "not found" }, { status: 404 });
     bucket = "documents";
     storagePath = data.storage_path;
@@ -71,7 +76,10 @@ export async function GET(req: Request) {
     trustee_id: sess.trusteeId,
     client_id: sess.clientId,
     request_id: sess.requestId,
-    action: type === "document" ? "download_document" : "download_farewell",
+    action:
+      type === "document" ? "download_document"
+      : type === "vault_item" ? "download_vault_item"
+      : "download_farewell",
     resource_type: type,
     resource_id: id,
     ip, user_agent: ua,

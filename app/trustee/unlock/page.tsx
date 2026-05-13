@@ -1,7 +1,7 @@
 "use client";
 
 import { Suspense, useEffect, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 
 function fromB64(s: string): Uint8Array {
   const bin = atob(s);
@@ -13,6 +13,7 @@ function fromB64(s: string): Uint8Array {
 type Stage = "init" | "sending" | "code" | "verifying" | "unlocked" | "error";
 
 function UnlockInner() {
+  const router = useRouter();
   const params = useSearchParams();
   const token = params.get("token") || "";
   const [stage, setStage] = useState<Stage>("init");
@@ -57,9 +58,16 @@ function UnlockInner() {
         accessExpiresAt: j.accessExpiresAt,
       }));
       setStage("unlocked");
-      window.location.href = "/trustee/vault";
+      router.push("/trustee/vault");
     } catch (e: any) {
-      setError(e?.message || "Vault reconstruction failed");
+      const raw = e?.message || "Vault reconstruction failed";
+      const friendly = /unwrap|decrypt|mac|aead|crypto_aead/i.test(raw)
+        ? "Vault keys could not be reconstructed. The owner may have rotated their passphrase or re-initialized trustee access after this trustee was added. Ask the owner to re-run trustee setup at /dashboard/vault/trustees/init, then request access again."
+        : /combine|share|degree|count/i.test(raw)
+        ? "Trustee shares are incompatible. Ask the owner to re-initialize trustee access at /dashboard/vault/trustees/init."
+        : raw;
+      console.error("[trustee-unlock] reconstruction failed:", raw);
+      setError(friendly);
       setStage("error");
     }
   }

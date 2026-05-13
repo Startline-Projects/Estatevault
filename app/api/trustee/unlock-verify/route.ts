@@ -101,11 +101,13 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "release key error" }, { status: 500 });
   }
 
-  // Burn token + OTP. Mark request as opened.
+  // Burn OTP only — keep the access token valid until access_expires_at (7d)
+  // so the trustee can re-enter from the email link if their session ends.
+  // Each new sign-in still requires a fresh OTP via /unlock-otp.
   await db.from("farewell_verification_requests").update({
-    trustee_access_token_hash: null,
     otp_email_hash: null,
     otp_email_expires_at: null,
+    otp_email_attempts: 0,
   }).eq("id", r.id);
 
   await db.from("trustee_access_audit").insert({
