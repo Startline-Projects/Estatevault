@@ -405,7 +405,7 @@ export default function TrusteeVaultPage() {
       const worker = getCryptoWorker();
       const plain = await worker.decryptBytes(cipher, INFO_FILES);
 
-      const blob = new Blob([plain.buffer.slice(plain.byteOffset, plain.byteOffset + plain.byteLength)]);
+      const blob = new Blob([plain.slice().buffer as ArrayBuffer]);
       const blobUrl = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = blobUrl;
