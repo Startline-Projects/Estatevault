@@ -57,7 +57,8 @@
       "Bash(TEST_MODE=1 TEST_ALLOW_SHARED_DB=1 npx tsx scripts/test-db-seed.ts)",
       "Bash(TEST_MODE=1 TEST_ALLOW_SHARED_DB=1 npx tsx --import ./scripts/_ws-polyfill.ts scripts/test-db-seed.ts)",
       "Bash(git restore *)",
-      "Bash(node *)"
+      "Bash(node *)",
+      "Bash(git push *)"
     ]
   }
 }
