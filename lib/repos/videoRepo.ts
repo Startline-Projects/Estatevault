@@ -62,6 +62,12 @@ function u32be(n: number): Uint8Array {
 // Encrypt full blob to framed ciphertext Blob (4B-BE length || ct per chunk).
 // Buffered to a Blob so PUT has a known Content-Length — Supabase Storage
 // rejects chunked/streaming PUTs with 400.
+function u8toAB(u: Uint8Array): ArrayBuffer {
+  const ab = new ArrayBuffer(u.byteLength);
+  new Uint8Array(ab).set(u);
+  return ab;
+}
+
 async function encryptToBlob(plaintext: Blob, sessionId: string): Promise<Blob> {
   const worker = getCryptoWorker();
   const reader = plaintext.stream().getReader();
@@ -82,15 +88,15 @@ async function encryptToBlob(plaintext: Blob, sessionId: string): Promise<Blob> 
     buffer = buffer.slice(take);
     const isFinal = done && buffer.length === 0;
     const ct = await worker.pushEncryptStream(sessionId, chunk, isFinal);
-    parts.push(u32be(ct.length));
-    parts.push(ct);
+    parts.push(u8toAB(u32be(ct.length)));
+    parts.push(u8toAB(ct));
     if (isFinal) break;
   }
 
   if (parts.length === 0) {
     const ct = await worker.pushEncryptStream(sessionId, new Uint8Array(0), true);
-    parts.push(u32be(ct.length));
-    parts.push(ct);
+    parts.push(u8toAB(u32be(ct.length)));
+    parts.push(u8toAB(ct));
   }
 
   return new Blob(parts, { type: "application/octet-stream" });

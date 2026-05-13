@@ -471,7 +471,11 @@ export default function TrusteeVaultPage() {
       await worker.endStream(sessionId).catch(() => undefined);
 
       const blob = new Blob(
-        plainChunks.map(u => u.buffer.slice(u.byteOffset, u.byteOffset + u.byteLength)),
+        plainChunks.map((u) => {
+          const ab = new ArrayBuffer(u.byteLength);
+          new Uint8Array(ab).set(u);
+          return ab;
+        }),
         { type: "video/mp4" },
       );
       if (videoUrl) URL.revokeObjectURL(videoUrl);
