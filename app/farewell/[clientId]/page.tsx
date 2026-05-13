@@ -212,7 +212,7 @@ export default function FarewellTrusteePage() {
               onClick={() => { setPageState("verify_access"); setError(""); }}
               className="mt-6 text-sm text-navy underline hover:text-gold"
             >
-              Didn't get it? Resend
+              Didn&apos;t get it? Resend
             </button>
           </div>
         </div>

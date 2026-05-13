@@ -60,7 +60,7 @@ export default function OwnerVetoPage() {
 
       {state.kind === "alreadyVetoed" && (
         <div style={{ marginTop: 24, padding: 16, background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: 8, color: "#166534" }}>
-          You've already cancelled this request. No further action needed.
+          You&apos;ve already cancelled this request. No further action needed.
         </div>
       )}
 
@@ -73,7 +73,7 @@ export default function OwnerVetoPage() {
             onClick={veto}
             style={{ marginTop: 24, width: "100%", background: "#C9A84C", color: "#fff", border: "none", padding: "16px 24px", borderRadius: 9999, fontSize: 16, fontWeight: 600, cursor: "pointer" }}
           >
-            I'm alive — Cancel Access
+            I&apos;m alive — Cancel Access
           </button>
         </>
       )}
