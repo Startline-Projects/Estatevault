@@ -74,6 +74,23 @@ export async function POST(request: Request) {
       }
 
       const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+
+      // Affiliate attribution for test orders, so dashboard reflects conversions
+      let testAffiliateId: string | null = null;
+      let testAffiliateCut = 0;
+      const testAffCookie = cookies().get(AFFILIATE_COOKIE)?.value;
+      if (testAffCookie) {
+        const { data: affRow } = await supabase
+          .from("affiliates")
+          .select("id, status")
+          .eq("id", testAffCookie)
+          .maybeSingle();
+        if (affRow && affRow.status === "active") {
+          testAffiliateId = affRow.id;
+          testAffiliateCut = calculateSplit("trust", "standard", { affiliate: true }).affiliateCut;
+        }
+      }
+
       const { data: order, error: orderErr } = await supabase.from("orders").insert({
         product_type: "trust",
         status: "generating",
@@ -81,6 +98,8 @@ export async function POST(request: Request) {
         ev_cut: 0,
         order_type: "test",
         expires_at: expiresAt,
+        affiliate_id: testAffiliateId,
+        affiliate_cut: testAffiliateCut,
         acknowledgment_signed: true,
         acknowledgment_signed_at: new Date().toISOString(),
         intake_data: intakeAnswers,
@@ -89,6 +108,24 @@ export async function POST(request: Request) {
       if (orderErr || !order) {
         console.error("Test order creation error:", orderErr);
         return NextResponse.json({ error: "Failed to create test order" }, { status: 500 });
+      }
+
+      // Mark the affiliate click as converted
+      if (testAffiliateId) {
+        const { data: latestClick } = await supabase
+          .from("affiliate_clicks")
+          .select("id")
+          .eq("affiliate_id", testAffiliateId)
+          .eq("converted", false)
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        if (latestClick) {
+          await supabase
+            .from("affiliate_clicks")
+            .update({ converted: true, order_id: order.id })
+            .eq("id", latestClick.id);
+        }
       }
 
       const { data: quizSession } = await supabase.from("quiz_sessions").insert({

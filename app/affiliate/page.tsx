@@ -1,8 +1,21 @@
+export const dynamic = "force-dynamic";
+
 import { headers } from "next/headers";
 import Link from "next/link";
+import { createServerClient } from "@supabase/ssr";
 import { createClient } from "@/lib/supabase/server";
 import AffiliateLinkCard from "@/components/AffiliateLinkCard";
 import AffiliateOnboardingResume from "@/components/AffiliateOnboardingResume";
+
+// Service-role client: the `orders` table has no RLS policy for affiliates,
+// so reads must bypass RLS. Scoped explicitly to the signed-in affiliate's id.
+function createAdminClient() {
+  return createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    { cookies: { getAll: () => [], setAll: () => {} } }
+  );
+}
 
 function fmtDollars(cents: number) {
   return `$${(cents / 100).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`;
@@ -45,8 +58,10 @@ export default async function AffiliateDashboardPage() {
   const proto = host.includes("localhost") ? "http" : "https";
   const referralLink = `${proto}://${host}/a/${affiliate.code}`;
 
+  const admin = createAdminClient();
+
   // Recent converted orders attributed to this affiliate
-  const { data: recentOrders } = await supabase
+  const { data: recentOrders } = await admin
     .from("orders")
     .select("id, product_type, amount_total, affiliate_cut, status, created_at")
     .eq("affiliate_id", affiliate.id)
@@ -54,12 +69,26 @@ export default async function AffiliateDashboardPage() {
     .limit(10);
 
   // Recent payouts
-  const { data: recentPayouts } = await supabase
+  const { data: recentPayouts } = await admin
     .from("affiliate_payouts")
     .select("id, amount_cents, status, paid_at, created_at, stripe_transfer_id")
     .eq("affiliate_id", affiliate.id)
     .order("created_at", { ascending: false })
     .limit(10);
+
+  // Derive conversions + earnings from attributed orders so test/free orders
+  // (which bypass the Stripe webhook) are still reflected on the dashboard.
+  const { data: attributedOrders } = await admin
+    .from("orders")
+    .select("affiliate_cut")
+    .eq("affiliate_id", affiliate.id)
+    .neq("status", "pending");
+
+  const conversions = attributedOrders?.length ?? 0;
+  const earnedCents = (attributedOrders ?? []).reduce(
+    (sum, o) => sum + (o.affiliate_cut || 0),
+    0
+  );
 
   const onboardingPending =
     affiliate.status !== "active" || !affiliate.stripe_onboarding_complete;
@@ -91,11 +120,11 @@ export default async function AffiliateDashboardPage() {
         </div>
         <div className="bg-white rounded-xl border border-gray-200 p-6">
           <p className="text-xs font-semibold text-charcoal/60 uppercase tracking-wider">Conversions</p>
-          <p className="mt-2 text-3xl font-bold text-navy">{affiliate.total_conversions}</p>
+          <p className="mt-2 text-3xl font-bold text-navy">{conversions}</p>
         </div>
         <div className="bg-white rounded-xl border border-gray-200 p-6">
           <p className="text-xs font-semibold text-charcoal/60 uppercase tracking-wider">Total Earned</p>
-          <p className="mt-2 text-3xl font-bold text-gold">{fmtDollars(affiliate.total_earned_cents)}</p>
+          <p className="mt-2 text-3xl font-bold text-gold">{fmtDollars(earnedCents)}</p>
         </div>
       </div>
 

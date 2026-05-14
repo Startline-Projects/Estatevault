@@ -58,7 +58,9 @@
       "Bash(TEST_MODE=1 TEST_ALLOW_SHARED_DB=1 npx tsx --import ./scripts/_ws-polyfill.ts scripts/test-db-seed.ts)",
       "Bash(git restore *)",
       "Bash(node *)",
-      "Bash(git push *)"
+      "Bash(git push *)",
+      "Bash(bash /tmp/tg_wrap.sh)",
+      "Bash(\"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome\" --headless --disable-gpu --no-pdf-header-footer --print-to-pdf=\"/Users/xamir/Desktop/Glo Staffing/Estatevault/TESTER_GUIDE.pdf\" \"file:///tmp/tg_full.html\")"
     ]
   }
 }

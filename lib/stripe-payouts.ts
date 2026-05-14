@@ -79,6 +79,28 @@ export async function transferToAffiliate(
   return transfer
 }
 
+// Batch payout: one transfer covering multiple attributed orders at once.
+// Used by the admin affiliate dashboard "Pay Out" action.
+export async function transferToAffiliateBatch(
+  affiliateStripeAccountId: string,
+  amount: number,
+  affiliateId: string,
+  orderIds: string[]
+) {
+  if (!affiliateStripeAccountId || amount <= 0) return null
+  const transfer = await stripe.transfers.create({
+    amount,
+    currency: 'usd',
+    destination: affiliateStripeAccountId,
+    metadata: {
+      affiliate_id: affiliateId,
+      payout_type: 'affiliate_batch',
+      order_count: String(orderIds.length),
+    },
+  })
+  return transfer
+}
+
 export async function createAffiliateConnectAccount(email: string, affiliateId: string) {
   const account = await stripe.accounts.create({
     type: 'express',

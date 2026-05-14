@@ -18,7 +18,12 @@ export async function GET(
 ) {
   const code = params.code;
   const url = new URL(request.url);
-  const origin = `${url.protocol}//${url.host}`;
+  // Use the Host header so the redirect (and cookie) stay on the host the
+  // visitor actually browses — request.url reflects the bind host in dev/proxy.
+  const host = request.headers.get("host") || url.host;
+  const proto =
+    request.headers.get("x-forwarded-proto") || url.protocol.replace(":", "");
+  const origin = `${proto}://${host}`;
   const redirectUrl = `${origin}/`;
 
   if (!code || code.length > 32) {
