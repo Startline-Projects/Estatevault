@@ -164,6 +164,8 @@ export default function MarketingPage() {
   const [expandScript, setExpandScript] = useState(false);
   const [previewEmail, setPreviewEmail] = useState<number | null>(null);
   const [copied, setCopied] = useState("");
+  const [materials, setMaterials] = useState<{ id: string; title: string; description: string | null; category: string; platform?: string | null; url: string; isGlobal?: boolean }[]>([]);
+  const [materialsLoading, setMaterialsLoading] = useState(true);
   const imageRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   useEffect(() => {
@@ -179,6 +181,21 @@ export default function MarketingPage() {
       }
     }
     load();
+  }, []);
+
+  useEffect(() => {
+    async function loadMaterials() {
+      setMaterialsLoading(true);
+      try {
+        const res = await fetch("/api/marketing/materials");
+        if (!res.ok) return;
+        const json = await res.json();
+        setMaterials(json.materials || []);
+      } catch {} finally {
+        setMaterialsLoading(false);
+      }
+    }
+    loadMaterials();
   }, []);
 
   function sub(text: string) { return partner ? substituteTokens(text, partner) : text; }
@@ -206,6 +223,16 @@ export default function MarketingPage() {
   }
 
   const isNorthwood = !!partner?.businessUrl?.toLowerCase().includes("northwoodwealthadvisors");
+  const accent = partner?.accentColor || "#C9A84C";
+  const accentDark = (() => {
+    const hex = accent.replace("#", "");
+    if (hex.length !== 6) return accent;
+    const r = Math.max(0, parseInt(hex.slice(0, 2), 16) - 30);
+    const g = Math.max(0, parseInt(hex.slice(2, 4), 16) - 30);
+    const b = Math.max(0, parseInt(hex.slice(4, 6), 16) - 30);
+    return `#${[r, g, b].map((v) => v.toString(16).padStart(2, "0")).join("")}`;
+  })();
+  const heroGradient = `linear-gradient(135deg, ${accent} 0%, ${accentDark} 100%)`;
   const showScripts = tab === "All" || tab === "Scripts";
   const showEmail = tab === "All" || tab === "Email";
   const showSocial = tab === "All" || tab === "Social Media";
@@ -213,34 +240,76 @@ export default function MarketingPage() {
   const showPres = tab === "All" || tab === "Presentations";
 
   return (
-    <div className="max-w-5xl">
-      <h1 className="text-2xl font-bold text-navy">Marketing Tools</h1>
-      <p className="mt-1 text-sm text-charcoal/60">Everything you need to introduce Legacy Protection to your clients. All materials are pre-branded for you, download and use immediately.</p>
+    <div className="max-w-6xl">
+      <style>{`
+        .mkt-themed .bg-gold { background-color: ${accent} !important; }
+        .mkt-themed .text-gold { color: ${accent} !important; }
+        .mkt-themed .border-gold { border-color: ${accent} !important; }
+        .mkt-themed .hover\\:bg-gold\\/90:hover { background-color: ${accentDark} !important; }
+        .mkt-themed .bg-gold\\/15 { background-color: ${accent}26 !important; }
+        .mkt-themed .bg-gold\\/5 { background-color: ${accent}0D !important; }
+        .mkt-themed .hover\\:text-gold\\/80:hover { color: ${accentDark} !important; }
+      `}</style>
+      <div className="mkt-themed">
+      {/* HERO */}
+      <div className="relative overflow-hidden rounded-3xl p-8 md:p-10 text-white" style={{ background: heroGradient }}>
+        <div className="pointer-events-none absolute -top-24 -right-20 h-72 w-72 rounded-full bg-white/10 blur-3xl" />
+        <div className="pointer-events-none absolute -bottom-24 -left-16 h-72 w-72 rounded-full bg-black/10 blur-3xl" />
+        <div className="pointer-events-none absolute inset-0 opacity-[0.06]" style={{ backgroundImage: "radial-gradient(circle at 1px 1px, white 1px, transparent 0)", backgroundSize: "20px 20px" }} />
+        <div className="relative flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+          <div className="flex items-center gap-4">
+            {partner?.logoUrl && (
+              <div className="h-14 w-14 rounded-2xl bg-white/15 backdrop-blur-sm ring-1 ring-white/25 flex items-center justify-center overflow-hidden">
+                <img src={partner.logoUrl} alt={partner.companyName} className="h-10 w-10 object-contain" />
+              </div>
+            )}
+            <div>
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-white/20 backdrop-blur-sm px-3 py-1 text-[10px] font-bold uppercase tracking-[0.16em]">
+                Marketing Hub
+              </span>
+              <h1 className="mt-2 text-3xl md:text-4xl font-bold tracking-tight">Grow your practice.</h1>
+              <p className="mt-2 max-w-xl text-sm md:text-base text-white/85 leading-relaxed">
+                Pre-branded scripts, emails, social posts, and print materials. Built for {partner?.companyName || "your firm"}. Download and use immediately.
+              </p>
+            </div>
+          </div>
+          <div className="flex gap-3 md:flex-col md:items-end">
+            <div className="rounded-2xl bg-white/15 backdrop-blur-sm ring-1 ring-white/20 px-4 py-3 text-center">
+              <p className="text-2xl font-bold">{materials.length + EMAIL_TEMPLATES.length + Object.values(SOCIAL_POSTS).flat().length + 4}</p>
+              <p className="text-[10px] uppercase tracking-wider text-white/75 mt-0.5">Assets</p>
+            </div>
+          </div>
+        </div>
+      </div>
 
       {!certified && (
-        <div className="mt-4 rounded-xl bg-amber-50 border border-amber-200 p-4 flex items-center justify-between">
+        <div className="mt-5 rounded-2xl bg-amber-50 border border-amber-200 p-4 flex items-center justify-between">
           <p className="text-sm text-amber-800">⚠ Complete your certification training to unlock all marketing materials. The Compliance Script Card is available now.</p>
           <Link href="/pro/training" className="rounded-full bg-amber-600 px-4 py-1.5 text-xs font-semibold text-white hover:bg-amber-700 shrink-0 ml-4">Complete Certification →</Link>
         </div>
       )}
 
       {/* Tabs */}
-      <div className="mt-6 flex gap-2 overflow-x-auto pb-2">
-        {TABS.map((t) => {
-          const selected = tab === t;
-          const selectedCls = isNorthwood
-            ? "bg-[#4D714C] text-white shadow-[0_4px_12px_-4px_rgba(77,113,76,0.45)]"
-            : "bg-navy text-white";
-          return (
-            <button
-              key={t}
-              onClick={() => setTab(t)}
-              className={`rounded-full px-4 py-1.5 text-sm font-medium whitespace-nowrap transition-all ${selected ? selectedCls : "bg-gray-100 text-charcoal/60 hover:bg-gray-200"}`}
-            >
-              {t}
-            </button>
-          );
-        })}
+      <div className="mt-6 sticky top-0 z-10 -mx-2 px-2 py-2 bg-white/80 backdrop-blur-md rounded-2xl">
+        <div className="flex gap-2 overflow-x-auto">
+          {TABS.map((t) => {
+            const selected = tab === t;
+            return (
+              <button
+                key={t}
+                onClick={() => setTab(t)}
+                className="rounded-full px-4 py-2 text-sm font-medium whitespace-nowrap transition-all"
+                style={selected
+                  ? { background: accent, color: "#fff", boxShadow: `0 4px 14px -4px ${accent}80` }
+                  : { background: "#f3f4f6", color: "#6b7280" }}
+                onMouseEnter={(e) => { if (!selected) e.currentTarget.style.background = "#e5e7eb"; }}
+                onMouseLeave={(e) => { if (!selected) e.currentTarget.style.background = "#f3f4f6"; }}
+              >
+                {t}
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       {/* SCRIPTS */}
@@ -248,37 +317,33 @@ export default function MarketingPage() {
         <div className="mt-8">
           <h2 className="text-lg font-bold text-navy">Compliance Script Card</h2>
           <div
-            className={`mt-3 relative overflow-hidden rounded-2xl p-7 shadow-[0_12px_32px_-12px_rgba(77,113,76,0.4)] ${isNorthwood ? "" : "border-2 border-gold bg-gold/5"}`}
-            style={isNorthwood ? { background: "linear-gradient(135deg, #4D714C 0%, #3f5e3e 60%, #2f4a30 100%)" } : undefined}
+            className="mt-3 relative overflow-hidden rounded-2xl p-7 text-white"
+            style={{ background: heroGradient, boxShadow: `0 12px 32px -12px ${accent}66` }}
           >
-            {isNorthwood && (
-              <>
-                <div className="pointer-events-none absolute -top-16 -right-16 h-56 w-56 rounded-full bg-white/10 blur-3xl" />
-                <div className="pointer-events-none absolute -bottom-20 -left-10 h-48 w-48 rounded-full bg-[#c9a84c]/15 blur-3xl" />
-                <div className="pointer-events-none absolute inset-0 opacity-[0.05]" style={{ backgroundImage: "radial-gradient(circle at 1px 1px, white 1px, transparent 0)", backgroundSize: "18px 18px" }} />
-              </>
-            )}
+            <div className="pointer-events-none absolute -top-16 -right-16 h-56 w-56 rounded-full bg-white/10 blur-3xl" />
+            <div className="pointer-events-none absolute -bottom-20 -left-10 h-48 w-48 rounded-full bg-black/10 blur-3xl" />
+            <div className="pointer-events-none absolute inset-0 opacity-[0.05]" style={{ backgroundImage: "radial-gradient(circle at 1px 1px, white 1px, transparent 0)", backgroundSize: "18px 18px" }} />
             <div className="relative">
               <div className="flex items-center gap-3 mb-4">
-                <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-[0.16em] ${isNorthwood ? "bg-white text-[#4D714C]" : "bg-gold text-white"}`}>
-                  <span className={`inline-block h-1.5 w-1.5 rounded-full ${isNorthwood ? "bg-[#4D714C]" : "bg-white"} animate-pulse`} />
+                <span className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-[0.16em] bg-white" style={{ color: accent }}>
+                  <span className="inline-block h-1.5 w-1.5 rounded-full animate-pulse" style={{ background: accent }} />
                   Start Here
                 </span>
-                <span className={`text-xs ${isNorthwood ? "text-white/75" : "text-charcoal/50"}`}>Always available · No certification required</span>
+                <span className="text-xs text-white/75">Always available · No certification required</span>
               </div>
               <div className="flex items-start gap-4">
-                <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl ${isNorthwood ? "bg-white/15 backdrop-blur-sm ring-1 ring-white/25" : "bg-gold/15"}`}>
-                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={isNorthwood ? "#fff" : "#C9A84C"} strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-white/15 backdrop-blur-sm ring-1 ring-white/25">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
                     <path d="M14 2v6h6M9 13h6M9 17h4" />
                   </svg>
                 </div>
                 <div className="min-w-0 flex-1">
-                  <h3 className={`text-lg font-bold tracking-tight ${isNorthwood ? "text-white" : "text-navy"}`}>Compliance Script Card</h3>
-                  <p className={`mt-1 text-sm leading-relaxed ${isNorthwood ? "text-white/80" : "text-charcoal/60"}`}>
+                  <h3 className="text-lg font-bold tracking-tight text-white">Compliance Script Card</h3>
+                  <p className="mt-1 text-sm leading-relaxed text-white/80">
                     Word-for-word approved scripts for introducing estate planning. What to say. What NOT to say. Print and keep at your desk.
                   </p>
-                  <div className={`mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] ${isNorthwood ? "text-white/70" : "text-charcoal/55"}`}>
+                  <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-white/70">
                     <span className="inline-flex items-center gap-1.5">✓ Compliance-reviewed</span>
                     <span className="inline-flex items-center gap-1.5">✓ Print-ready PDF</span>
                     <span className="inline-flex items-center gap-1.5">✓ Updated 2026</span>
@@ -287,7 +352,7 @@ export default function MarketingPage() {
               </div>
               <button
                 onClick={() => setExpandScript(!expandScript)}
-                className={`mt-4 inline-flex items-center gap-1 text-sm font-medium transition-colors ${isNorthwood ? "text-white/90 hover:text-white" : "text-gold hover:text-gold/80"}`}
+                className="mt-4 inline-flex items-center gap-1 text-sm font-medium text-white/90 hover:text-white transition-colors"
               >
                 {expandScript ? "Hide Preview" : "Show Preview"}
                 <span className={`inline-block transition-transform ${expandScript ? "rotate-180" : ""}`}>▾</span>
@@ -298,7 +363,8 @@ export default function MarketingPage() {
               <div className="mt-5 flex flex-wrap gap-3">
                 <a
                   href={`/api/marketing/script-card`}
-                  className={`group inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold transition-all hover:-translate-y-0.5 ${isNorthwood ? "bg-white text-[#4D714C] hover:bg-white/95 shadow-[0_6px_18px_-6px_rgba(0,0,0,0.35)]" : "bg-gold text-white hover:bg-gold/90"}`}
+                  className="group inline-flex items-center gap-2 rounded-full bg-white px-5 py-2.5 text-sm font-semibold transition-all hover:-translate-y-0.5 shadow-[0_6px_18px_-6px_rgba(0,0,0,0.35)]"
+                  style={{ color: accent }}
                 >
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3" />
@@ -333,12 +399,93 @@ export default function MarketingPage() {
       )}
 
       {/* SOCIAL MEDIA */}
-      {showSocial && (
+      <div className={showSocial ? "" : "hidden"}>
+      {true && (
         <div className="mt-8">
           <h2 className="text-lg font-bold text-navy">Social Media Posts</h2>
-          {(["linkedin", "facebook", "instagram"] as const).map((platform) => (
+          {(() => {
+            const otherSocial = materials.filter((m) => m.category === "social" && (m.platform === "other" || (!m.platform && !["linkedin", "facebook", "instagram"].some((p) => m.title.toLowerCase().includes(p)))));
+            if (otherSocial.length === 0) return null;
+            return (
+              <div className="mt-4">
+                <h3 className="text-sm font-semibold text-navy">Other</h3>
+                <div className="mt-2 grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {otherSocial.map((m) => (
+                    <div key={m.id} className="group rounded-xl bg-white border border-gray-200 overflow-hidden hover:shadow-md transition-shadow">
+                      <button type="button" onClick={() => window.open(m.url, "_blank")} className="block w-full bg-gray-50 relative overflow-hidden" style={{ aspectRatio: "1/1", maxHeight: 220 }}>
+                        <iframe src={`${m.url}#toolbar=0&navpanes=0&scrollbar=0&view=FitH`} className="absolute inset-0 w-full h-full pointer-events-none" title={m.title} />
+                      </button>
+                      <div className="p-3">
+                        <div className="flex items-start justify-between gap-2">
+                          <h4 className="text-xs font-semibold text-navy">{m.title}</h4>
+                          {m.isGlobal && <span className="rounded-full bg-gold/15 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-gold shrink-0">Global</span>}
+                        </div>
+                        {m.description && <p className="mt-1 text-xs text-charcoal/50 line-clamp-2">{m.description}</p>}
+                        <div className="mt-2 flex gap-2">
+                          <button onClick={() => window.open(m.url, "_blank")} className="flex-1 rounded-full border border-gray-200 px-2 py-1 text-xs font-medium text-charcoal/70 hover:bg-gray-50">Preview</button>
+                          <a href={m.url} download className="flex-1 rounded-full bg-gold px-2 py-1 text-center text-xs font-semibold text-white hover:bg-gold/90">Download</a>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })()}
+          {(["linkedin", "facebook", "instagram"] as const).map((platform) => {
+            const platformPdfs = materials.filter((m) => m.category === "social" && (m.platform === platform || (!m.platform && m.title.toLowerCase().includes(platform))));
+            return (
             <div key={platform} className="mt-4">
               <h3 className="text-sm font-semibold text-navy capitalize">{platform}</h3>
+              {materialsLoading && (
+                <div className="mt-2 grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {Array.from({ length: 3 }).map((_, i) => (
+                    <div key={i} className="rounded-xl bg-white border border-gray-200 overflow-hidden">
+                      <div className="aspect-square bg-gray-100 animate-pulse" />
+                      <div className="p-3 space-y-2">
+                        <div className="h-3 w-2/3 bg-gray-100 rounded animate-pulse" />
+                        <div className="h-2 w-full bg-gray-100 rounded animate-pulse" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {!materialsLoading && platformPdfs.length > 0 && (
+                <div className="mt-2 grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {platformPdfs.map((m) => (
+                    <div key={m.id} className="group rounded-xl bg-white border border-gray-200 overflow-hidden hover:shadow-md transition-shadow">
+                      <button
+                        type="button"
+                        onClick={() => window.open(m.url, "_blank")}
+                        className="block w-full bg-gray-50 relative overflow-hidden"
+                        style={{ aspectRatio: "1/1", maxHeight: 220 }}
+                        title="Open preview"
+                      >
+                        <iframe
+                          src={`${m.url}#toolbar=0&navpanes=0&scrollbar=0&view=FitH`}
+                          className="absolute inset-0 w-full h-full pointer-events-none"
+                          title={m.title}
+                        />
+                      </button>
+                      <div className="p-3">
+                        <div className="flex items-start justify-between gap-2">
+                          <h4 className="text-xs font-semibold text-navy">{m.title}</h4>
+                          {m.isGlobal && <span className="rounded-full bg-gold/15 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-gold shrink-0">Global</span>}
+                        </div>
+                        {m.description && <p className="mt-1 text-xs text-charcoal/50 line-clamp-2">{m.description}</p>}
+                        <div className="mt-2 flex gap-2">
+                          <button onClick={() => window.open(m.url, "_blank")} className="flex-1 rounded-full border border-gray-200 px-2 py-1 text-xs font-medium text-charcoal/70 hover:bg-gray-50">
+                            Preview
+                          </button>
+                          <a href={m.url} download className="flex-1 rounded-full bg-gold px-2 py-1 text-center text-xs font-semibold text-white hover:bg-gold/90">
+                            Download
+                          </a>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
               <div className="mt-2 grid grid-cols-1 md:grid-cols-3 gap-4">
                 {SOCIAL_POSTS[platform].map((post, i) => {
                   const refKey = `${platform}-${i}`;
@@ -367,38 +514,70 @@ export default function MarketingPage() {
                 })}
               </div>
             </div>
-          ))}
+            );
+          })}
         </div>
       )}
+      </div>
 
       {/* PRINT MATERIALS */}
-      {showPrint && (
+      <div className={showPrint ? "" : "hidden"}>
+      {true && (
         <div className="mt-8">
           <h2 className="text-lg font-bold text-navy">Print Materials</h2>
           <div className="mt-3 grid grid-cols-1 md:grid-cols-3 gap-4">
-            {[
-              { title: "Client Flyer", desc: "8.5x11 flyer for waiting rooms and client meetings.", href: "/api/marketing/flyer" },
-              { title: "Trifold Brochure", desc: "Professional brochure for client packets.", href: "/api/marketing/flyer" },
-              { title: "Business Card Insert", desc: "3.5x2 card to include with business cards.", href: "/api/marketing/flyer" },
-            ].map((asset) => (
-              <div key={asset.title} className="rounded-xl bg-white border border-gray-200 p-5">
-                <div className="h-32 bg-gray-50 rounded-lg flex items-center justify-center mb-4">
-                  <div className="text-center">
-                    <p className="text-xs font-bold text-navy">{partner?.companyName || "Company"}</p>
-                    <p className="text-xs text-charcoal/50 mt-1">Estate Planning</p>
-                    <p className="text-xs mt-2" style={{ color: partner?.accentColor || "#C9A84C" }}>$400 / $600</p>
+            {materialsLoading && Array.from({ length: 3 }).map((_, i) => (
+              <div key={`sk-${i}`} className="rounded-xl bg-white border border-gray-200 overflow-hidden">
+                <div className="h-48 bg-gray-100 animate-pulse" />
+                <div className="p-4 space-y-2">
+                  <div className="h-3 w-2/3 bg-gray-100 rounded animate-pulse" />
+                  <div className="h-2 w-full bg-gray-100 rounded animate-pulse" />
+                  <div className="mt-3 flex gap-2">
+                    <div className="h-7 flex-1 bg-gray-100 rounded-full animate-pulse" />
+                    <div className="h-7 flex-1 bg-gray-100 rounded-full animate-pulse" />
                   </div>
                 </div>
-                <h3 className="text-sm font-bold text-navy">{asset.title}</h3>
-                <p className="mt-1 text-xs text-charcoal/50">{asset.desc}</p>
-                <LockButton onClick={() => { window.open(asset.href, "_blank"); }} className="mt-3 rounded-full bg-gold px-4 py-1.5 text-xs font-semibold text-white hover:bg-gold/90">
-                  Download PDF
-                </LockButton>
               </div>
             ))}
+            {!materialsLoading && materials.filter((m) => m.category === "print").map((m) => (
+              <div key={m.id} className="group rounded-xl bg-white border border-gray-200 overflow-hidden hover:shadow-md transition-shadow">
+                <button
+                  type="button"
+                  onClick={() => window.open(m.url, "_blank")}
+                  className="block w-full h-48 bg-gray-50 relative overflow-hidden"
+                  title="Open preview"
+                >
+                  <iframe
+                    src={`${m.url}#toolbar=0&navpanes=0&scrollbar=0&view=FitH`}
+                    className="absolute inset-0 w-full h-full pointer-events-none"
+                    title={m.title}
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                </button>
+                <div className="p-4">
+                  <div className="flex items-start justify-between gap-2">
+                    <h3 className="text-sm font-bold text-navy">{m.title}</h3>
+                    {m.isGlobal && <span className="rounded-full bg-gold/15 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-gold shrink-0">Global</span>}
+                  </div>
+                  {m.description && <p className="mt-1 text-xs text-charcoal/50">{m.description}</p>}
+                  <div className="mt-3 flex gap-2">
+                    <button onClick={() => window.open(m.url, "_blank")} className="flex-1 rounded-full border border-gray-200 px-3 py-1.5 text-xs font-medium text-charcoal/70 hover:bg-gray-50">
+                      Preview
+                    </button>
+                    <a href={m.url} download className="flex-1 rounded-full bg-gold px-3 py-1.5 text-center text-xs font-semibold text-white hover:bg-gold/90">
+                      Download
+                    </a>
+                  </div>
+                </div>
+              </div>
+            ))}
+            {!materialsLoading && materials.filter((m) => m.category === "print").length === 0 && (
+              <p className="col-span-full text-sm text-charcoal/50">No print materials available yet.</p>
+            )}
           </div>
         </div>
       )}
+      </div>
 
       {/* PRESENTATIONS */}
       {showPres && (
@@ -459,6 +638,7 @@ export default function MarketingPage() {
           </div>
         </div>
       )}
+      </div>
     </div>
   );
 }
