@@ -6,6 +6,9 @@
 
 # testing
 /coverage
+/playwright-report
+/test-results
+/.last-run-id
 
 # next.js
 /.next/
