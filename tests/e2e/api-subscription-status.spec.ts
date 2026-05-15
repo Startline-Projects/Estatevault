@@ -26,7 +26,7 @@ test.describe("/api/partner/revenue", () => {
     expect([301, 302, 307, 401, 403]).toContain(res.status());
   });
 
-  test("returns earnings shape for partner", async ({ page }) => {
+  test("returns earnings shape for partner", { tag: "@pro" }, async ({ page }) => {
     await loginAs(page, TEST_USERS.partnerBasic.email, TEST_USERS.partnerBasic.password);
     const res = await page.request.get("/api/partner/revenue");
     expect(res.ok()).toBeTruthy();

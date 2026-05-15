@@ -24,6 +24,10 @@ export async function loginAs(page: Page, email: string, password: string) {
   await page.getByRole("button", { name: /sign in/i }).click();
   // Wait for any post-login route (router.push fires per user_type)
   await page.waitForURL((u) => !u.pathname.startsWith("/auth/login"), { timeout: 15_000 });
+  // Park on a blank page so the test's next page.goto() is always a real
+  // navigation that returns a response — goto() returns null when navigating
+  // to the URL the page already sits on (e.g. login landed us on /dashboard).
+  await page.goto("about:blank");
 }
 
 export async function logout(page: Page) {

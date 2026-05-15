@@ -2,7 +2,7 @@ import { test, expect } from "@playwright/test";
 import { loginAs } from "./helpers/auth";
 import { TEST_USERS } from "../fixtures/users";
 
-test.describe("partner onboarding", () => {
+test.describe("partner onboarding", { tag: "@pro" }, () => {
   test("onboarding step-1 renders for fresh partner", async ({ page }) => {
     await page.goto("/pro/onboarding/step-1");
     // Should either show onboarding content or redirect to login

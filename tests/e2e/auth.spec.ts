@@ -17,7 +17,7 @@ test.describe("auth — UI flows", () => {
     await expect(page.locator("text=/invalid|incorrect|credentials/i").first()).toBeVisible({ timeout: 10_000 });
   });
 
-  test("partner login routes to /pro/dashboard or onboarding", async ({ page }) => {
+  test("partner login routes to /pro/dashboard or onboarding", { tag: "@pro" }, async ({ page }) => {
     await page.goto("/auth/login");
     await page.getByLabel("Email").fill(TEST_USERS.partnerBasic.email);
     await page.getByLabel("Password").fill(TEST_USERS.partnerBasic.password);

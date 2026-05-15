@@ -13,20 +13,20 @@ test.describe("admin / sales routes — access control", () => {
     await expect(page).toHaveURL(/\/(auth\/login|login|pro\/login)/, { timeout: 10_000 });
   });
 
-  test("sales rep can access /pro/sales dashboard", async ({ page }) => {
+  test("sales rep can access /pro/sales dashboard", { tag: "@sales" }, async ({ page }) => {
     await loginAs(page, TEST_USERS.salesRep.email, TEST_USERS.salesRep.password);
     const res = await page.goto("/pro/sales");
     expect(res?.status()).toBeLessThan(400);
     await expect(page).not.toHaveURL(/\/auth\/login/);
   });
 
-  test("sales rep sees partners list", async ({ page }) => {
+  test("sales rep sees partners list", { tag: "@sales" }, async ({ page }) => {
     await loginAs(page, TEST_USERS.salesRep.email, TEST_USERS.salesRep.password);
     const res = await page.goto("/pro/sales/partners");
     expect(res?.status()).toBeLessThan(400);
   });
 
-  test("sales rep sees pipeline", async ({ page }) => {
+  test("sales rep sees pipeline", { tag: "@sales" }, async ({ page }) => {
     await loginAs(page, TEST_USERS.salesRep.email, TEST_USERS.salesRep.password);
     const res = await page.goto("/pro/sales/pipeline");
     expect(res?.status()).toBeLessThan(400);
@@ -50,7 +50,7 @@ test.describe("sales API routes", () => {
     expect([401, 403, 307]).toContain(res.status());
   });
 
-  test("authenticated sales rep can fetch reps list", async ({ page }) => {
+  test("authenticated sales rep can fetch reps list", { tag: "@sales" }, async ({ page }) => {
     await loginAs(page, TEST_USERS.salesRep.email, TEST_USERS.salesRep.password);
     const res = await page.request.get("/api/sales/reps");
     // 200 or 403 (if admin-only) — not 307 unauth redirect

@@ -38,14 +38,14 @@ test.describe("role-based access control", () => {
     await expect(page).not.toHaveURL(/\/auth\/login/);
   });
 
-  test("partner can access /pro/dashboard", async ({ page }) => {
+  test("partner can access /pro/dashboard", { tag: "@pro" }, async ({ page }) => {
     await loginAs(page, TEST_USERS.partnerBasic.email, TEST_USERS.partnerBasic.password);
     const res = await page.goto("/pro/dashboard");
     expect(res?.status()).toBeLessThan(400);
     await expect(page).not.toHaveURL(/\/auth\/login/);
   });
 
-  test("partner accessing /pro/sales does not see sales-only data", async ({ page }) => {
+  test("partner accessing /pro/sales does not see sales-only data", { tag: "@pro" }, async ({ page }) => {
     await loginAs(page, TEST_USERS.partnerBasic.email, TEST_USERS.partnerBasic.password);
     await page.goto("/pro/sales");
     // Route currently lacks role guard — page loads but should not expose other partners' data
@@ -54,7 +54,7 @@ test.describe("role-based access control", () => {
     expect(url).toBeTruthy(); // smoke — page does not crash
   });
 
-  test("sales rep can access /pro/sales", async ({ page }) => {
+  test("sales rep can access /pro/sales", { tag: "@sales" }, async ({ page }) => {
     await loginAs(page, TEST_USERS.salesRep.email, TEST_USERS.salesRep.password);
     const res = await page.goto("/pro/sales");
     expect(res?.status()).toBeLessThan(400);

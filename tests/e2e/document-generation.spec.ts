@@ -38,7 +38,7 @@ test.describe("document generation API", () => {
     await expect(page).not.toHaveURL(/\/auth\/login/);
   });
 
-  test("partner documents page loads", async ({ page }) => {
+  test("partner documents page loads", { tag: "@pro" }, async ({ page }) => {
     await loginAs(page, TEST_USERS.partnerBasic.email, TEST_USERS.partnerBasic.password);
     const res = await page.goto("/pro/documents");
     expect(res?.status()).toBeLessThan(400);
