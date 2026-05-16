@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
@@ -33,6 +33,7 @@ const ALL_POA_POWERS = [
 ];
 
 const relOptions = ["Spouse/Partner", "Adult Child", "Sibling", "Parent", "Friend", "Other"];
+const maritalOptions = ["Single", "Married", "Domestic partnership", "Divorced", "Widowed"];
 const benRelOptions = ["Spouse/Partner", "Child", "Parent", "Sibling", "Other"];
 const execRelOptions = ["Spouse/Partner", "Adult Child", "Sibling", "Parent", "Other"];
 
@@ -48,6 +49,23 @@ export default function TrustPage() {
   const [customAgeMode, setCustomAgeMode] = useState(false);
   const [customAgeError, setCustomAgeError] = useState("");
   const hasMinorChildren = intake.hasMinorChildren === "Yes";
+  const [openReviewSections, setOpenReviewSections] = useState<Record<string, boolean>>({
+    residency: false,
+    personal: false,
+    trust: false,
+    beneficiaries: false,
+    guardian: false,
+    assets: false,
+    pourover: false,
+    poa: false,
+    healthcare: false,
+    gifts: false,
+  });
+  const maxDob = (() => {
+    const d = new Date();
+    d.setFullYear(d.getFullYear() - 18);
+    return d.toISOString().slice(0, 10);
+  })();
 
   const partialNamesRef = useRef<Set<string>>(new Set());
   const [hasPartialName, setHasPartialName] = useState(false);
@@ -99,9 +117,9 @@ export default function TrustPage() {
   }, [update]);
 
   // Card IDs
-  type CardId = "about" | "trustee" | "beneficiaries" | "guardian" | "assets" | "pourover" | "poa" | "healthcare" | "gifts" | "review";
+  type CardId = "residency" | "about" | "trustee" | "beneficiaries" | "guardian" | "assets" | "pourover" | "poa" | "healthcare" | "gifts" | "review";
 
-  const visibleCards: CardId[] = ["about", "trustee", "beneficiaries"];
+  const visibleCards: CardId[] = ["residency", "about", "trustee", "beneficiaries"];
   if (hasMinorChildren) visibleCards.push("guardian");
   visibleCards.push("assets", "pourover", "poa", "healthcare", "gifts", "review");
 
@@ -112,8 +130,10 @@ export default function TrustPage() {
 
   function isCardComplete(): boolean {
     switch (activeCardId) {
+      case "residency":
+        return intake.state === "Michigan" && intake.maritalStatus !== "";
       case "about":
-        return intake.firstName.trim() !== "" && intake.lastName.trim() !== "" && intake.dateOfBirth !== "" && intake.city.trim() !== "" && intake.hasMinorChildren !== "";
+        return intake.firstName.trim() !== "" && intake.lastName.trim() !== "" && intake.dateOfBirth !== "" && intake.dateOfBirth <= maxDob && intake.city.trim() !== "" && intake.hasMinorChildren !== "";
       case "trustee":
         return intake.primaryTrustee !== "" && (intake.primaryTrustee === "Myself" || intake.trusteeName.trim() !== "") && intake.successorTrusteeName.trim() !== "" && intake.successorTrusteeRelationship !== "";
       case "beneficiaries": {
@@ -210,6 +230,7 @@ export default function TrustPage() {
   }
 
   const moduleTitles: Record<CardId, string> = {
+    residency: "Residency & Status",
     about: "About You",
     trustee: "Your Trustee",
     beneficiaries: "Your Beneficiaries",
@@ -246,6 +267,44 @@ export default function TrustPage() {
 
   function renderCard() {
     switch (activeCardId) {
+      case "residency":
+        return (
+          <>
+            <p className="mb-5 text-xs text-charcoal/60 leading-relaxed">
+              We&apos;ll start with a couple of quick questions so we can confirm we can serve you.
+            </p>
+            <QuestionLabel required>What state do you live in?</QuestionLabel>
+            <div className="grid grid-cols-2 gap-3">
+              {["Michigan", "Other"].map((opt) => (
+                <ChoiceTile
+                  key={opt}
+                  label={opt}
+                  selected={intake.state === opt}
+                  onClick={() => update({ state: opt })}
+                />
+              ))}
+            </div>
+            {intake.state === "Other" && (
+              <div className="mt-3 rounded-lg bg-amber-50 border border-amber-200 px-4 py-3 text-xs text-amber-800 leading-relaxed">
+                We&apos;re currently only providing services for Michigan residents. We&apos;re working to expand soon, please check back later.
+              </div>
+            )}
+            <div className="mt-5">
+              <QuestionLabel required>What is your marital status?</QuestionLabel>
+              <div className="grid grid-cols-2 gap-3">
+                {maritalOptions.map((opt) => (
+                  <ChoiceTile
+                    key={opt}
+                    label={opt}
+                    selected={intake.maritalStatus === opt}
+                    onClick={() => update({ maritalStatus: opt })}
+                  />
+                ))}
+              </div>
+            </div>
+          </>
+        );
+
       case "about":
         return (
           <>
@@ -259,7 +318,25 @@ export default function TrustPage() {
                 <TextInput value={intake.lastName} onChange={(v) => update({ lastName: v })} placeholder="Last name" />
               </div>
             </div>
-            <div className="mt-5"><QuestionLabel required>Date of birth</QuestionLabel><input type="date" required aria-required="true" value={intake.dateOfBirth} onChange={(e) => update({ dateOfBirth: e.target.value })} className="min-h-[44px] w-full rounded-xl border-2 border-gray-200 bg-white px-4 py-3 text-sm text-charcoal focus:border-gold focus:outline-none focus:ring-1 focus:ring-gold/30 transition-colors" /></div>
+            <div className="mt-5">
+              <QuestionLabel required>Date of birth</QuestionLabel>
+              <input
+                type="date"
+                required
+                aria-required="true"
+                value={intake.dateOfBirth}
+                max={maxDob}
+                onChange={(e) => update({ dateOfBirth: e.target.value })}
+                onClick={(e) => {
+                  const el = e.currentTarget as HTMLInputElement & { showPicker?: () => void };
+                  el.showPicker?.();
+                }}
+                className="min-h-[44px] w-full cursor-pointer rounded-xl border-2 border-gray-200 bg-white px-4 py-3 text-sm text-charcoal focus:border-gold focus:outline-none focus:ring-1 focus:ring-gold/30 transition-colors"
+              />
+              {intake.dateOfBirth && intake.dateOfBirth > maxDob && (
+                <p className="mt-1.5 text-xs text-red-500">You must be at least 18 years old.</p>
+              )}
+            </div>
             <div className="mt-5"><QuestionLabel required>City of residence</QuestionLabel><TextInput value={intake.city} onChange={(v) => update({ city: v })} placeholder="e.g. Grand Rapids" /></div>
             <div className="mt-5"><QuestionLabel required>Do you have minor children (under 18)?</QuestionLabel><YesNoTiles value={intake.hasMinorChildren} onChange={(v) => update({ hasMinorChildren: v, ...(v === "No" ? { guardianName: "", guardianRelationship: "", successorGuardianName: "" } : {}) })} /></div>
             <div className="mt-5">
@@ -353,7 +430,7 @@ export default function TrustPage() {
             {intake.beneficiaries.map((b, idx) => (
               <div key={idx} className={idx === 0 ? "" : "mt-5 rounded-lg bg-gray-50 p-4"}>
                 <div className={idx === 0 ? "" : "mb-2 flex items-center justify-between"}>
-                  <QuestionLabel required>Beneficiary {idx + 1} name</QuestionLabel>
+                  <QuestionLabel required>{idx === 0 ? "Beneficiary name" : `Beneficiary ${idx + 1} name`}</QuestionLabel>
                   {idx > 0 && (
                     <button type="button" onClick={() => update({ beneficiaries: intake.beneficiaries.filter((_, i) => i !== idx) })} className="text-xs text-red-500 hover:text-red-600 font-medium">Remove</button>
                   )}
@@ -433,7 +510,7 @@ export default function TrustPage() {
               <>
                 {intake.contingentBeneficiaries.map((cb, idx) => (
                   <div key={idx} className="mt-5 rounded-lg bg-gray-50 p-4">
-                    <QuestionLabel required>Contingent beneficiary {idx + 1} name</QuestionLabel>
+                    <QuestionLabel required>{idx === 0 ? "Contingent beneficiary name" : `Contingent beneficiary ${idx + 1} name`}</QuestionLabel>
                     <NameInput value={cb.name} onChange={(v) => { const u = [...intake.contingentBeneficiaries]; u[idx] = { ...u[idx], name: v }; update({ contingentBeneficiaries: u }); }} />
                     <div className="mt-3"><QuestionLabel>Relationship</QuestionLabel>
                       <div className="grid grid-cols-2 gap-2">{["Child", "Parent", "Sibling", "Friend", "Charity/Organization", "Other"].map((opt) => (<ChoiceTile key={opt} label={opt} selected={cb.relationship === opt} onClick={() => { const u = [...intake.contingentBeneficiaries]; u[idx] = { ...u[idx], relationship: opt }; update({ contingentBeneficiaries: u }); }} />))}</div>
@@ -520,7 +597,33 @@ export default function TrustPage() {
             <p className="mb-5 text-xs text-charcoal/50 leading-relaxed">A Pour-Over Will captures any assets not transferred into your trust during your lifetime and directs them into the trust after you pass.</p>
             <QuestionLabel required>Who should carry out your Pour-Over Will?</QuestionLabel><NameInput value={intake.executorName} onChange={(v) => update({ executorName: v })} />
             <div className="mt-5"><QuestionLabel>Executor relationship</QuestionLabel><div className="grid grid-cols-2 gap-3">{execRelOptions.map((opt) => (<ChoiceTile key={opt} label={opt} selected={intake.executorRelationship === opt} onClick={() => update({ executorRelationship: opt })} />))}</div></div>
-            <div className="mt-5"><QuestionLabel>Successor executor</QuestionLabel><NameInput value={intake.successorExecutorName} onChange={(v) => update({ successorExecutorName: v })} optional onPartialChange={partialHandler("successor-executor")} /></div>
+            <div className="mt-5">
+              <QuestionLabel>Successor executor</QuestionLabel>
+              <NameInput
+                value={intake.successorExecutorName}
+                onChange={(v) => {
+                  update({ successorExecutorName: v });
+                  if (!v) update({ successorExecutorRelationship: "" });
+                }}
+                optional
+                onPartialChange={partialHandler("successor-executor")}
+              />
+              {intake.successorExecutorName.trim() !== "" && (
+                <div className="mt-3">
+                  <QuestionLabel>Successor executor relationship</QuestionLabel>
+                  <div className="grid grid-cols-2 gap-3">
+                    {execRelOptions.map((opt) => (
+                      <ChoiceTile
+                        key={opt}
+                        label={opt}
+                        selected={intake.successorExecutorRelationship === opt}
+                        onClick={() => update({ successorExecutorRelationship: opt })}
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
           </>
         );
 
@@ -530,7 +633,33 @@ export default function TrustPage() {
             <p className="mb-5 text-xs text-charcoal/60">This person manages your finances if you become incapacitated.</p>
             <QuestionLabel required>Agent name</QuestionLabel><NameInput value={intake.poaAgentName} onChange={(v) => update({ poaAgentName: v })} />
             <div className="mt-5"><QuestionLabel>Agent relationship</QuestionLabel><div className="grid grid-cols-2 gap-3">{relOptions.map((opt) => (<ChoiceTile key={opt} label={opt} selected={intake.poaAgentRelationship === opt} onClick={() => update({ poaAgentRelationship: opt })} />))}</div></div>
-            <div className="mt-5"><QuestionLabel>Successor agent name</QuestionLabel><NameInput value={intake.poaSuccessorAgentName} onChange={(v) => update({ poaSuccessorAgentName: v })} optional onPartialChange={partialHandler("poa-successor")} /></div>
+            <div className="mt-5">
+              <QuestionLabel>Successor agent name</QuestionLabel>
+              <NameInput
+                value={intake.poaSuccessorAgentName}
+                onChange={(v) => {
+                  update({ poaSuccessorAgentName: v });
+                  if (!v) update({ poaSuccessorAgentRelationship: "" });
+                }}
+                optional
+                onPartialChange={partialHandler("poa-successor")}
+              />
+              {intake.poaSuccessorAgentName.trim() !== "" && (
+                <div className="mt-3">
+                  <QuestionLabel>Successor agent relationship</QuestionLabel>
+                  <div className="grid grid-cols-2 gap-3">
+                    {relOptions.map((opt) => (
+                      <ChoiceTile
+                        key={opt}
+                        label={opt}
+                        selected={intake.poaSuccessorAgentRelationship === opt}
+                        onClick={() => update({ poaSuccessorAgentRelationship: opt })}
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
             <div className="mt-5"><QuestionLabel>Powers granted</QuestionLabel>
               <div className="space-y-3">
                 {ALL_POA_POWERS.map((power) => (
@@ -582,47 +711,171 @@ export default function TrustPage() {
           </>
         );
 
-      case "review":
-        return (
-          <div className="space-y-4 text-sm">
-            <div><p className="font-medium text-navy">Personal Information</p><p className="text-charcoal/70">{intake.firstName} {intake.lastName} &middot; {intake.dateOfBirth} &middot; {intake.city}, Michigan</p></div>
-            <hr className="border-gray-100" />
-            <div><p className="font-medium text-navy">Trust Details</p>
-              <p className="text-charcoal/70">Name: {intake.trustName || `The ${intake.firstName} ${intake.lastName} Revocable Living Trust`}</p>
-              <p className="text-charcoal/70">Trustee: {intake.primaryTrustee === "Myself" ? "Yourself" : intake.trusteeName}</p>
-              <p className="text-charcoal/70">Successor: {intake.successorTrusteeName} ({intake.successorTrusteeRelationship})</p>
-              {intake.additionalSuccessorTrustees.filter((s) => s.name.trim()).map((s, i) => (
-                <p key={i} className="text-charcoal/50 text-xs">{i === 0 ? "2nd" : i === 1 ? "3rd" : `${i + 2}th`} backup: {s.name}{s.relationship ? ` (${s.relationship})` : ""}</p>
-              ))}
-            </div>
-            <hr className="border-gray-100" />
-            <div><p className="font-medium text-navy">Beneficiaries</p>
-              {intake.beneficiaries.map((b, i) => (
-                <p key={i} className="text-charcoal/70">{b.name} ({b.relationship}){intake.beneficiaries.length > 1 && intake.beneficiariesEqualShares === "No" && b.share ? ` — ${b.share}%` : ""}</p>
-              ))}
-              {intake.beneficiaries.length > 1 && intake.beneficiariesEqualShares !== "No" && <p className="text-charcoal/50 text-xs">Equal shares</p>}
-              {hasMinorChildren && intake.distributionAge && <p className="text-charcoal/50 text-xs">Distribution age: {intake.distributionAge}</p>}
-              {intake.hasContingentBeneficiary === "Yes" && intake.contingentBeneficiaries.length > 0 ? (
-                <p className="text-charcoal/50 text-xs mt-1">Contingent: {intake.contingentBeneficiaries.map((b) => intake.contingentEqualShares === "No" && b.share ? `${b.name} (${b.relationship}), ${b.share}%` : `${b.name} (${b.relationship})`).join(", ")}{intake.contingentBeneficiaries.length > 1 && intake.contingentEqualShares !== "No" && ", equal shares"}</p>
-              ) : (
-                <p className="text-charcoal/50 text-xs mt-1">No contingent beneficiary designated</p>
-              )}
-            </div>
-            <hr className="border-gray-100" />
-            <div><p className="font-medium text-navy">Pour-Over Will</p><p className="text-charcoal/70">Executor: {intake.executorName} ({intake.executorRelationship})</p><p className="text-charcoal/50 text-xs">Backup: {intake.successorExecutorName}</p></div>
-            <hr className="border-gray-100" />
-            <div><p className="font-medium text-navy">Power of Attorney</p><p className="text-charcoal/70">Agent: {intake.poaAgentName} ({intake.poaAgentRelationship})</p><p className="text-charcoal/50 text-xs">Backup: {intake.poaSuccessorAgentName}</p><p className="text-charcoal/50 text-xs">Powers: {intake.poaPowers.join(", ")}</p></div>
-            <hr className="border-gray-100" />
-            <div><p className="font-medium text-navy">Healthcare Directive</p><p className="text-charcoal/70">Advocate: {intake.patientAdvocateName} ({intake.patientAdvocateRelationship})</p><p className="text-charcoal/50 text-xs">Backup: {intake.successorPatientAdvocateName}</p>
-              <p className="text-charcoal/50 text-xs">Organ donation: {intake.organDonation || "Not specified"}</p>
-              {intake.hasHealthcareWishes === "Yes" && <p className="text-charcoal/50 text-xs mt-1">Wishes: {intake.healthcareWishesDescription}</p>}
-            </div>
-            {hasMinorChildren && intake.guardianName && (<><hr className="border-gray-100" /><div><p className="font-medium text-navy">Guardian</p><p className="text-charcoal/70">{intake.guardianName} ({intake.guardianRelationship})</p><p className="text-charcoal/50 text-xs">Backup: {intake.successorGuardianName}</p></div></>)}
-            <hr className="border-gray-100" />
-            <div><p className="font-medium text-navy">Assets in Trust</p><p className="text-charcoal/70">{intake.assetTypes.join(", ")}</p></div>
-            {intake.hasSpecificGifts === "Yes" && (<><hr className="border-gray-100" /><div><p className="font-medium text-navy">Specific Gifts</p><p className="text-charcoal/70 whitespace-pre-wrap">{intake.specificGiftsDescription}</p></div></>)}
+      case "review": {
+        const jumpToCard = (cardId: CardId) => {
+          const idx = visibleCards.indexOf(cardId);
+          if (idx >= 0) animateTransition("back", () => setCurrentCard(idx));
+        };
+        const toggleSec = (k: string) =>
+          setOpenReviewSections((s) => ({ ...s, [k]: !s[k] }));
+        const Row = ({ label, value }: { label: string; value: ReactNode }) => (
+          <div className="flex justify-between gap-3 py-1.5 border-b border-gray-100 last:border-b-0">
+            <span className="text-xs text-charcoal/60">{label}</span>
+            <span className="text-sm text-charcoal text-right break-words">{value || <span className="text-charcoal/40 italic">Not provided</span>}</span>
           </div>
         );
+        const Section = ({
+          k, title, target, children,
+        }: { k: string; title: string; target: CardId; children: ReactNode }) => {
+          const open = openReviewSections[k];
+          return (
+            <div className="rounded-xl border border-gray-200 bg-white overflow-hidden">
+              <div className="flex items-center justify-between px-4 py-3 bg-gray-50">
+                <button type="button" onClick={() => toggleSec(k)} className="flex-1 flex items-center gap-2 text-left">
+                  <span className={`text-charcoal/60 transition-transform ${open ? "rotate-90" : ""}`}>›</span>
+                  <span className="font-semibold text-navy text-sm">{title}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => jumpToCard(target)}
+                  className="text-xs font-medium text-gold hover:text-gold/80 px-2 py-1 rounded"
+                >
+                  Edit
+                </button>
+              </div>
+              {open && <div className="px-4 py-3 space-y-0.5">{children}</div>}
+            </div>
+          );
+        };
+        const primaryShares =
+          intake.beneficiaries.length > 1
+            ? intake.beneficiariesEqualShares === "No"
+              ? "Custom split"
+              : "Equal shares"
+            : "Sole beneficiary";
+        const contingentSummary =
+          intake.hasContingentBeneficiary === "Yes" && intake.contingentBeneficiaries.length > 0
+            ? intake.contingentBeneficiaries
+                .map((b) =>
+                  intake.contingentEqualShares === "No" && b.share
+                    ? `${b.name} (${b.relationship}) — ${b.share}%`
+                    : `${b.name} (${b.relationship})`
+                )
+                .join(", ")
+            : "None designated";
+        const allOpen = Object.values(openReviewSections).every(Boolean);
+        const setAll = (val: boolean) =>
+          setOpenReviewSections((s) => Object.fromEntries(Object.keys(s).map((k) => [k, val])) as Record<string, boolean>);
+        return (
+          <div>
+            <div className="mb-3 flex items-center justify-between">
+              <p className="text-xs text-charcoal/60">Tap any section to expand. Use Edit to change answers.</p>
+              <button
+                type="button"
+                onClick={() => setAll(!allOpen)}
+                className="text-xs font-medium text-gold hover:text-gold/80"
+              >
+                {allOpen ? "Collapse all" : "Expand all"}
+              </button>
+            </div>
+            <div className="grid gap-3 md:grid-cols-2">
+            <Section k="residency" title="Residency & Status" target="residency">
+              <Row label="State" value={intake.state} />
+              <Row label="Marital status" value={intake.maritalStatus} />
+            </Section>
+
+            <Section k="personal" title="Personal Information" target="about">
+              <Row label="Name" value={`${intake.firstName} ${intake.lastName}`.trim()} />
+              <Row label="Date of birth" value={intake.dateOfBirth} />
+              <Row label="City" value={intake.city} />
+              <Row label="Minor children" value={intake.hasMinorChildren} />
+            </Section>
+
+            <Section k="trust" title="Trust & Trustees" target="trustee">
+              <Row label="Trust name" value={intake.trustName || `The ${intake.firstName} ${intake.lastName} Revocable Living Trust`.trim()} />
+              <Row label="Primary trustee" value={intake.primaryTrustee === "Myself" ? "Yourself" : intake.trusteeName} />
+              <Row label="Successor trustee" value={intake.successorTrusteeName} />
+              <Row label="Relationship" value={intake.successorTrusteeRelationship} />
+              {intake.additionalSuccessorTrustees.filter((s) => s.name.trim()).map((s, i) => (
+                <Row key={i} label={`${i === 0 ? "2nd" : i === 1 ? "3rd" : `${i + 2}th`} backup`} value={`${s.name}${s.relationship ? ` (${s.relationship})` : ""}`} />
+              ))}
+            </Section>
+
+            <Section k="beneficiaries" title="Beneficiaries" target="beneficiaries">
+              <Row label="Distribution" value={primaryShares} />
+              <div className="pt-1">
+                {intake.beneficiaries.map((b, i) => (
+                  <div key={i} className="py-1 border-b border-gray-100 last:border-b-0">
+                    <p className="text-sm text-charcoal">{b.name || <span className="text-charcoal/40 italic">No name</span>}</p>
+                    <p className="text-xs text-charcoal/60">
+                      {b.relationship}
+                      {intake.beneficiaries.length > 1 && intake.beneficiariesEqualShares === "No" && b.share
+                        ? ` · ${b.share}%`
+                        : ""}
+                    </p>
+                  </div>
+                ))}
+              </div>
+              {hasMinorChildren && intake.distributionAge && (
+                <Row label="Distribution age" value={intake.distributionAge} />
+              )}
+              <Row label="Contingent" value={contingentSummary} />
+            </Section>
+
+            {hasMinorChildren && (
+              <Section k="guardian" title="Guardian" target="guardian">
+                <Row label="Guardian name" value={intake.guardianName} />
+                <Row label="Relationship" value={intake.guardianRelationship} />
+                <Row label="Successor guardian" value={intake.successorGuardianName} />
+              </Section>
+            )}
+
+            <Section k="assets" title="Assets in Trust" target="assets">
+              {intake.assetTypes.length === 0 ? (
+                <Row label="Assets" value="" />
+              ) : (
+                intake.assetTypes.map((a) => (
+                  <Row key={a} label="" value={a} />
+                ))
+              )}
+            </Section>
+
+            <Section k="pourover" title="Pour-Over Will" target="pourover">
+              <Row label="Executor" value={intake.executorName} />
+              <Row label="Relationship" value={intake.executorRelationship} />
+              <Row label="Successor executor" value={intake.successorExecutorName} />
+              <Row label="Successor relationship" value={intake.successorExecutorRelationship} />
+            </Section>
+
+            <Section k="poa" title="Power of Attorney" target="poa">
+              <Row label="Agent" value={intake.poaAgentName} />
+              <Row label="Relationship" value={intake.poaAgentRelationship} />
+              <Row label="Successor agent" value={intake.poaSuccessorAgentName} />
+              <Row label="Successor relationship" value={intake.poaSuccessorAgentRelationship} />
+              <Row label="Powers" value={intake.poaPowers.join(", ")} />
+            </Section>
+
+            <Section k="healthcare" title="Healthcare Directive" target="healthcare">
+              <Row label="Advocate" value={intake.patientAdvocateName} />
+              <Row label="Relationship" value={intake.patientAdvocateRelationship} />
+              <Row label="Successor advocate" value={intake.successorPatientAdvocateName} />
+              <Row label="Organ donation" value={intake.organDonation} />
+              <Row label="Healthcare wishes" value={intake.hasHealthcareWishes} />
+              {intake.hasHealthcareWishes === "Yes" && (
+                <Row label="Wishes" value={<span className="whitespace-pre-wrap">{intake.healthcareWishesDescription}</span>} />
+              )}
+            </Section>
+
+            <Section k="gifts" title="Specific Gifts" target="gifts">
+              <Row label="Has gifts" value={intake.hasSpecificGifts} />
+              {intake.hasSpecificGifts === "Yes" && (
+                <Row label="Description" value={<span className="whitespace-pre-wrap">{intake.specificGiftsDescription}</span>} />
+              )}
+            </Section>
+            </div>
+          </div>
+        );
+      }
 
       default: return null;
     }
@@ -637,7 +890,7 @@ export default function TrustPage() {
         <span className="text-xs text-white/60">{safeIndex + 1} of {totalCards}</span>
       </div>
       <div className="flex min-h-screen items-center justify-center px-6 pt-16 pb-8">
-        <div className={`w-full max-w-lg transform transition-all duration-300 ease-out ${slideClass}`}>
+        <div className={`w-full transform transition-all duration-300 ease-out ${activeCardId === "review" ? "max-w-3xl" : "max-w-lg"} ${slideClass}`}>
           <div className="rounded-2xl bg-white p-6 md:p-8 shadow-xl">
             <p className="mb-6 text-xs font-medium uppercase tracking-wider text-gold">{moduleTitles[activeCardId]}</p>
             {activeCardId === "review" && <h2 className="mb-4 text-lg font-bold text-navy">Does everything look right?</h2>}

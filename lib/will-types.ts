@@ -3,10 +3,13 @@ export interface WillIntake {
   lastName: string;
   dateOfBirth: string;
   city: string;
+  state: string;
+  maritalStatus: string;
   hasMinorChildren: string;
   executorName: string;
   executorRelationship: string;
   successorExecutorName: string;
+  successorExecutorRelationship: string;
   beneficiaries: Array<{ name: string; relationship: string; share: string }>;
   beneficiariesEqualShares: string;
   guardianName: string;
@@ -25,10 +28,13 @@ export const initialWillIntake: WillIntake = {
   lastName: "",
   dateOfBirth: "",
   city: "",
+  state: "",
+  maritalStatus: "",
   hasMinorChildren: "",
   executorName: "",
   executorRelationship: "",
   successorExecutorName: "",
+  successorExecutorRelationship: "",
   beneficiaries: [{ name: "", relationship: "", share: "" }],
   beneficiariesEqualShares: "",
   guardianName: "",

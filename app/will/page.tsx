@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
@@ -27,6 +27,19 @@ export default function WillPage() {
   const [animating, setAnimating] = useState(false);
   const [direction, setDirection] = useState<"forward" | "back">("forward");
   const hasMinorChildren = intake.hasMinorChildren === "Yes";
+  const [openReviewSections, setOpenReviewSections] = useState<Record<string, boolean>>({
+    residency: false,
+    personal: false,
+    executor: false,
+    beneficiaries: false,
+    guardian: false,
+    gifts: false,
+  });
+  const maxDob = (() => {
+    const d = new Date();
+    d.setFullYear(d.getFullYear() - 18);
+    return d.toISOString().slice(0, 10);
+  })();
 
   const update = useCallback(
     (updates: Partial<WillIntake>) =>
@@ -88,9 +101,9 @@ export default function WillPage() {
   }, [update]);
 
   // ── Intake card logic ─────────────────────────────────────────
-  type CardId = "about" | "executor" | "beneficiaries" | "guardian" | "gifts" | "review";
+  type CardId = "residency" | "about" | "executor" | "beneficiaries" | "guardian" | "gifts" | "review";
 
-  const visibleCards: CardId[] = ["about", "executor", "beneficiaries"];
+  const visibleCards: CardId[] = ["residency", "about", "executor", "beneficiaries"];
   if (hasMinorChildren) visibleCards.push("guardian");
   visibleCards.push("gifts", "review");
 
@@ -101,11 +114,14 @@ export default function WillPage() {
 
   function isCardComplete(): boolean {
     switch (activeCardId) {
+      case "residency":
+        return intake.state === "Michigan" && intake.maritalStatus !== "";
       case "about":
         return (
           intake.firstName.trim() !== "" &&
           intake.lastName.trim() !== "" &&
           intake.dateOfBirth !== "" &&
+          intake.dateOfBirth <= maxDob &&
           intake.city.trim() !== "" &&
           intake.hasMinorChildren !== ""
         );
@@ -250,6 +266,7 @@ export default function WillPage() {
 
   // ── STAGE 2: INTAKE ───────────────────────────────────────────
   const moduleTitles: Record<CardId, string> = {
+    residency: "Residency & Status",
     about: "About You",
     executor: "Your Executor",
     beneficiaries: "Your Beneficiaries",
@@ -258,8 +275,48 @@ export default function WillPage() {
     review: "Final Review",
   };
 
+  const maritalOptions = ["Single", "Married", "Domestic partnership", "Divorced", "Widowed"];
+
   function renderCard() {
     switch (activeCardId) {
+      case "residency":
+        return (
+          <>
+            <p className="mb-5 text-xs text-charcoal/60 leading-relaxed">
+              We&apos;ll start with a couple of quick questions so we can confirm we can serve you.
+            </p>
+            <QuestionLabel required>What state do you live in?</QuestionLabel>
+            <div className="grid grid-cols-2 gap-3">
+              {["Michigan", "Other"].map((opt) => (
+                <ChoiceTile
+                  key={opt}
+                  label={opt}
+                  selected={intake.state === opt}
+                  onClick={() => update({ state: opt })}
+                />
+              ))}
+            </div>
+            {intake.state === "Other" && (
+              <div className="mt-3 rounded-lg bg-amber-50 border border-amber-200 px-4 py-3 text-xs text-amber-800 leading-relaxed">
+                We&apos;re currently only providing services for Michigan residents. We&apos;re working to expand soon, please check back later.
+              </div>
+            )}
+            <div className="mt-5">
+              <QuestionLabel required>What is your marital status?</QuestionLabel>
+              <div className="grid grid-cols-2 gap-3">
+                {maritalOptions.map((opt) => (
+                  <ChoiceTile
+                    key={opt}
+                    label={opt}
+                    selected={intake.maritalStatus === opt}
+                    onClick={() => update({ maritalStatus: opt })}
+                  />
+                ))}
+              </div>
+            </div>
+          </>
+        );
+
       case "about":
         return (
           <>
@@ -288,9 +345,17 @@ export default function WillPage() {
                 required
                 aria-required="true"
                 value={intake.dateOfBirth}
+                max={maxDob}
                 onChange={(e) => update({ dateOfBirth: e.target.value })}
-                className="min-h-[44px] w-full rounded-xl border-2 border-gray-200 bg-white px-4 py-3 text-sm text-charcoal focus:border-gold focus:outline-none focus:ring-1 focus:ring-gold/30 transition-colors"
+                onClick={(e) => {
+                  const el = e.currentTarget as HTMLInputElement & { showPicker?: () => void };
+                  el.showPicker?.();
+                }}
+                className="min-h-[44px] w-full cursor-pointer rounded-xl border-2 border-gray-200 bg-white px-4 py-3 text-sm text-charcoal focus:border-gold focus:outline-none focus:ring-1 focus:ring-gold/30 transition-colors"
               />
+              {intake.dateOfBirth && intake.dateOfBirth > maxDob && (
+                <p className="mt-1.5 text-xs text-red-500">You must be at least 18 years old.</p>
+              )}
             </div>
             <div className="mt-5">
               <QuestionLabel required>City of residence</QuestionLabel>
@@ -353,10 +418,28 @@ export default function WillPage() {
               </p>
               <NameInput
                 value={intake.successorExecutorName}
-                onChange={(v) => update({ successorExecutorName: v })}
+                onChange={(v) => {
+                  update({ successorExecutorName: v });
+                  if (!v) update({ successorExecutorRelationship: "" });
+                }}
                 optional
                 onPartialChange={partialHandler("successor-executor")}
               />
+              {intake.successorExecutorName.trim() !== "" && (
+                <div className="mt-3">
+                  <QuestionLabel>Successor executor relationship</QuestionLabel>
+                  <div className="grid grid-cols-2 gap-3">
+                    {relationshipOptions.map((opt) => (
+                      <ChoiceTile
+                        key={opt}
+                        label={opt}
+                        selected={intake.successorExecutorRelationship === opt}
+                        onClick={() => update({ successorExecutorRelationship: opt })}
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           </>
         );
@@ -370,7 +453,7 @@ export default function WillPage() {
             {intake.beneficiaries.map((b, idx) => (
               <div key={idx} className={idx === 0 ? "" : "mt-5 rounded-lg bg-gray-50 p-4"}>
                 <div className={idx === 0 ? "" : "mb-2 flex items-center justify-between"}>
-                  <QuestionLabel required>Beneficiary {idx + 1} name</QuestionLabel>
+                  <QuestionLabel required>{idx === 0 ? "Beneficiary name" : `Beneficiary ${idx + 1} name`}</QuestionLabel>
                   {idx > 0 && (
                     <button
                       type="button"
@@ -479,7 +562,7 @@ export default function WillPage() {
               <>
                 {intake.contingentBeneficiaries.map((cb, idx) => (
                   <div key={idx} className="mt-5 rounded-lg bg-gray-50 p-4">
-                    <QuestionLabel required>Contingent beneficiary {idx + 1} name</QuestionLabel>
+                    <QuestionLabel required>{idx === 0 ? "Contingent beneficiary name" : `Contingent beneficiary ${idx + 1} name`}</QuestionLabel>
                     <NameInput
                       value={cb.name}
                       onChange={(v) => {
@@ -654,85 +737,130 @@ export default function WillPage() {
           </>
         );
 
-      case "review":
-        return (
-          <div className="space-y-4 text-sm">
-            <div>
-              <p className="font-medium text-navy">Personal Information</p>
-              <p className="text-charcoal/70">
-                {intake.firstName} {intake.lastName} &middot;{" "}
-                {intake.dateOfBirth} &middot; {intake.city}, Michigan
-              </p>
-            </div>
-            <hr className="border-gray-100" />
-            <div>
-              <p className="font-medium text-navy">Executor</p>
-              <p className="text-charcoal/70">
-                {intake.executorName} ({intake.executorRelationship})
-              </p>
-              <p className="text-charcoal/50 text-xs">
-                Backup: {intake.successorExecutorName}
-              </p>
-            </div>
-            <hr className="border-gray-100" />
-            <div>
-              <p className="font-medium text-navy">Beneficiaries</p>
-              {intake.beneficiaries.map((b, i) => (
-                <p key={i} className="text-charcoal/70">
-                  {b.name} ({b.relationship}){intake.beneficiaries.length > 1 && intake.beneficiariesEqualShares === "No" && b.share ? ` — ${b.share}%` : ""}
-                </p>
-              ))}
-              {intake.beneficiaries.length > 1 && intake.beneficiariesEqualShares !== "No" && (
-                <p className="text-charcoal/50 text-xs">Equal shares</p>
-              )}
-              {intake.hasContingentBeneficiary === "Yes" && intake.contingentBeneficiaries.length > 0 ? (
-                <div className="mt-2">
-                  <p className="text-charcoal/50 text-xs">
-                    Contingent:{" "}
-                    {intake.contingentBeneficiaries.map((b) =>
-                      intake.contingentEqualShares === "No" && b.share
-                        ? `${b.name} (${b.relationship}), ${b.share}%`
-                        : `${b.name} (${b.relationship})`
-                    ).join(", ")}
-                    {intake.contingentBeneficiaries.length > 1 && intake.contingentEqualShares !== "No" && ", equal shares"}
-                  </p>
-                </div>
-              ) : (
-                <p className="text-charcoal/50 text-xs mt-1">No contingent beneficiary designated</p>
-              )}
-            </div>
-            {hasMinorChildren && intake.guardianName && (
-              <>
-                <hr className="border-gray-100" />
-                <div>
-                  <p className="font-medium text-navy">Guardian</p>
-                  <p className="text-charcoal/70">
-                    {intake.guardianName} ({intake.guardianRelationship})
-                  </p>
-                  <p className="text-charcoal/50 text-xs">
-                    Backup: {intake.successorGuardianName}
-                  </p>
-                </div>
-              </>
-            )}
-            <hr className="border-gray-100" />
-            <div>
-              <p className="font-medium text-navy">Healthcare</p>
-              <p className="text-charcoal/50 text-xs">Organ donation: {intake.organDonation || "Not specified"}</p>
-            </div>
-            {intake.hasSpecificGifts === "Yes" && (
-              <>
-                <hr className="border-gray-100" />
-                <div>
-                  <p className="font-medium text-navy">Specific Gifts</p>
-                  <p className="text-charcoal/70 whitespace-pre-wrap">
-                    {intake.specificGiftsDescription}
-                  </p>
-                </div>
-              </>
-            )}
+      case "review": {
+        const jumpToCard = (cardId: CardId) => {
+          const idx = visibleCards.indexOf(cardId);
+          if (idx >= 0) animateTransition("back", () => setCurrentCard(idx));
+        };
+        const toggleSec = (k: string) =>
+          setOpenReviewSections((s) => ({ ...s, [k]: !s[k] }));
+        const Row = ({ label, value }: { label: string; value: ReactNode }) => (
+          <div className="flex justify-between gap-3 py-1.5 border-b border-gray-100 last:border-b-0">
+            <span className="text-xs text-charcoal/60">{label}</span>
+            <span className="text-sm text-charcoal text-right break-words">{value || <span className="text-charcoal/40 italic">Not provided</span>}</span>
           </div>
         );
+        const Section = ({
+          k, title, target, children,
+        }: { k: string; title: string; target: CardId; children: ReactNode }) => {
+          const open = openReviewSections[k];
+          return (
+            <div className="rounded-xl border border-gray-200 bg-white overflow-hidden">
+              <div className="flex items-center justify-between px-4 py-3 bg-gray-50">
+                <button type="button" onClick={() => toggleSec(k)} className="flex-1 flex items-center gap-2 text-left">
+                  <span className={`text-charcoal/60 transition-transform ${open ? "rotate-90" : ""}`}>›</span>
+                  <span className="font-semibold text-navy text-sm">{title}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => jumpToCard(target)}
+                  className="text-xs font-medium text-gold hover:text-gold/80 px-2 py-1 rounded"
+                >
+                  Edit
+                </button>
+              </div>
+              {open && <div className="px-4 py-3 space-y-0.5">{children}</div>}
+            </div>
+          );
+        };
+        const primaryShares =
+          intake.beneficiaries.length > 1
+            ? intake.beneficiariesEqualShares === "No"
+              ? "Custom split"
+              : "Equal shares"
+            : "Sole beneficiary";
+        const contingentSummary =
+          intake.hasContingentBeneficiary === "Yes" && intake.contingentBeneficiaries.length > 0
+            ? intake.contingentBeneficiaries
+                .map((b) =>
+                  intake.contingentEqualShares === "No" && b.share
+                    ? `${b.name} (${b.relationship}) — ${b.share}%`
+                    : `${b.name} (${b.relationship})`
+                )
+                .join(", ")
+            : "None designated";
+        const allOpen = Object.values(openReviewSections).every(Boolean);
+        const setAll = (val: boolean) =>
+          setOpenReviewSections((s) => Object.fromEntries(Object.keys(s).map((k) => [k, val])) as Record<string, boolean>);
+        return (
+          <div>
+            <div className="mb-3 flex items-center justify-between">
+              <p className="text-xs text-charcoal/60">Tap any section to expand. Use Edit to change answers.</p>
+              <button
+                type="button"
+                onClick={() => setAll(!allOpen)}
+                className="text-xs font-medium text-gold hover:text-gold/80"
+              >
+                {allOpen ? "Collapse all" : "Expand all"}
+              </button>
+            </div>
+            <div className="grid gap-3 md:grid-cols-2">
+            <Section k="residency" title="Residency & Status" target="residency">
+              <Row label="State" value={intake.state} />
+              <Row label="Marital status" value={intake.maritalStatus} />
+            </Section>
+
+            <Section k="personal" title="Personal Information" target="about">
+              <Row label="Name" value={`${intake.firstName} ${intake.lastName}`.trim()} />
+              <Row label="Date of birth" value={intake.dateOfBirth} />
+              <Row label="City" value={intake.city} />
+              <Row label="Minor children" value={intake.hasMinorChildren} />
+            </Section>
+
+            <Section k="executor" title="Executor" target="executor">
+              <Row label="Executor name" value={intake.executorName} />
+              <Row label="Relationship" value={intake.executorRelationship} />
+              <Row label="Successor executor" value={intake.successorExecutorName} />
+              <Row label="Successor relationship" value={intake.successorExecutorRelationship} />
+            </Section>
+
+            <Section k="beneficiaries" title="Beneficiaries" target="beneficiaries">
+              <Row label="Distribution" value={primaryShares} />
+              <div className="pt-1">
+                {intake.beneficiaries.map((b, i) => (
+                  <div key={i} className="py-1 border-b border-gray-100 last:border-b-0">
+                    <p className="text-sm text-charcoal">{b.name || <span className="text-charcoal/40 italic">No name</span>}</p>
+                    <p className="text-xs text-charcoal/60">
+                      {b.relationship}
+                      {intake.beneficiaries.length > 1 && intake.beneficiariesEqualShares === "No" && b.share
+                        ? ` · ${b.share}%`
+                        : ""}
+                    </p>
+                  </div>
+                ))}
+              </div>
+              <Row label="Contingent" value={contingentSummary} />
+            </Section>
+
+            {hasMinorChildren && (
+              <Section k="guardian" title="Guardian" target="guardian">
+                <Row label="Guardian name" value={intake.guardianName} />
+                <Row label="Relationship" value={intake.guardianRelationship} />
+                <Row label="Successor guardian" value={intake.successorGuardianName} />
+              </Section>
+            )}
+
+            <Section k="gifts" title="Gifts & Healthcare" target="gifts">
+              <Row label="Organ donation" value={intake.organDonation} />
+              <Row label="Specific gifts" value={intake.hasSpecificGifts} />
+              {intake.hasSpecificGifts === "Yes" && (
+                <Row label="Description" value={<span className="whitespace-pre-wrap">{intake.specificGiftsDescription}</span>} />
+              )}
+            </Section>
+            </div>
+          </div>
+        );
+      }
 
       default:
         return null;
@@ -766,7 +894,7 @@ export default function WillPage() {
       {/* Card area */}
       <div className="flex min-h-screen items-center justify-center px-6 pt-16 pb-8">
         <div
-          className={`w-full max-w-lg transform transition-all duration-300 ease-out ${slideClass}`}
+          className={`w-full transform transition-all duration-300 ease-out ${activeCardId === "review" ? "max-w-3xl" : "max-w-lg"} ${slideClass}`}
         >
           <div className="rounded-2xl bg-white p-6 md:p-8 shadow-xl">
             <p className="mb-6 text-xs font-medium uppercase tracking-wider text-gold">

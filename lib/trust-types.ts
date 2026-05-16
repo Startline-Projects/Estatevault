@@ -4,6 +4,8 @@ export interface TrustIntake {
   lastName: string;
   dateOfBirth: string;
   city: string;
+  state: string;
+  maritalStatus: string;
   trustName: string;
   // Trustee
   primaryTrustee: string;
@@ -26,10 +28,12 @@ export interface TrustIntake {
   executorName: string;
   executorRelationship: string;
   successorExecutorName: string;
+  successorExecutorRelationship: string;
   // Power of attorney
   poaAgentName: string;
   poaAgentRelationship: string;
   poaSuccessorAgentName: string;
+  poaSuccessorAgentRelationship: string;
   poaPowers: string[];
   // Healthcare directive
   patientAdvocateName: string;
@@ -52,6 +56,8 @@ export const initialTrustIntake: TrustIntake = {
   lastName: "",
   dateOfBirth: "",
   city: "",
+  state: "",
+  maritalStatus: "",
   trustName: "",
   primaryTrustee: "",
   trusteeName: "",
@@ -69,9 +75,11 @@ export const initialTrustIntake: TrustIntake = {
   executorName: "",
   executorRelationship: "",
   successorExecutorName: "",
+  successorExecutorRelationship: "",
   poaAgentName: "",
   poaAgentRelationship: "",
   poaSuccessorAgentName: "",
+  poaSuccessorAgentRelationship: "",
   poaPowers: ["Banking and finances"],
   patientAdvocateName: "",
   patientAdvocateRelationship: "",
