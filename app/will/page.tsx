@@ -10,6 +10,8 @@ import AcknowledgmentCard from "@/components/intake/AcknowledgmentCard";
 import ChoiceTile from "@/components/quiz/ChoiceTile";
 import YesNoTiles from "@/components/quiz/YesNoTiles";
 import TextInput from "@/components/quiz/TextInput";
+import CityAutocomplete from "@/components/intake/CityAutocomplete";
+import DateOfBirthInput from "@/components/intake/DateOfBirthInput";
 import NameInput from "@/components/quiz/NameInput";
 import QuestionLabel from "@/components/quiz/QuestionLabel";
 
@@ -275,7 +277,7 @@ export default function WillPage() {
     review: "Final Review",
   };
 
-  const maritalOptions = ["Single", "Married", "Domestic partnership", "Divorced", "Widowed"];
+  const maritalOptions = ["Single", "Married", "Divorced", "Widowed"];
 
   function renderCard() {
     switch (activeCardId) {
@@ -340,18 +342,11 @@ export default function WillPage() {
             </div>
             <div className="mt-5">
               <QuestionLabel required>Date of birth</QuestionLabel>
-              <input
-                type="date"
-                required
-                aria-required="true"
+              <DateOfBirthInput
                 value={intake.dateOfBirth}
-                max={maxDob}
-                onChange={(e) => update({ dateOfBirth: e.target.value })}
-                onClick={(e) => {
-                  const el = e.currentTarget as HTMLInputElement & { showPicker?: () => void };
-                  el.showPicker?.();
-                }}
-                className="min-h-[44px] w-full cursor-pointer rounded-xl border-2 border-gray-200 bg-white px-4 py-3 text-sm text-charcoal focus:border-gold focus:outline-none focus:ring-1 focus:ring-gold/30 transition-colors"
+                onChange={(val) => update({ dateOfBirth: val })}
+                maxDate={maxDob}
+                minYearsAgo={18}
               />
               {intake.dateOfBirth && intake.dateOfBirth > maxDob && (
                 <p className="mt-1.5 text-xs text-red-500">You must be at least 18 years old.</p>
@@ -359,7 +354,7 @@ export default function WillPage() {
             </div>
             <div className="mt-5">
               <QuestionLabel required>City of residence</QuestionLabel>
-              <TextInput
+              <CityAutocomplete
                 value={intake.city}
                 onChange={(v) => update({ city: v })}
                 placeholder="e.g. Grand Rapids"
@@ -879,13 +874,7 @@ export default function WillPage() {
       </div>
 
       {/* Top bar */}
-      <div className="fixed top-1.5 left-0 right-0 z-30 flex items-center justify-between px-6 py-3">
-        <button
-          onClick={handleBack}
-          className="flex items-center gap-1 text-sm text-white/70 hover:text-white transition-colors"
-        >
-          <span className="text-lg">&larr;</span> Back
-        </button>
+      <div className="fixed top-1.5 left-0 right-0 z-30 flex items-center justify-end px-6 py-3">
         <span className="text-xs text-white/60">
           {safeIndex + 1} of {totalCards}
         </span>
@@ -925,17 +914,30 @@ export default function WillPage() {
                 </button>
               </div>
             ) : (
-              <button
-                onClick={handleContinue}
-                disabled={!isCardComplete() || hasPartialName}
-                className={`mt-8 flex w-full min-h-[44px] items-center justify-center rounded-full py-3.5 text-sm font-semibold transition-all ${
-                  isCardComplete() && !hasPartialName
-                    ? "bg-gold text-white hover:bg-gold/90 shadow-md"
-                    : "bg-gray-200 text-gray-400 cursor-not-allowed"
-                }`}
-              >
-                Continue &rarr;
-              </button>
+              <div className="mt-8 flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={handleBack}
+                  className="flex-1 min-h-[44px] grid grid-cols-3 items-center rounded-full border-2 border-gray-200 px-5 py-3 text-sm font-medium text-navy hover:border-navy transition-colors"
+                >
+                  <span className="justify-self-start">&larr;</span>
+                  <span className="justify-self-center">Back</span>
+                  <span />
+                </button>
+                <button
+                  onClick={handleContinue}
+                  disabled={!isCardComplete() || hasPartialName}
+                  className={`flex-1 grid grid-cols-3 min-h-[44px] items-center rounded-full px-5 py-3.5 text-sm font-semibold transition-all ${
+                    isCardComplete() && !hasPartialName
+                      ? "bg-gold text-white hover:bg-gold/90 shadow-md"
+                      : "bg-gray-200 text-gray-400 cursor-not-allowed"
+                  }`}
+                >
+                  <span />
+                  <span className="justify-self-center">Continue</span>
+                  <span className="justify-self-end">&rarr;</span>
+                </button>
+              </div>
             )}
           </div>
         </div>

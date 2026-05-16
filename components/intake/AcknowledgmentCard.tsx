@@ -57,17 +57,29 @@ export default function AcknowledgmentCard({ onContinue }: AcknowledgmentCardPro
             </span>
           </label>
 
-          <button
-            onClick={() => { if (checked) onContinue(); }}
-            disabled={!checked}
-            className={`mt-6 w-full min-h-[44px] rounded-full py-3.5 text-sm font-semibold transition-all ${
-              checked
-                ? "bg-gold text-white hover:bg-gold/90 shadow-md"
-                : "bg-gray-200 text-gray-400 cursor-not-allowed"
-            }`}
-          >
-            I Understand, Continue
-          </button>
+          <div className="mt-6 flex items-center gap-3">
+            <Link
+              href={branding ? `/?partner=${branding.id}` : "/"}
+              className="flex-1 basis-0 min-h-[44px] grid grid-cols-[1fr_auto_1fr] items-center rounded-full border-2 border-gray-200 px-4 py-3 text-sm font-medium text-navy hover:border-navy transition-colors"
+            >
+              <span className="justify-self-start">&larr;</span>
+              <span className="justify-self-center">Back</span>
+              <span />
+            </Link>
+            <button
+              onClick={() => { if (checked) onContinue(); }}
+              disabled={!checked}
+              className={`flex-1 basis-0 grid grid-cols-[1fr_auto_1fr] min-h-[44px] items-center rounded-full px-5 py-3.5 text-sm font-semibold transition-all ${
+                checked
+                  ? "bg-gold text-white hover:bg-gold/90 shadow-md"
+                  : "bg-gray-200 text-gray-400 cursor-not-allowed"
+              }`}
+            >
+              <span />
+              <span className="justify-self-center">I Understand, Continue</span>
+              <span className="justify-self-end">&rarr;</span>
+            </button>
+          </div>
         </div>
       </div>
     </div>

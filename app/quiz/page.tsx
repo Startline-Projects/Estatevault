@@ -212,14 +212,21 @@ export default function QuizPage() {
         return (
           <>
             <QuestionLabel>What state do you live in?</QuestionLabel>
-            <select
-              value={answers.state}
-              onChange={(e) => update({ state: e.target.value })}
-              className="min-h-[44px] w-full rounded-xl border-2 border-gray-200 bg-white px-4 py-3 text-sm text-charcoal focus:border-gold focus:outline-none focus:ring-1 focus:ring-gold/30 transition-colors"
-            >
-              <option value="Michigan">Michigan</option>
-              <option value="Other">Other</option>
-            </select>
+            <div className="grid grid-cols-2 gap-3">
+              {["Michigan", "Other"].map((opt) => (
+                <ChoiceTile
+                  key={opt}
+                  label={opt}
+                  selected={answers.state === opt}
+                  onClick={() => update({ state: opt })}
+                />
+              ))}
+            </div>
+            {answers.state === "Other" && (
+              <div className="mt-3 rounded-lg bg-amber-50 border border-amber-200 px-4 py-3 text-xs text-amber-800 leading-relaxed">
+                We&apos;re currently only providing services for Michigan residents. We&apos;re working to expand soon, please check back later.
+              </div>
+            )}
 
             <div className="mt-6">
               <QuestionLabel>What is your marital status?</QuestionLabel>
@@ -477,22 +484,7 @@ export default function QuizPage() {
       </div>
 
       {/* Top bar */}
-      <div className="fixed top-1.5 left-0 right-0 z-30 flex items-center justify-between px-6 py-3">
-        {safeIndex > 0 ? (
-          <button
-            onClick={handleBack}
-            className="flex items-center gap-1 text-sm text-white/70 hover:text-white transition-colors"
-          >
-            <span className="text-lg">&larr;</span> Back
-          </button>
-        ) : (
-          <Link
-            href="/"
-            className="flex items-center gap-1 text-sm text-white/70 hover:text-white transition-colors"
-          >
-            <span className="text-lg">&larr;</span> Exit
-          </Link>
-        )}
+      <div className="fixed top-1.5 left-0 right-0 z-30 flex items-center justify-end px-6 py-3">
         <span className="text-xs text-white/60">
           {safeIndex + 1} of {totalCards}
         </span>
@@ -513,19 +505,43 @@ export default function QuizPage() {
             {/* Card content */}
             {renderCard()}
 
-            {/* Continue button */}
-            <button
-              onClick={handleContinue}
-              disabled={!isCardComplete()}
-              className={`mt-8 flex w-full min-h-[44px] items-center justify-center rounded-full py-3.5 text-sm font-semibold transition-all
-                ${
-                  isCardComplete()
-                    ? "bg-gold text-white hover:bg-gold/90 shadow-md"
-                    : "bg-gray-200 text-gray-400 cursor-not-allowed"
-                }`}
-            >
-              Continue &rarr;
-            </button>
+            {/* Back + Continue row */}
+            <div className="mt-8 flex items-center gap-3">
+              {safeIndex > 0 ? (
+                <button
+                  type="button"
+                  onClick={handleBack}
+                  className="flex-1 min-h-[44px] grid grid-cols-3 items-center rounded-full border-2 border-gray-200 px-5 py-3 text-sm font-medium text-navy hover:border-navy transition-colors"
+                >
+                  <span className="justify-self-start">&larr;</span>
+                  <span className="justify-self-center">Back</span>
+                  <span />
+                </button>
+              ) : (
+                <Link
+                  href="/"
+                  className="flex-1 min-h-[44px] grid grid-cols-3 items-center rounded-full border-2 border-gray-200 px-5 py-3 text-sm font-medium text-navy hover:border-navy transition-colors"
+                >
+                  <span className="justify-self-start">&larr;</span>
+                  <span className="justify-self-center">Back</span>
+                  <span />
+                </Link>
+              )}
+              <button
+                onClick={handleContinue}
+                disabled={!isCardComplete()}
+                className={`flex-1 grid grid-cols-3 min-h-[44px] items-center rounded-full px-5 py-3.5 text-sm font-semibold transition-all
+                  ${
+                    isCardComplete()
+                      ? "bg-gold text-white hover:bg-gold/90 shadow-md"
+                      : "bg-gray-200 text-gray-400 cursor-not-allowed"
+                  }`}
+              >
+                <span />
+                <span className="justify-self-center">Continue</span>
+                <span className="justify-self-end">&rarr;</span>
+              </button>
+            </div>
           </div>
         </div>
       </div>
