@@ -715,6 +715,7 @@ export async function POST(request: Request) {
         client_id: clientId,
         category: "estate_document",
         label: productType === "trust" ? "Trust Package" : "Will Package",
+        auto_generated: true,
         data: {
           order_id: orderId,
           product_type: productType,
@@ -747,6 +748,7 @@ export async function POST(request: Request) {
             client_id: clientId,
             category: "estate_document",
             label: "Asset Funding Checklist",
+            auto_generated: true,
             data: {
               order_id: orderId,
               assets: buildAssetChecklist(assetTypes),

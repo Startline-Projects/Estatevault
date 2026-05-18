@@ -22,7 +22,18 @@ export async function POST(request: Request) {
 
   if (action === "check") {
     const { data: profile } = await admin.from("profiles").select("vault_pin_hash").eq("id", user.id).single();
-    return NextResponse.json({ hasPin: !!profile?.vault_pin_hash });
+    const hasPin = !!profile?.vault_pin_hash;
+    let selfSet = false;
+    if (hasPin) {
+      const { data: audit } = await admin
+        .from("audit_log")
+        .select("id")
+        .eq("actor_id", user.id)
+        .in("action", ["vault.pin_created", "vault.pin_changed"])
+        .limit(1);
+      selfSet = !!(audit && audit.length);
+    }
+    return NextResponse.json({ hasPin, selfSet });
   }
 
   if (action === "create") {
@@ -51,6 +62,7 @@ export async function POST(request: Request) {
     if (!valid) return NextResponse.json({ error: "Current PIN incorrect" }, { status: 401 });
     const hash = await bcrypt.hash(newPin, 10);
     await admin.from("profiles").update({ vault_pin_hash: hash }).eq("id", user.id);
+    await admin.from("audit_log").insert({ actor_id: user.id, action: "vault.pin_changed", resource_type: "profile", resource_id: user.id });
     return NextResponse.json({ success: true });
   }
 

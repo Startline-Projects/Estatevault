@@ -35,6 +35,7 @@ export default function SettingsPage() {
   const [openSection, setOpenSection] = useState<string | null>("account");
 
   // PIN change
+  const [hasPin, setHasPin] = useState(false);
   const [currentPin, setCurrentPin] = useState("");
   const [newPin, setNewPin] = useState("");
   const [confirmNewPin, setConfirmNewPin] = useState("");
@@ -60,6 +61,15 @@ export default function SettingsPage() {
           notification_preferences: data.notification_preferences || { documents_delivered: true, annual_review: true, life_event_reminders: true },
         });
       }
+
+      // Check PIN status
+      try {
+        const res = await fetch("/api/vault/pin", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "check" }) });
+        if (res.ok) {
+          const d = await res.json();
+          setHasPin(!!d.selfSet);
+        }
+      } catch {}
 
       // Load advisor info
       const { data: client } = await supabase.from("clients").select("advisor_name, advisor_firm, advisor_share_consent").eq("profile_id", user.id).single();
@@ -140,15 +150,17 @@ export default function SettingsPage() {
           </div>
         </Section>
 
-        <Section id="pin" title="Vault PIN" openSection={openSection} setOpenSection={setOpenSection}>
-          <div className="space-y-3">
-            {pinMsg && <p className={`text-sm ${pinMsg.includes("success") ? "text-green-600" : "text-red-600"}`}>{pinMsg}</p>}
-            <input type="password" maxLength={4} inputMode="numeric" value={currentPin} onChange={(e) => setCurrentPin(e.target.value.replace(/\D/g, ""))} placeholder="Current PIN" className="w-full min-h-[44px] rounded-xl border-2 border-gray-200 px-4 py-3 text-sm focus:border-gold focus:outline-none" />
-            <input type="password" maxLength={4} inputMode="numeric" value={newPin} onChange={(e) => setNewPin(e.target.value.replace(/\D/g, ""))} placeholder="New PIN" className="w-full min-h-[44px] rounded-xl border-2 border-gray-200 px-4 py-3 text-sm focus:border-gold focus:outline-none" />
-            <input type="password" maxLength={4} inputMode="numeric" value={confirmNewPin} onChange={(e) => setConfirmNewPin(e.target.value.replace(/\D/g, ""))} placeholder="Confirm new PIN" className="w-full min-h-[44px] rounded-xl border-2 border-gray-200 px-4 py-3 text-sm focus:border-gold focus:outline-none" />
-            <button onClick={changePin} className="rounded-full bg-gold px-6 py-2 text-sm font-semibold text-white hover:bg-gold/90">Change PIN</button>
-          </div>
-        </Section>
+        {hasPin && (
+          <Section id="pin" title="Vault PIN" openSection={openSection} setOpenSection={setOpenSection}>
+            <div className="space-y-3">
+              {pinMsg && <p className={`text-sm ${pinMsg.includes("success") ? "text-green-600" : "text-red-600"}`}>{pinMsg}</p>}
+              <input type="password" maxLength={4} inputMode="numeric" value={currentPin} onChange={(e) => setCurrentPin(e.target.value.replace(/\D/g, ""))} placeholder="Current PIN" className="w-full min-h-[44px] rounded-xl border-2 border-gray-200 px-4 py-3 text-sm focus:border-gold focus:outline-none" />
+              <input type="password" maxLength={4} inputMode="numeric" value={newPin} onChange={(e) => setNewPin(e.target.value.replace(/\D/g, ""))} placeholder="New PIN" className="w-full min-h-[44px] rounded-xl border-2 border-gray-200 px-4 py-3 text-sm focus:border-gold focus:outline-none" />
+              <input type="password" maxLength={4} inputMode="numeric" value={confirmNewPin} onChange={(e) => setConfirmNewPin(e.target.value.replace(/\D/g, ""))} placeholder="Confirm new PIN" className="w-full min-h-[44px] rounded-xl border-2 border-gray-200 px-4 py-3 text-sm focus:border-gold focus:outline-none" />
+              <button onClick={changePin} className="rounded-full bg-gold px-6 py-2 text-sm font-semibold text-white hover:bg-gold/90">Change PIN</button>
+            </div>
+          </Section>
+        )}
 
         <Section id="notifications" title="Notifications" openSection={openSection} setOpenSection={setOpenSection}>
           <div className="space-y-4">

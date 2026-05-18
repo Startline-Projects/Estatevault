@@ -39,6 +39,7 @@ export async function GET(req: NextRequest) {
         .eq("client_id", client.id)
         .is("ciphertext", null)
         .not("label", "is", null)
+        .eq("auto_generated", false)
         .order("created_at", { ascending: true })
         .limit(parsed.data.limit);
       rows = data ?? [];

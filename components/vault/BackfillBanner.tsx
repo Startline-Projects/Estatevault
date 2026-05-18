@@ -6,7 +6,7 @@ import { useBackfill } from "@/hooks/useBackfill";
 // migrate; auto-hides on completion.
 export function BackfillBanner() {
   const { status, running, error } = useBackfill();
-  if (!status || status.complete || status.totalRemaining === 0) return null;
+  if (!status || !status.bootstrapped || status.complete || status.totalRemaining === 0) return null;
 
   return (
     <div className="rounded-md border border-[#C9A84C]/40 bg-[#C9A84C]/10 px-4 py-3 text-sm text-[#1C3557] flex items-center justify-between">

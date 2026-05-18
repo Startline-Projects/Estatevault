@@ -17,12 +17,26 @@ export async function GET() {
     .single();
   if (!client) return NextResponse.json({ error: "no client" }, { status: 404 });
 
+  // User hasn't bootstrapped E2EE yet (no PIN) — nothing to backfill. Auto-generated
+  // server-side rows (will/trust PDFs from Stripe webhook + doc processor) live as
+  // plaintext intentionally and should not surface the banner.
+  if (!client.crypto_setup_at) {
+    return NextResponse.json({
+      bootstrapped: false,
+      completedAt: null,
+      complete: true,
+      remaining: { vault_items: 0, vault_trustees: 0, farewell_messages: 0 },
+      totalRemaining: 0,
+    });
+  }
+
   const counts = await Promise.all([
     admin.from("vault_items")
       .select("id", { count: "exact", head: true })
       .eq("client_id", client.id)
       .is("ciphertext", null)
-      .not("label", "is", null),
+      .not("label", "is", null)
+      .eq("auto_generated", false),
     admin.from("vault_trustees")
       .select("id", { count: "exact", head: true })
       .eq("client_id", client.id)
