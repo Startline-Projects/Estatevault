@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
+import { consumeVerifiedToken } from "@/lib/auth/emailVerification";
 
 function createAdminClient() {
   return createServerClient(
@@ -11,7 +12,7 @@ function createAdminClient() {
 
 export async function POST(request: Request) {
   try {
-    const { email, password, fullName } = await request.json();
+    const { email, password, fullName, verifiedToken } = await request.json();
     const normalizedEmail = String(email || "").trim().toLowerCase();
 
     if (!normalizedEmail || !password) {
@@ -20,6 +21,13 @@ export async function POST(request: Request) {
 
     if (password.length < 8) {
       return NextResponse.json({ error: "Password must be at least 8 characters." }, { status: 400 });
+    }
+
+    if (!verifiedToken || !consumeVerifiedToken(normalizedEmail, verifiedToken)) {
+      return NextResponse.json(
+        { error: "Please verify your email first." },
+        { status: 403 }
+      );
     }
 
     const admin = createAdminClient();

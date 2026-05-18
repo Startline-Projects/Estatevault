@@ -60,13 +60,15 @@ export default function SalesAccountPage() {
       return;
     }
 
-    const supabase = createClient();
-    const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/pro/sales/account`,
+    const res = await fetch("/api/auth/recovery", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email }),
     });
 
-    if (resetError) {
-      setError(resetError.message);
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      setError(data.error || "Failed to send reset email.");
     } else {
       setResetSent(true);
     }

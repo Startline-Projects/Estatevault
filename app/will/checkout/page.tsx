@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import PartnerThemedShell, { usePartnerBranding } from "@/components/partner/PartnerThemedShell";
+import EmailVerifyGate from "@/components/auth/EmailVerifyGate";
 
 function BrandedWordmark({ className = "" }: { className?: string }) {
   const branding = usePartnerBranding();
@@ -39,6 +40,8 @@ export default function WillCheckoutPage() {
   const [conflictMsg, setConflictMsg] = useState("");
   const [conflictBlocked, setConflictBlocked] = useState(false);
   const [conflictChecking, setConflictChecking] = useState(false);
+  const [emailVerified, setEmailVerified] = useState(false);
+  const [verifiedEmail, setVerifiedEmail] = useState("");
 
   const total = promoApplied ? 0 : (attorneyReview ? 700 : 400);
 
@@ -293,14 +296,23 @@ export default function WillCheckoutPage() {
         {!promoApplied && (
           <div className="mt-6 rounded-2xl bg-white border border-gray-200 p-6 shadow-sm">
             <h3 className="text-sm font-semibold text-navy mb-3">Your Email</h3>
-            <p className="text-xs text-charcoal/50 mb-3">We&apos;ll use this to create or link your account.</p>
-            <input
-              type="email"
+            <p className="text-xs text-charcoal/50 mb-3">We&apos;ll use this to create or link your account. Verify before continuing to payment.</p>
+            <EmailVerifyGate
               value={customerEmail}
-              onChange={(e) => { setCustomerEmail(e.target.value); setConflictMsg(""); setConflictBlocked(false); }}
-              onBlur={(e) => checkConflict(e.target.value.trim())}
+              onChange={(v) => {
+                setCustomerEmail(v);
+                setConflictMsg("");
+                setConflictBlocked(false);
+                if (v.trim().toLowerCase() !== verifiedEmail) {
+                  setEmailVerified(false);
+                  setVerifiedEmail("");
+                }
+              }}
+              onVerifiedChange={({ verified, email }) => {
+                setEmailVerified(verified);
+                setVerifiedEmail(verified ? email : "");
+              }}
               placeholder="your@email.com"
-              className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gold/30 focus:border-gold"
             />
             {conflictChecking && <p className="mt-2 text-xs text-charcoal/50">Checking…</p>}
             {conflictBlocked && conflictMsg && (
@@ -351,9 +363,18 @@ export default function WillCheckoutPage() {
           <div className="mt-6 rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">{error}</div>
         )}
 
+        {!promoApplied && !emailVerified && customerEmail.trim() && (
+          <p className="mt-4 text-xs text-amber-700 text-center">Verify your email to enable payment.</p>
+        )}
+
         <button
           onClick={isTestMode ? handleTestSubmit : (promoApplied ? handlePromoSubmit : handlePayment)}
-          disabled={loading || conflictBlocked || (promoApplied && !isTestMode && !promoEmail.trim()) || (!promoApplied && !customerEmail.trim())}
+          disabled={
+            loading ||
+            conflictBlocked ||
+            (promoApplied && !isTestMode && !promoEmail.trim()) ||
+            (!promoApplied && (!customerEmail.trim() || !emailVerified))
+          }
           className="mt-8 w-full min-h-[44px] rounded-full bg-gold py-4 text-base font-semibold text-white hover:bg-gold/90 transition-colors shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {loading

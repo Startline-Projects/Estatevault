@@ -1,33 +1,42 @@
 "use client";
 
-import { useState } from "react";
+import { useState, Suspense } from "react";
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/client";
+import { useSearchParams } from "next/navigation";
 
-export default function VerifyEmailPage() {
+function VerifyEmailInner() {
+  const searchParams = useSearchParams();
+  const emailFromQuery = searchParams.get("email") || "";
+  const [email, setEmail] = useState(emailFromQuery);
   const [resending, setResending] = useState(false);
   const [resent, setResent] = useState(false);
+  const [error, setError] = useState("");
 
   async function handleResend() {
-    setResending(true);
-    const supabase = createClient();
-
-    // Resend requires the user's email, get it from the current session
-    const { data } = await supabase.auth.getSession();
-    const email = data.session?.user?.email;
-
-    if (email) {
-      await supabase.auth.resend({
-        type: "signup",
-        email,
-        options: {
-          emailRedirectTo: `${window.location.origin}/auth/callback`,
-        },
-      });
+    setError("");
+    if (!email) {
+      setError("Enter your email address to resend the verification link.");
+      return;
     }
 
-    setResending(false);
-    setResent(true);
+    setResending(true);
+    try {
+      const res = await fetch("/api/auth/resend-verification", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: email.trim().toLowerCase() }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        setError(data.error || "Unable to resend right now. Try again in a minute.");
+      } else {
+        setResent(true);
+      }
+    } catch {
+      setError("Network error. Try again.");
+    } finally {
+      setResending(false);
+    }
   }
 
   return (
@@ -39,19 +48,42 @@ export default function VerifyEmailPage() {
 
         <div className="rounded-2xl bg-white p-8 shadow-xl text-center">
           <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-gold/10">
-            <span className="text-3xl">✉</span>
+            <span className="text-3xl">&#9993;</span>
           </div>
 
           <h1 className="mt-6 text-xl font-bold text-navy">Check Your Email</h1>
           <p className="mt-3 text-sm text-charcoal/60 leading-relaxed">
-            We sent you a verification link. Click the link in your email to
-            activate your account.
+            {emailFromQuery
+              ? <>We sent a verification link to <strong>{emailFromQuery}</strong>. Click the link in your email to activate your account.</>
+              : "We sent you a verification link. Click the link in your email to activate your account."}
           </p>
+
+          {!emailFromQuery && (
+            <div className="mt-6 text-left">
+              <label htmlFor="email" className="block text-sm font-medium text-navy mb-1">
+                Email
+              </label>
+              <input
+                id="email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="min-h-[44px] w-full rounded-xl border-2 border-gray-200 px-4 py-3 text-sm text-charcoal focus:border-gold focus:outline-none focus:ring-1 focus:ring-gold/30"
+                placeholder="you@example.com"
+              />
+            </div>
+          )}
+
+          {error && (
+            <div className="mt-4 rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
+              {error}
+            </div>
+          )}
 
           <div className="mt-8">
             {resent ? (
               <p className="text-sm text-green-600 font-medium">
-                Verification email resent!
+                Verification email resent. Check your inbox.
               </p>
             ) : (
               <button
@@ -73,5 +105,13 @@ export default function VerifyEmailPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function VerifyEmailPage() {
+  return (
+    <Suspense>
+      <VerifyEmailInner />
+    </Suspense>
   );
 }

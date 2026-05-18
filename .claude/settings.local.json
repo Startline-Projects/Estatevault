@@ -61,7 +61,8 @@
       "Bash(git push *)",
       "Bash(bash /tmp/tg_wrap.sh)",
       "Bash(\"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome\" --headless --disable-gpu --no-pdf-header-footer --print-to-pdf=\"/Users/xamir/Desktop/Glo Staffing/Estatevault/TESTER_GUIDE.pdf\" \"file:///tmp/tg_full.html\")",
-      "Bash(nslookup alrlaywoqvomluexpsvq.supabase.co)"
+      "Bash(nslookup alrlaywoqvomluexpsvq.supabase.co)",
+      "Bash(sed -E 's/=.*$/=***/')"
     ]
   }
 }

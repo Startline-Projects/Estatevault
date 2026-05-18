@@ -100,8 +100,11 @@ export default function SettingsPage() {
   }
 
   async function changePassword() {
-    const supabase = createClient();
-    await supabase.auth.resetPasswordForEmail(email, { redirectTo: `${window.location.origin}/auth/callback?redirect=/dashboard/settings` });
+    await fetch("/api/auth/recovery", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email }),
+    });
     alert("Password reset email sent. Check your inbox.");
   }
 

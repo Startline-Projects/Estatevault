@@ -1,9 +1,16 @@
 "use client";
 
-import { useState, Suspense } from "react";
+import { useState, Suspense, useEffect } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+
+type ExistingAccountInfo = {
+  fullName: string | null;
+  hasWill: boolean;
+  hasTrust: boolean;
+  hasVault: boolean;
+};
 
 function SignUpForm() {
   const searchParams = useSearchParams();
@@ -18,10 +25,157 @@ function SignUpForm() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
+  // Email verification state
+  const [verifyStage, setVerifyStage] = useState<"idle" | "code_sent" | "verified">("idle");
+  const [verifyLoading, setVerifyLoading] = useState(false);
+  const [verifyError, setVerifyError] = useState("");
+  const [existingAccount, setExistingAccount] = useState<ExistingAccountInfo | null>(null);
+  const [code, setCode] = useState("");
+  const [verifiedToken, setVerifiedToken] = useState("");
+  const [verifiedEmail, setVerifiedEmail] = useState("");
+  const [resendCooldown, setResendCooldown] = useState(0);
+
+  const emailLooksValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
+  const emailIsVerified = verifyStage === "verified" && verifiedEmail === email.trim().toLowerCase();
+
+  // Reset verification if user changes email after verifying
+  useEffect(() => {
+    if (verifyStage !== "idle" && email.trim().toLowerCase() !== verifiedEmail) {
+      setVerifyStage("idle");
+      setExistingAccount(null);
+      setCode("");
+      setVerifiedToken("");
+      setVerifyError("");
+    }
+  }, [email, verifyStage, verifiedEmail]);
+
+  useEffect(() => {
+    if (resendCooldown <= 0) return;
+    const t = setTimeout(() => setResendCooldown((c) => c - 1), 1000);
+    return () => clearTimeout(t);
+  }, [resendCooldown]);
+
+  async function handleVerifyEmailClick() {
+    setVerifyError("");
+    setExistingAccount(null);
+    const normalizedEmail = email.trim().toLowerCase();
+
+    if (!emailLooksValid) {
+      setVerifyError("Enter a valid email address.");
+      return;
+    }
+
+    setVerifyLoading(true);
+    try {
+      const checkRes = await fetch("/api/auth/check-email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: normalizedEmail }),
+      });
+      const checkData = await checkRes.json().catch(() => ({}));
+
+      if (!checkRes.ok) {
+        setVerifyError(checkData.error || "Unable to check email.");
+        return;
+      }
+
+      if (checkData.exists) {
+        setExistingAccount({
+          fullName: checkData.fullName,
+          hasWill: !!checkData.hasWill,
+          hasTrust: !!checkData.hasTrust,
+          hasVault: !!checkData.hasVault,
+        });
+        return;
+      }
+
+      const sendRes = await fetch("/api/auth/send-verify-code", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: normalizedEmail }),
+      });
+      const sendData = await sendRes.json().catch(() => ({}));
+
+      if (!sendRes.ok) {
+        setVerifyError(sendData.error || "Unable to send code.");
+        return;
+      }
+
+      setVerifyStage("code_sent");
+      setResendCooldown(30);
+    } catch {
+      setVerifyError("Network error. Try again.");
+    } finally {
+      setVerifyLoading(false);
+    }
+  }
+
+  async function handleVerifyCode() {
+    setVerifyError("");
+    const normalizedEmail = email.trim().toLowerCase();
+    const normalizedCode = code.trim();
+
+    if (normalizedCode.length !== 6) {
+      setVerifyError("Enter the 6-digit code.");
+      return;
+    }
+
+    setVerifyLoading(true);
+    try {
+      const res = await fetch("/api/auth/verify-code", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: normalizedEmail, code: normalizedCode }),
+      });
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok || !data.token) {
+        setVerifyError(data.error || "Verification failed.");
+        return;
+      }
+
+      setVerifiedToken(data.token);
+      setVerifiedEmail(normalizedEmail);
+      setVerifyStage("verified");
+    } catch {
+      setVerifyError("Network error. Try again.");
+    } finally {
+      setVerifyLoading(false);
+    }
+  }
+
+  async function handleResendCode() {
+    if (resendCooldown > 0) return;
+    setVerifyError("");
+    const normalizedEmail = email.trim().toLowerCase();
+    setVerifyLoading(true);
+    try {
+      const res = await fetch("/api/auth/send-verify-code", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: normalizedEmail }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setVerifyError(data.error || "Unable to resend code.");
+        return;
+      }
+      setResendCooldown(30);
+    } catch {
+      setVerifyError("Network error.");
+    } finally {
+      setVerifyLoading(false);
+    }
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
 
+    if (!emailIsVerified) {
+      setError("Please verify your email before continuing.");
+      return;
+    }
     if (password !== confirmPassword) {
       setError("Passwords do not match.");
       return;
@@ -48,7 +202,12 @@ function SignUpForm() {
       const signupRes = await withTimeout("/api/auth/signup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: normalizedEmail, password, fullName }),
+        body: JSON.stringify({
+          email: normalizedEmail,
+          password,
+          fullName,
+          verifiedToken,
+        }),
       });
       const signupData = await signupRes.json().catch(() => ({}));
 
@@ -57,7 +216,17 @@ function SignUpForm() {
         return;
       }
 
-      const startVaultCheckout = async () => {
+      const supabase = createClient();
+      for (let attempt = 0; attempt < 5; attempt++) {
+        const { error: signInError } = await supabase.auth.signInWithPassword({
+          email: normalizedEmail,
+          password,
+        });
+        if (!signInError) break;
+        if (attempt < 4) await new Promise((resolve) => setTimeout(resolve, 600));
+      }
+
+      if (isVaultFlow) {
         const res = await withTimeout("/api/checkout/vault-subscription", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -70,57 +239,6 @@ function SignUpForm() {
           return;
         }
         setError(data.error || "Failed to start checkout.");
-      };
-
-      const supabase = createClient();
-      let signInErrorMessage = "Invalid login credentials";
-      let signedIn = false;
-      for (let attempt = 0; attempt < 5; attempt++) {
-        const { error: signInError } = await supabase.auth.signInWithPassword({
-          email: normalizedEmail,
-          password,
-        });
-        if (!signInError) {
-          signedIn = true;
-          break;
-        }
-        signInErrorMessage = signInError.message;
-        if (attempt < 4) {
-          await new Promise((resolve) => setTimeout(resolve, 600));
-        }
-      }
-
-      if (!signedIn) {
-        const repairRes = await withTimeout("/api/auth/set-password", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            email: normalizedEmail,
-            password,
-            fullName,
-          }),
-        });
-
-        const repairData = await repairRes.json().catch(() => ({}));
-        if (!repairRes.ok) {
-          setError(repairData.error || signInErrorMessage || "Unable to sign in right now.");
-          return;
-        }
-
-        const { error: repairSignInError } = await supabase.auth.signInWithPassword({
-          email: normalizedEmail,
-          password,
-        });
-
-        if (repairSignInError) {
-          setError(repairSignInError.message || "Unable to sign in right now.");
-          return;
-        }
-        signedIn = true;
-      }
-
-      if (isVaultFlow) {
-        await startVaultCheckout();
         return;
       }
 
@@ -138,6 +256,14 @@ function SignUpForm() {
   }
 
   const inputClass = "min-h-[44px] w-full rounded-xl border-2 border-gray-200 px-4 py-3 text-sm text-charcoal focus:border-gold focus:outline-none focus:ring-1 focus:ring-gold/30";
+  const loginHref = `/auth/login${partner ? `?partner=${partner}&redirect=${encodeURIComponent(redirect)}` : ""}`;
+
+  const submitDisabled =
+    loading ||
+    !emailIsVerified ||
+    !fullName.trim() ||
+    password.length < 8 ||
+    password !== confirmPassword;
 
   return (
     <div className="min-h-screen bg-navy flex items-center justify-center px-6 py-12">
@@ -180,15 +306,92 @@ function SignUpForm() {
               <label htmlFor="email" className="block text-sm font-medium text-navy mb-1">
                 Email
               </label>
-              <input
-                id="email"
-                type="email"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className={inputClass}
-                placeholder="john@example.com"
-              />
+              <div className="flex gap-2">
+                <input
+                  id="email"
+                  type="email"
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  disabled={emailIsVerified}
+                  className={`${inputClass} flex-1 ${emailIsVerified ? "bg-gray-50" : ""}`}
+                  placeholder="john@example.com"
+                />
+                {!emailIsVerified ? (
+                  <button
+                    type="button"
+                    onClick={handleVerifyEmailClick}
+                    disabled={!emailLooksValid || verifyLoading || verifyStage === "code_sent"}
+                    className="shrink-0 min-h-[44px] rounded-xl bg-navy px-4 text-sm font-semibold text-white hover:bg-navy/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {verifyLoading && verifyStage === "idle" ? "..." : "Verify Email"}
+                  </button>
+                ) : (
+                  <span className="shrink-0 inline-flex items-center gap-1 min-h-[44px] rounded-xl bg-green-50 border border-green-200 px-3 text-sm font-semibold text-green-700">
+                    &#10003; Verified
+                  </span>
+                )}
+              </div>
+
+              {verifyError && (
+                <p className="mt-2 text-xs text-red-600">{verifyError}</p>
+              )}
+
+              {existingAccount && (
+                <div className="mt-3 rounded-lg bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-900">
+                  <p className="font-semibold">An account already exists for this email.</p>
+                  <p className="mt-1 text-xs text-amber-800/80">
+                    {existingAccount.fullName ? `${existingAccount.fullName} already has ` : "We already have "}
+                    {[
+                      existingAccount.hasWill && "Will documents",
+                      existingAccount.hasTrust && "Trust documents",
+                      existingAccount.hasVault && "an active Vault subscription",
+                    ]
+                      .filter(Boolean)
+                      .join(", ") || "an account"}
+                    {" on file. "}
+                    <Link href={loginHref} className="underline font-medium text-amber-900 hover:text-navy">
+                      Sign in instead
+                    </Link>
+                    {" or use a different email."}
+                  </p>
+                </div>
+              )}
+
+              {verifyStage === "code_sent" && (
+                <div className="mt-3 rounded-lg bg-navy/5 border border-navy/10 px-4 py-3">
+                  <p className="text-xs text-navy">
+                    We sent a 6-digit code to <strong>{email.trim().toLowerCase()}</strong>. Enter it below.
+                  </p>
+                  <div className="mt-2 flex gap-2">
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      maxLength={6}
+                      value={code}
+                      onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))}
+                      placeholder="123456"
+                      className={`${inputClass} flex-1 tracking-[0.4em] text-center font-mono`}
+                    />
+                    <button
+                      type="button"
+                      onClick={handleVerifyCode}
+                      disabled={verifyLoading || code.length !== 6}
+                      className="shrink-0 min-h-[44px] rounded-xl bg-gold px-4 text-sm font-semibold text-white hover:bg-gold/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {verifyLoading ? "..." : "Confirm"}
+                    </button>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleResendCode}
+                    disabled={resendCooldown > 0 || verifyLoading}
+                    className="mt-2 text-xs font-medium text-navy hover:text-gold transition-colors disabled:opacity-50"
+                  >
+                    {resendCooldown > 0 ? `Resend code in ${resendCooldown}s` : "Resend code"}
+                  </button>
+                </div>
+              )}
             </div>
 
             <div>
@@ -221,9 +424,15 @@ function SignUpForm() {
               />
             </div>
 
+            {!emailIsVerified && (
+              <p className="text-xs text-charcoal/60">
+                Verify your email before {isVaultFlow ? "continuing to payment" : "creating your account"}.
+              </p>
+            )}
+
             <button
               type="submit"
-              disabled={loading}
+              disabled={submitDisabled}
               className="mt-2 w-full min-h-[44px] rounded-full bg-gold py-3.5 text-sm font-semibold text-white hover:bg-gold/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading
@@ -235,7 +444,7 @@ function SignUpForm() {
           <p className="mt-6 text-center text-sm text-charcoal/60">
             Already have an account?{" "}
             <Link
-              href={`/auth/login${partner ? `?partner=${partner}&redirect=${redirect}` : ""}`}
+              href={loginHref}
               className="font-medium text-navy hover:text-gold transition-colors"
             >
               Sign in
