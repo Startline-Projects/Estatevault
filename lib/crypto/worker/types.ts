@@ -17,6 +17,13 @@ export type CryptoWorkerApi = {
   getState(): Promise<LockState>;
   lock(): Promise<void>;
 
+  // Session-restore helpers: export raw MK (so main thread can stash a copy in
+  // sessionStorage) and re-import on reload. Trade-off: MK becomes reachable
+  // from sessionStorage (tab-scoped, cleared on tab close) → page reloads no
+  // longer require a passphrase. Same security envelope as the tab itself.
+  exportMkForSession(): Promise<Uint8Array>;
+  unlockWithRawMk(rawMk: Uint8Array): Promise<void>;
+
   // Key bootstrap (signup)
   bootstrap(args: {
     passphrase: string;

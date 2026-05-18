@@ -79,8 +79,6 @@ export default function DocumentsPage() {
   const [openGuide, setOpenGuide] = useState<string | null>(null);
   const [latestOrder, setLatestOrder] = useState<Order | null>(null);
   const [docsReady, setDocsReady] = useState(false);
-  const [executed, setExecuted] = useState(false);
-  const [markingExecuted, setMarkingExecuted] = useState(false);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
 
   const fetchData = useCallback(async () => {
@@ -88,9 +86,8 @@ export default function DocumentsPage() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return "idle";
 
-    const { data: client } = await supabase.from("clients").select("id, documents_executed").eq("profile_id", user.id).single();
+    const { data: client } = await supabase.from("clients").select("id").eq("profile_id", user.id).single();
     if (!client) { setLoading(false); return "idle"; }
-    if (client.documents_executed) setExecuted(true);
 
     const { data: orders } = await supabase
       .from("orders")
@@ -331,36 +328,6 @@ export default function DocumentsPage() {
                 );
               })}
             </div>
-          </div>
-
-          {/* Mark as executed */}
-          <div className="mt-10 rounded-xl bg-navy/5 border border-navy/10 p-6">
-            {executed ? (
-              <div className="flex items-center gap-3">
-                <span className="text-green-600 text-xl">✅</span>
-                <div>
-                  <p className="text-sm font-semibold text-navy">Documents marked as signed</p>
-                  <p className="text-xs text-charcoal/50 mt-0.5">Your plan completion has been updated.</p>
-                </div>
-              </div>
-            ) : (
-              <>
-                <h3 className="text-base font-bold text-navy">Have you signed your documents?</h3>
-                <p className="mt-1 text-sm text-charcoal/60">Once you have physically signed and witnessed all your documents, mark them as complete.</p>
-                <button
-                  onClick={async () => {
-                    setMarkingExecuted(true);
-                    const res = await fetch("/api/client/mark-executed", { method: "POST" });
-                    if (res.ok) setExecuted(true);
-                    setMarkingExecuted(false);
-                  }}
-                  disabled={markingExecuted}
-                  className="mt-4 inline-flex min-h-[44px] items-center rounded-full bg-navy px-6 py-2.5 text-sm font-semibold text-white hover:bg-navy/90 disabled:opacity-50 transition-colors"
-                >
-                  {markingExecuted ? "Saving..." : "I have signed my documents"}
-                </button>
-              </>
-            )}
           </div>
 
           {/* Amendment section */}

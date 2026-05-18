@@ -2,16 +2,25 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { getKeySession } from "@/lib/crypto/keySession";
 import { getBundle } from "@/lib/repos/cryptoRepo";
 import type { LockState } from "@/lib/crypto/worker/types";
 
 type Mode = "passphrase" | "rate-limited";
 
+const SESSION_MK_KEY = "vault:session-mk";
+
 export function UnlockModal({ entitled = false }: { entitled?: boolean }) {
+  const pathname = usePathname() || "";
+  const onVaultRoute = pathname.startsWith("/dashboard/vault");
   const [state, setState] = useState<LockState>(() =>
     typeof window === "undefined" ? "locked" : getKeySession().getState(),
   );
+  const [restoring, setRestoring] = useState<boolean>(() => {
+    if (typeof window === "undefined") return false;
+    try { return !!sessionStorage.getItem(SESSION_MK_KEY); } catch { return false; }
+  });
   const [pp, setPp] = useState("");
   const [show, setShow] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -23,11 +32,25 @@ export function UnlockModal({ entitled = false }: { entitled?: boolean }) {
   useEffect(() => {
     const session = getKeySession();
     setState(session.getState());
-    return session.subscribe(setState);
+    const unsub = session.subscribe(setState);
+    let stale = false;
+    if (typeof window !== "undefined") {
+      let hasToken = false;
+      try { hasToken = !!sessionStorage.getItem(SESSION_MK_KEY); } catch { /* ignore */ }
+      if (hasToken && session.getState() !== "unlocked") {
+        setRestoring(true);
+        session.tryRestoreFromSession()
+          .catch(() => undefined)
+          .finally(() => { if (!stale) setRestoring(false); });
+      } else {
+        setRestoring(false);
+      }
+    }
+    return () => { stale = true; unsub(); };
   }, []);
 
   useEffect(() => {
-    if (!entitled) return;
+    if (!entitled || !onVaultRoute || restoring) return;
     if (state !== "unlocked" && bootstrapped === null) {
       fetch("/api/crypto/bundle", { method: "HEAD" })
         .then((r) => setBootstrapped(r.status !== 404))
@@ -43,10 +66,21 @@ export function UnlockModal({ entitled = false }: { entitled?: boolean }) {
         .then((j) => setHasPin(!!j.hasPin))
         .catch(() => setHasPin(false));
     }
-  }, [state, bootstrapped, hasPin, entitled]);
+  }, [state, bootstrapped, hasPin, entitled, onVaultRoute, restoring]);
 
   if (!entitled) return null;
+  if (!onVaultRoute) return null;
   if (state === "unlocked") return null;
+  if (restoring) {
+    return (
+      <div role="dialog" aria-modal="true" className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+        <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md text-center">
+          <div className="inline-block h-6 w-6 animate-spin rounded-full border-2 border-[#1C3557] border-t-transparent" aria-label="Restoring vault session" />
+          <p className="mt-3 text-sm text-[#2D2D2D]">Restoring your session…</p>
+        </div>
+      </div>
+    );
+  }
 
   if (bootstrapped === null || hasPin === null) {
     return (

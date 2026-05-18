@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import SubscriptionBanner from "@/components/dashboard/SubscriptionBanner";
@@ -88,9 +88,14 @@ const DOC_TYPE_OPTIONS = ["Will", "Trust", "Power of Attorney", "Healthcare Dire
 
 type Screen = "pin-check" | "pin-create" | "pin-enter" | "vault" | "category" | "add-item" | "upload-doc";
 
+const SCREEN_STORAGE_KEY = "vault:screen";
+const CATEGORY_STORAGE_KEY = "vault:selected-category";
+const RESTORABLE_SCREENS = new Set<Screen>(["vault", "category", "add-item", "upload-doc"]);
+
 export default function VaultPage() {
   const router = useRouter();
   const { isLocked } = useVaultLock();
+  const initRef = useRef(false);
   const [screen, setScreen] = useState<Screen>("pin-check");
   const [pin, setPin] = useState("");
   const [confirmPin, setConfirmPin] = useState("");
@@ -116,6 +121,8 @@ export default function VaultPage() {
   const [revealedFields, setRevealedFields] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
+    if (initRef.current) return;
+    initRef.current = true;
     async function check() {
       const justSubscribed = typeof window !== "undefined" && new URLSearchParams(window.location.search).get("subscribed") === "true";
 
@@ -147,9 +154,21 @@ export default function VaultPage() {
       if (pinData.hasPin && cachedExpiry > Date.now()) {
         setPinExpiry(cachedExpiry);
         await loadItems();
-        setScreen("vault");
+        // Restore prior in-tab screen (e.g. category detail) so remount/race doesn't bounce user back.
+        const savedScreen = typeof window !== "undefined" ? sessionStorage.getItem(SCREEN_STORAGE_KEY) : null;
+        const savedCategory = typeof window !== "undefined" ? sessionStorage.getItem(CATEGORY_STORAGE_KEY) : null;
+        if (savedScreen && RESTORABLE_SCREENS.has(savedScreen as Screen)) {
+          if (savedCategory) setSelectedCategory(savedCategory);
+          setScreen(savedScreen as Screen);
+        } else {
+          setScreen("vault");
+        }
       } else {
-        if (typeof window !== "undefined") sessionStorage.removeItem("vault:pin-expiry");
+        if (typeof window !== "undefined") {
+          sessionStorage.removeItem("vault:pin-expiry");
+          sessionStorage.removeItem(SCREEN_STORAGE_KEY);
+          sessionStorage.removeItem(CATEGORY_STORAGE_KEY);
+        }
         setScreen(pinData.hasPin ? "pin-enter" : "pin-create");
       }
 
@@ -171,6 +190,16 @@ export default function VaultPage() {
     check();
   }, [router]);
 
+  // Persist current screen + category so async/remount races can't bounce user back.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (RESTORABLE_SCREENS.has(screen)) {
+      sessionStorage.setItem(SCREEN_STORAGE_KEY, screen);
+      if (selectedCategory) sessionStorage.setItem(CATEGORY_STORAGE_KEY, selectedCategory);
+      else sessionStorage.removeItem(CATEGORY_STORAGE_KEY);
+    }
+  }, [screen, selectedCategory]);
+
   // Auto-lock after 10 min
   useEffect(() => {
     if (screen !== "vault" && screen !== "category" && screen !== "add-item" && screen !== "upload-doc") return;
@@ -179,11 +208,20 @@ export default function VaultPage() {
       if (Date.now() > pinExpiry) {
         setScreen("pin-enter");
         setPin("");
-        if (typeof window !== "undefined") sessionStorage.removeItem("vault:pin-expiry");
+        if (typeof window !== "undefined") {
+          sessionStorage.removeItem("vault:pin-expiry");
+          sessionStorage.removeItem(SCREEN_STORAGE_KEY);
+          sessionStorage.removeItem(CATEGORY_STORAGE_KEY);
+        }
       }
     }, 10000);
     return () => clearInterval(timer);
   }, [screen, pinExpiry]);
+
+  const handleSubStatusLoaded = useCallback(
+    (s: { status: string }) => setIsSubscribed(s.status === "active"),
+    [],
+  );
 
   const loadItems = useCallback(async () => {
     if (isLocked) return;
@@ -707,7 +745,7 @@ export default function VaultPage() {
 
       {/* Subscription banner */}
       <div className="mt-6">
-        <SubscriptionBanner onStatusLoaded={(s) => setIsSubscribed(s.status === "active")} />
+        <SubscriptionBanner onStatusLoaded={handleSubStatusLoaded} />
       </div>
 
       {/* Upgrade prompt modal */}

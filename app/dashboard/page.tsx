@@ -30,7 +30,7 @@ export default async function DashboardHome() {
   const { data: profile } = await supabase.from("profiles").select("full_name").eq("id", user.id).single();
   const firstName = profile?.full_name?.split(" ")[0] || "there";
 
-  const { data: client } = await supabase.from("clients").select("id, documents_executed, funding_checklist").eq("profile_id", user.id).single();
+  const { data: client } = await supabase.from("clients").select("id, funding_checklist").eq("profile_id", user.id).single();
 
   let orders: Array<{ id: string; product_type: string; status: string; created_at: string; attorney_review_requested: boolean }> = [];
   let documents: Array<{ id: string; document_type: string; status: string }> = [];
@@ -70,12 +70,10 @@ export default async function DashboardHome() {
 
   // Completion tracking
   const hasPurchased = orders.length > 0;
-  const docsExecuted = client?.documents_executed || false;
   const vaultPopulated = vaultCount >= 3;
 
   const actions = [
     { label: "Documents purchased", done: hasPurchased },
-    { label: "Documents executed (signed)", done: docsExecuted },
     { label: "Vault populated", done: vaultPopulated },
   ];
   if (isTrustClient) {
@@ -87,8 +85,8 @@ export default async function DashboardHome() {
 
   // Next action logic
   let nextAction = { title: "", description: "", buttonText: "", href: "" };
-  if (!docsExecuted) {
-    nextAction = { title: "Sign your documents", description: "Follow the execution guide to properly sign and witness your documents.", buttonText: "View Execution Guide", href: "/dashboard/documents" };
+  if (!hasPurchased) {
+    nextAction = { title: "Purchase your documents", description: "Choose a package to get started with your estate plan.", buttonText: "View Packages", href: "/dashboard/documents" };
   } else if (!vaultPopulated) {
     nextAction = { title: "Set up your vault", description: "Add your important accounts, policies, and contacts to your family vault.", buttonText: "Go to My Vault", href: "/dashboard/vault" };
   } else if (isTrustClient && !fundingComplete) {

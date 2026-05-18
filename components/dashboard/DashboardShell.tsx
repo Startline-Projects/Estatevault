@@ -51,6 +51,12 @@ export default function DashboardShell({
 
   async function handleSignOut() {
     const supabase = createClient();
+    // Tear down the crypto worker + session-scoped MK before sign-out so a
+    // subsequent login (same tab) can't reuse the previous user's keys.
+    try {
+      const { getKeySession } = await import("@/lib/crypto/keySession");
+      await getKeySession().destroy();
+    } catch { /* best-effort */ }
     await supabase.auth.signOut();
     router.replace("/");
     router.refresh();

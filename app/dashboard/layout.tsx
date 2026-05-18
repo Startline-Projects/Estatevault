@@ -101,6 +101,10 @@ export default async function DashboardLayout({
   if (isVaultOnlyClient && !isVaultOnlyPathAllowed) {
     redirect("/dashboard/vault");
   }
+  // NB: don't gate UnlockModal on server pathname — App Router layouts don't
+  // re-run on client nav, so a header-captured pathname goes stale and the
+  // modal would never mount when the user navigates into /dashboard/vault
+  // from another dashboard route. The modal self-gates on usePathname().
 
   const name = profile?.full_name || profile?.email || user.email || "Client";
   const requiresPasswordChange = profile?.requires_password_change === true;
@@ -110,9 +114,7 @@ export default async function DashboardLayout({
       {requiresPasswordChange && <PasswordChangeBanner />}
       <BackfillBanner />
       {children}
-      {pathname.startsWith("/dashboard/vault") && (
-        <UnlockModal entitled={vaultEntitled} />
-      )}
+      <UnlockModal entitled={vaultEntitled} />
     </DashboardShell>
   );
 }

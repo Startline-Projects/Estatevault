@@ -87,7 +87,6 @@ function DownloadBtn() {
 function HomeSection({ onNav }: { onNav: (s: NavSection) => void }) {
   const actions = [
     { label: 'Documents purchased', done: true },
-    { label: 'Documents executed (signed)', done: false },
     { label: 'Vault populated', done: false },
     { label: 'Assets funded', done: false },
   ];

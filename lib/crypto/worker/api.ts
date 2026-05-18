@@ -72,6 +72,19 @@ export function createCryptoWorkerApi(): CryptoWorkerApi {
     async getState() { return state; },
     async lock() { clearKeys(); },
 
+    async exportMkForSession() {
+      requireUnlocked();
+      // Return a copy — caller serializes to sessionStorage. Worker still owns MK.
+      return new Uint8Array(mk!);
+    },
+
+    async unlockWithRawMk(rawMk) {
+      if (state === "unlocked") clearKeys();
+      mk = new Uint8Array(rawMk);
+      state = "unlocked";
+      await loadIdentity();
+    },
+
     async bootstrap({ passphrase, kdfParams = DEFAULT_KDF }) {
       if (state === "unlocked") clearKeys();
       const salt = await generateSalt();
