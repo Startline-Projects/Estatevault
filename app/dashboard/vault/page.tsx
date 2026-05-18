@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import SubscriptionBanner from "@/components/dashboard/SubscriptionBanner";
 import { listItems, createItem, deleteItem, type VaultCategory } from "@/lib/repos/vaultRepo";
 import { downloadDocument } from "@/lib/repos/documentRepo";
@@ -88,6 +89,7 @@ const DOC_TYPE_OPTIONS = ["Will", "Trust", "Power of Attorney", "Healthcare Dire
 type Screen = "pin-check" | "pin-create" | "pin-enter" | "vault" | "category" | "add-item" | "upload-doc";
 
 export default function VaultPage() {
+  const router = useRouter();
   const { isLocked } = useVaultLock();
   const [screen, setScreen] = useState<Screen>("pin-check");
   const [pin, setPin] = useState("");
@@ -99,6 +101,7 @@ export default function VaultPage() {
   const [saving, setSaving] = useState(false);
   const [pinExpiry, setPinExpiry] = useState(0);
   const [isSubscribed, setIsSubscribed] = useState(false);
+  const [isBootstrapped, setIsBootstrapped] = useState<boolean | null>(null);
   const [showUpgradePrompt, setShowUpgradePrompt] = useState(false);
 
   // Upload state
@@ -136,7 +139,28 @@ export default function VaultPage() {
       }
 
       setIsSubscribed(subData.status === "active");
-      setScreen(pinData.hasPin ? "pin-enter" : "pin-create");
+
+      // Persisted PIN unlock survives intra-tab nav (e.g. /trustees → back).
+      const cachedExpiry = typeof window !== "undefined"
+        ? Number(sessionStorage.getItem("vault:pin-expiry") || 0)
+        : 0;
+      if (pinData.hasPin && cachedExpiry > Date.now()) {
+        setPinExpiry(cachedExpiry);
+        await loadItems();
+        setScreen("vault");
+      } else {
+        if (typeof window !== "undefined") sessionStorage.removeItem("vault:pin-expiry");
+        setScreen(pinData.hasPin ? "pin-enter" : "pin-create");
+      }
+
+      // Track passphrase/crypto bootstrap separately. Used to gate item-add actions
+      // and redirect into /onboarding/vault-setup when user tries to use vault before finishing setup.
+      try {
+        const bundleRes = await fetch("/api/crypto/bundle", { method: "HEAD" });
+        setIsBootstrapped(bundleRes.status !== 404);
+      } catch {
+        setIsBootstrapped(false);
+      }
 
       if (justSubscribed && typeof window !== "undefined") {
         const url = new URL(window.location.href);
@@ -145,14 +169,18 @@ export default function VaultPage() {
       }
     }
     check();
-  }, []);
+  }, [router]);
 
   // Auto-lock after 10 min
   useEffect(() => {
     if (screen !== "vault" && screen !== "category" && screen !== "add-item" && screen !== "upload-doc") return;
     if (pinExpiry === 0) return;
     const timer = setInterval(() => {
-      if (Date.now() > pinExpiry) { setScreen("pin-enter"); setPin(""); }
+      if (Date.now() > pinExpiry) {
+        setScreen("pin-enter");
+        setPin("");
+        if (typeof window !== "undefined") sessionStorage.removeItem("vault:pin-expiry");
+      }
     }, 10000);
     return () => clearInterval(timer);
   }, [screen, pinExpiry]);
@@ -175,12 +203,21 @@ export default function VaultPage() {
     }
   }, [isLocked]);
 
+  // Auto-reload items when MK unlocks while user is already past PIN gate.
+  useEffect(() => {
+    if (isLocked) return;
+    if (screen !== "vault" && screen !== "category") return;
+    void loadItems();
+  }, [isLocked, screen, loadItems]);
+
   async function handleCreatePin() {
     if (pin.length !== 4 || !/^\d{4}$/.test(pin)) { setPinError("PIN must be exactly 4 digits"); return; }
     if (pin !== confirmPin) { setPinError("PINs do not match"); return; }
     const res = await fetch("/api/vault/pin", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "create", pin }) });
     if (!res.ok) { setPinError("Failed to create PIN"); return; }
-    setPinExpiry(Date.now() + 10 * 60 * 1000);
+    const expiry = Date.now() + 10 * 60 * 1000;
+    setPinExpiry(expiry);
+    if (typeof window !== "undefined") sessionStorage.setItem("vault:pin-expiry", String(expiry));
     await loadItems();
     setScreen("vault");
   }
@@ -188,7 +225,9 @@ export default function VaultPage() {
   async function handleVerifyPin() {
     const res = await fetch("/api/vault/pin", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "verify", pin }) });
     if (!res.ok) { setPinError("Incorrect PIN"); setPin(""); return; }
-    setPinExpiry(Date.now() + 10 * 60 * 1000);
+    const expiry = Date.now() + 10 * 60 * 1000;
+    setPinExpiry(expiry);
+    if (typeof window !== "undefined") sessionStorage.setItem("vault:pin-expiry", String(expiry));
     await loadItems();
     setScreen("vault");
   }
@@ -708,6 +747,7 @@ export default function VaultPage() {
               key={cat.key}
               onClick={() => {
                 if (requiresUpgrade) { setShowUpgradePrompt(true); return; }
+                if (isBootstrapped === false) { router.push("/onboarding/vault-setup"); return; }
                 setSelectedCategory(cat.key);
                 setScreen("category");
               }}

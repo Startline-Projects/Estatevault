@@ -38,6 +38,7 @@ export default function TrusteesPage() {
   const [error, setError] = useState("");
   const [justAdded, setJustAdded] = useState(false);
   const [scope, setScope] = useState<AccessScope>({ ...FULL_SCOPE });
+  const [showForm, setShowForm] = useState(false);
 
   function toggleCategory(key: string) {
     setScope((p) => ({
@@ -72,6 +73,7 @@ export default function TrusteesPage() {
       await addTrustee({ name: name.trim(), email: email.trim(), relationship, accessScope: scope });
       setName(""); setEmail(""); setRelationship(""); setScope({ ...FULL_SCOPE });
       setJustAdded(true);
+      setShowForm(false);
       await loadTrustees();
     } catch (e) {
       const err = e as Error & { action?: string };
@@ -101,7 +103,11 @@ export default function TrusteesPage() {
   }
 
   if (isLocked) {
-    return <div className="py-20 text-center text-charcoal/50">{state === "uninitialized" ? "Loading..." : "Unlock vault to manage emergency access."}</div>;
+    return (
+      <div className="py-20 text-center text-charcoal/50">
+        {state === "uninitialized" ? "Loading..." : "Unlocking vault…"}
+      </div>
+    );
   }
   if (loading) return <div className="py-20 text-center text-charcoal/50">Loading...</div>;
 
@@ -121,6 +127,22 @@ export default function TrusteesPage() {
 
       {error && (
         <div className="mt-4 rounded-xl bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">{error}</div>
+      )}
+
+      {trustees.length === 0 && !showForm && (
+        <div className="mt-8 rounded-xl bg-white border border-gray-200 p-8 text-center">
+          <div className="mx-auto w-14 h-14 rounded-full bg-gold/10 flex items-center justify-center mb-3">
+            <span className="text-2xl">🛡️</span>
+          </div>
+          <h2 className="text-base font-bold text-navy">No Trustees Yet</h2>
+          <p className="mt-1 text-sm text-charcoal/60">Add up to 2 trusted people who can request emergency access to your vault.</p>
+          <button
+            onClick={() => setShowForm(true)}
+            className="mt-5 inline-flex items-center rounded-full bg-gold px-5 py-2.5 text-sm font-semibold text-white hover:bg-gold/90 transition-colors"
+          >
+            + Add Your First Trustee
+          </button>
+        </div>
       )}
 
       {trustees.length > 0 && (
@@ -160,10 +182,24 @@ export default function TrusteesPage() {
         </div>
       )}
 
-      {trustees.length < 2 && (
+      {trustees.length > 0 && trustees.length < 2 && !showForm && (
+        <button
+          onClick={() => setShowForm(true)}
+          className="mt-6 inline-flex items-center rounded-full bg-gold px-5 py-2.5 text-sm font-semibold text-white hover:bg-gold/90 transition-colors"
+        >
+          + Add Another Trustee
+        </button>
+      )}
+
+      {trustees.length < 2 && showForm && (
         <div className="mt-8 rounded-xl bg-white border border-gray-200 p-6">
-          <h2 className="text-base font-bold text-navy">Add Trustee</h2>
-          <p className="text-xs text-charcoal/50 mt-1">A confirmation email will be sent to the trustee. They must accept before the role is active.</p>
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <h2 className="text-base font-bold text-navy">Add Trustee</h2>
+              <p className="text-xs text-charcoal/50 mt-1">A confirmation email will be sent to the trustee. They must accept before the role is active.</p>
+            </div>
+            <button onClick={() => setShowForm(false)} className="text-charcoal/50 hover:text-charcoal text-xl leading-none">×</button>
+          </div>
           {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
           <div className="mt-4 space-y-4">
             <div>

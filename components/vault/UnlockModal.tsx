@@ -48,6 +48,30 @@ export function UnlockModal({ entitled = false }: { entitled?: boolean }) {
   if (!entitled) return null;
   if (state === "unlocked") return null;
 
+  if (bootstrapped === null || hasPin === null) {
+    return (
+      <div role="dialog" aria-modal="true" className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+        <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md text-center">
+          <div className="inline-block h-6 w-6 animate-spin rounded-full border-2 border-[#1C3557] border-t-transparent" aria-label="Loading" />
+        </div>
+      </div>
+    );
+  }
+
+  if (bootstrapped === false) {
+    return (
+      <div role="dialog" aria-modal="true" className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+        <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md text-center">
+          <h2 className="text-lg font-semibold text-[#1C3557] mb-2">Set up your vault</h2>
+          <p className="text-sm text-[#2D2D2D] mb-4">You haven&apos;t created a passphrase yet.</p>
+          <Link href="/onboarding/vault-setup" className="inline-block bg-[#1C3557] text-white rounded px-4 py-2 text-sm">
+            Set up vault
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
   if (hasPin === false) {
     return (
       <div role="dialog" aria-modal="true" className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
@@ -82,20 +106,6 @@ export function UnlockModal({ entitled = false }: { entitled?: boolean }) {
     } finally {
       setBusy(false);
     }
-  }
-
-  if (bootstrapped === false) {
-    return (
-      <div role="dialog" aria-modal="true" className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-        <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md text-center">
-          <h2 className="text-lg font-semibold text-[#1C3557] mb-2">Set up your vault</h2>
-          <p className="text-sm text-[#2D2D2D] mb-4">You haven&apos;t created a passphrase yet.</p>
-          <Link href="/onboarding/vault-setup" className="inline-block bg-[#1C3557] text-white rounded px-4 py-2 text-sm">
-            Set up vault
-          </Link>
-        </div>
-      </div>
-    );
   }
 
   return (

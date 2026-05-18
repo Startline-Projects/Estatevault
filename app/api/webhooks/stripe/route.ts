@@ -711,11 +711,10 @@ export async function POST(request: Request) {
 
     // ── 5. Pre-populate vault with estate documents entry ──────
     if (clientId) {
-      await supabase.from("vault_items").insert({
+      const pkgRow = {
         client_id: clientId,
         category: "estate_document",
         label: productType === "trust" ? "Trust Package" : "Will Package",
-        auto_generated: true,
         data: {
           order_id: orderId,
           product_type: productType,
@@ -723,7 +722,12 @@ export async function POST(request: Request) {
           status: attorneyReview ? "under_review" : "generating",
           note: "Documents will be available for download once generated.",
         },
-      });
+      };
+      const r = await supabase.from("vault_items").insert({ ...pkgRow, auto_generated: true });
+      if (r.error) {
+        // Fallback for envs missing 20260518_vault_auto_generated.sql
+        await supabase.from("vault_items").insert(pkgRow);
+      }
     }
 
     // ── 6. Save asset checklist to client record (trust only) ──
@@ -743,18 +747,20 @@ export async function POST(request: Request) {
         const assetTypes = answers.assetTypes as string[] | undefined;
 
         if (assetTypes && assetTypes.length > 0) {
-          // Save asset checklist as a vault item
-          await supabase.from("vault_items").insert({
+          const checklistRow = {
             client_id: clientId,
             category: "estate_document",
             label: "Asset Funding Checklist",
-            auto_generated: true,
             data: {
               order_id: orderId,
               assets: buildAssetChecklist(assetTypes),
               status: "action_required",
             },
-          });
+          };
+          const r = await supabase.from("vault_items").insert({ ...checklistRow, auto_generated: true });
+          if (r.error) {
+            await supabase.from("vault_items").insert(checklistRow);
+          }
         }
       }
     }

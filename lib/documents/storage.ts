@@ -83,15 +83,28 @@ export async function uploadDocument(
   // Discard plaintext reference. (GC handles the rest.)
   toUpload = new Uint8Array(0);
 
-  await supabase.from("documents").update({
+  // Core update — must succeed for the doc to surface in client UI. Kept
+  // separate so a missing phase12 migration cannot wedge status=pending.
+  const coreUpd = await supabase.from("documents").update({
     storage_path: path,
     status: "generated",
     generated_at: new Date().toISOString(),
+  }).eq("order_id", orderId).eq("document_type", documentType);
+  if (coreUpd.error) {
+    throw new Error(`documents update failed: ${coreUpd.error.message}`);
+  }
+
+  // Extended update — requires 20260509_e2ee_phase12_documents.sql. Tolerate
+  // failure so older envs still generate working docs.
+  const extUpd = await supabase.from("documents").update({
     sealed,
     sealed_for_user_id: sealedFor,
     attorney_sealed_path: attorneySealedPath,
     attorney_sealed_for: attorneySealedFor,
   }).eq("order_id", orderId).eq("document_type", documentType);
+  if (extUpd.error) {
+    console.warn("[uploadDocument] sealed columns update failed (apply 20260509_e2ee_phase12_documents.sql):", extUpd.error.message);
+  }
 
   await supabase.from("audit_log").insert({
     actor_id: sealedFor,

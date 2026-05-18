@@ -8,7 +8,7 @@ import { MnemonicConfirm } from "@/components/onboarding/MnemonicConfirm";
 import { getKeySession } from "@/lib/crypto/keySession";
 import { postBootstrap } from "@/lib/repos/cryptoRepo";
 
-type Step = "pin" | "passphrase" | "show" | "confirm" | "done";
+type Step = "loading" | "pin" | "passphrase" | "show" | "confirm" | "done";
 
 type Pending = {
   mnemonic: string;
@@ -17,7 +17,7 @@ type Pending = {
 
 export default function VaultSetupPage() {
   const router = useRouter();
-  const [step, setStep] = useState<Step>("pin");
+  const [step, setStep] = useState<Step>("loading");
   const [pending, setPending] = useState<Pending | null>(null);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -32,9 +32,9 @@ export default function VaultSetupPage() {
     })
       .then((r) => r.json())
       .then((j) => {
-        if (j.hasPin) setStep("passphrase");
+        setStep(j.hasPin ? "passphrase" : "pin");
       })
-      .catch(() => {});
+      .catch(() => setStep("pin"));
   }, []);
 
   async function handlePin(e: React.FormEvent) {
@@ -103,7 +103,7 @@ export default function VaultSetupPage() {
       // Wipe mnemonic from React state immediately.
       setPending(null);
       setStep("done");
-      router.replace("/dashboard");
+      router.replace("/dashboard/vault");
     } catch (e) {
       setErr((e as Error).message);
     } finally {
@@ -116,6 +116,7 @@ export default function VaultSetupPage() {
       <div className="w-full max-w-lg bg-white rounded-lg shadow-md p-8">
         <h1 className="text-2xl font-semibold text-[#1C3557] mb-1">Set up your vault</h1>
         <p className="text-sm text-[#2D2D2D] mb-6">
+          {step === "loading" && " "}
           {step === "pin" && "Create a 4-digit PIN. You'll use this each time you access your vault."}
           {step === "passphrase" && "Choose a passphrase. Only you will know it."}
           {step === "show" && "Save your 24-word recovery phrase."}
@@ -126,6 +127,12 @@ export default function VaultSetupPage() {
         {err && (
           <div className="mb-4 rounded bg-red-50 border border-red-200 p-3 text-sm text-red-800">
             {err}
+          </div>
+        )}
+
+        {step === "loading" && (
+          <div className="flex justify-center py-8">
+            <div className="h-6 w-6 animate-spin rounded-full border-2 border-[#1C3557] border-t-transparent" aria-label="Loading" />
           </div>
         )}
 

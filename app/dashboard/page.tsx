@@ -43,8 +43,20 @@ export default async function DashboardHome() {
     orders = o || [];
     isTrustClient = orders.some((o) => o.product_type === "trust");
 
-    const { data: d } = await supabase.from("documents").select("id, document_type, status").eq("client_id", client.id);
-    documents = d || [];
+    // Prefer docs for the latest order, fall back to client-wide query for
+    // legacy rows missing order_id. Keeps PackageStatusCard initial state
+    // aligned with its poll filter (order_id).
+    const latestOrderId = orders[0]?.id;
+    let docsRows: Array<{ id: string; document_type: string; status: string }> = [];
+    if (latestOrderId) {
+      const { data: byOrder } = await supabase.from("documents").select("id, document_type, status").eq("order_id", latestOrderId);
+      docsRows = byOrder || [];
+    }
+    if (docsRows.length === 0) {
+      const { data: byClient } = await supabase.from("documents").select("id, document_type, status").eq("client_id", client.id);
+      docsRows = byClient || [];
+    }
+    documents = docsRows;
 
     const { data: v } = await supabase.from("vault_items").select("id").eq("client_id", client.id);
     vaultCount = v?.length || 0;

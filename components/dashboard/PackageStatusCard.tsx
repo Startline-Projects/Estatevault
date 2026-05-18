@@ -37,10 +37,10 @@ export default function PackageStatusCard({ orderId, packageName, initialOrderSt
         supabase.from("orders").select("status").eq("id", orderId).single(),
       ]);
       console.log("[PackageStatusCard] poll", { orderId, docs: docsRes.data, docsErr: docsRes.error, order: orderRes.data, orderErr: orderRes.error });
-      if (Array.isArray(docsRes.data)) {
+      if (Array.isArray(docsRes.data) && docsRes.data.length > 0) {
         const mapped = docsRes.data.map((d) => ({ type: d.document_type as string, status: d.status as string }));
         setDocuments(mapped);
-        const ready = mapped.length > 0 && mapped.every((d) => d.status === "generated" || d.status === "delivered");
+        const ready = mapped.every((d) => d.status === "generated" || d.status === "delivered");
         if (ready) router.refresh();
       }
       if (orderRes.data?.status) setOrderStatus(orderRes.data.status as string);
