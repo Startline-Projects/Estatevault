@@ -3,6 +3,7 @@ export const maxDuration = 300;
 
 import { NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
+import { createClient } from "@/lib/supabase/server";
 import { claude, CLAUDE_MODEL } from "@/lib/claude";
 import { uploadDocument } from "@/lib/documents/storage";
 
@@ -44,13 +45,22 @@ async function getTemplate(docType: string) {
 export async function GET(request: Request) {
   const log: string[] = [];
   try {
+    // Admin-only gate
+    const userClient = createClient();
+    const { data: { user } } = await userClient.auth.getUser();
+    if (!user) return NextResponse.json({ error: "Unauthorized", log }, { status: 401 });
+    const supabase = createAdminClient();
+    const { data: callerProfile } = await supabase
+      .from("profiles").select("user_type").eq("id", user.id).single();
+    if (callerProfile?.user_type !== "admin") {
+      return NextResponse.json({ error: "Forbidden", log }, { status: 403 });
+    }
+
     const { searchParams } = new URL(request.url);
     const orderId = searchParams.get("order_id");
     if (!orderId) {
       return NextResponse.json({ error: "Add ?order_id=XXX", log }, { status: 400 });
     }
-
-    const supabase = createAdminClient();
 
     const { data: order, error: orderErr } = await supabase
       .from("orders")

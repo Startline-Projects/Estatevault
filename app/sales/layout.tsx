@@ -34,7 +34,7 @@ export default function SalesLayout({ children }: { children: React.ReactNode })
 
   const portalLabel = isAdmin ? "Admin Portal" : "Sales Portal";
   const commissionItem: PortalNavItem = {
-    label: isAdmin ? "Partner Commissions" : "My Commission",
+    label: isAdmin ? "Sales Rep Commissions" : "My Commission",
     href: "/sales/commission",
   };
   // Affiliate program oversight is admin-only for now.
@@ -42,6 +42,7 @@ export default function SalesLayout({ children }: { children: React.ReactNode })
     ? [
         { label: "Affiliates", href: "/sales/affiliates" },
         { label: "Marketing Materials", href: "/sales/marketing-materials" },
+        { label: "Regenerate Docs", href: "/sales/admin/regenerate-docs" },
       ]
     : [];
   const navItems = [...baseNavItems, commissionItem, ...adminItems, ...tailNavItems];

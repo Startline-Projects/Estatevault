@@ -78,7 +78,12 @@ export default function DashboardShell({
       isActive={isActive}
       onSignOut={handleSignOut}
     >
-      <div className="pb-20 md:pb-0">{children}</div>
+      <div
+        className="partner-themed pb-20 md:pb-0"
+        style={{ ["--partner-accent" as string]: sidebarAccent }}
+      >
+        {children}
+      </div>
       <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-gray-200 flex justify-around py-2">
         {visibleNavItems.map((item) => {
           const active = pathname === item.href || (item.href !== "/dashboard" && pathname.startsWith(item.href));

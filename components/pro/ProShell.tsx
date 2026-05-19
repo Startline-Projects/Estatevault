@@ -5,6 +5,7 @@ import { flushSync } from "react-dom";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { PartnerAccentContext } from "@/lib/partner-accent-context";
 
 const navItems = [
   { icon: "🏠", label: "Dashboard", href: "/pro/dashboard", basicHidden: false, basicOnly: false },
@@ -211,7 +212,10 @@ export default function ProShell({ companyName, userName, tier, logoUrl, onboard
   );
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div
+      className="min-h-screen bg-gray-50"
+      style={{ ["--partner-accent" as any]: accent, ["--partner-accent-dark" as any]: accentDark }}
+    >
       {/* Desktop sidebar */}
       <aside style={sidebarBgStyle} className={`fixed left-0 top-0 z-40 hidden md:flex h-screen w-60 flex-col ${sidebarBgClass}`}>{sidebar}</aside>
 
@@ -236,16 +240,19 @@ export default function ProShell({ companyName, userName, tier, logoUrl, onboard
           <div className="flex flex-col items-center gap-4 rounded-2xl bg-white/85 backdrop-blur-md px-8 py-6 shadow-[0_8px_32px_-8px_rgba(28,53,87,0.25)] border border-white/60">
             <div className="relative h-12 w-12">
               <div className="absolute inset-0 rounded-full border-[3px] border-navy/10" />
-              <div className="absolute inset-0 rounded-full border-[3px] border-transparent border-t-gold border-r-gold/60 animate-spin" />
+              <div
+                className="absolute inset-0 rounded-full border-[3px] border-transparent animate-spin"
+                style={{ borderTopColor: accent, borderRightColor: `color-mix(in srgb, ${accent} 60%, transparent)` }}
+              />
               <div className="absolute inset-1.5 rounded-full border-[2px] border-transparent border-b-navy/40 animate-[spin_1.4s_linear_infinite_reverse]" />
-              <div className="absolute inset-0 m-auto h-2 w-2 rounded-full bg-gold animate-pulse" />
+              <div className="absolute inset-0 m-auto h-2 w-2 rounded-full animate-pulse" style={{ background: accent }} />
             </div>
             <div className="flex items-center gap-1">
               <span className="text-xs font-semibold tracking-[0.18em] uppercase text-navy/70">Loading</span>
               <span className="flex gap-0.5">
-                <span className="h-1 w-1 rounded-full bg-gold animate-[bounce_1s_infinite_0ms]" />
-                <span className="h-1 w-1 rounded-full bg-gold animate-[bounce_1s_infinite_150ms]" />
-                <span className="h-1 w-1 rounded-full bg-gold animate-[bounce_1s_infinite_300ms]" />
+                <span className="h-1 w-1 rounded-full animate-[bounce_1s_infinite_0ms]" style={{ background: accent }} />
+                <span className="h-1 w-1 rounded-full animate-[bounce_1s_infinite_150ms]" style={{ background: accent }} />
+                <span className="h-1 w-1 rounded-full animate-[bounce_1s_infinite_300ms]" style={{ background: accent }} />
               </span>
             </div>
           </div>
@@ -256,14 +263,25 @@ export default function ProShell({ companyName, userName, tier, logoUrl, onboard
       <main className="md:ml-60 pt-14 md:pt-0 min-h-screen relative">
         {/* Onboarding/certification banners */}
         {tier !== "basic" && (!onboardingComplete || !certificationComplete) && (
-          <div className="bg-amber-50 border-b border-amber-200 px-6 py-3 flex items-center gap-4 text-sm">
-            <span className="text-amber-700">⚠</span>
-            <span className="text-amber-800">{!onboardingComplete ? "Your setup is incomplete." : "Certification required to unlock client features."}</span>
-            {!onboardingComplete && <Link href={`/pro/onboarding/step-${onboardingStep}`} className="font-semibold text-amber-900 underline">Complete Setup →</Link>}
-            {onboardingComplete && !certificationComplete && <Link href="/pro/training" className="font-semibold text-amber-900 underline">Complete Certification →</Link>}
+          <div
+            className="border-b px-6 py-3 flex items-center gap-4 text-sm"
+            style={{
+              background: `color-mix(in srgb, ${accent} 12%, #ffffff)`,
+              borderColor: `color-mix(in srgb, ${accent} 30%, #ffffff)`,
+              color: accentDark,
+            }}
+          >
+            <span style={{ color: accentDark }}>⚠</span>
+            <span style={{ color: accentDark }}>{!onboardingComplete ? "Your setup is incomplete." : "Certification required to unlock client features."}</span>
+            {!onboardingComplete && <Link href={`/pro/onboarding/step-${onboardingStep}`} className="font-semibold underline" style={{ color: accentDark }}>Complete Setup →</Link>}
+            {onboardingComplete && !certificationComplete && <Link href="/pro/training" className="font-semibold underline" style={{ color: accentDark }}>Complete Certification →</Link>}
           </div>
         )}
-        <div className="p-6 md:p-8">{children}</div>
+        <div className="p-6 md:p-8">
+          <PartnerAccentContext.Provider value={{ accent, accentDark }}>
+            {children}
+          </PartnerAccentContext.Provider>
+        </div>
       </main>
 
       <style jsx global>{`

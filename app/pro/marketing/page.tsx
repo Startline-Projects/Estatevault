@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { substituteTokens, type PartnerData } from "@/lib/marketing/substitute";
+import { usePartnerAccent } from "@/lib/partner-accent-context";
 
 const TABS = ["All", "Scripts", "Email", "Social Media", "Print Materials", "Presentations"];
 
@@ -223,10 +224,11 @@ export default function MarketingPage() {
   }
 
   const isNorthwood = !!partner?.businessUrl?.toLowerCase().includes("northwoodwealthadvisors");
-  const accent = partner?.accentColor || "#C9A84C";
+  const shellAccent = usePartnerAccent();
+  const accent = partner?.accentColor || shellAccent.accent;
   const accentDark = (() => {
     const hex = accent.replace("#", "");
-    if (hex.length !== 6) return accent;
+    if (hex.length !== 6) return shellAccent.accentDark;
     const r = Math.max(0, parseInt(hex.slice(0, 2), 16) - 30);
     const g = Math.max(0, parseInt(hex.slice(2, 4), 16) - 30);
     const b = Math.max(0, parseInt(hex.slice(4, 6), 16) - 30);
@@ -283,9 +285,19 @@ export default function MarketingPage() {
       </div>
 
       {!certified && (
-        <div className="mt-5 rounded-2xl bg-amber-50 border border-amber-200 p-4 flex items-center justify-between">
-          <p className="text-sm text-amber-800">⚠ Complete your certification training to unlock all marketing materials. The Compliance Script Card is available now.</p>
-          <Link href="/pro/training" className="rounded-full bg-amber-600 px-4 py-1.5 text-xs font-semibold text-white hover:bg-amber-700 shrink-0 ml-4">Complete Certification →</Link>
+        <div
+          className="mt-5 rounded-2xl border p-4 flex items-center justify-between"
+          style={{
+            background: "color-mix(in srgb, var(--partner-accent, #C9A84C) 12%, #ffffff)",
+            borderColor: "color-mix(in srgb, var(--partner-accent, #C9A84C) 30%, #ffffff)",
+          }}
+        >
+          <p className="text-sm" style={{ color: "color-mix(in srgb, var(--partner-accent, #C9A84C) 60%, #1a1a1a)" }}>⚠ Complete your certification training to unlock all marketing materials. The Compliance Script Card is available now.</p>
+          <Link
+            href="/pro/training"
+            className="rounded-full px-4 py-1.5 text-xs font-semibold text-white shrink-0 ml-4 transition-opacity hover:opacity-90"
+            style={{ background: "var(--partner-accent, #C9A84C)" }}
+          >Complete Certification →</Link>
         </div>
       )}
 
@@ -496,7 +508,7 @@ export default function MarketingPage() {
                       <div ref={(el) => { imageRefs.current[refKey] = el; }} className="rounded-lg overflow-hidden" style={{ aspectRatio: `${w}/${h}`, maxHeight: 200 }}>
                         <div className="w-full h-full bg-navy flex flex-col items-center justify-center p-4 text-center" style={{ aspectRatio: `${w}/${h}` }}>
                           <p className="text-white font-bold text-sm whitespace-pre-line leading-relaxed">{sub(post.imageText)}</p>
-                          <p className="mt-2 text-xs" style={{ color: partner?.accentColor || "#C9A84C" }}>{partner?.companyName || "Company"}</p>
+                          <p className="mt-2 text-xs" style={{ color: accent }}>{partner?.companyName || "Company"}</p>
                         </div>
                       </div>
                       <h4 className="mt-3 text-xs font-semibold text-navy">{post.title}</h4>
@@ -589,7 +601,7 @@ export default function MarketingPage() {
                 <p className="text-xs text-white/60">{partner?.companyName || "Company"}</p>
                 <p className="text-base font-bold text-white mt-2">Introducing {partner?.productName || "Legacy Protection"}</p>
                 <p className="text-xs text-white/70 mt-1">Attorney-Reviewed Estate Planning</p>
-                <p className="text-sm font-bold mt-3" style={{ color: partner?.accentColor || "#C9A84C" }}>Will: $400 &middot; Trust: $600</p>
+                <p className="text-sm font-bold mt-3" style={{ color: accent }}>Will: $400 &middot; Trust: $600</p>
               </div>
               <h3 className="text-sm font-bold text-navy">Client Presentation Slide</h3>
               <p className="mt-1 text-xs text-charcoal/50">Drop into your existing presentations.</p>
@@ -599,7 +611,7 @@ export default function MarketingPage() {
               <div className="bg-white border border-gray-200 rounded-lg p-6 mb-4">
                 <p className="text-xs font-bold text-navy">{partner?.productName || "Legacy Protection"}</p>
                 <p className="text-xs text-charcoal/60 mt-2">Attorney-reviewed estate planning for your clients. Will Package $400. Trust Package $600. Includes a secure Family Vault.</p>
-                <p className="text-xs mt-2" style={{ color: partner?.accentColor || "#C9A84C" }}>{partner?.businessUrl ? `legacy.${partner.businessUrl}` : "estatevault.com"}</p>
+                <p className="text-xs mt-2" style={{ color: accent }}>{partner?.businessUrl ? `legacy.${partner.businessUrl}` : "estatevault.com"}</p>
               </div>
               <h3 className="text-sm font-bold text-navy">Client One-Pager</h3>
               <p className="mt-1 text-xs text-charcoal/50">Leave-behind for client meetings.</p>
@@ -625,7 +637,7 @@ export default function MarketingPage() {
                   <p className="text-xs text-charcoal/60 mt-1">{sub(EMAIL_TEMPLATES[previewEmail].subject)}</p>
                 </div>
                 <div className="p-4">
-                  <div className="h-2 w-24 rounded" style={{ background: partner?.accentColor || "#C9A84C" }} />
+                  <div className="h-2 w-24 rounded" style={{ background: accent }} />
                   <pre className="mt-4 whitespace-pre-wrap text-sm text-charcoal/80 leading-relaxed font-sans">{sub(EMAIL_TEMPLATES[previewEmail].body)}</pre>
                 </div>
               </div>

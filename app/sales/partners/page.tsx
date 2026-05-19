@@ -112,6 +112,20 @@ export default function PartnersListPage() {
     return updated < threeDaysAgo;
   }
 
+  const stats = {
+    total: partners.length,
+    active: partners.filter((p) => p.status === "active").length,
+    onboarding: partners.filter((p) => p.status === "onboarding").length,
+    stuck: partners.filter(isStuck).length,
+    enterprise: partners.filter((p) => p.plan_tier === "enterprise").length,
+    standard: partners.filter((p) => p.plan_tier === "standard").length,
+    certified: partners.filter((p) => p.certification_completed).length,
+    mtdDocs: partners.reduce((s, p) => s + p.mtd_docs, 0),
+    mtdRevenue: partners.reduce((s, p) => s + p.mtd_revenue, 0),
+  };
+  const activationRate = stats.total ? Math.round((stats.active / stats.total) * 100) : 0;
+  const avgRevenuePerActive = stats.active ? stats.mtdRevenue / stats.active : 0;
+
   const filtered = partners.filter((p) => {
     if (search) {
       const q = search.toLowerCase();
@@ -143,6 +157,51 @@ export default function PartnersListPage() {
           <span className="text-base leading-none">+</span> New Partner
         </Link>
       </div>
+
+      {/* Analytics */}
+      {!loading && partners.length > 0 && (
+        <div className="mb-6 rounded-xl border border-gray-200 bg-white overflow-hidden">
+          <div className="grid grid-cols-2 md:grid-cols-4 divide-x divide-y md:divide-y-0 divide-gray-100">
+            <div className="p-5">
+              <p className="text-[11px] uppercase tracking-wider font-semibold text-gray-400">Total Partners</p>
+              <p className="mt-2 text-2xl font-bold text-charcoal">{stats.total}</p>
+              <p className="mt-1 text-xs text-gray-500">
+                <span className="text-green-600 font-medium">{stats.active} active</span>
+                {stats.onboarding > 0 && (
+                  <span className="text-blue-600 font-medium"> · {stats.onboarding} onboarding</span>
+                )}
+              </p>
+            </div>
+            <div className="p-5">
+              <p className="text-[11px] uppercase tracking-wider font-semibold text-gray-400">Activation Rate</p>
+              <p className="mt-2 text-2xl font-bold text-charcoal">{activationRate}%</p>
+              <p className="mt-1 text-xs text-gray-500">
+                {stats.certified} certified
+                {stats.stuck > 0 && <span className="text-amber-600 font-medium"> · {stats.stuck} stuck</span>}
+              </p>
+            </div>
+            <div className="p-5">
+              <p className="text-[11px] uppercase tracking-wider font-semibold text-gray-400">MTD Documents</p>
+              <p className="mt-2 text-2xl font-bold text-charcoal">{stats.mtdDocs}</p>
+              <p className="mt-1 text-xs text-gray-500">
+                across {stats.active} active {stats.active === 1 ? "partner" : "partners"}
+              </p>
+            </div>
+            <div className="p-5">
+              <p className="text-[11px] uppercase tracking-wider font-semibold text-gray-400">MTD Revenue</p>
+              <p className="mt-2 text-2xl font-bold text-charcoal">
+                ${(stats.mtdRevenue / 100).toLocaleString()}
+              </p>
+              <p className="mt-1 text-xs text-gray-500">
+                {stats.enterprise} ent · {stats.standard} std
+                {stats.active > 0 && (
+                  <> · avg ${(avgRevenuePerActive / 100).toLocaleString(undefined, { maximumFractionDigits: 0 })}</>
+                )}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Filters */}
       <div className="bg-white rounded-xl border border-gray-200 p-4 mb-6">

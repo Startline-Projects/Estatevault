@@ -121,9 +121,10 @@ export default function ProTrainingPage() {
         </div>
         <div className="h-2 rounded-full bg-gray-200">
           <div
-            className="h-2 rounded-full bg-gold transition-all"
+            className="h-2 rounded-full transition-all"
             style={{
               width: `${(completedModules.length / MODULES.length) * 100}%`,
+              background: "var(--partner-accent, #C9A84C)",
             }}
           />
         </div>
@@ -140,8 +141,13 @@ export default function ProTrainingPage() {
               className={`rounded-xl border-2 p-5 transition-all hover:shadow-md ${
                 isComplete
                   ? "border-green-200 bg-green-50/50"
-                  : "border-gray-200 bg-white hover:border-gold/40"
+                  : "border-gray-200 bg-white"
               }`}
+              style={
+                isComplete
+                  ? undefined
+                  : { borderColor: "color-mix(in srgb, var(--partner-accent, #C9A84C) 28%, #ffffff)" }
+              }
             >
               <div className="flex items-start justify-between">
                 <span className="text-xs font-semibold text-charcoal/60">
@@ -170,9 +176,17 @@ export default function ProTrainingPage() {
           certified
             ? "border-green-200 bg-green-50/50"
             : allModulesComplete
-            ? "border-gold bg-gold/5"
+            ? ""
             : "border-gray-200 bg-gray-50"
         }`}
+        style={
+          !certified && allModulesComplete
+            ? {
+                borderColor: "var(--partner-accent, #C9A84C)",
+                background: "color-mix(in srgb, var(--partner-accent, #C9A84C) 6%, #ffffff)",
+              }
+            : undefined
+        }
       >
         <div className="flex items-center justify-between">
           <div>
@@ -192,7 +206,8 @@ export default function ProTrainingPage() {
           ) : allModulesComplete ? (
             <Link
               href="/pro/training/exam"
-              className="rounded-full bg-gold px-6 py-2 text-sm font-semibold text-white hover:bg-gold/90"
+              className="rounded-full px-6 py-2 text-sm font-semibold text-white transition-opacity hover:opacity-90"
+              style={{ background: "var(--partner-accent, #C9A84C)" }}
             >
               Take Exam
             </Link>

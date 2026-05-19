@@ -15,7 +15,7 @@ function CompletionRing({ percent }: { percent: number }) {
     <div className="relative inline-flex items-center justify-center">
       <svg width="128" height="128" className="-rotate-90">
         <circle cx="64" cy="64" r={r} fill="none" stroke="#e5e7eb" strokeWidth="10" />
-        <circle cx="64" cy="64" r={r} fill="none" stroke="#C9A84C" strokeWidth="10" strokeLinecap="round" strokeDasharray={c} strokeDashoffset={offset} className="transition-all duration-1000" />
+        <circle cx="64" cy="64" r={r} fill="none" strokeWidth="10" strokeLinecap="round" strokeDasharray={c} strokeDashoffset={offset} className="transition-all duration-1000 stroke-gold" />
       </svg>
       <span className="absolute text-2xl font-bold text-navy">{percent}%</span>
     </div>

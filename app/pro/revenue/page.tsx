@@ -305,7 +305,13 @@ export default function ProRevenuePage() {
       </div>
 
       {/* Pending balance */}
-      <div className="mt-6 rounded-xl bg-gold/10 border border-gold/30 p-6">
+      <div
+        className="mt-6 rounded-xl border p-6"
+        style={{
+          background: "color-mix(in srgb, var(--partner-accent, #C9A84C) 10%, #ffffff)",
+          borderColor: "color-mix(in srgb, var(--partner-accent, #C9A84C) 30%, #ffffff)",
+        }}
+      >
         <div className="flex items-center justify-between">
           <div>
             <p className="text-sm font-semibold text-navy">Pending Balance</p>

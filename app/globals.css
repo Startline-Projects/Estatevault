@@ -2,6 +2,45 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Partner-themed client dashboard — swap gold accent with the partner's
+   accent_color via --partner-accent. Scoped to the dashboard wrapper so
+   marketing/landing pages keep their original EstateVault gold. */
+.partner-themed .bg-gold,
+.partner-themed .hover\:bg-gold:hover {
+  background-color: var(--partner-accent) !important;
+}
+.partner-themed .hover\:bg-gold\/90:hover {
+  background-color: color-mix(in srgb, var(--partner-accent) 90%, transparent) !important;
+}
+.partner-themed .bg-gold\/10 {
+  background-color: color-mix(in srgb, var(--partner-accent) 10%, transparent) !important;
+}
+.partner-themed .bg-gold\/20 {
+  background-color: color-mix(in srgb, var(--partner-accent) 20%, transparent) !important;
+}
+.partner-themed .bg-gold\/5 {
+  background-color: color-mix(in srgb, var(--partner-accent) 5%, transparent) !important;
+}
+.partner-themed .text-gold,
+.partner-themed .hover\:text-gold:hover {
+  color: var(--partner-accent) !important;
+}
+.partner-themed .hover\:text-gold\/80:hover {
+  color: color-mix(in srgb, var(--partner-accent) 80%, transparent) !important;
+}
+.partner-themed .border-gold,
+.partner-themed .focus\:border-gold:focus,
+.partner-themed .hover\:border-gold\/40:hover {
+  border-color: var(--partner-accent) !important;
+}
+.partner-themed .accent-gold { accent-color: var(--partner-accent) !important; }
+.partner-themed .ring-gold,
+.partner-themed .focus\:ring-gold:focus {
+  --tw-ring-color: var(--partner-accent) !important;
+}
+.partner-themed .fill-gold { fill: var(--partner-accent) !important; }
+.partner-themed .stroke-gold { stroke: var(--partner-accent) !important; }
+
 /* Northwood partner — swap navy backgrounds with light cream. Text colors untouched. */
 body.theme-northwood .bg-navy,
 body.theme-northwood .hover\:bg-navy:hover,

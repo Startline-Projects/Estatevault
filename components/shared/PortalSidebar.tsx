@@ -51,7 +51,7 @@ const SVG_ICONS: Record<string, JSX.Element> = {
   Revenue: <><path d="M3 17l5-5 4 4 8-8" /><path d="M16 8h4v4" /></>,
   Commission: <><path d="M3 17l5-5 4 4 8-8" /><path d="M16 8h4v4" /></>,
   "My Commission": <><path d="M3 17l5-5 4 4 8-8" /><path d="M16 8h4v4" /></>,
-  "Partner Commissions": <><path d="M3 17l5-5 4 4 8-8" /><path d="M16 8h4v4" /></>,
+  "Sales Rep Commissions": <><path d="M3 17l5-5 4 4 8-8" /><path d="M16 8h4v4" /></>,
   Pipeline: <><path d="M3 6h18M6 12h12M9 18h6" /></>,
   Marketing: <><path d="M3 11l14-7v16L3 13z" /><path d="M7 12v5a2 2 0 004 0" /></>,
   Settings: <><circle cx="12" cy="12" r="3" /><path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1" /></>,

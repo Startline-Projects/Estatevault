@@ -127,7 +127,7 @@ export default function ProSupportPage() {
             <span className="text-2xl">{card.icon}</span>
             <h3 className="mt-3 text-sm font-bold text-navy">{card.title}</h3>
             <p className="mt-1 text-xs text-charcoal/60">{card.description}</p>
-            <p className="mt-3 text-sm font-semibold text-gold">{card.action}</p>
+            <p className="mt-3 text-sm font-semibold" style={{ color: "var(--partner-accent, #C9A84C)" }}>{card.action}</p>
             <p className="mt-1 text-xs text-charcoal/60">{card.detail}</p>
           </div>
         ))}
