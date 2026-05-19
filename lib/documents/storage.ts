@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { sealForRecipient } from "./seal";
+import { byteaToBytes } from "@/lib/api/crypto";
 
 function createAdminClient() {
   return createServerClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, { cookies: { getAll: () => [], setAll: () => {} } });
@@ -33,12 +34,14 @@ export async function uploadDocument(
   let sealedFor: string | null = null;
 
   if (client?.pubkey_x25519) {
-    const recipPub = client.pubkey_x25519 instanceof Uint8Array
-      ? client.pubkey_x25519
-      : new Uint8Array(client.pubkey_x25519 as ArrayBuffer);
-    toUpload = await sealForRecipient(toUpload, recipPub);
-    sealed = true;
-    sealedFor = client.profile_id ?? null;
+    const recipPub = byteaToBytes(client.pubkey_x25519);
+    if (recipPub.length === 32) {
+      toUpload = await sealForRecipient(toUpload, recipPub);
+      sealed = true;
+      sealedFor = client.profile_id ?? null;
+    } else {
+      console.warn(`[uploadDocument] client pubkey wrong length (${recipPub.length}), uploading plaintext`);
+    }
   }
 
   const { error } = await supabase.storage
@@ -65,9 +68,10 @@ export async function uploadDocument(
         .eq("profile_id", review.attorney_id)
         .maybeSingle();
       if (att?.pubkey_x25519) {
-        const attPub = att.pubkey_x25519 instanceof Uint8Array
-          ? att.pubkey_x25519
-          : new Uint8Array(att.pubkey_x25519 as ArrayBuffer);
+        const attPub = byteaToBytes(att.pubkey_x25519);
+        if (attPub.length !== 32) {
+          console.warn(`[uploadDocument] attorney pubkey wrong length (${attPub.length}), skipping attorney seal`);
+        } else {
         const attSealed = await sealForRecipient(new Uint8Array(pdfBuffer), attPub);
         attorneySealedPath = `${clientId}/${orderId}/${documentType}.attorney.bin`;
         const r = await supabase.storage.from("documents").upload(attorneySealedPath, attSealed, {
@@ -76,6 +80,7 @@ export async function uploadDocument(
         });
         if (!r.error) attorneySealedFor = review.attorney_id;
         else attorneySealedPath = null;
+        }
       }
     }
   }

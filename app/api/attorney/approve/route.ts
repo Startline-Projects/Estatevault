@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createServerClient } from "@supabase/ssr";
-import { sendApprovalEmail } from "@/lib/email";
+import { sendDocumentEmail } from "@/lib/email";
 
 function createAdminClient() {
   return createServerClient(
@@ -105,10 +105,21 @@ export async function POST(request: Request) {
       }
     }
 
-    // Send approval email to client
+    // Send full document email to client now that attorney approved (intake was purged,
+    // so asset checklist is omitted; client signs in to download docs).
     if (clientEmail) {
-      const dashboardUrl = `${process.env.NEXT_PUBLIC_SITE_URL || "https://www.estatevault.us"}/dashboard/documents`;
-      await sendApprovalEmail({ to: clientEmail, productType, dashboardUrl, partnerId: order?.partner_id });
+      const origin = process.env.NEXT_PUBLIC_SITE_URL || "https://www.estatevault.us";
+      await sendDocumentEmail({
+        to: clientEmail,
+        productType,
+        loginLink: `${origin}/auth/login?email=${encodeURIComponent(clientEmail)}`,
+        partnerId: order?.partner_id,
+      });
+      await admin.from("audit_log").insert({
+        action: "email.documents_delivered_after_review",
+        resource_type: "order",
+        resource_id: review.order_id,
+      });
     } else {
       console.error("Could not find client email for review:", reviewId);
     }

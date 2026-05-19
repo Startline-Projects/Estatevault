@@ -5,7 +5,7 @@ import { headers } from "next/headers";
 import Stripe from "stripe";
 import { stripe } from "@/lib/stripe";
 import { createServerClient } from "@supabase/ssr";
-import { buildAssetChecklist } from "@/lib/email";
+import { buildAssetChecklist, sendWelcomeEmail } from "@/lib/email";
 import { calculateSplit, transferToPartner, transferToAffiliate } from "@/lib/stripe-payouts";
 
 function createAdminClient() {
@@ -170,6 +170,20 @@ export async function POST(request: Request) {
                 profileId = newUser.user.id;
                 await supabase.from("profiles").upsert({
                   id: profileId, email: guestEmail, full_name: guestName, user_type: "client",
+                });
+
+                const originUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.estatevault.us";
+                await sendWelcomeEmail({
+                  to: guestEmail,
+                  fullName: guestName || null,
+                  productType: "vault",
+                  loginLink: `${originUrl}/auth/login?email=${encodeURIComponent(guestEmail)}`,
+                  partnerId,
+                });
+                await supabase.from("audit_log").insert({
+                  action: "email.welcome_sent",
+                  resource_type: "profile",
+                  resource_id: profileId,
                 });
               }
             }
@@ -368,6 +382,22 @@ export async function POST(request: Request) {
             } else if (clientFullName) {
               await supabase.from("profiles").update({ full_name: clientFullName }).eq("id", profileId);
             }
+
+            // New account → welcome email (docs-being-generated notice)
+            const origin = process.env.NEXT_PUBLIC_SITE_URL || "https://www.estatevault.us";
+            await sendWelcomeEmail({
+              to: customerEmail,
+              fullName: clientFullName || null,
+              productType,
+              attorneyReview,
+              loginLink: `${origin}/auth/login?email=${encodeURIComponent(customerEmail)}`,
+              partnerId: metadata.partner_id || null,
+            });
+            await supabase.from("audit_log").insert({
+              action: "email.welcome_sent",
+              resource_type: "profile",
+              resource_id: profileId,
+            });
           }
         }
 

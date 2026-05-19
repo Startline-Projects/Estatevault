@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { consumeVerifiedToken } from "@/lib/auth/emailVerification";
+import { sendWelcomeEmail } from "@/lib/email";
 
 function createAdminClient() {
   return createServerClient(
@@ -72,6 +73,17 @@ export async function POST(request: Request) {
 
     if (upsertErr) {
       return NextResponse.json({ error: "Failed to finalize profile setup." }, { status: 500 });
+    }
+
+    try {
+      const { origin } = new URL(request.url);
+      await sendWelcomeEmail({
+        to: normalizedEmail,
+        fullName: (fullName || "").trim() || null,
+        loginLink: `${origin}/auth/login?email=${encodeURIComponent(normalizedEmail)}`,
+      });
+    } catch (mailErr) {
+      console.error("welcome email failed:", mailErr);
     }
 
     return NextResponse.json({ success: true, userId: newUser.user.id });

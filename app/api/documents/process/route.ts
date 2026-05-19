@@ -5,6 +5,65 @@ import { createServerClient } from "@supabase/ssr";
 import { claude, CLAUDE_MODEL } from "@/lib/claude";
 import { popNextJob, getJob, updateJob, ratelimit } from "@/lib/queue/document-queue";
 import { uploadDocument } from "@/lib/documents/storage";
+import { sendDocumentEmail, sendAttorneyReviewPendingEmail, buildAssetChecklist } from "@/lib/email";
+
+type SupabaseAdmin = ReturnType<typeof createAdminClient>;
+
+async function notifyClientByEmail(
+  supabase: SupabaseAdmin,
+  orderId: string,
+  clientId: string | null,
+  productType: string,
+  isAttorneyReview: boolean,
+  intake: Record<string, unknown>,
+  origin: string,
+) {
+  if (!clientId) return;
+  if (productType !== "will" && productType !== "trust") return;
+  try {
+    const { data: clientRow } = await supabase
+      .from("clients")
+      .select("profile_id, partner_id")
+      .eq("id", clientId)
+      .maybeSingle();
+    const profileId = clientRow?.profile_id;
+    if (!profileId) return;
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("email")
+      .eq("id", profileId)
+      .maybeSingle();
+    const clientEmail = profile?.email;
+    if (!clientEmail) return;
+
+    const partnerId = clientRow?.partner_id || null;
+    if (isAttorneyReview) {
+      await sendAttorneyReviewPendingEmail({
+        to: clientEmail,
+        productType: productType as "will" | "trust",
+        partnerId,
+      });
+    } else {
+      const assetTypes = Array.isArray((intake as { assetTypes?: unknown }).assetTypes)
+        ? ((intake as { assetTypes?: string[] }).assetTypes as string[])
+        : [];
+      await sendDocumentEmail({
+        to: clientEmail,
+        productType: productType as "will" | "trust",
+        loginLink: `${origin}/auth/login?email=${encodeURIComponent(clientEmail)}`,
+        assetChecklist: productType === "trust" ? buildAssetChecklist(assetTypes) : undefined,
+        partnerId,
+      });
+    }
+    await supabase.from("audit_log").insert({
+      action: isAttorneyReview ? "email.attorney_review_pending" : "email.documents_delivered",
+      resource_type: "order",
+      resource_id: orderId,
+    });
+  } catch (mailErr) {
+    console.error("notifyClientByEmail failed:", mailErr);
+  }
+}
 
 function createAdminClient() {
   return createServerClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, { cookies: { getAll: () => [], setAll: () => {} } });
@@ -37,7 +96,7 @@ async function getTemplate(docType: string) {
   }
 }
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
     // Try Redis queue first
     const jobId = await popNextJob();
@@ -147,6 +206,20 @@ export async function GET() {
         await supabase.from("documents").update({ status: "delivered", delivered_at: new Date().toISOString() }).eq("order_id", order.id);
       }
 
+      // Notify client via email (delivered → docs ready; review → attorney pending notice)
+      if (!isTestOrder) {
+        const { origin } = new URL(request.url);
+        await notifyClientByEmail(
+          supabase,
+          order.id,
+          order.client_id,
+          order.product_type,
+          !!order.attorney_review_requested,
+          intake,
+          origin,
+        );
+      }
+
       // E2EE Phase 12b: purge plaintext quiz answers once PDFs are generated.
       // PDFs are sealed to user pubkey (Phase 12); server no longer needs intake.
       if (order.quiz_session_id) {
@@ -235,6 +308,27 @@ export async function GET() {
 
       // Update document statuses to delivered
       await supabase.from("documents").update({ status: "delivered", delivered_at: new Date().toISOString() }).eq("order_id", job.order_id);
+    }
+
+    // Notify client via email
+    {
+      const { data: jobOrderInfo } = await supabase
+        .from("orders")
+        .select("product_type, order_type")
+        .eq("id", job.order_id)
+        .maybeSingle();
+      if (jobOrderInfo && jobOrderInfo.order_type !== "test") {
+        const { origin } = new URL(request.url);
+        await notifyClientByEmail(
+          supabase,
+          job.order_id,
+          job.client_id,
+          jobOrderInfo.product_type,
+          !!job.attorney_review,
+          intake as Record<string, unknown>,
+          origin,
+        );
+      }
     }
 
     // Auto-populate vault

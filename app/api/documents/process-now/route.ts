@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { claude, CLAUDE_MODEL } from "@/lib/claude";
 import { uploadDocument } from "@/lib/documents/storage";
+import { sendDocumentEmail, sendAttorneyReviewPendingEmail, buildAssetChecklist } from "@/lib/email";
 
 function createAdminClient() {
   return createServerClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, { cookies: { getAll: () => [], setAll: () => {} } });
@@ -147,6 +148,60 @@ export async function GET(request: Request) {
       await supabase.from("orders").update({ status: "delivered" }).eq("id", orderId);
       await supabase.from("documents").update({ status: "delivered", delivered_at: new Date().toISOString() }).eq("order_id", orderId);
       log.push("8. Order and documents set to 'delivered'");
+    }
+
+    // Notify client via email
+    if (!isTestOrder && order.client_id) {
+      try {
+        const { data: clientRow } = await supabase
+          .from("clients")
+          .select("profile_id, partner_id")
+          .eq("id", order.client_id)
+          .maybeSingle();
+        const profileId = clientRow?.profile_id;
+        let clientEmail: string | null = null;
+        if (profileId) {
+          const { data: profile } = await supabase
+            .from("profiles")
+            .select("email")
+            .eq("id", profileId)
+            .maybeSingle();
+          clientEmail = profile?.email || null;
+        }
+        const productType = order.product_type as "will" | "trust";
+        if (clientEmail && (productType === "will" || productType === "trust")) {
+          if (isAttorneyReview) {
+            await sendAttorneyReviewPendingEmail({
+              to: clientEmail,
+              productType,
+              partnerId: clientRow?.partner_id || null,
+            });
+            log.push(`9. Sent attorney-review-pending email to ${clientEmail}`);
+          } else {
+            const { origin } = new URL(request.url);
+            const assetTypes = Array.isArray((quizAnswers as { assetTypes?: unknown }).assetTypes)
+              ? ((quizAnswers as { assetTypes?: string[] }).assetTypes as string[])
+              : [];
+            await sendDocumentEmail({
+              to: clientEmail,
+              productType,
+              loginLink: `${origin}/auth/login?email=${encodeURIComponent(clientEmail)}`,
+              assetChecklist: productType === "trust" ? buildAssetChecklist(assetTypes) : undefined,
+              partnerId: clientRow?.partner_id || null,
+            });
+            log.push(`9. Sent document email to ${clientEmail}`);
+          }
+          await supabase.from("audit_log").insert({
+            action: isAttorneyReview ? "email.attorney_review_pending" : "email.documents_delivered",
+            resource_type: "order",
+            resource_id: orderId,
+          });
+        } else {
+          log.push("9. Skipped email (no client email found)");
+        }
+      } catch (mailErr) {
+        log.push(`9. Email send failed: ${mailErr instanceof Error ? mailErr.message : String(mailErr)}`);
+      }
     }
 
     // E2EE Phase 12b: purge plaintext quiz answers once PDFs generated.

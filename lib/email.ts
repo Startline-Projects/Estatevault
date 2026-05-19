@@ -31,7 +31,7 @@ export async function getPartnerFrom(partnerId?: string | null): Promise<{ from:
 interface SendDocumentEmailParams {
   to: string;
   productType: "will" | "trust";
-  passwordLink: string;
+  loginLink: string;
   assetChecklist?: { asset: string; instruction: string }[];
 }
 
@@ -54,7 +54,7 @@ export function buildAssetChecklist(assetTypes: string[]): { asset: string; inst
 
 function buildEmailHtml({
   productType,
-  passwordLink,
+  loginLink,
   assetChecklist,
 }: Omit<SendDocumentEmailParams, "to">): string {
   const packageName = productType === "will" ? "Will Package" : "Trust Package";
@@ -110,13 +110,13 @@ function buildEmailHtml({
       <h2 style="margin:0 0 16px;font-size:22px;color:#1C3557;">Your ${packageName} is ready.</h2>
       <p style="margin:0 0 24px;font-size:14px;color:#2D2D2D;line-height:1.6;">
         Your documents have been generated and are saved in your account.
-        Click the button below to set your password and access your documents.
+        Click the button below to sign in and access your documents.
       </p>
 
       <!-- CTA Button -->
       <div style="text-align:center;margin:32px 0;">
-        <a href="${passwordLink}" style="display:inline-block;background:#C9A84C;color:#ffffff;text-decoration:none;padding:14px 32px;border-radius:50px;font-size:14px;font-weight:600;">
-          Set Your Password & View Documents
+        <a href="${loginLink}" style="display:inline-block;background:#C9A84C;color:#ffffff;text-decoration:none;padding:14px 32px;border-radius:50px;font-size:14px;font-weight:600;">
+          Sign In to View Documents
         </a>
       </div>
 
@@ -154,6 +154,133 @@ function buildEmailHtml({
   </div>
 </body>
 </html>`;
+}
+
+export async function sendWelcomeEmail({
+  to,
+  fullName,
+  productType,
+  loginLink,
+  attorneyReview,
+  partnerId,
+}: {
+  to: string;
+  fullName?: string | null;
+  productType?: "will" | "trust" | "vault" | null;
+  loginLink: string;
+  attorneyReview?: boolean;
+  partnerId?: string | null;
+}) {
+  const greeting = fullName ? `Welcome, ${fullName}!` : "Welcome to EstateVault!";
+  const sender = await getPartnerFrom(partnerId);
+
+  let productLine = "";
+  if (productType === "will" || productType === "trust") {
+    const packageName = productType === "will" ? "Will Package" : "Trust Package";
+    productLine = attorneyReview
+      ? `<p style="margin:0 0 16px;font-size:14px;color:#2D2D2D;line-height:1.6;">
+           Your <strong>${packageName}</strong> is being prepared. Once your documents are generated, a licensed Michigan attorney will review them. We will email you the documents instantly once the attorney approves them.
+         </p>`
+      : `<p style="margin:0 0 16px;font-size:14px;color:#2D2D2D;line-height:1.6;">
+           Your <strong>${packageName}</strong> is being generated right now. We will email you as soon as your documents are ready, usually within a few minutes.
+         </p>`;
+  } else if (productType === "vault") {
+    productLine = `<p style="margin:0 0 16px;font-size:14px;color:#2D2D2D;line-height:1.6;">
+        Your EstateVault subscription is active. Sign in to start adding documents, accounts, and family contacts to your secure vault.
+      </p>`;
+  }
+
+  try {
+    await resend.emails.send({
+      from: sender.from,
+      replyTo: sender.replyTo,
+      to,
+      subject: "Welcome to EstateVault",
+      html: `<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#f4f4f5;font-family:'Inter',Arial,sans-serif;">
+  <div style="max-width:600px;margin:0 auto;background:#ffffff;">
+    <div style="background:#1C3557;padding:24px 32px;">
+      <h1 style="margin:0;color:#ffffff;font-size:20px;font-weight:700;">EstateVault</h1>
+    </div>
+    <div style="padding:32px;">
+      <h2 style="margin:0 0 16px;font-size:22px;color:#1C3557;">${greeting}</h2>
+      <p style="margin:0 0 16px;font-size:14px;color:#2D2D2D;line-height:1.6;">
+        Your EstateVault account has been created. We help you protect everything that matters &mdash; documents, accounts, and the people you love.
+      </p>
+      ${productLine}
+      <div style="text-align:center;margin:32px 0;">
+        <a href="${loginLink}" style="display:inline-block;background:#C9A84C;color:#ffffff;text-decoration:none;padding:14px 32px;border-radius:50px;font-size:14px;font-weight:600;">
+          Sign In to Your Account
+        </a>
+      </div>
+      <p style="margin:24px 0 0;font-size:13px;color:#999;line-height:1.5;">
+        Need help? Reply to this email or contact <a href="mailto:info@estatevault.us" style="color:#1C3557;">info@estatevault.us</a>.
+      </p>
+    </div>
+    <div style="background:#f8f9fa;padding:24px 32px;border-top:1px solid #e5e5e5;">
+      <p style="margin:0;font-size:11px;color:#bbb;line-height:1.5;">&copy; 2026 EstateVault Technologies LLC</p>
+    </div>
+  </div>
+</body>
+</html>`,
+    });
+  } catch (e) {
+    console.error("Welcome email failed:", e);
+  }
+}
+
+export async function sendAttorneyReviewPendingEmail({
+  to,
+  productType,
+  partnerId,
+}: {
+  to: string;
+  productType: "will" | "trust";
+  partnerId?: string | null;
+}) {
+  const packageName = productType === "will" ? "Will Package" : "Trust Package";
+  const sender = await getPartnerFrom(partnerId);
+  try {
+    await resend.emails.send({
+      from: sender.from,
+      replyTo: sender.replyTo,
+      to,
+      subject: `Your ${packageName} is under attorney review`,
+      html: `<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#f4f4f5;font-family:'Inter',Arial,sans-serif;">
+  <div style="max-width:600px;margin:0 auto;background:#ffffff;">
+    <div style="background:#1C3557;padding:24px 32px;">
+      <h1 style="margin:0;color:#ffffff;font-size:20px;font-weight:700;">EstateVault</h1>
+    </div>
+    <div style="padding:32px;">
+      <h2 style="margin:0 0 16px;font-size:22px;color:#1C3557;">Your ${packageName} is being reviewed.</h2>
+      <p style="margin:0 0 16px;font-size:14px;color:#2D2D2D;line-height:1.6;">
+        Your documents have been generated and submitted to a licensed Michigan attorney for review.
+        Once the attorney approves them, we will email you the documents instantly so you can download and execute them.
+      </p>
+      <p style="margin:0 0 16px;font-size:14px;color:#2D2D2D;line-height:1.6;">
+        Typical turnaround is 48 hours. No further action is required from you at this time.
+      </p>
+      <p style="margin:24px 0 0;font-size:13px;color:#999;line-height:1.5;">
+        Questions? Contact <a href="mailto:info@estatevault.us" style="color:#1C3557;">info@estatevault.us</a>.
+      </p>
+    </div>
+    <div style="background:#f8f9fa;padding:24px 32px;border-top:1px solid #e5e5e5;">
+      <p style="margin:0;font-size:11px;color:#bbb;line-height:1.5;">
+        This platform provides document preparation services only. No attorney-client relationship is created.
+      </p>
+    </div>
+  </div>
+</body>
+</html>`,
+    });
+  } catch (e) {
+    console.error("Attorney-review-pending email failed:", e);
+  }
 }
 
 export async function sendApprovalEmail({ to, productType, dashboardUrl, partnerId }: { to: string; productType: "will" | "trust"; dashboardUrl: string; partnerId?: string | null }) {
