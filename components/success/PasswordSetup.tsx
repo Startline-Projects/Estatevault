@@ -35,21 +35,25 @@ export default function PasswordSetup({ email, userId, defaultName = "" }: Passw
     try {
       const supabase = createClient();
 
-      // If user has a session (already logged in), update password directly
-      const { data: { session } } = await supabase.auth.getSession();
+      // Validate session against the server (getSession only reads cookie locally;
+      // getUser hits the auth server). A wiped/deleted user yields an error here
+      // even though cookie still exists. In that case clear stale session and fall
+      // back to the set-password API path which creates the user fresh.
+      const { data: { user: liveUser }, error: liveUserErr } = await supabase.auth.getUser();
 
-      if (session) {
+      if (liveUser && !liveUserErr) {
         const { error: updateErr } = await supabase.auth.updateUser({ password });
         if (updateErr) {
           setError(updateErr.message);
           setLoading(false);
           return;
         }
-        // Save name even if already logged in
         if (fullName.trim()) {
-          await supabase.from("profiles").update({ full_name: fullName.trim() }).eq("id", session.user.id);
+          await supabase.from("profiles").update({ full_name: fullName.trim() }).eq("id", liveUser.id);
         }
       } else {
+        // Stale or missing session — purge and use set-password flow
+        await supabase.auth.signOut().catch(() => {});
         // Call set-password API, it handles userId lookup by email with retry
         const res = await fetch("/api/auth/set-password", {
           method: "POST",

@@ -5,7 +5,7 @@
  * Approved By: [TO BE FILLED]
  */
 
-import { PDFDocument, StandardFonts, rgb, PageSizes } from "pdf-lib";
+import { PDFDocument, StandardFonts, rgb, PageSizes, type PDFImage } from "pdf-lib";
 import fs from "fs";
 import path from "path";
 
@@ -16,6 +16,17 @@ function loadLogoBytes(): Buffer | null {
     const p = path.join(process.cwd(), "public", "logo.png");
     cachedLogoBytes = fs.readFileSync(p);
     return cachedLogoBytes;
+  } catch {
+    return null;
+  }
+}
+
+async function fetchRemoteLogo(url: string): Promise<Buffer | null> {
+  try {
+    const res = await fetch(url);
+    if (!res.ok) return null;
+    const ab = await res.arrayBuffer();
+    return Buffer.from(ab);
   } catch {
     return null;
   }
@@ -140,7 +151,8 @@ export async function generatePDF(
     barNumber: string;
     reviewedAt: string;
   },
-  city?: string
+  city?: string,
+  partnerLogoUrl?: string | null
 ): Promise<Buffer> {
   const pdfDoc = await PDFDocument.create();
 
@@ -148,8 +160,30 @@ export async function generatePDF(
   const timesBold = await pdfDoc.embedFont(StandardFonts.TimesRomanBold);
   const helvetica = await pdfDoc.embedFont(StandardFonts.Helvetica);
 
-  const logoBytes = loadLogoBytes();
-  const logoImage = logoBytes ? await pdfDoc.embedPng(logoBytes) : null;
+  // Logo selection:
+  //   partner client + partner uploaded logo → partner logo
+  //   partner client + no logo → no logo (do NOT fallback to EstateVault)
+  //   direct EstateVault client (no partnerName) → EstateVault logo
+  let logoBytes: Buffer | null = null;
+  if (partnerName) {
+    if (partnerLogoUrl) {
+      logoBytes = await fetchRemoteLogo(partnerLogoUrl);
+    }
+  } else {
+    logoBytes = loadLogoBytes();
+  }
+  let logoImage: PDFImage | null = null;
+  if (logoBytes) {
+    try {
+      logoImage = await pdfDoc.embedPng(logoBytes);
+    } catch {
+      try {
+        logoImage = await pdfDoc.embedJpg(logoBytes);
+      } catch {
+        logoImage = null;
+      }
+    }
+  }
 
   const [pageWidth, pageHeight] = PageSizes.Letter;
   const margin = 72;

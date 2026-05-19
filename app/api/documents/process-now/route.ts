@@ -96,6 +96,26 @@ export async function GET(request: Request) {
 
     log.push(`6. Will generate ${documentTypes.length} documents: ${documentTypes.join(", ")}`);
 
+    // Resolve partner branding for the PDF cover/header
+    let partnerName: string | undefined;
+    let partnerLogoUrl: string | null = null;
+    if (order.client_id) {
+      const { data: clientRow } = await supabase
+        .from("clients")
+        .select("partner_id")
+        .eq("id", order.client_id)
+        .maybeSingle();
+      if (clientRow?.partner_id) {
+        const { data: partner } = await supabase
+          .from("partners")
+          .select("company_name, logo_url")
+          .eq("id", clientRow.partner_id)
+          .maybeSingle();
+        partnerName = partner?.company_name || undefined;
+        partnerLogoUrl = partner?.logo_url || null;
+      }
+    }
+
     // Mark order as generating so client dashboard shows spinner
     await supabase.from("orders").update({ status: "generating" }).eq("id", orderId);
 
@@ -122,7 +142,8 @@ export async function GET(request: Request) {
         const pdfBuffer = await generatePDF(
           documentText, docType,
           String(quizAnswers.firstName || "") + " " + String(quizAnswers.lastName || ""),
-          undefined, undefined, String(quizAnswers.city || "")
+          partnerName, undefined, String(quizAnswers.city || ""),
+          partnerLogoUrl
         );
 
         const storageClientId = isTestOrder ? "test" : (order.client_id || "unknown");

@@ -167,6 +167,20 @@ export async function GET(request: Request) {
 
       const intake = quizAnswers;
 
+      // Resolve partner branding once
+      let partnerName: string | undefined;
+      let partnerLogoUrl: string | null = null;
+      if (order.client_id) {
+        const { data: clientRow } = await supabase
+          .from("clients").select("partner_id").eq("id", order.client_id).maybeSingle();
+        if (clientRow?.partner_id) {
+          const { data: partner } = await supabase
+            .from("partners").select("company_name, logo_url").eq("id", clientRow.partner_id).maybeSingle();
+          partnerName = partner?.company_name || undefined;
+          partnerLogoUrl = partner?.logo_url || null;
+        }
+      }
+
       for (const docType of documentTypes) {
         try {
           console.log("Generating document:", docType);
@@ -187,7 +201,12 @@ export async function GET(request: Request) {
           console.log("Document generated:", docType, "length:", documentText.length, "stop_reason:", response.stop_reason);
 
           const { generatePDF } = await import("@/lib/documents/generate-pdf");
-          const pdfBuffer = await generatePDF(documentText, docType, String(intake.firstName || "") + " " + String(intake.lastName || ""), undefined, undefined, String(intake.city || ""));
+          const pdfBuffer = await generatePDF(
+            documentText, docType,
+            String(intake.firstName || "") + " " + String(intake.lastName || ""),
+            partnerName, undefined, String(intake.city || ""),
+            partnerLogoUrl
+          );
 
           const storageClientId = isTestOrder ? "test" : order.client_id;
           await uploadDocument(storageClientId, order.id, docType, pdfBuffer);
@@ -243,6 +262,20 @@ export async function GET(request: Request) {
 
     const intake = job.intake_answers;
 
+    // Resolve partner branding once for this job
+    let jobPartnerName: string | undefined;
+    let jobPartnerLogoUrl: string | null = null;
+    if (job.client_id) {
+      const { data: clientRow } = await supabase
+        .from("clients").select("partner_id").eq("id", job.client_id).maybeSingle();
+      if (clientRow?.partner_id) {
+        const { data: partner } = await supabase
+          .from("partners").select("company_name, logo_url").eq("id", clientRow.partner_id).maybeSingle();
+        jobPartnerName = partner?.company_name || undefined;
+        jobPartnerLogoUrl = partner?.logo_url || null;
+      }
+    }
+
     for (const docType of job.document_types) {
       try {
         // Rate limit check
@@ -270,7 +303,11 @@ export async function GET(request: Request) {
 
         // Generate PDF
         const { generatePDF } = await import("@/lib/documents/generate-pdf");
-        const pdfBuffer = await generatePDF(documentText, docType, String(intake.firstName || "") + " " + String(intake.lastName || ""), undefined);
+        const pdfBuffer = await generatePDF(
+          documentText, docType,
+          String(intake.firstName || "") + " " + String(intake.lastName || ""),
+          jobPartnerName, undefined, undefined, jobPartnerLogoUrl
+        );
 
         // Upload to storage
         await uploadDocument(job.client_id, job.order_id, docType, pdfBuffer);

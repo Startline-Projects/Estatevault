@@ -28,7 +28,7 @@ import type { ReviewRouting, PartnerForRouting } from "./types";
  * Mo Murshed's email, used to look up his profile ID at runtime.
  * His profile must exist in the database with user_type = 'review_attorney'.
  */
-export const INHOUSE_ATTORNEY_EMAIL = "mmurshed@thepeoplesfirmpllc.com";
+export const INHOUSE_ATTORNEY_EMAIL = "test-attorney@estatevault.test";
 
 /**
  * EstateVault admin email, controls fee for all in-house reviews.

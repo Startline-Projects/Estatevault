@@ -18,6 +18,8 @@ type Props = {
   placeholder?: string;
   loginHref?: string;
   helperText?: string;
+  partnerId?: string | null;
+  partnerSlug?: string | null;
 };
 
 function randomSessionId(): string {
@@ -35,6 +37,8 @@ export default function EmailVerifyGate({
   placeholder = "your@email.com",
   loginHref = "/auth/login",
   helperText,
+  partnerId,
+  partnerSlug,
 }: Props) {
   const [stage, setStage] = useState<"idle" | "sending" | "awaiting_click" | "verified">("idle");
   const [verifyError, setVerifyError] = useState("");
@@ -152,7 +156,7 @@ export default function EmailVerifyGate({
       const sendRes = await fetch("/api/auth/send-verify-link", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: normalizedEmail, sessionId: sessionIdRef.current }),
+        body: JSON.stringify({ email: normalizedEmail, sessionId: sessionIdRef.current, partnerId: partnerId || null, partnerSlug: partnerSlug || null }),
       });
       const sendData = await sendRes.json().catch(() => ({}));
 
@@ -180,7 +184,7 @@ export default function EmailVerifyGate({
       const res = await fetch("/api/auth/send-verify-link", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: normalizedEmail, sessionId: sessionIdRef.current }),
+        body: JSON.stringify({ email: normalizedEmail, sessionId: sessionIdRef.current, partnerId: partnerId || null, partnerSlug: partnerSlug || null }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {

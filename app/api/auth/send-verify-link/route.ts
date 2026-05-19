@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { Resend } from "resend";
 import { generateUrlToken, storeLink } from "@/lib/auth/emailVerification";
+import { resolveSenderForEmail, renderEmailHeader, renderEmailFooter, type EmailBrand } from "@/lib/email";
 
 export const dynamic = "force-dynamic";
 
@@ -19,15 +20,13 @@ function checkRateLimit(email: string): boolean {
   return true;
 }
 
-function buildEmailHtml(verifyLink: string): string {
+function buildEmailHtml(verifyLink: string, brand: EmailBrand): string {
   return `<!DOCTYPE html>
 <html>
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
 <body style="margin:0;padding:0;background:#f4f4f5;font-family:'Inter',Arial,sans-serif;">
   <div style="max-width:600px;margin:0 auto;background:#ffffff;">
-    <div style="background:#1C3557;padding:24px 32px;">
-      <h1 style="margin:0;color:#ffffff;font-size:20px;font-weight:700;">EstateVault</h1>
-    </div>
+    ${renderEmailHeader(brand)}
     <div style="padding:32px;">
       <h2 style="margin:0 0 16px;font-size:22px;color:#1C3557;">Confirm your email</h2>
       <p style="margin:0 0 24px;font-size:14px;color:#2D2D2D;line-height:1.6;">
@@ -44,9 +43,7 @@ function buildEmailHtml(verifyLink: string): string {
         This link expires in 30 minutes. If you didn&rsquo;t request this, ignore this email.
       </p>
     </div>
-    <div style="background:#f8f9fa;padding:24px 32px;border-top:1px solid #e5e5e5;">
-      <p style="margin:0;font-size:11px;color:#bbb;line-height:1.5;">&copy; 2026 EstateVault Technologies LLC</p>
-    </div>
+    ${renderEmailFooter(brand)}
   </div>
 </body>
 </html>`;
@@ -54,7 +51,7 @@ function buildEmailHtml(verifyLink: string): string {
 
 export async function POST(request: Request) {
   try {
-    const { email, sessionId } = await request.json();
+    const { email, sessionId, partnerSlug, partnerId } = await request.json();
     const normalizedEmail = String(email || "").trim().toLowerCase();
     const session = String(sessionId || "").trim();
 
@@ -77,11 +74,18 @@ export async function POST(request: Request) {
       linkToken
     )}&email=${encodeURIComponent(normalizedEmail)}`;
 
+    const sender = await resolveSenderForEmail({
+      email: normalizedEmail,
+      partnerId: partnerId || null,
+      partnerSlug: partnerSlug || null,
+    });
+
     const { error: sendErr } = await resend.emails.send({
-      from: "EstateVault <info@estatevault.us>",
+      from: sender.from,
+      replyTo: sender.replyTo,
       to: normalizedEmail,
       subject: "Confirm your email to continue",
-      html: buildEmailHtml(verifyLink),
+      html: buildEmailHtml(verifyLink, sender.brand),
     });
 
     if (sendErr) {

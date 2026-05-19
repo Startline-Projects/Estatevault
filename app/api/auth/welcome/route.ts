@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createServerClient } from "@supabase/ssr";
 import { Resend } from "resend";
+import { resolveSenderForEmail } from "@/lib/email";
 
 export const dynamic = "force-dynamic";
 
@@ -71,8 +72,11 @@ export async function POST(request: Request) {
     const { origin } = new URL(request.url);
     const dashboardUrl = `${origin}/dashboard`;
 
+    const sender = await resolveSenderForEmail({ email: user.email });
+
     const { error: sendErr } = await resend.emails.send({
-      from: "EstateVault <info@estatevault.us>",
+      from: sender.from,
+      replyTo: sender.replyTo,
       to: user.email,
       subject: "Welcome to EstateVault",
       html: buildWelcomeHtml(fullName, dashboardUrl),

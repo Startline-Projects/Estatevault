@@ -92,7 +92,7 @@ function SignUpForm() {
       const sendRes = await fetch("/api/auth/send-verify-code", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: normalizedEmail }),
+        body: JSON.stringify({ email: normalizedEmail, partnerSlug: partner || null }),
       });
       const sendData = await sendRes.json().catch(() => ({}));
 
@@ -153,7 +153,7 @@ function SignUpForm() {
       const res = await fetch("/api/auth/send-verify-code", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: normalizedEmail }),
+        body: JSON.stringify({ email: normalizedEmail, partnerSlug: partner || null }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
@@ -207,6 +207,7 @@ function SignUpForm() {
           password,
           fullName,
           verifiedToken,
+          partnerSlug: partner || null,
         }),
       });
       const signupData = await signupRes.json().catch(() => ({}));

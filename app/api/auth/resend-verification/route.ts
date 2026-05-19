@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { Resend } from "resend";
+import { resolveSenderForEmail } from "@/lib/email";
 
 export const dynamic = "force-dynamic";
 
@@ -92,8 +93,11 @@ export async function POST(request: Request) {
       linkData.properties.hashed_token
     )}&type=magiclink`;
 
+    const sender = await resolveSenderForEmail({ email: normalizedEmail });
+
     const { error: sendErr } = await resend.emails.send({
-      from: "EstateVault <info@estatevault.us>",
+      from: sender.from,
+      replyTo: sender.replyTo,
       to: normalizedEmail,
       subject: "Confirm your EstateVault email",
       html: buildVerifyEmailHtml(verifyLink),

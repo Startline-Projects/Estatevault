@@ -313,6 +313,7 @@ export default function WillCheckoutPage() {
                 setVerifiedEmail(verified ? email : "");
               }}
               placeholder="your@email.com"
+              partnerId={partnerId || null}
             />
             {conflictChecking && <p className="mt-2 text-xs text-charcoal/50">Checking…</p>}
             {conflictBlocked && conflictMsg && (

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { Resend } from "resend";
 import { generateCode, storeCode } from "@/lib/auth/emailVerification";
+import { resolveSenderForEmail } from "@/lib/email";
 
 export const dynamic = "force-dynamic";
 
@@ -52,7 +53,7 @@ function buildEmailHtml(code: string): string {
 
 export async function POST(request: Request) {
   try {
-    const { email } = await request.json();
+    const { email, partnerSlug, partnerId } = await request.json();
     const normalizedEmail = String(email || "").trim().toLowerCase();
 
     if (!normalizedEmail) {
@@ -69,8 +70,15 @@ export async function POST(request: Request) {
     const code = generateCode();
     storeCode(normalizedEmail, code);
 
+    const sender = await resolveSenderForEmail({
+      email: normalizedEmail,
+      partnerId: partnerId || null,
+      partnerSlug: partnerSlug || null,
+    });
+
     const { error: sendErr } = await resend.emails.send({
-      from: "EstateVault <info@estatevault.us>",
+      from: sender.from,
+      replyTo: sender.replyTo,
       to: normalizedEmail,
       subject: `Your EstateVault code: ${code}`,
       html: buildEmailHtml(code),

@@ -13,7 +13,7 @@ function createAdminClient() {
 
 export async function POST(request: Request) {
   try {
-    const { email, password, fullName, verifiedToken } = await request.json();
+    const { email, password, fullName, verifiedToken, partnerSlug } = await request.json();
     const normalizedEmail = String(email || "").trim().toLowerCase();
 
     if (!normalizedEmail || !password) {
@@ -75,12 +75,23 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Failed to finalize profile setup." }, { status: 500 });
     }
 
+    let resolvedPartnerId: string | null = null;
+    if (partnerSlug) {
+      const { data: partner } = await admin
+        .from("partners")
+        .select("id")
+        .eq("partner_slug", partnerSlug)
+        .maybeSingle();
+      resolvedPartnerId = partner?.id || null;
+    }
+
     try {
       const { origin } = new URL(request.url);
       await sendWelcomeEmail({
         to: normalizedEmail,
         fullName: (fullName || "").trim() || null,
         loginLink: `${origin}/auth/login?email=${encodeURIComponent(normalizedEmail)}`,
+        partnerId: resolvedPartnerId,
       });
     } catch (mailErr) {
       console.error("welcome email failed:", mailErr);

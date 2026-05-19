@@ -97,6 +97,20 @@ export async function GET(request: Request) {
     const isAttorneyReview = order.attorney_review_requested === true;
     const results: Array<{ docType: string; success: boolean; path?: string; error?: string }> = [];
 
+    // Partner branding
+    let partnerName: string | undefined;
+    let partnerLogoUrl: string | null = null;
+    if (order.client_id) {
+      const { data: clientRow } = await supabase
+        .from("clients").select("partner_id").eq("id", order.client_id).maybeSingle();
+      if (clientRow?.partner_id) {
+        const { data: partner } = await supabase
+          .from("partners").select("company_name, logo_url").eq("id", clientRow.partner_id).maybeSingle();
+        partnerName = partner?.company_name || undefined;
+        partnerLogoUrl = partner?.logo_url || null;
+      }
+    }
+
     for (const doc of missingDocs) {
       const docType = doc.document_type;
       try {
@@ -120,9 +134,10 @@ export async function GET(request: Request) {
           text,
           docType,
           String(intake.firstName || "") + " " + String(intake.lastName || ""),
+          partnerName,
           undefined,
-          undefined,
-          String(intake.city || "")
+          String(intake.city || ""),
+          partnerLogoUrl
         );
 
         const storageClientId = isTestOrder ? "test" : (order.client_id || "unknown");
