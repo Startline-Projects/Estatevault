@@ -77,12 +77,21 @@ export async function GET(request: Request) {
     partnerCompany = partner?.company_name || null;
   }
 
-  // Fetch documents
+  // Fetch documents (base columns — always present).
   const { data: documents } = await admin
     .from("documents")
     .select("id, document_type, storage_path, status")
     .eq("order_id", review.order_id)
     .order("created_at", { ascending: true });
+
+  // Edit-and-upload columns live in a later migration. Fetch separately and
+  // tolerate failure so a missing migration never empties the document list.
+  const extra: Record<string, { review_docx_path: string | null; reviewed_path: string | null; reviewed_uploaded_at: string | null }> = {};
+  const { data: extDocs } = await admin
+    .from("documents")
+    .select("id, review_docx_path, reviewed_path, reviewed_uploaded_at")
+    .eq("order_id", review.order_id);
+  if (extDocs) for (const e of extDocs) extra[e.id] = e;
 
   return NextResponse.json({
     review: {
@@ -103,6 +112,9 @@ export async function GET(request: Request) {
       document_type: d.document_type,
       storage_path: d.storage_path,
       status: d.status,
+      has_editable_docx: !!extra[d.id]?.review_docx_path,
+      reviewed_uploaded: !!extra[d.id]?.reviewed_path,
+      reviewed_uploaded_at: extra[d.id]?.reviewed_uploaded_at || null,
     })),
   });
 }

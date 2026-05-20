@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
+import { downloadReviewDocx } from "@/lib/repos/documentSealedRepo";
 
 const DOC_LABELS: Record<string, string> = {
   will: "Last Will & Testament",
@@ -17,6 +18,9 @@ interface DocRecord {
   document_type: string;
   storage_path: string | null;
   status: string;
+  has_editable_docx?: boolean;
+  reviewed_uploaded?: boolean;
+  reviewed_uploaded_at?: string | null;
 }
 
 interface ReviewData {
@@ -39,21 +43,26 @@ export default function AttorneyReviewPage() {
   const [notes, setNotes] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
+  const [docxId, setDocxId] = useState<string | null>(null);
+  const [uploadingId, setUploadingId] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState(false);
+  const fileInputs = useRef<Record<string, HTMLInputElement | null>>({});
+
+  async function load() {
+    const res = await fetch(`/api/attorney/review?id=${reviewId}`);
+    if (!res.ok) {
+      setError("Unable to load review. You may not have access.");
+      setLoading(false);
+      return;
+    }
+    const json = await res.json();
+    setData(json);
+    setLoading(false);
+  }
 
   useEffect(() => {
-    async function load() {
-      const res = await fetch(`/api/attorney/review?id=${reviewId}`);
-      if (!res.ok) {
-        setError("Unable to load review. You may not have access.");
-        setLoading(false);
-        return;
-      }
-      const json = await res.json();
-      setData(json);
-      setLoading(false);
-    }
     load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [reviewId]);
 
   async function handleDownload(doc: DocRecord) {
@@ -70,6 +79,49 @@ export default function AttorneyReviewPage() {
       if (url) window.open(url, "_blank");
     } finally {
       setDownloadingId(null);
+    }
+  }
+
+  function saveBlob(blob: Blob, filename: string) {
+    const objectUrl = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = objectUrl;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
+  }
+
+  async function handleDownloadDocx(doc: DocRecord) {
+    setDocxId(doc.id);
+    try {
+      const { blob, filename } = await downloadReviewDocx(doc.id);
+      saveBlob(blob, filename);
+    } catch (e) {
+      alert(e instanceof Error ? e.message : "Unable to download editable document.");
+    } finally {
+      setDocxId(null);
+    }
+  }
+
+  async function handleUploadReviewed(doc: DocRecord, file: File) {
+    setUploadingId(doc.id);
+    try {
+      const fd = new FormData();
+      fd.append("documentId", doc.id);
+      fd.append("file", file);
+      const res = await fetch("/api/attorney/upload-reviewed", { method: "POST", body: fd });
+      if (!res.ok) {
+        const json = await res.json().catch(() => ({}));
+        alert(json.error || "Upload failed.");
+        return;
+      }
+      await load(); // refresh so the "uploaded" badge appears
+    } catch {
+      alert("Upload failed. Please try again.");
+    } finally {
+      setUploadingId(null);
     }
   }
 
@@ -220,7 +272,7 @@ export default function AttorneyReviewPage() {
             <div className="rounded-xl bg-white border border-gray-200 overflow-hidden">
               <div className="px-6 py-4 border-b border-gray-100">
                 <h2 className="text-sm font-bold text-navy">Documents to Review</h2>
-                <p className="text-xs text-charcoal/50 mt-0.5">Download and review each document before submitting your decision</p>
+                <p className="text-xs text-charcoal/50 mt-0.5">Download <span className="font-medium">Edit (DOCX)</span> to revise in Word, then upload your edited DOCX — we convert it to PDF for the client. If you approve without uploading, the client receives the originally generated document.</p>
               </div>
               <div className="divide-y divide-gray-50">
                 {documents.length === 0 ? (
@@ -235,42 +287,85 @@ export default function AttorneyReviewPage() {
                   </div>
                 ) : (
                   documents.map((d) => (
-                    <div key={d.id} className="flex items-center justify-between px-6 py-4 hover:bg-gray-50/50 transition-colors">
-                      <div className="flex items-center gap-3">
+                    <div key={d.id} className="flex items-start justify-between gap-4 px-6 py-4 hover:bg-gray-50/50 transition-colors">
+                      <div className="flex items-center gap-3 min-w-0">
                         <div className="w-8 h-8 rounded-lg bg-navy/5 flex items-center justify-center flex-shrink-0">
                           <svg className="w-4 h-4 text-navy/60" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                             <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
                           </svg>
                         </div>
-                        <div>
-                          <p className="text-sm font-medium text-navy">
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium text-navy truncate">
                             {DOC_LABELS[d.document_type] || d.document_type.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())}
                           </p>
-                          <p className="text-xs text-charcoal/40 mt-0.5 capitalize">{d.status}</p>
+                          {d.reviewed_uploaded ? (
+                            <p className="text-xs text-green-600 mt-0.5 flex items-center gap-1">
+                              <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+                              Edited version uploaded — client will receive this
+                            </p>
+                          ) : (
+                            <p className="text-xs text-charcoal/40 mt-0.5 capitalize">{d.status}</p>
+                          )}
                         </div>
                       </div>
+
                       {d.storage_path ? (
-                        <button
-                          onClick={() => handleDownload(d)}
-                          disabled={downloadingId === d.id}
-                          className="inline-flex items-center gap-1.5 rounded-lg bg-navy px-3.5 py-2 text-xs font-semibold text-white hover:bg-navy/90 transition-colors disabled:opacity-60"
-                        >
-                          {downloadingId === d.id ? (
-                            <>
-                              <div className="w-3 h-3 border-2 border-white/40 border-t-white rounded-full animate-spin" />
-                              Opening...
-                            </>
-                          ) : (
-                            <>
-                              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
-                              </svg>
-                              Download PDF
-                            </>
-                          )}
-                        </button>
+                        <div className="flex flex-col items-end gap-2 flex-shrink-0">
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => handleDownload(d)}
+                              disabled={downloadingId === d.id}
+                              className="inline-flex items-center gap-1.5 rounded-lg border border-navy/20 px-3 py-2 text-xs font-semibold text-navy hover:bg-navy/5 transition-colors disabled:opacity-60"
+                            >
+                              {downloadingId === d.id ? "Opening..." : "PDF"}
+                            </button>
+                            {d.has_editable_docx && (
+                              <button
+                                onClick={() => handleDownloadDocx(d)}
+                                disabled={docxId === d.id}
+                                className="inline-flex items-center gap-1.5 rounded-lg bg-navy px-3 py-2 text-xs font-semibold text-white hover:bg-navy/90 transition-colors disabled:opacity-60"
+                              >
+                                {docxId === d.id ? (
+                                  <><div className="w-3 h-3 border-2 border-white/40 border-t-white rounded-full animate-spin" />Preparing...</>
+                                ) : (
+                                  <>
+                                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" /></svg>
+                                    Edit (DOCX)
+                                  </>
+                                )}
+                              </button>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <input
+                              ref={(el) => { fileInputs.current[d.id] = el; }}
+                              type="file"
+                              accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                              className="hidden"
+                              onChange={(e) => {
+                                const f = e.target.files?.[0];
+                                if (f) handleUploadReviewed(d, f);
+                                e.target.value = "";
+                              }}
+                            />
+                            <button
+                              onClick={() => fileInputs.current[d.id]?.click()}
+                              disabled={uploadingId === d.id}
+                              className="inline-flex items-center gap-1.5 rounded-lg bg-gold/90 px-3 py-2 text-xs font-semibold text-white hover:bg-gold transition-colors disabled:opacity-60"
+                            >
+                              {uploadingId === d.id ? (
+                                <><div className="w-3 h-3 border-2 border-white/40 border-t-white rounded-full animate-spin" />Converting...</>
+                              ) : (
+                                <>
+                                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 16.5V3m0 0L7.5 7.5M12 3l4.5 4.5M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5" /></svg>
+                                  {d.reviewed_uploaded ? "Replace edited DOCX" : "Upload edited DOCX"}
+                                </>
+                              )}
+                            </button>
+                          </div>
+                        </div>
                       ) : (
-                        <span className="text-xs text-charcoal/40 italic">Generating...</span>
+                        <span className="text-xs text-charcoal/40 italic flex-shrink-0">Generating...</span>
                       )}
                     </div>
                   ))

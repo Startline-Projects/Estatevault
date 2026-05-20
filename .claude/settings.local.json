@@ -64,7 +64,9 @@
       "Bash(nslookup alrlaywoqvomluexpsvq.supabase.co)",
       "Bash(sed -E 's/=.*$/=***/')",
       "Bash(cat vercel.json)",
-      "Bash(ls app/api/cron)"
+      "Bash(ls app/api/cron)",
+      "Bash(grep -nE \"CLOUDCONVERT|DOC_CONVERT|SOFFICE\" .env.example)",
+      "Bash(tail -5 .env.example)"
     ]
   }
 }

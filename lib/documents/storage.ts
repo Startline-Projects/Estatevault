@@ -19,6 +19,7 @@ export async function uploadDocument(
   orderId: string,
   documentType: string,
   pdfBuffer: Buffer,
+  docxBuffer?: Buffer,
 ): Promise<string> {
   const supabase = createAdminClient();
   const path = `${clientId}/${orderId}/${documentType}.pdf`;
@@ -85,6 +86,47 @@ export async function uploadDocument(
     }
   }
 
+  // Editable DOCX for the assigned review attorney (attorney edit-and-upload flow).
+  // Sealed to the attorney's pubkey when available; plaintext fallback otherwise so
+  // the attorney can still download + edit. Never delivered to the client.
+  let reviewDocxPath: string | null = null;
+  let reviewDocxFor: string | null = null;
+  if (docxBuffer) {
+    try {
+      const { data: review } = await supabase
+        .from("attorney_reviews")
+        .select("attorney_id")
+        .eq("order_id", orderId)
+        .maybeSingle();
+      if (review?.attorney_id) {
+        let docxUpload: Uint8Array = new Uint8Array(docxBuffer);
+        const { data: att } = await supabase
+          .from("clients")
+          .select("pubkey_x25519")
+          .eq("profile_id", review.attorney_id)
+          .maybeSingle();
+        if (att?.pubkey_x25519) {
+          const attPub = byteaToBytes(att.pubkey_x25519);
+          if (attPub.length === 32) {
+            docxUpload = await sealForRecipient(docxUpload, attPub);
+            reviewDocxFor = review.attorney_id;
+          } else {
+            console.warn(`[uploadDocument] attorney pubkey wrong length (${attPub.length}), uploading plaintext docx`);
+          }
+        }
+        const path = `${clientId}/${orderId}/${documentType}.review.docx.bin`;
+        const r = await supabase.storage.from("documents").upload(path, docxUpload, {
+          contentType: reviewDocxFor ? "application/octet-stream" : "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+          upsert: true,
+        });
+        if (!r.error) reviewDocxPath = path;
+        else console.warn("[uploadDocument] review docx upload failed:", r.error.message);
+      }
+    } catch (e) {
+      console.warn("[uploadDocument] review docx generation/seal failed (non-fatal):", e);
+    }
+  }
+
   // Discard plaintext reference. (GC handles the rest.)
   toUpload = new Uint8Array(0);
 
@@ -106,6 +148,8 @@ export async function uploadDocument(
     sealed_for_user_id: sealedFor,
     attorney_sealed_path: attorneySealedPath,
     attorney_sealed_for: attorneySealedFor,
+    review_docx_path: reviewDocxPath,
+    review_docx_for: reviewDocxFor,
   }).eq("order_id", orderId).eq("document_type", documentType);
   if (extUpd.error) {
     console.warn("[uploadDocument] sealed columns update failed (apply 20260509_e2ee_phase12_documents.sql):", extUpd.error.message);

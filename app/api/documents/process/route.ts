@@ -202,16 +202,28 @@ export async function GET(request: Request) {
           const documentText = response.content[0].type === "text" ? response.content[0].text : "";
           console.log("Document generated:", docType, "length:", documentText.length, "stop_reason:", response.stop_reason);
 
+          const clientFullName = String(intake.firstName || "") + " " + String(intake.lastName || "");
           const { generatePDF } = await import("@/lib/documents/generate-pdf");
           const pdfBuffer = await generatePDF(
             documentText, docType,
-            String(intake.firstName || "") + " " + String(intake.lastName || ""),
+            clientFullName,
             partnerName, undefined, String(intake.city || ""),
             partnerLogoUrl
           );
 
+          // Editable DOCX for attorney review (non-fatal if it fails).
+          let docxBuffer: Buffer | undefined;
+          if (order.attorney_review_requested) {
+            try {
+              const { generateDOCX } = await import("@/lib/documents/generate-docx");
+              docxBuffer = await generateDOCX(documentText, docType, clientFullName, partnerName);
+            } catch (e) {
+              console.error("DOCX generation failed (non-fatal):", docType, e);
+            }
+          }
+
           const storageClientId = isTestOrder ? "test" : order.client_id;
-          await uploadDocument(storageClientId, order.id, docType, pdfBuffer);
+          await uploadDocument(storageClientId, order.id, docType, pdfBuffer, docxBuffer);
           console.log("Document uploaded:", docType, "test:", isTestOrder);
         } catch (docError) {
           console.error(`Error generating ${docType}:`, docError);
@@ -264,6 +276,14 @@ export async function GET(request: Request) {
 
     const intake = job.intake_answers;
 
+    // Does this order want attorney review? Gates editable DOCX generation.
+    let jobReviewRequested = false;
+    if (job.order_id) {
+      const { data: jobOrderFlag } = await supabase
+        .from("orders").select("attorney_review_requested").eq("id", job.order_id).maybeSingle();
+      jobReviewRequested = !!jobOrderFlag?.attorney_review_requested;
+    }
+
     // Resolve partner branding once for this job
     let jobPartnerName: string | undefined;
     let jobPartnerLogoUrl: string | null = null;
@@ -304,15 +324,27 @@ export async function GET(request: Request) {
         const documentText = response.content[0].type === "text" ? response.content[0].text : "";
 
         // Generate PDF
+        const jobClientFullName = String(intake.firstName || "") + " " + String(intake.lastName || "");
         const { generatePDF } = await import("@/lib/documents/generate-pdf");
         const pdfBuffer = await generatePDF(
           documentText, docType,
-          String(intake.firstName || "") + " " + String(intake.lastName || ""),
+          jobClientFullName,
           jobPartnerName, undefined, undefined, jobPartnerLogoUrl
         );
 
+        // Editable DOCX for attorney review (non-fatal if it fails).
+        let jobDocxBuffer: Buffer | undefined;
+        if (jobReviewRequested) {
+          try {
+            const { generateDOCX } = await import("@/lib/documents/generate-docx");
+            jobDocxBuffer = await generateDOCX(documentText, docType, jobClientFullName, jobPartnerName);
+          } catch (e) {
+            console.error("DOCX generation failed (non-fatal):", docType, e);
+          }
+        }
+
         // Upload to storage
-        await uploadDocument(job.client_id, job.order_id, docType, pdfBuffer);
+        await uploadDocument(job.client_id, job.order_id, docType, pdfBuffer, jobDocxBuffer);
 
         await supabase.from("audit_log").insert({ action: "document.generated", resource_type: "document", metadata: { order_id: job.order_id, document_type: docType } });
       } catch (docError) {

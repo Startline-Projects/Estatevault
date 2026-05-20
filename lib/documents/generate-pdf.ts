@@ -32,7 +32,7 @@ async function fetchRemoteLogo(url: string): Promise<Buffer | null> {
   }
 }
 
-const TYPE_NAMES: Record<string, string> = {
+export const TYPE_NAMES: Record<string, string> = {
   will: "Last Will and Testament",
   trust: "Revocable Living Trust",
   pour_over_will: "Pour-Over Will",
@@ -40,7 +40,7 @@ const TYPE_NAMES: Record<string, string> = {
   healthcare_directive: "Patient Advocate Designation",
 };
 
-interface ParsedLine {
+export interface ParsedLine {
   type: "text" | "blank" | "signature_line" | "notary_block";
   text?: string;
   label?: string;
@@ -62,7 +62,7 @@ function stripMarkdown(text: string): string {
     .trim();
 }
 
-function parseDocumentText(rawText: string): ParsedLine[] {
+export function parseDocumentText(rawText: string): ParsedLine[] {
   const text = stripMarkdown(rawText);
   const lines: ParsedLine[] = [];
   const rawLines = text.split("\n");

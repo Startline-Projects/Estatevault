@@ -26,6 +26,20 @@ export async function GET(request: Request) {
     .single();
   if (!doc || !doc.storage_path) return NextResponse.json({ error: "Document not found" }, { status: 404 });
 
+  // Attorney-edited PDF columns live in a later migration. Fetch separately and
+  // tolerate failure so a missing migration never breaks the original download.
+  let reviewedPath: string | null = null;
+  let reviewedSealed = false;
+  const { data: rev } = await admin
+    .from("documents")
+    .select("reviewed_path, reviewed_sealed")
+    .eq("id", documentId)
+    .maybeSingle();
+  if (rev) {
+    reviewedPath = rev.reviewed_path ?? null;
+    reviewedSealed = !!rev.reviewed_sealed;
+  }
+
   // Verify access: client owns it OR partner has access
   const { data: client } = await admin.from("clients").select("profile_id, partner_id").eq("id", doc.client_id).single();
   if (!client) return NextResponse.json({ error: "Access denied" }, { status: 403 });
@@ -68,10 +82,19 @@ export async function GET(request: Request) {
     }
   }
 
-  // Sealed routing: review attorneys get the attorney-sealed copy if one exists.
+  // Path + sealed routing:
+  //  - Review attorney → original (or attorney-sealed copy) so they review what was generated.
+  //  - Everyone else (client/partner/admin) → the attorney-edited PDF if one was uploaded,
+  //    otherwise the originally generated PDF.
   let path = doc.storage_path as string;
-  if (doc.sealed && isReviewAttorney && doc.attorney_sealed_path && doc.attorney_sealed_for === user.id) {
-    path = doc.attorney_sealed_path as string;
+  let sealed = !!doc.sealed;
+  if (isReviewAttorney) {
+    if (doc.sealed && doc.attorney_sealed_path && doc.attorney_sealed_for === user.id) {
+      path = doc.attorney_sealed_path as string;
+    }
+  } else if (reviewedPath) {
+    path = reviewedPath;
+    sealed = reviewedSealed;
   }
 
   const url = await getDocumentDownloadUrl(path);
@@ -82,8 +105,8 @@ export async function GET(request: Request) {
     action: "document.downloaded",
     resource_type: "document",
     resource_id: documentId,
-    metadata: { sealed: !!doc.sealed },
+    metadata: { sealed, reviewed: !isReviewAttorney && !!reviewedPath },
   });
 
-  return NextResponse.json({ url, sealed: !!doc.sealed, encVersion: 1 });
+  return NextResponse.json({ url, sealed, encVersion: 1 });
 }
