@@ -8,6 +8,7 @@ import {
 } from "@/lib/stripe-payouts";
 import { generateAffiliateCode } from "@/lib/affiliate";
 import { affiliateSignupSchema } from "@/lib/validation/schemas";
+import { createClient } from "@/lib/supabase/server";
 
 function createAdminClient() {
   return createServerClient(
@@ -124,6 +125,19 @@ export async function POST(request: Request) {
       resource_id: affiliate.id,
       metadata: { code, email },
     });
+
+    // Establish a browser session so the affiliate stays logged in through the
+    // Stripe onboarding round-trip and lands authed on /affiliate afterward.
+    const authClient = createClient();
+    const { error: signInError } = await authClient.auth.signInWithPassword({
+      email,
+      password,
+    });
+    if (signInError) {
+      // Account exists and password is valid; surface but don't fail signup —
+      // the affiliate can still sign in manually.
+      console.error("Affiliate auto-login failed:", signInError);
+    }
 
     return NextResponse.json({
       affiliateId: affiliate.id,
