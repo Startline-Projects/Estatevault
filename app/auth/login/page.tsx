@@ -150,7 +150,7 @@ function LoginForm() {
       if (clientRow?.partner_id) {
         const { data: partner } = await supabase
           .from("partners")
-          .select("subdomain, custom_domain, vault_subdomain, business_name")
+          .select("subdomain, custom_domain, vault_subdomain, company_name")
           .eq("id", clientRow.partner_id)
           .single();
 
@@ -179,7 +179,7 @@ function LoginForm() {
             (partner?.vault_subdomain ? `${partner.vault_subdomain}.estatevault.us` : null);
           const targetUrl = target ? `https://${target}/auth/login` : "your firm's portal";
           setError(
-            `This account is managed by ${partner?.business_name || "your advisor"}. Please sign in at ${targetUrl}.`
+            `This account is managed by ${partner?.company_name || "your advisor"}. Please sign in at ${targetUrl}.`
           );
           setLoading(false);
           return;
