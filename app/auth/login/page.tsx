@@ -148,11 +148,14 @@ function LoginForm() {
         .maybeSingle();
 
       if (clientRow?.partner_id) {
-        const { data: partner } = await supabase
-          .from("partners")
-          .select("subdomain, custom_domain, vault_subdomain, company_name")
-          .eq("id", clientRow.partner_id)
-          .single();
+        // RLS blocks clients from reading the partners table directly, so use a
+        // security-definer RPC that returns only the whitelabel host fields for
+        // the partner this client belongs to.
+        const { data: partnerRows } = await supabase.rpc(
+          "get_partner_login_target",
+          { p_partner_id: clientRow.partner_id }
+        );
+        const partner = Array.isArray(partnerRows) ? partnerRows[0] : partnerRows;
 
         const allowedHosts = [
           partner?.subdomain,
