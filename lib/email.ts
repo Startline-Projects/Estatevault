@@ -405,16 +405,45 @@ export async function sendDocumentEmail(params: SendDocumentEmailParams & { part
   }
 }
 
+function escapeHtml(s: string): string {
+  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+
+function firstNameOf(fullName?: string | null): string {
+  return (fullName || "").trim().split(/\s+/)[0] || "";
+}
+
+function formatLongDate(d?: string | Date | null): string {
+  if (!d) return "";
+  const dt = typeof d === "string" ? new Date(d) : d;
+  if (isNaN(dt.getTime())) return "";
+  return dt.toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
+}
+
+function greetingHtml(fullName?: string | null): string {
+  const first = firstNameOf(fullName);
+  if (!first) return "";
+  return `<p style="margin:0 0 16px;font-size:14px;color:#2D2D2D;line-height:1.6;">Hello ${escapeHtml(first)},</p>`;
+}
+
 export async function sendAnnualReviewEmail({
   to,
   loginLink,
   partnerId,
+  clientName,
+  deliveredAt,
 }: {
   to: string;
   loginLink: string;
   partnerId?: string | null;
+  clientName?: string | null;
+  deliveredAt?: string | Date | null;
 }) {
   const sender = await getPartnerFrom(partnerId);
+  const createdOn = formatLongDate(deliveredAt);
+  const sinceLine = createdOn
+    ? `It's been about a year since your estate plan was created on <strong>${createdOn}</strong>.`
+    : `It's been about a year since your estate plan was created.`;
   try {
     await resend.emails.send({
       from: sender.from,
@@ -429,8 +458,9 @@ export async function sendAnnualReviewEmail({
     ${renderEmailHeader(sender.brand)}
     <div style="padding:32px;">
       <h2 style="margin:0 0 16px;font-size:22px;color:#1C3557;">A year of protection — let's keep it current.</h2>
+      ${greetingHtml(clientName)}
       <p style="margin:0 0 16px;font-size:14px;color:#2D2D2D;line-height:1.6;">
-        It's been about a year since your estate plan was created. A quick yearly review helps make
+        ${sinceLine} A quick yearly review helps make
         sure your documents still reflect your wishes and the people you trust most.
       </p>
       <p style="margin:0 0 16px;font-size:14px;color:#2D2D2D;line-height:1.6;">
@@ -456,12 +486,20 @@ export async function sendLifeEventCheckInEmail({
   to,
   loginLink,
   partnerId,
+  clientName,
+  deliveredAt,
 }: {
   to: string;
   loginLink: string;
   partnerId?: string | null;
+  clientName?: string | null;
+  deliveredAt?: string | Date | null;
 }) {
   const sender = await getPartnerFrom(partnerId);
+  const createdOn = formatLongDate(deliveredAt);
+  const sinceLine = createdOn
+    ? `Since your plan was created on <strong>${createdOn}</strong>, life may have moved on. `
+    : "";
   try {
     await resend.emails.send({
       from: sender.from,
@@ -476,8 +514,9 @@ export async function sendLifeEventCheckInEmail({
     ${renderEmailHeader(sender.brand)}
     <div style="padding:32px;">
       <h2 style="margin:0 0 16px;font-size:22px;color:#1C3557;">Big moments are worth protecting.</h2>
+      ${greetingHtml(clientName)}
       <p style="margin:0 0 16px;font-size:14px;color:#2D2D2D;line-height:1.6;">
-        Life changes — a marriage, a new child or grandchild, a move, a new home, or a change in
+        ${sinceLine}Life changes — a marriage, a new child or grandchild, a move, a new home, or a change in
         the people you'd want to look after things. When that happens, it's a good time to make sure
         your estate plan keeps up.
       </p>
@@ -486,7 +525,7 @@ export async function sendLifeEventCheckInEmail({
       </p>
       <div style="text-align:center;margin:32px 0;">
         <a href="${loginLink}" style="display:inline-block;background:#C9A84C;color:#ffffff;text-decoration:none;padding:14px 32px;border-radius:50px;font-size:14px;font-weight:600;">
-          Update My Plan
+          Request Amendment
         </a>
       </div>
     </div>

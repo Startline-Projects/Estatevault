@@ -132,8 +132,9 @@ export async function POST(request: Request) {
     });
   } catch (error) {
     console.error("Affiliate signup error:", error);
+    const detail = error instanceof Error ? error.message : String(error);
     return NextResponse.json(
-      { error: "Failed to complete signup" },
+      { error: "Failed to complete signup", detail },
       { status: 500 }
     );
   }

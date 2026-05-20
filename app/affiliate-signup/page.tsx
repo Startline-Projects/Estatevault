@@ -83,7 +83,7 @@ function AffiliateSignupContent() {
         body: JSON.stringify({ fullName, email, password, acceptTerms }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Signup failed");
+      if (!res.ok) throw new Error(data.detail || data.error || "Signup failed");
 
       setOnboardingUrl(data.onboardingUrl);
       setAffiliateCode(data.code);

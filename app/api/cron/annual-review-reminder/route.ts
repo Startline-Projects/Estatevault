@@ -68,7 +68,7 @@ export async function GET(req: Request) {
 
     const { data: profile } = await db
       .from("profiles")
-      .select("email")
+      .select("email, full_name")
       .eq("id", profileId)
       .maybeSingle();
     const email = profile?.email;
@@ -78,6 +78,8 @@ export async function GET(req: Request) {
       to: email,
       loginLink: `${baseUrl}/auth/login?email=${encodeURIComponent(email)}`,
       partnerId: info.partnerId,
+      clientName: profile?.full_name,
+      deliveredAt: info.deliveredAt,
     });
     await db.from("clients").update({ last_annual_review_sent_at: new Date().toISOString() }).eq("id", clientId);
     await db.from("audit_log").insert({
