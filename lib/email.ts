@@ -404,3 +404,98 @@ export async function sendDocumentEmail(params: SendDocumentEmailParams & { part
     // Do NOT re-throw, generation succeeded, client can download from their account
   }
 }
+
+export async function sendAnnualReviewEmail({
+  to,
+  loginLink,
+  partnerId,
+}: {
+  to: string;
+  loginLink: string;
+  partnerId?: string | null;
+}) {
+  const sender = await getPartnerFrom(partnerId);
+  try {
+    await resend.emails.send({
+      from: sender.from,
+      replyTo: sender.replyTo,
+      to,
+      subject: "Time for your yearly estate plan check-up",
+      html: `<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#f4f4f5;font-family:'Inter',Arial,sans-serif;">
+  <div style="max-width:600px;margin:0 auto;background:#ffffff;">
+    ${renderEmailHeader(sender.brand)}
+    <div style="padding:32px;">
+      <h2 style="margin:0 0 16px;font-size:22px;color:#1C3557;">A year of protection — let's keep it current.</h2>
+      <p style="margin:0 0 16px;font-size:14px;color:#2D2D2D;line-height:1.6;">
+        It's been about a year since your estate plan was created. A quick yearly review helps make
+        sure your documents still reflect your wishes and the people you trust most.
+      </p>
+      <p style="margin:0 0 16px;font-size:14px;color:#2D2D2D;line-height:1.6;">
+        Sign in to review your plan. If everything still looks right, there's nothing more to do.
+      </p>
+      <div style="text-align:center;margin:32px 0;">
+        <a href="${loginLink}" style="display:inline-block;background:#C9A84C;color:#ffffff;text-decoration:none;padding:14px 32px;border-radius:50px;font-size:14px;font-weight:600;">
+          Review My Plan
+        </a>
+      </div>
+    </div>
+    ${renderEmailFooter(sender.brand, `<p style="margin:0 0 8px;font-size:11px;color:#bbb;line-height:1.5;">You're receiving this because you opted in to annual review reminders. Manage preferences in your account settings.</p>`)}
+  </div>
+</body>
+</html>`,
+    });
+  } catch (e) {
+    console.error("Annual-review email failed:", e);
+  }
+}
+
+export async function sendLifeEventCheckInEmail({
+  to,
+  loginLink,
+  partnerId,
+}: {
+  to: string;
+  loginLink: string;
+  partnerId?: string | null;
+}) {
+  const sender = await getPartnerFrom(partnerId);
+  try {
+    await resend.emails.send({
+      from: sender.from,
+      replyTo: sender.replyTo,
+      to,
+      subject: "Anything change in your life lately?",
+      html: `<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#f4f4f5;font-family:'Inter',Arial,sans-serif;">
+  <div style="max-width:600px;margin:0 auto;background:#ffffff;">
+    ${renderEmailHeader(sender.brand)}
+    <div style="padding:32px;">
+      <h2 style="margin:0 0 16px;font-size:22px;color:#1C3557;">Big moments are worth protecting.</h2>
+      <p style="margin:0 0 16px;font-size:14px;color:#2D2D2D;line-height:1.6;">
+        Life changes — a marriage, a new child or grandchild, a move, a new home, or a change in
+        the people you'd want to look after things. When that happens, it's a good time to make sure
+        your estate plan keeps up.
+      </p>
+      <p style="margin:0 0 16px;font-size:14px;color:#2D2D2D;line-height:1.6;">
+        Had a recent life event? Sign in to log it and we'll help you keep your plan in step.
+      </p>
+      <div style="text-align:center;margin:32px 0;">
+        <a href="${loginLink}" style="display:inline-block;background:#C9A84C;color:#ffffff;text-decoration:none;padding:14px 32px;border-radius:50px;font-size:14px;font-weight:600;">
+          Update My Plan
+        </a>
+      </div>
+    </div>
+    ${renderEmailFooter(sender.brand, `<p style="margin:0 0 8px;font-size:11px;color:#bbb;line-height:1.5;">You're receiving this because you opted in to life event check-in reminders. Manage preferences in your account settings.</p>`)}
+  </div>
+</body>
+</html>`,
+    });
+  } catch (e) {
+    console.error("Life-event check-in email failed:", e);
+  }
+}

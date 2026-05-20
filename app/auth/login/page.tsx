@@ -163,9 +163,15 @@ function LoginForm() {
           .map((h) => String(h).toLowerCase());
 
         const hostLower = currentHost.toLowerCase();
-        const onAllowedHost = allowedHosts.some(
-          (h) => hostLower === h || hostLower === `www.${h}`
-        );
+        // Local dev bypass: no partner uses localhost, so the whitelabel
+        // lockout would always block sign-in on a dev machine.
+        const isLocal =
+          hostLower.startsWith("localhost") || hostLower.startsWith("127.0.0.1");
+        const onAllowedHost =
+          isLocal ||
+          allowedHosts.some(
+            (h) => hostLower === h || hostLower === `www.${h}`
+          );
 
         if (!onAllowedHost) {
           await supabase.auth.signOut();

@@ -19,6 +19,14 @@
     {
       "path": "/api/cron/farewell-window-expired",
       "schedule": "*/15 * * * *"
+    },
+    {
+      "path": "/api/cron/annual-review-reminder",
+      "schedule": "0 14 * * *"
+    },
+    {
+      "path": "/api/cron/life-event-checkin",
+      "schedule": "0 15 * * *"
     }
   ],
   "functions": {

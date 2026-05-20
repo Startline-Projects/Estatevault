@@ -106,7 +106,7 @@ export default async function DashboardHome() {
   return (
     <div className="max-w-4xl">
       {/* Welcome banner */}
-      <div className="rounded-xl bg-navy p-6 border-l-4 border-gold">
+      <div className="rounded-xl bg-gold p-6">
         <h1 className="text-xl font-bold text-white">
           {hasPurchased ? `Welcome back, ${firstName}.` : `Welcome, ${firstName}. Your estate plan is ready.`}
         </h1>

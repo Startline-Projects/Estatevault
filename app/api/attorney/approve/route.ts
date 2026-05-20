@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createServerClient } from "@supabase/ssr";
 import { sendDocumentEmail } from "@/lib/email";
+import { wantsNotification } from "@/lib/notifications/prefs";
 
 function createAdminClient() {
   return createServerClient(
@@ -85,6 +86,7 @@ export async function POST(request: Request) {
       .single();
 
     let clientEmail: string | null = null;
+    let clientProfileId: string | null = null;
     let productType: "will" | "trust" = "will";
 
     if (order) {
@@ -96,6 +98,7 @@ export async function POST(request: Request) {
         .single();
 
       if (client?.profile_id) {
+        clientProfileId = client.profile_id;
         const { data: clientProfile } = await admin
           .from("profiles")
           .select("email")
@@ -107,7 +110,10 @@ export async function POST(request: Request) {
 
     // Send full document email to client now that attorney approved (intake was purged,
     // so asset checklist is omitted; client signs in to download docs).
-    if (clientEmail) {
+    const wantsDelivery = clientEmail
+      ? await wantsNotification(admin, clientProfileId, "documents_delivered")
+      : false;
+    if (clientEmail && wantsDelivery) {
       const origin = process.env.NEXT_PUBLIC_SITE_URL || "https://www.estatevault.us";
       await sendDocumentEmail({
         to: clientEmail,
@@ -120,7 +126,7 @@ export async function POST(request: Request) {
         resource_type: "order",
         resource_id: review.order_id,
       });
-    } else {
+    } else if (!clientEmail) {
       console.error("Could not find client email for review:", reviewId);
     }
   }

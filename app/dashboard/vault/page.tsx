@@ -790,7 +790,7 @@ export default function VaultPage() {
                 setScreen("category");
               }}
               className={`relative rounded-xl p-5 text-left transition-all hover:shadow-md ${
-                count > 0 ? "bg-navy text-white" : "bg-navy/5 border border-gray-200 text-navy"
+                count > 0 ? "bg-gold text-white" : "bg-gold/5 border border-gray-200 text-navy"
               }`}
             >
               {requiresUpgrade && (
@@ -811,7 +811,7 @@ export default function VaultPage() {
 
         {/* Farewell Messages card */}
         <Link href="/dashboard/vault/farewell"
-          className="rounded-xl p-5 text-left transition-all hover:shadow-md bg-navy/5 border border-gold/30 text-navy">
+          className="rounded-xl p-5 text-left transition-all hover:shadow-md bg-gold/5 border border-gold/30 text-navy">
           <span className="text-2xl">🎥</span>
           <p className="mt-3 text-sm font-semibold">Farewell Messages</p>
           <p className="mt-1 text-xs text-charcoal/60">Video messages for loved ones</p>

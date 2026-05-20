@@ -3,6 +3,7 @@ import { createServerClient } from "@supabase/ssr";
 import { claude, CLAUDE_MODEL } from "@/lib/claude";
 import { uploadDocument } from "@/lib/documents/storage";
 import { sendDocumentEmail, sendAttorneyReviewPendingEmail, buildAssetChecklist } from "@/lib/email";
+import { wantsNotification } from "@/lib/notifications/prefs";
 
 function createAdminClient() {
   return createServerClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, { cookies: { getAll: () => [], setAll: () => {} } });
@@ -198,6 +199,13 @@ export async function GET(request: Request) {
               partnerId: clientRow?.partner_id || null,
             });
             log.push(`9. Sent attorney-review-pending email to ${clientEmail}`);
+            await supabase.from("audit_log").insert({
+              action: "email.attorney_review_pending",
+              resource_type: "order",
+              resource_id: orderId,
+            });
+          } else if (!(await wantsNotification(supabase, profileId, "documents_delivered"))) {
+            log.push(`9. Skipped document email (client opted out)`);
           } else {
             const { origin } = new URL(request.url);
             const assetTypes = Array.isArray((quizAnswers as { assetTypes?: unknown }).assetTypes)
@@ -211,12 +219,12 @@ export async function GET(request: Request) {
               partnerId: clientRow?.partner_id || null,
             });
             log.push(`9. Sent document email to ${clientEmail}`);
+            await supabase.from("audit_log").insert({
+              action: "email.documents_delivered",
+              resource_type: "order",
+              resource_id: orderId,
+            });
           }
-          await supabase.from("audit_log").insert({
-            action: isAttorneyReview ? "email.attorney_review_pending" : "email.documents_delivered",
-            resource_type: "order",
-            resource_id: orderId,
-          });
         } else {
           log.push("9. Skipped email (no client email found)");
         }

@@ -6,6 +6,7 @@ import { claude, CLAUDE_MODEL } from "@/lib/claude";
 import { popNextJob, getJob, updateJob, ratelimit } from "@/lib/queue/document-queue";
 import { uploadDocument } from "@/lib/documents/storage";
 import { sendDocumentEmail, sendAttorneyReviewPendingEmail, buildAssetChecklist } from "@/lib/email";
+import { wantsNotification } from "@/lib/notifications/prefs";
 
 type SupabaseAdmin = ReturnType<typeof createAdminClient>;
 
@@ -44,6 +45,7 @@ async function notifyClientByEmail(
         partnerId,
       });
     } else {
+      if (!(await wantsNotification(supabase, profileId, "documents_delivered"))) return;
       const assetTypes = Array.isArray((intake as { assetTypes?: unknown }).assetTypes)
         ? ((intake as { assetTypes?: string[] }).assetTypes as string[])
         : [];
