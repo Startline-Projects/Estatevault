@@ -178,11 +178,8 @@ function LoginForm() {
 
         if (!onAllowedHost) {
           await supabase.auth.signOut();
-          const target = partner?.custom_domain || partner?.subdomain ||
-            (partner?.vault_subdomain ? `${partner.vault_subdomain}.estatevault.us` : null);
-          const targetUrl = target ? `https://${target}/auth/login` : "your firm's portal";
           setError(
-            `This account is managed by ${partner?.company_name || "your advisor"}. Please sign in at ${targetUrl}.`
+            `This account is managed by ${partner?.company_name || "your advisor"}. Please sign in at that site.`
           );
           setLoading(false);
           return;
