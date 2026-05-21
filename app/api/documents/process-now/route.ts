@@ -139,16 +139,28 @@ export async function GET(request: Request) {
         const documentText = response.content[0].type === "text" ? response.content[0].text : "";
         log.push(`   ${docType}: generated ${documentText.length} chars`);
 
+        const clientFullName = String(quizAnswers.firstName || "") + " " + String(quizAnswers.lastName || "");
         const { generatePDF } = await import("@/lib/documents/generate-pdf");
         const pdfBuffer = await generatePDF(
           documentText, docType,
-          String(quizAnswers.firstName || "") + " " + String(quizAnswers.lastName || ""),
+          clientFullName,
           partnerName, undefined, String(quizAnswers.city || ""),
           partnerLogoUrl
         );
 
+        // Editable DOCX for attorney review (non-fatal if it fails).
+        let docxBuffer: Buffer | undefined;
+        if (isAttorneyReview) {
+          try {
+            const { generateDOCX } = await import("@/lib/documents/generate-docx");
+            docxBuffer = await generateDOCX(documentText, docType, clientFullName, partnerName, partnerLogoUrl);
+          } catch (e) {
+            log.push(`   ${docType}: DOCX generation failed (non-fatal): ${e instanceof Error ? e.message : String(e)}`);
+          }
+        }
+
         const storageClientId = isTestOrder ? "test" : (order.client_id || "unknown");
-        const path = await uploadDocument(storageClientId, order.id, docType, pdfBuffer);
+        const path = await uploadDocument(storageClientId, order.id, docType, pdfBuffer, docxBuffer);
         // uploadDocument sets doc status to "generated", we will update below
         log.push(`   ${docType}: uploaded to ${path}`);
         results.push({ docType, success: true, path });

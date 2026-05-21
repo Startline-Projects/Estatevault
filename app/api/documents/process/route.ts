@@ -216,7 +216,7 @@ export async function GET(request: Request) {
           if (order.attorney_review_requested) {
             try {
               const { generateDOCX } = await import("@/lib/documents/generate-docx");
-              docxBuffer = await generateDOCX(documentText, docType, clientFullName, partnerName);
+              docxBuffer = await generateDOCX(documentText, docType, clientFullName, partnerName, partnerLogoUrl);
             } catch (e) {
               console.error("DOCX generation failed (non-fatal):", docType, e);
             }
@@ -337,7 +337,7 @@ export async function GET(request: Request) {
         if (jobReviewRequested) {
           try {
             const { generateDOCX } = await import("@/lib/documents/generate-docx");
-            jobDocxBuffer = await generateDOCX(documentText, docType, jobClientFullName, jobPartnerName);
+            jobDocxBuffer = await generateDOCX(documentText, docType, jobClientFullName, jobPartnerName, jobPartnerLogoUrl);
           } catch (e) {
             console.error("DOCX generation failed (non-fatal):", docType, e);
           }

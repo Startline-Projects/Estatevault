@@ -139,19 +139,31 @@ export async function GET(request: Request) {
         if (!text) throw new Error(`empty response, stop_reason=${response.stop_reason}`);
         log.push(`${docType}: ${text.length} chars, stop=${response.stop_reason}`);
 
+        const clientFullName = String(intake.firstName || "") + " " + String(intake.lastName || "");
         const { generatePDF } = await import("@/lib/documents/generate-pdf");
         const pdfBuffer = await generatePDF(
           text,
           docType,
-          String(intake.firstName || "") + " " + String(intake.lastName || ""),
+          clientFullName,
           partnerName,
           undefined,
           String(intake.city || ""),
           partnerLogoUrl
         );
 
+        // Editable DOCX for attorney review (non-fatal if it fails).
+        let docxBuffer: Buffer | undefined;
+        if (isAttorneyReview) {
+          try {
+            const { generateDOCX } = await import("@/lib/documents/generate-docx");
+            docxBuffer = await generateDOCX(text, docType, clientFullName, partnerName, partnerLogoUrl);
+          } catch (e) {
+            log.push(`${docType}: DOCX generation failed (non-fatal): ${e instanceof Error ? e.message : String(e)}`);
+          }
+        }
+
         const storageClientId = isTestOrder ? "test" : (order.client_id || "unknown");
-        const path = await uploadDocument(storageClientId, order.id, docType, pdfBuffer);
+        const path = await uploadDocument(storageClientId, order.id, docType, pdfBuffer, docxBuffer);
 
         // Restore status to match siblings
         const targetStatus = isAttorneyReview && order.status === "review" ? "review" : "delivered";

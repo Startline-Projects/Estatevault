@@ -67,7 +67,13 @@
       "Bash(ls app/api/cron)",
       "Bash(grep -nE \"CLOUDCONVERT|DOC_CONVERT|SOFFICE\" .env.example)",
       "Bash(tail -5 .env.example)",
-      "Bash(pnpm install *)"
+      "Bash(pnpm install *)",
+      "Bash(find . -path ./node_modules -prune -o -type d -name documents -print)",
+      "Bash(grep -rl \"being prepared\\\\|Under Review\\\\|attorney review is complete\" --include=*.tsx --include=*.ts app components)",
+      "Bash(echo \"EXIT: $?\")",
+      "Bash(nslookup api.resend.com)",
+      "Bash(ping -c 1 -t 2 1.1.1.1)",
+      "Bash(supabase status *)"
     ]
   }
 }

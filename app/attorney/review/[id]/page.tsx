@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { downloadReviewDocx } from "@/lib/repos/documentSealedRepo";
+import { authedFetch, SessionExpiredError } from "@/lib/api/authedFetch";
 
 const DOC_LABELS: Record<string, string> = {
   will: "Last Will & Testament",
@@ -49,15 +50,21 @@ export default function AttorneyReviewPage() {
   const fileInputs = useRef<Record<string, HTMLInputElement | null>>({});
 
   async function load() {
-    const res = await fetch(`/api/attorney/review?id=${reviewId}`);
-    if (!res.ok) {
+    try {
+      const res = await authedFetch(`/api/attorney/review?id=${reviewId}`);
+      if (!res.ok) {
+        setError("Unable to load review. You may not have access.");
+        setLoading(false);
+        return;
+      }
+      const json = await res.json();
+      setData(json);
+      setLoading(false);
+    } catch (e) {
+      if (e instanceof SessionExpiredError) return; // redirecting to login
       setError("Unable to load review. You may not have access.");
       setLoading(false);
-      return;
     }
-    const json = await res.json();
-    setData(json);
-    setLoading(false);
   }
 
   useEffect(() => {
@@ -65,11 +72,38 @@ export default function AttorneyReviewPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [reviewId]);
 
+  // Documents are uploaded one-by-one as generation finishes. They're "complete"
+  // once every doc has a storage_path (downloadable). Until then, poll/refetch so
+  // each one appears without a manual refresh — same UX as the client dashboard.
+  const docsComplete = !!data && data.documents.length > 0 && data.documents.every((d) => !!d.storage_path);
+
+  // Poll the (admin-backed) review API while documents are still generating.
+  // 4s cadence; cleared as soon as all docs are present, on submit, or unmount.
+  useEffect(() => {
+    if (loading || docsComplete || submitted) return;
+    const interval = setInterval(() => { load(); }, 4000);
+    return () => clearInterval(interval);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading, docsComplete, submitted]);
+
+  // Refetch when the tab regains focus, so returning never shows a stale list.
+  useEffect(() => {
+    if (docsComplete) return;
+    const onFocus = () => { load(); };
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onFocus);
+    return () => {
+      window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onFocus);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [docsComplete]);
+
   async function handleDownload(doc: DocRecord) {
     if (!doc.storage_path) return;
     setDownloadingId(doc.id);
     try {
-      const res = await fetch(`/api/documents/download?id=${doc.id}`);
+      const res = await authedFetch(`/api/documents/download?id=${doc.id}`);
       if (!res.ok) {
         const json = await res.json().catch(() => ({}));
         alert(json.error || "Unable to download document.");
@@ -77,6 +111,9 @@ export default function AttorneyReviewPage() {
       }
       const { url } = await res.json();
       if (url) window.open(url, "_blank");
+    } catch (e) {
+      if (e instanceof SessionExpiredError) return; // redirecting to login
+      alert("Unable to download document.");
     } finally {
       setDownloadingId(null);
     }
@@ -99,6 +136,7 @@ export default function AttorneyReviewPage() {
       const { blob, filename } = await downloadReviewDocx(doc.id);
       saveBlob(blob, filename);
     } catch (e) {
+      if (e instanceof SessionExpiredError) return; // redirecting to login
       alert(e instanceof Error ? e.message : "Unable to download editable document.");
     } finally {
       setDocxId(null);
@@ -111,14 +149,15 @@ export default function AttorneyReviewPage() {
       const fd = new FormData();
       fd.append("documentId", doc.id);
       fd.append("file", file);
-      const res = await fetch("/api/attorney/upload-reviewed", { method: "POST", body: fd });
+      const res = await authedFetch("/api/attorney/upload-reviewed", { method: "POST", body: fd });
       if (!res.ok) {
         const json = await res.json().catch(() => ({}));
         alert(json.error || "Upload failed.");
         return;
       }
       await load(); // refresh so the "uploaded" badge appears
-    } catch {
+    } catch (e) {
+      if (e instanceof SessionExpiredError) return; // redirecting to login
       alert("Upload failed. Please try again.");
     } finally {
       setUploadingId(null);
@@ -130,7 +169,7 @@ export default function AttorneyReviewPage() {
     setSubmitting(true);
 
     try {
-      const res = await fetch("/api/attorney/approve", {
+      const res = await authedFetch("/api/attorney/approve", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ reviewId, decision, notes }),
@@ -145,7 +184,8 @@ export default function AttorneyReviewPage() {
 
       setSubmitted(true);
       setTimeout(() => router.push("/attorney/reviews"), 2000);
-    } catch {
+    } catch (e) {
+      if (e instanceof SessionExpiredError) return; // redirecting to login
       alert("Failed to submit review. Please try again.");
       setSubmitting(false);
     }

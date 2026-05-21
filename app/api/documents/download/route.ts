@@ -70,14 +70,19 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Access denied" }, { status: 403 });
   }
 
-  // Block client download while order is under attorney review
+  // Block client download while order is under attorney review.
+  // Attorney-review orders stay locked from the moment documents start generating
+  // through the review itself, until the attorney approves (status -> 'delivered').
+  // Without the attorney_review_requested gate, docs uploaded one-by-one during
+  // generation are downloadable before the order ever reaches 'review'. Non-review
+  // orders are unaffected.
   if (isClient && !isAdmin) {
     const { data: order } = await admin
       .from("orders")
-      .select("status")
+      .select("status, attorney_review_requested")
       .eq("id", doc.order_id)
       .single();
-    if (order?.status === "review") {
+    if (order?.attorney_review_requested && order.status !== "delivered") {
       return NextResponse.json({ error: "Documents are under attorney review and will be available once approved." }, { status: 403 });
     }
   }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 
@@ -70,12 +70,13 @@ export default function AttorneyQueuePage() {
   const [reviews, setReviews] = useState<Review[]>([]);
   const [loading, setLoading] = useState(true);
   const [userName, setUserName] = useState("");
+  const [userId, setUserId] = useState<string | null>(null);
 
-  useEffect(() => {
-    async function load() {
+  const load = useCallback(async () => {
       const supabase = createClient();
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
+      setUserId(user.id);
 
       const { data: profile } = await supabase.from("profiles").select("full_name, email").eq("id", user.id).single();
       setUserName(profile?.full_name || profile?.email || "Attorney");
@@ -88,6 +89,7 @@ export default function AttorneyQueuePage() {
         .order("created_at", { ascending: false });
 
       if (!rawReviews || rawReviews.length === 0) {
+        setReviews([]);
         setLoading(false);
         return;
       }
@@ -147,9 +149,39 @@ export default function AttorneyQueuePage() {
 
       setReviews(enriched);
       setLoading(false);
-    }
-    load();
   }, []);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  // Live queue via Supabase realtime: a new order entering review (new
+  // attorney_reviews row) or a status change shows up instantly, no refresh.
+  // RLS already scopes attorney_reviews to attorney_id = auth.uid().
+  useEffect(() => {
+    if (!userId) return;
+    const supabase = createClient();
+    const channel = supabase
+      .channel(`attorney-queue-${userId}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "attorney_reviews", filter: `attorney_id=eq.${userId}` },
+        () => { load(); }
+      )
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [userId, load]);
+
+  // Refetch on tab focus, covering any realtime gap after sleep/reconnect.
+  useEffect(() => {
+    const onFocus = () => { load(); };
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onFocus);
+    return () => {
+      window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onFocus);
+    };
+  }, [load]);
 
   if (loading) {
     return (

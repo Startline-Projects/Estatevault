@@ -4,6 +4,7 @@
 // Server returns { url, sealed } — if sealed, fetch ciphertext, open in worker.
 
 import { getCryptoWorker } from "@/lib/crypto/worker/client";
+import { authedFetch } from "@/lib/api/authedFetch";
 
 export type DownloadResult = {
   blob: Blob;
@@ -36,7 +37,7 @@ const DOCX_MIME = "application/vnd.openxmlformats-officedocument.wordprocessingm
 // Attorney-only: download the editable DOCX generated for review. Sealed copies
 // are opened in the crypto worker with the attorney's key.
 export async function downloadReviewDocx(documentId: string): Promise<DownloadResult> {
-  const meta = await fetch(`/api/attorney/review-docx?documentId=${encodeURIComponent(documentId)}`);
+  const meta = await authedFetch(`/api/attorney/review-docx?documentId=${encodeURIComponent(documentId)}`);
   if (!meta.ok) {
     const j = await meta.json().catch(() => ({}));
     throw new Error(j.error ?? `download meta failed: ${meta.status}`);

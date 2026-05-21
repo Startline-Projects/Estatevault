@@ -71,6 +71,7 @@ interface Order {
   id: string;
   product_type: string;
   status: string;
+  attorney_review_requested: boolean;
 }
 
 export default function DocumentsPage() {
@@ -80,6 +81,7 @@ export default function DocumentsPage() {
   const [latestOrder, setLatestOrder] = useState<Order | null>(null);
   const [docsReady, setDocsReady] = useState(false);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
+  const [clientId, setClientId] = useState<string | null>(null);
 
   const fetchData = useCallback(async () => {
     const supabase = createClient();
@@ -88,10 +90,11 @@ export default function DocumentsPage() {
 
     const { data: client } = await supabase.from("clients").select("id").eq("profile_id", user.id).single();
     if (!client) { setLoading(false); return "idle"; }
+    setClientId(client.id);
 
     const { data: orders } = await supabase
       .from("orders")
-      .select("id, product_type, status")
+      .select("id, product_type, status, attorney_review_requested")
       .eq("client_id", client.id)
       .order("created_at", { ascending: false })
       .limit(1);
@@ -127,19 +130,54 @@ export default function DocumentsPage() {
     fetchData();
   }, [fetchData]);
 
-  // Poll when generating
+  // Poll while the order hasn't reached a final downloadable state.
+  // Covers "generating"/"paid" (document generation) AND "review" (attorney
+  // approval), so review -> delivered flips the buttons live with no refresh.
+  // No hard timeout: attorney review can take days; the interval is cleared as
+  // soon as fetchData reports "ready" or the component unmounts.
   useEffect(() => {
     if (docsReady) return;
-    if (latestOrder?.status !== "generating" && latestOrder?.status !== "paid") return;
+    if (!latestOrder) return;
+    if (latestOrder.status === "delivered") return;
 
+    // 4s during active generation, slower (12s) while waiting on attorney review.
+    const intervalMs = latestOrder.status === "review" ? 12000 : 4000;
     const interval = setInterval(async () => {
       const state = await fetchData();
       if (state === "ready") clearInterval(interval);
-    }, 3000);
+    }, intervalMs);
 
-    const timeout = setTimeout(() => clearInterval(interval), 300000);
-    return () => { clearInterval(interval); clearTimeout(timeout); };
-  }, [latestOrder?.status, docsReady, fetchData]);
+    return () => { clearInterval(interval); };
+  }, [latestOrder?.status, latestOrder, docsReady, fetchData]);
+
+  // Refetch when the tab regains focus, so coming back never shows stale state.
+  useEffect(() => {
+    if (docsReady) return;
+    const onFocus = () => { fetchData(); };
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onFocus);
+    return () => {
+      window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onFocus);
+    };
+  }, [docsReady, fetchData]);
+
+  // Live updates via Supabase realtime, so download buttons appear the instant
+  // generation finishes, no browser refresh needed.
+  useEffect(() => {
+    if (!clientId || docsReady) return;
+    const supabase = createClient();
+    const channel = supabase
+      .channel(`client-docs-${clientId}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "documents", filter: `client_id=eq.${clientId}` }, () => {
+        fetchData();
+      })
+      .on("postgres_changes", { event: "*", schema: "public", table: "orders", filter: `client_id=eq.${clientId}` }, () => {
+        fetchData();
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [clientId, docsReady, fetchData]);
 
   function formatDocType(t: string) {
     return DOC_LABELS[t] || t.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
@@ -172,10 +210,17 @@ export default function DocumentsPage() {
   }
 
   const isGenerating = (latestOrder?.status === "generating" || latestOrder?.status === "paid") && !docsReady;
-  const isUnderReview = latestOrder?.status === "review";
+  // Attorney-review orders stay locked from the moment generation starts until the
+  // attorney approves (order status -> 'delivered'). reviewPending covers both the
+  // 'generating' and 'review' windows, so docs uploaded one-by-one during
+  // generation never appear downloadable before approval.
+  const reviewPending = !!latestOrder?.attorney_review_requested && latestOrder?.status !== "delivered";
+  const isUnderReview = reviewPending && !isGenerating;
   const packageName = latestOrder?.product_type === "trust" ? "Trust" : "Will";
   const deliveredDocs = documents.filter((d) => d.status === "delivered");
-  const visibleDocs = isUnderReview ? documents : documents.filter((d) => d.status === "generated" || d.status === "delivered");
+  const visibleDocs = reviewPending
+    ? documents.filter((d) => d.status === "generated" || d.status === "delivered" || d.status === "review")
+    : documents.filter((d) => d.status === "generated" || d.status === "delivered");
 
   return (
     <div className="max-w-4xl">
@@ -245,7 +290,7 @@ export default function DocumentsPage() {
         <div className="mt-6 space-y-3">
           {visibleDocs.map((doc) => {
             const isDelivered = doc.status === "delivered" || doc.status === "generated";
-            const canDownload = isDelivered && !!doc.storage_path && !isUnderReview;
+            const canDownload = isDelivered && !!doc.storage_path && !reviewPending;
             const isDownloading = downloadingId === doc.id;
 
             return (
@@ -253,7 +298,7 @@ export default function DocumentsPage() {
                 <div>
                   <p className="text-sm font-semibold text-navy">{formatDocType(doc.document_type)}</p>
                   <p className="text-xs text-charcoal/50 mt-1">
-                    {isUnderReview
+                    {reviewPending
                       ? "Locked until attorney review is complete"
                       : doc.delivered_at
                       ? `Delivered ${new Date(doc.delivered_at).toLocaleDateString()}`
@@ -263,7 +308,7 @@ export default function DocumentsPage() {
                   </p>
                 </div>
                 <div className="flex items-center gap-3">
-                  {isUnderReview ? (
+                  {reviewPending ? (
                     <span className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium bg-amber-100 text-amber-700">
                       <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                         <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m0 0v2m0-2h2m-2 0H10m2-9V4m0 0L9 7m3-3l3 3" />
