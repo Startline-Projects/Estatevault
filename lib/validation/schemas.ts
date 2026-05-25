@@ -184,7 +184,78 @@ export const affiliateSignupSchema = z.object({
   }),
 });
 
+// ---- Vault (server-managed encryption / Option A) ----
+
+export const VAULT_CATEGORIES = [
+  "estate_document", "insurance", "financial_account", "digital_account",
+  "physical_location", "contact", "final_wishes", "business",
+] as const;
+
+// Create/update a vault item (plaintext in, server encrypts at rest).
+export const vaultItemSchema = z.object({
+  category: z.enum(VAULT_CATEGORIES),
+  label: z.string().min(1).max(500),
+  data: z.record(z.string(), z.unknown()).default({}),
+  storagePath: z.string().optional(),
+});
+
+// Encrypted-search query (plaintext label → server-side blind index).
+export const vaultItemSearchSchema = z.object({
+  label: z.string().min(1).max(500),
+  category: z.string().optional(),
+});
+
+// Add a trustee. Name/email validated AFTER the route coalesces the legacy
+// `trustee_*` aliases; the key win over the old hand-rolled check is `.email()`.
+export const trusteeCreateSchema = z.object({
+  name: z.string().min(1, "Name is required").max(200),
+  email: z.string().email("A valid email is required").max(320),
+  relationship: z.string().max(200).optional(),
+});
+
+// Confirm a trustee invite via its emailed token.
+export const trusteeConfirmSchema = z.object({
+  token: z.string().min(1, "Missing token"),
+});
+
+// Create a farewell message (title + recipient encrypted at rest).
+export const farewellCreateSchema = z.object({
+  title: z.string().min(1, "Title is required").max(500),
+  recipientEmail: z.string().email("A valid recipient email is required").max(320),
+  storagePath: z.string().nullable().optional(),
+  fileSizeMb: z.number().nullable().optional(),
+  durationSeconds: z.number().nullable().optional(),
+});
+
+// Edit a farewell message. Everything but the id is optional; a supplied
+// recipient email must still be a valid email.
+export const farewellUpdateSchema = z.object({
+  messageId: z.string().min(1, "Missing messageId"),
+  title: z.string().min(1).max(500).optional(),
+  recipientEmail: z.string().email("A valid recipient email is required").max(320).optional(),
+  storagePath: z.string().nullable().optional(),
+  fileSizeMb: z.number().nullable().optional(),
+  durationSeconds: z.number().nullable().optional(),
+});
+
+// Mint a signed upload URL for opaque (client-encrypted) file content.
+export const vaultUploadUrlSchema = z.object({
+  kind: z.enum(["document", "farewell"]).default("document"),
+  uploadId: z.string().uuid().optional(),
+  expectedSize: z.number().int().positive().optional(),
+});
+
+// Mint a signed download URL for a scoped storage path.
+export const vaultDownloadUrlSchema = z.object({
+  bucket: z.enum(["documents", "farewell-videos"]).default("documents"),
+  path: z.string().min(1),
+});
+
 export type WillIntake = z.infer<typeof willIntakeSchema>;
 export type TrustIntake = z.infer<typeof trustIntakeSchema>;
 export type QuizAnswers = z.infer<typeof quizAnswersSchema>;
 export type AffiliateSignup = z.infer<typeof affiliateSignupSchema>;
+export type VaultItemInput = z.infer<typeof vaultItemSchema>;
+export type TrusteeCreateInput = z.infer<typeof trusteeCreateSchema>;
+export type FarewellCreateInput = z.infer<typeof farewellCreateSchema>;
+export type FarewellUpdateInput = z.infer<typeof farewellUpdateSchema>;

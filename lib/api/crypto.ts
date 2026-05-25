@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { requireAuth, type UserType } from "./auth";
+import { requireAuth, createAdminClient, type UserType } from "./auth";
 import {
   cryptoBundleRateLimit,
   cryptoRecoveryRateLimit,
@@ -59,7 +59,26 @@ export function validateEnvelope(buf: Uint8Array, maxLen = 1024) {
 
 // ---- Auth + client lookup ----
 
-export async function requireClientUser(req: NextRequest, opts: { autoCreate?: boolean } = {}) {
+// The `clients` row loaded by requireClientUser. Keyed columns are typed; the
+// index signature keeps non-listed columns accessible as `unknown` so callers
+// don't break, while the explicit union lets `"error" in ctx` discriminate.
+export interface ClientRow extends Record<string, unknown> {
+  id: string;
+  profile_id: string;
+  wrapped_dek?: unknown;
+}
+
+export interface ClientUserOk {
+  admin: ReturnType<typeof createAdminClient>;
+  user: { id: string; email?: string };
+  profile: { id: string; user_type: UserType };
+  client: ClientRow;
+}
+
+export async function requireClientUser(
+  req: NextRequest,
+  opts: { autoCreate?: boolean } = {},
+): Promise<{ error: NextResponse } | ClientUserOk> {
   const auth = await requireAuth(["client"] as UserType[], req);
   if ("error" in auth) return { error: auth.error };
   const { admin, user, profile } = auth;

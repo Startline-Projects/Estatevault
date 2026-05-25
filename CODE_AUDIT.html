@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EstateVault — Structural & Bug Audit</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --navy:#1C3557;
+    --navy-soft:#27406b;
+    --gold:#C9A84C;
+    --gold-soft:#e7d49a;
+    --charcoal:#2D2D2D;
+    --white:#FFFFFF;
+    --bg:#f4f6f9;
+    --line:#e3e8f0;
+    --good:#1f8a5b;
+    --warn:#c98a1e;
+    --bad:#c0392b;
+    --muted:#5f6b7c;
+    --crit:#c0392b;
+    --high:#d35400;
+    --med:#c98a1e;
+    --low:#3a7ca5;
+  }
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    margin:0;
+    font-family:'Inter',system-ui,sans-serif;
+    background:var(--bg);
+    color:var(--charcoal);
+    line-height:1.65;
+    font-size:16px;
+  }
+  a{color:var(--navy);text-decoration:none;}
+  a:hover{text-decoration:underline;}
+  code{
+    font-family:'JetBrains Mono',ui-monospace,monospace;
+    font-size:.86em;
+    background:#eef1f6;
+    color:#324; padding:1px 6px;border-radius:5px;
+    border:1px solid #e0e5ee;
+    word-break:break-word;
+  }
+
+  /* ---------- Hero ---------- */
+  header.hero{
+    background:linear-gradient(135deg,var(--navy) 0%,#13243d 100%);
+    color:var(--white);
+    padding:48px 0 52px;
+    border-bottom:4px solid var(--gold);
+  }
+  .hero .tag{
+    display:inline-block;letter-spacing:.18em;text-transform:uppercase;
+    font-size:12px;font-weight:600;color:var(--gold-soft);margin-bottom:14px;
+  }
+  .hero h1{margin:0;font-size:38px;font-weight:800;line-height:1.1;}
+  .hero p.sub{margin:14px 0 0;font-size:18px;color:#cdd6e4;max-width:760px;line-height:1.6;}
+  .hero .meta{margin-top:24px;display:flex;flex-wrap:wrap;gap:10px;}
+  .hero .meta span{
+    background:rgba(255,255,255,.08);border:1px solid rgba(201,168,76,.35);
+    padding:6px 14px;border-radius:999px;font-size:13px;color:#e7ecf4;
+  }
+
+  /* ---------- Layout ---------- */
+  .layout{display:flex;gap:36px;max-width:1280px;margin:0 auto;padding:36px 24px 80px;}
+  main{flex:1;min-width:0;}
+  nav.toc{
+    width:248px;flex-shrink:0;position:sticky;top:24px;align-self:flex-start;
+    max-height:calc(100vh - 48px);overflow-y:auto;
+    background:var(--white);border:1px solid var(--line);border-radius:14px;padding:18px 16px;
+    font-size:14px;
+  }
+  nav.toc h4{margin:0 0 10px;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);}
+  nav.toc a{display:block;padding:5px 8px;border-radius:7px;color:var(--charcoal);}
+  nav.toc a:hover{background:var(--bg);text-decoration:none;}
+  nav.toc a .dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:7px;vertical-align:middle;}
+
+  /* ---------- Cards / sections ---------- */
+  .card{background:var(--white);border:1px solid var(--line);border-radius:16px;padding:28px 30px;margin-bottom:22px;box-shadow:0 1px 2px rgba(20,40,70,.04);}
+  h2.section{font-size:13px;letter-spacing:.16em;text-transform:uppercase;color:var(--navy);margin:38px 0 16px;display:flex;align-items:center;gap:10px;}
+  h2.section::after{content:"";flex:1;height:1px;background:var(--line);}
+
+  .summary p{margin:0 0 14px;}
+  .summary strong{color:var(--navy);}
+
+  /* ---------- Stat row ---------- */
+  .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px;margin:24px 0 8px;}
+  .stat{background:var(--white);border:1px solid var(--line);border-radius:14px;padding:18px 20px;border-top:3px solid var(--gold);}
+  .stat .n{font-size:30px;font-weight:800;color:var(--navy);line-height:1;}
+  .stat .l{font-size:13px;color:var(--muted);margin-top:6px;}
+  .stat.crit{border-top-color:var(--crit);} .stat.crit .n{color:var(--crit);}
+  .stat.high{border-top-color:var(--high);} .stat.high .n{color:var(--high);}
+  .stat.med{border-top-color:var(--med);} .stat.med .n{color:var(--med);}
+  .stat.low{border-top-color:var(--low);} .stat.low .n{color:var(--low);}
+
+  /* ---------- Finding ---------- */
+  .finding{border:1px solid var(--line);border-radius:13px;padding:18px 20px;margin-bottom:14px;border-left:5px solid var(--muted);background:var(--white);}
+  .finding.crit{border-left-color:var(--crit);}
+  .finding.high{border-left-color:var(--high);}
+  .finding.med{border-left-color:var(--med);}
+  .finding.low{border-left-color:var(--low);}
+  .finding h3{margin:0 0 6px;font-size:17px;color:var(--navy);font-weight:700;display:flex;gap:9px;align-items:baseline;flex-wrap:wrap;}
+  .id{font-family:'JetBrains Mono',monospace;font-weight:600;font-size:14px;color:var(--charcoal);background:#eef1f6;padding:1px 8px;border-radius:6px;border:1px solid #e0e5ee;}
+  .badge{font-size:10.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:3px 9px;border-radius:999px;color:#fff;}
+  .badge.crit{background:var(--crit);} .badge.high{background:var(--high);} .badge.med{background:var(--med);} .badge.low{background:var(--low);}
+  .verified{font-size:11px;color:var(--good);font-weight:600;}
+  .finding .loc{font-family:'JetBrains Mono',monospace;font-size:12.5px;color:var(--muted);margin:2px 0 10px;word-break:break-word;}
+  .finding p{margin:8px 0;font-size:15px;}
+  .finding .k{font-weight:700;color:var(--charcoal);}
+  .finding .fix{background:#f3f8f4;border:1px solid #d8ebdd;border-radius:9px;padding:10px 13px;margin-top:10px;font-size:14.5px;}
+  .finding .fix .k{color:var(--good);}
+  .finding .blast{background:#fbf3f2;border:1px solid #f0dcd9;border-radius:9px;padding:10px 13px;margin-top:10px;font-size:14.5px;}
+  .finding .blast .k{color:var(--bad);}
+
+  ul.tight{margin:6px 0;padding-left:20px;}
+  ul.tight li{margin:8px 0;font-size:14.5px;}
+  ol.plan{padding-left:22px;}
+  ol.plan li{margin:12px 0;}
+
+  .note{background:#fffaf0;border:1px solid var(--gold-soft);border-radius:11px;padding:16px 20px;font-size:14.5px;}
+  .note .k{color:var(--warn);font-weight:700;}
+
+  footer{text-align:center;color:var(--muted);font-size:13px;padding:30px 24px 50px;}
+
+  @media(max-width:880px){
+    nav.toc{display:none;}
+    .layout{padding:24px 16px 60px;}
+    .card{padding:22px 18px;}
+  }
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div style="max-width:1280px;margin:0 auto;padding:0 24px;">
+    <span class="tag">Engineering Audit · 2026-05-25</span>
+    <h1>Structural &amp; Bug Audit</h1>
+    <p class="sub">Full-codebase review across auth/crypto, payments, the API route layer, and data/migrations. Top-severity items were re-read at source and verified. No files were modified.</p>
+    <div class="meta">
+      <span>~100 API routes</span>
+      <span>8 repos</span>
+      <span>45 migrations</span>
+      <span>4 domain audits</span>
+      <span>40 findings</span>
+    </div>
+  </div>
+</header>
+
+<div class="layout">
+  <nav class="toc">
+    <h4>Contents</h4>
+    <a href="#summary"><span class="dot" style="background:var(--navy)"></span>Executive summary</a>
+    <a href="#critical"><span class="dot" style="background:var(--crit)"></span>Critical · 8</a>
+    <a href="#high"><span class="dot" style="background:var(--high)"></span>High · 12</a>
+    <a href="#medium"><span class="dot" style="background:var(--med)"></span>Medium · 10</a>
+    <a href="#low"><span class="dot" style="background:var(--low)"></span>Low · 10</a>
+    <a href="#tests"><span class="dot" style="background:var(--muted)"></span>Untested seams</a>
+    <a href="#plan"><span class="dot" style="background:var(--gold)"></span>Execution plan</a>
+  </nav>
+
+  <main>
+
+    <div class="stats">
+      <div class="stat crit"><div class="n">8</div><div class="l">Critical — data loss / breach / mis-paid money</div></div>
+      <div class="stat high"><div class="n">12</div><div class="l">High — auth holes & correctness</div></div>
+      <div class="stat med"><div class="n">10</div><div class="l">Medium — drift & robustness</div></div>
+      <div class="stat low"><div class="n">10</div><div class="l">Low — polish</div></div>
+    </div>
+
+    <!-- ============ SUMMARY ============ -->
+    <h2 class="section" id="summary">Executive summary</h2>
+    <div class="card summary">
+      <p>The code that was written carefully — the <code>vault/*</code> routes, <code>lib/crypto/*</code> with its test suite, and <code>calculateSplit</code> — is genuinely good and matches the conventions. Risk concentrates in <strong>two places</strong>:</p>
+      <p><strong>1. Structural drift.</strong> The canonical patterns never propagated. <strong>8 routes use <code>requireAuth</code>; 49 use raw <code>auth.getUser()</code></strong>, each re-implementing a service-role admin client inline (~40 copies) and gating roles by hand — the direct cause of several missing-authorization bugs. Validation is worse: <strong>1 route</strong> imports the shared Zod schemas; the rest trust raw <code>request.json()</code>.</p>
+      <p><strong>2. Non-atomic critical operations.</strong> DEK provisioning, the Stripe webhook, OTP throttling, and affiliate payouts all do check-then-write with no atomicity or idempotency. Under retries/concurrency these corrupt keys, double-pay real money, or weaken brute-force gates.</p>
+      <p>The migration directory is half-migrated (legacy monolith + 17 undated files alongside 28 dated ones) — a latent rebuild hazard, not a live production bug.</p>
+      <div class="note" style="margin-top:18px;"><span class="k">Fix order (highest risk first):</span> Stripe webhook idempotency (C-1) → DEK AAD + atomic provisioning (C-2, C-3) → unauthenticated mutation routes (C-4, C-5) → broken role gating on writes (C-6, C-7) → attorney-verify money/column bug (C-8).</div>
+    </div>
+
+    <!-- ============ CRITICAL ============ -->
+    <h2 class="section" id="critical">Critical</h2>
+
+    <div class="finding crit">
+      <h3><span class="id">C-1</span> <span class="badge crit">Critical</span> Stripe webhook has no idempotency; retries double-pay partners &amp; affiliates</h3>
+      <div class="loc">app/api/webhooks/stripe/route.ts (whole handler) · lib/stripe-payouts.ts:54,72,91</div>
+      <p>The handler never records <code>event.id</code> or checks if an event was already processed. Stripe retries on any non-2xx/timeout, and <code>checkout.session.completed</code> runs many sequential awaits. A re-delivery re-runs <code>transferToPartner</code> / <code>transferToAffiliate</code> and re-inserts <code>payouts</code> / <code>orders</code> rows. No <code>idempotencyKey</code> on any <code>stripe.transfers.create</code>.</p>
+      <div class="blast"><span class="k">Blast radius:</span> double-paying partners and affiliates real money; duplicate payout/order rows; duplicate generation jobs.</div>
+      <div class="fix"><span class="k">Fix:</span> add a <code>processed_stripe_events(event_id pk)</code> table; insert <code>event.id</code> at the top of the handler, return 200 if it exists. Pass <code>{ idempotencyKey: `transfer_${orderId}` }</code> to every <code>transfers.create</code>.</div>
+    </div>
+
+    <div class="finding crit">
+      <h3><span class="id">C-2</span> <span class="badge crit">Critical</span> DEK wrapped with no AAD → cross-tenant vault decryption via one DB column copy <span class="verified">✓ verified</span></h3>
+      <div class="loc">lib/api/dek.ts:51 — wrapKey(dek, kek) with no associated data</div>
+      <p>Every user's <code>wrapped_dek</code> is encrypted under the <strong>same</strong> app-wide KEK with no per-user binding. Anyone with a DB write path (SQL injection, compromised service role) can copy victim A's <code>wrapped_dek</code> onto attacker B's <code>clients</code> row; B's session then unwraps A's DEK and decrypts A's entire vault — no KEK compromise required.</p>
+      <div class="blast"><span class="k">Blast radius:</span> full cross-tenant vault decryption from a single column copy.</div>
+      <div class="fix"><span class="k">Fix:</span> bind AAD to client identity — <code>wrapKey(dek, kek, utf8("dek:" + client.id))</code> and pass the same AAD on unwrap. A swapped blob then fails the Poly1305 tag check.</div>
+    </div>
+
+    <div class="finding crit">
+      <h3><span class="id">C-3</span> <span class="badge crit">Critical</span> getOrCreateUserDek write race mints two DEKs → permanent vault data loss <span class="verified">✓ verified</span></h3>
+      <div class="loc">lib/api/dek.ts:45-57</div>
+      <p>Check-then-update is not atomic and the UPDATE is unconditional (no <code>wrapped_dek IS NULL</code> guard). Two concurrent first-use requests both read <code>wrapped_dek = null</code>, generate <strong>different</strong> DEKs, and the second overwrites the first. Anything encrypted under DEK#1 becomes permanently undecryptable. Fails silently.</p>
+      <div class="blast"><span class="k">Blast radius:</span> every Option-A vault item/document; silent, unrecoverable data loss.</div>
+      <div class="fix"><span class="k">Fix:</span> <code>UPDATE clients SET wrapped_dek=... WHERE id=$1 AND wrapped_dek IS NULL</code>, then re-SELECT; if another writer won, unwrap the persisted value. Or <code>INSERT ... ON CONFLICT</code> / advisory lock.</div>
+    </div>
+
+    <div class="finding crit">
+      <h3><span class="id">C-4</span> <span class="badge crit">Critical</span> documents/process GET is fully public and destructive <span class="verified">✓ verified</span></h3>
+      <div class="loc">app/api/documents/process/route.ts:101 — no auth, no CRON_SECRET</div>
+      <p>Anyone hitting it triggers Claude generation, flips orders/documents to <code>delivered</code>/<code>review</code>, sends client emails, auto-populates vaults, and <strong>purges plaintext quiz answers</strong> (<code>quiz_sessions.answers = {}</code>).</p>
+      <div class="blast"><span class="k">Blast radius:</span> unauthenticated data destruction, Anthropic spend, forged/premature document delivery.</div>
+      <div class="fix"><span class="k">Fix:</span> gate with a fail-closed <code>CRON_SECRET</code> bearer check or <code>requireAuth(["admin"])</code>.</div>
+    </div>
+
+    <div class="finding crit">
+      <h3><span class="id">C-5</span> <span class="badge crit">Critical</span> documents/cleanup-test-orders GET deletes orders/docs/files with no auth</h3>
+      <div class="loc">app/api/documents/cleanup-test-orders/route.ts:15</div>
+      <p>Public <code>GET</code>, no CRON_SECRET (unlike the <code>cron/*</code> routes). Deletes storage files, document rows, quiz sessions, and orders for any expired test order.</p>
+      <div class="blast"><span class="k">Blast radius:</span> unauthenticated deletion.</div>
+      <div class="fix"><span class="k">Fix:</span> add the fail-closed <code>CRON_SECRET</code> bearer check.</div>
+    </div>
+
+    <div class="finding crit">
+      <h3><span class="id">C-6</span> <span class="badge crit">Critical</span> partner/clients lets any logged-in user create accounts under any partner <span class="verified">✓ verified</span></h3>
+      <div class="loc">app/api/partner/clients/route.ts:9 (POST), :68 (PUT)</div>
+      <p>Checks only <code>if (!user)</code> — no <code>user_type</code> check, and <code>partnerId</code> is taken straight from the request body. Any authenticated client can create Supabase auth users, attach clients to arbitrary partners, and write <code>client_notes</code>.</p>
+      <div class="blast"><span class="k">Blast radius:</span> account creation + CRM pollution across tenant boundaries.</div>
+      <div class="fix"><span class="k">Fix:</span> <code>requireAuth(["partner","admin"])</code>; verify <code>partnerId</code> resolves to the caller's own partner (<code>partners.profile_id === user.id</code>) unless admin.</div>
+    </div>
+
+    <div class="finding crit">
+      <h3><span class="id">C-7</span> <span class="badge crit">Critical</span> sales/partner-notes exposes/writes sales CRM to any authenticated user</h3>
+      <div class="loc">app/api/sales/partner-notes/route.ts:9 (GET), :23 (POST)</div>
+      <p>Only <code>if (!user)</code>. Any client can read all internal sales notes for any <code>partnerId</code> and inject notes.</p>
+      <div class="blast"><span class="k">Blast radius:</span> internal CRM data disclosure + tampering.</div>
+      <div class="fix"><span class="k">Fix:</span> <code>requireAuth(["sales_rep","admin"])</code>.</div>
+    </div>
+
+    <div class="finding crit">
+      <h3><span class="id">C-8</span> <span class="badge crit">Critical</span> Attorney verify writes wrong column + dollars into cents fields <span class="verified">✓ verified</span></h3>
+      <div class="loc">app/api/checkout/attorney/verify/route.ts:116-129</div>
+      <p>The <code>partners</code> upsert uses <code>user_id: userId</code> — <strong>the column is <code>profile_id</code></strong> (verified: <code>database.sql:48</code>, no <code>user_id</code> exists). The partner row is never linked. Also <code>custom_review_fee: reviewFee</code> writes <code>300</code> into an integer-cents column (default <code>30000</code>), and <code>one_time_fee_amount: amount</code> writes a dollar value into a cents column.</p>
+      <div class="blast"><span class="k">Blast radius:</span> attorney review fee shows $3.00 instead of $300; bookkeeping off 100×; partner unreachable by profile. Same <code>user_id</code> mistake in <code>sales/create-partner/route.ts:117</code>.</div>
+      <div class="fix"><span class="k">Fix:</span> <code>profile_id: userId</code>; keep money in cents (<code>custom_review_fee: reviewFee * 100</code>, <code>one_time_fee_amount: session.amount_total</code>).</div>
+    </div>
+
+    <!-- ============ HIGH ============ -->
+    <h2 class="section" id="high">High</h2>
+
+    <div class="finding high">
+      <h3><span class="id">H-1</span> <span class="badge high">High</span> Paid amendment generates a full Will document set</h3>
+      <div class="loc">app/api/checkout/amendment/route.ts:99-105 → app/api/webhooks/stripe/route.ts:311,598-611</div>
+      <p>Amendment checkout sets <code>product_type: "amendment"</code>, but the webhook casts <code>productType</code> as <code>"will" | "trust"</code> with no amendment branch, so it inserts <code>["will","poa","healthcare_directive"]</code> and queues a will job.</p>
+      <div class="blast"><span class="k">Blast radius:</span> every paid (non-subscriber) amendment gets wrong documents and mis-tracked state.</div>
+      <div class="fix"><span class="k">Fix:</span> add an <code>if (productType === "amendment")</code> branch that marks paid/generating and queues amendment generation only.</div>
+    </div>
+
+    <div class="finding high">
+      <h3><span class="id">H-2</span> <span class="badge high">High</span> Role-string drift: "review_attorney" / "affiliate" not in UserType</h3>
+      <div class="loc">lib/api/auth.ts:5 vs partners/create-review-attorney/route.ts:54,83 · affiliate/signup/route.ts:67</div>
+      <p>The enum omits the role strings the DB actually stores. A future <code>requireAuth(["attorney"])</code> would never match a real review attorney → silent 403. Routes hard-code the raw <code>"review_attorney"</code> string to compensate, working only because they bypass <code>requireAuth</code>.</p>
+      <div class="fix"><span class="k">Fix:</span> make the enum the single source of truth (<code>"review_attorney"</code>, <code>"affiliate"</code>), update consumers, drop magic strings.</div>
+    </div>
+
+    <div class="finding high">
+      <h3><span class="id">H-3</span> <span class="badge high">High</span> Cron routes are world-callable when CRON_SECRET is unset</h3>
+      <div class="loc">cron/farewell-window-expired:29 · annual-review-reminder:25 · life-event-checkin:25 · farewell-veto-reminder:24</div>
+      <p>All use <code>if (secret &amp;&amp; auth !== ...)</code> — if the env var is missing the check is skipped and the endpoint (sends emails, issues trustee access tokens, unlocks vaults) is open.</p>
+      <div class="fix"><span class="k">Fix:</span> fail closed — <code>if (!secret || auth !== `Bearer ${secret}`) return 401</code>.</div>
+    </div>
+
+    <div class="finding high">
+      <h3><span class="id">H-4</span> <span class="badge high">High</span> Trustee OTP attempt counter is non-atomic → brute-force throttle is racy</h3>
+      <div class="loc">app/api/trustee/unlock-verify/route.ts:71-84</div>
+      <p>Attempts are read, compared to <code>MAX_OTP_ATTEMPTS</code>, then written back. Concurrent requests all read the same low count, all pass the <code>&lt; 5</code> gate, each writes <code>count+1</code> (lost update). The cap on a 6-digit OTP can be exceeded in parallel — this gate releases Share C → vault MK.</p>
+      <div class="fix"><span class="k">Fix:</span> <code>UPDATE ... SET otp_email_attempts = otp_email_attempts + 1 WHERE id=$1 AND otp_email_attempts &lt; 5 RETURNING ...</code>; reject on 0 rows. Add an Upstash limit on <code>unlock-verify:{requestId}</code>.</div>
+    </div>
+
+    <div class="finding high">
+      <h3><span class="id">H-5</span> <span class="badge high">High</span> Affiliate batch payout race + no idempotency → double payout</h3>
+      <div class="loc">app/api/sales/affiliates/[id]/payout/route.ts:62-109</div>
+      <p><code>unpaid = earned - covered</code> is read, the transfer fires, then the <code>affiliate_payouts</code> row is inserted. Two concurrent admin clicks both read <code>covered</code> before either inserts → two transfers for the same balance.</p>
+      <div class="fix"><span class="k">Fix:</span> pass an <code>idempotencyKey</code> keyed on <code>affiliateId + unpaid + max(order created_at)</code>, or insert a <code>pending</code> payout row reserving the balance in a transaction before calling Stripe.</div>
+    </div>
+
+    <div class="finding high">
+      <h3><span class="id">H-6</span> <span class="badge high">High</span> Partner tier elevated before payment confirmation → free enterprise splits</h3>
+      <div class="loc">app/api/checkout/partner/route.ts:36-38</div>
+      <p><code>partners.tier</code> is updated right after creating the (unpaid) checkout session. If the partner abandons checkout, tier is already elevated — and tier drives the revenue split (enterprise = larger partner cut).</p>
+      <div class="fix"><span class="k">Fix:</span> set tier only in the webhook <code>partner_platform_fee</code> branch (which already sets <code>one_time_fee_paid</code>).</div>
+    </div>
+
+    <div class="finding high">
+      <h3><span class="id">H-7</span> <span class="badge high">High</span> Attorney paid signup stores tier that violates the DB CHECK</h3>
+      <div class="loc">app/api/checkout/attorney/route.ts:87,140 vs verify/route.ts:59,121</div>
+      <p>Checkout maps <code>"professional" → "enterprise"</code>, but <code>verify</code> stores <code>tier = meta.tier</code> raw (<code>"professional"</code>), which violates <code>partners.tier CHECK in ('standard','enterprise')</code> (<code>database.sql:53</code>). The insert is rejected.</p>
+      <div class="fix"><span class="k">Fix:</span> normalize tier to standard/enterprise in verify (as the promo path does); centralize platform-fee amounts.</div>
+    </div>
+
+    <div class="finding high">
+      <h3><span class="id">H-8</span> <span class="badge high">High</span> GET vault routes swallow DB errors and return empty as success <span class="verified">✓ verified</span></h3>
+      <div class="loc">vault/items/route.ts:42-48 · vault/trustees/route.ts:35-40 · vault/farewell/route.ts:22-29</div>
+      <p><code>const { data: rows } = await admin...</code> discards <code>error</code>. On a DB failure <code>rows</code> is null → route returns <code>{ items: [] }</code> with HTTP 200. A transient failure renders as "your vault is empty" — dangerous for an estate-vault product.</p>
+      <div class="fix"><span class="k">Fix:</span> destructure <code>error</code>, <code>console.error("[GET vault_items]", error)</code>, return 500.</div>
+    </div>
+
+    <div class="finding high">
+      <h3><span class="id">H-9</span> <span class="badge high">High</span> Missing ownership filter on vault UPDATE (admin client bypasses RLS)</h3>
+      <div class="loc">app/api/vault/items/route.ts:184 · app/api/vault/farewell/route.ts:213</div>
+      <p>The UPDATE filters only by <code>.eq("id", id)</code>. Ownership is checked in a prior SELECT, but the write isn't scoped by <code>client_id</code>. Since the admin client bypasses RLS, any race or future refactor dropping the pre-check writes to arbitrary rows. (Trustees DELETE at <code>trustees/route.ts:207-211</code> does it correctly.)</p>
+      <div class="fix"><span class="k">Fix:</span> add <code>.eq("client_id", client.id)</code> to every UPDATE/DELETE so the guard is atomic.</div>
+    </div>
+
+    <div class="finding high">
+      <h3><span class="id">H-10</span> <span class="badge high">High</span> clients UPDATE policy has no WITH CHECK → users can self-activate vault subscription</h3>
+      <div class="loc">database.sql — policy "Clients can update own record"</div>
+      <p>A client can write to their own <code>clients</code> row via the anon key, including <code>vault_subscription_status</code> and <code>wrapped_dek</code>. The farewell POST gate reads exactly <code>vault_subscription_status</code> (<code>farewell/route.ts:73-77</code>), so a user could set it to <code>'active'</code> and bypass the paid check.</p>
+      <div class="fix"><span class="k">Fix:</span> add <code>WITH CHECK (profile_id = auth.uid())</code> plus a column-level guard (trigger/GRANT) blocking client writes to billing/key columns; or move the table behind the service role.</div>
+    </div>
+
+    <div class="finding high">
+      <h3><span class="id">H-11</span> <span class="badge high">High</span> DB error messages leaked to clients</h3>
+      <div class="loc">vault/items:121,185 · vault/trustees:130,161,212 · share:161,208 · admin/orders-missing-docs:43 · documents/download-by-session:58</div>
+      <p>Routes return <code>error.message</code> straight from Supabase, leaking column/constraint names and schema.</p>
+      <div class="fix"><span class="k">Fix:</span> log server-side, return generic <code>{ error: string }</code>.</div>
+    </div>
+
+    <div class="finding high">
+      <h3><span class="id">H-12</span> <span class="badge high">High</span> documents/download-by-session authorizes on row existence alone</h3>
+      <div class="loc">app/api/documents/download-by-session/route.ts:45-49</div>
+      <p>The promo/test fallback sets <code>authorized = true</code> if <code>orderId === doc.order_id</code> and the order row merely exists. Order IDs are UUIDs that appear on success pages — anyone learning a <code>documentId</code>+<code>orderId</code> pair gets a signed download URL with no session/ownership proof.</p>
+      <div class="fix"><span class="k">Fix:</span> require a paid/test state tied to the requester, or drop the orderId fallback for non-test orders.</div>
+    </div>
+
+    <!-- ============ MEDIUM ============ -->
+    <h2 class="section" id="medium">Medium</h2>
+
+    <div class="finding med">
+      <h3><span class="id">M-1</span> <span class="badge med">Medium</span> requireAuth not adopted (8 routes) vs raw getUser() (49 routes) <span class="verified">✓ verified</span></h3>
+      <div class="loc">app/api/** route.ts</div>
+      <p>The canonical auth helper is almost unused outside <code>crypto/*</code> and <code>vault/*</code>. Each of the 49 hand-rolls <code>getUser()</code> + manual role lookup and re-defines <code>createAdminClient()</code> inline (~40 copies). Root cause of C-6/C-7; means a future auth/RLS fix won't propagate.</p>
+      <div class="fix"><span class="k">Fix:</span> migrate routes to <code>requireAuth([...roles])</code>; import the single <code>createAdminClient</code> from <code>@/lib/api/auth</code>.</div>
+    </div>
+
+    <div class="finding med">
+      <h3><span class="id">M-2</span> <span class="badge med">Medium</span> Validation not at the boundary (1 route uses shared schemas)</h3>
+      <div class="loc">lib/validation/schemas.ts (used only by affiliate/signup)</div>
+      <p>Most routes do raw <code>request.json()</code> with <code>if (!x)</code> checks — no shape/type/length/format enforcement. <code>vault/trustees</code> and <code>vault/farewell</code> accept an email with no format validation and forward it to Resend.</p>
+      <div class="fix"><span class="k">Fix:</span> add <code>trusteeSchema</code>, <code>farewellSchema</code>, etc. and <code>safeParse</code> at each boundary (the <code>new-zod-schema</code> skill exists for this).</div>
+    </div>
+
+    <div class="finding med">
+      <h3><span class="id">M-3</span> <span class="badge med">Medium</span> Migration directory is half-migrated (rebuild hazard)</h3>
+      <div class="loc">supabase/migrations/ — database.sql + 17 undated migration-*.sql + 28 dated YYYYMMDD_*.sql</div>
+      <p>Legacy files define core tables; dated ones <code>ALTER</code> them — apply order is load-bearing but unencoded. Duplicate defs: <code>custom_review_fee</code> &amp; <code>desired_review_fee</code> added twice; farewell storage policies created then dropped. Saved today only by <code>IF EXISTS</code>/<code>OR REPLACE</code>.</p>
+      <div class="fix"><span class="k">Fix:</span> squash legacy SQL into one timestamped baseline, delete <code>database.sql</code> + <code>migration-*.sql</code>, keep only the dated lineage.</div>
+    </div>
+
+    <div class="finding med">
+      <h3><span class="id">M-4</span> <span class="badge med">Medium</span> Duplicated/inline price &amp; promo tables (no single source of truth)</h3>
+      <div class="loc">checkout/will:213,218 · checkout/trust:193,198 · checkout/amendment:79,86,101 · vault 9900 in 4 files</div>
+      <p>Prices hardcoded inline per route; promo codes (<code>FREE134</code>, <code>TPFP</code>) redefined per-route. The <code>calculateSplit</code> table itself is correct and matches the CLAUDE.md law — only the call sites drift.</p>
+      <div class="fix"><span class="k">Fix:</span> create <code>lib/orders/pricing.ts</code> exporting <code>PRICES</code> (cents) + promo definitions; reuse everywhere.</div>
+    </div>
+
+    <div class="finding med">
+      <h3><span class="id">M-5</span> <span class="badge med">Medium</span> cryptoBootstrapRateLimit = 1/hour can hard-lock a new user out of vault setup</h3>
+      <div class="loc">lib/rate-limit.ts (slidingWindow(1,'1 h')) + app/api/crypto/bootstrap/route.ts:24</div>
+      <p>If bootstrap fails after passing the limiter but before persisting (bad payload, transient DB error, crash), the user can't retry for an hour — and bootstrap gates all vault use.</p>
+      <div class="fix"><span class="k">Fix:</span> consume the token only on success, or raise the limit; make bootstrap idempotent-retryable.</div>
+    </div>
+
+    <div class="finding med">
+      <h3><span class="id">M-6</span> <span class="badge med">Medium</span> In-memory Maps for verification + rate limits break under serverless</h3>
+      <div class="loc">lib/auth/emailVerification.ts:22 · lib/api/auth.ts:91 · set-password/route.ts:15 · send-verify-link/route.ts:10</div>
+      <p>On Vercel each lambda instance has its own memory. The email-verification handshake can land on different instances (appears to fail), and rate limits silently don't apply (attacker hits a fresh instance each time). <code>set-password</code> is public, protected only by this ineffective limiter.</p>
+      <div class="fix"><span class="k">Fix:</span> move verification state and these limiters to Upstash/Redis (<code>lib/rate-limit.ts</code> already exists).</div>
+    </div>
+
+    <div class="finding med">
+      <h3><span class="id">M-7</span> <span class="badge med">Medium</span> set-password (public) creates/overwrites a password keyed only on email</h3>
+      <div class="loc">app/api/auth/set-password/route.ts:86-130</div>
+      <p>Public route. Creates a new auth user with the caller-supplied password and links it to the most-recent order's unclaimed client, the only ownership proof being possession of the email string (no verified-token check, unlike <code>signup</code>).</p>
+      <div class="fix"><span class="k">Fix:</span> require a verified-email token (as signup does) and bind client-linking to that token, not "most recent order".</div>
+    </div>
+
+    <div class="finding med">
+      <h3><span class="id">M-8</span> <span class="badge med">Medium</span> sales/create-partner has no try/catch (raw 500 + stack to client)</h3>
+      <div class="loc">app/api/sales/create-partner/route.ts:10</div>
+      <p><code>await request.json()</code> and every <code>admin.*</code> call can throw, producing an unhandled rejection with a Next.js stack. Only privileged route fully missing the convention; also no <code>Promise&lt;NextResponse&gt;</code> return type.</p>
+      <div class="fix"><span class="k">Fix:</span> wrap in try/catch with <code>console.error("[sales/create-partner]", e)</code>.</div>
+    </div>
+
+    <div class="finding med">
+      <h3><span class="id">M-9</span> <span class="badge med">Medium</span> Trustee download-url doesn't re-check access_scope</h3>
+      <div class="loc">app/api/trustee/vault/download-url/route.ts:48-67</div>
+      <p>Issues a 60s signed Storage URL purely on the 30-min session cookie, without checking <code>vault_trustees.access_scope</code> (unlike the items route at <code>:53-92</code>). A scoped trustee can fetch out-of-scope documents/farewell by ID.</p>
+      <div class="fix"><span class="k">Fix:</span> add the same scope check before signing.</div>
+    </div>
+
+    <div class="finding med">
+      <h3><span class="id">M-10</span> <span class="badge med">Medium</span> Mixed Stripe API versions</h3>
+      <div class="loc">lib/stripe.ts:4 (2026-03-25.dahlia) vs lib/stripe-payouts.ts:3 (2024-12-18.acacia)</div>
+      <p>Two API versions in one codebase invites field-shape drift (the webhook already casts via <code>as unknown as Record&lt;...&gt;</code>).</p>
+      <div class="fix"><span class="k">Fix:</span> align both on one pinned version.</div>
+    </div>
+
+    <!-- ============ LOW ============ -->
+    <h2 class="section" id="low">Low</h2>
+    <div class="card">
+      <ul class="tight">
+        <li><span class="id">L-1</span> <code>calculateSplit(productType: string)</code> (<code>lib/stripe-payouts.ts:6</code>) returns all-zeros for a typo → silent underpay. Tighten to a <code>ProductType</code> union.</li>
+        <li><span class="id">L-2</span> <code>byteaToBytes</code> silent base64 fallback (<code>lib/api/crypto.ts:23-28</code>): unknown formats produce wrong-length keys surfacing as opaque AEAD failures, masked further by the decrypt-catch writing <code>"[decryption failed]"</code>. Throw on unrecognized formats.</li>
+        <li><span class="id">L-3</span> Crypto audit log swallows all errors (<code>lib/api/crypto.ts:157-161</code>): security events can silently fail to record. At least <code>console.error</code>.</li>
+        <li><span class="id">L-4</span> <code>shamir-setup</code> GET always reports "not initialized" (<code>shamir-setup/route.ts:101-104</code>): reads columns not in the select list (<code>lib/api/crypto.ts:67</code>), always undefined. Add the columns.</li>
+        <li><span class="id">L-5</span> <code>shareRepo</code> non-null assertion (<code>lib/repos/shareRepo.ts:151</code>): <code>decodeBytea(s.wrappedDek)!</code> can be null at runtime where <code>Uint8Array</code> is typed. Filter null-decoding shares.</li>
+        <li><span class="id">L-6</span> Duplicated encoding helpers (bytea/b64/AB) copy-pasted across <code>documentRepo</code>, <code>documentSealedRepo:61</code>, <code>videoRepo:41</code>, <code>backfillRepo:13</code>, <code>cryptoRepo:8</code>, <code>shareRepo:11</code>. Consolidate into <code>lib/crypto/encoding.ts</code>.</li>
+        <li><span class="id">L-7</span> Missing indexes on <code>farewell_verification_requests.trustee_id</code> / <code>client_id</code> (<code>migration-vault-subscription.sql:37-49</code>); used in unindexed <code>.eq(...)</code> scans.</li>
+        <li><span class="id">L-8</span> Missing explicit <code>Promise&lt;NextResponse&gt;</code> return types on essentially all in-scope handlers (convention).</li>
+        <li><span class="id">L-9</span> <code>professionals/request-access</code> uses <code>@supabase/supabase-js</code> <code>createClient</code> instead of the project's <code>@supabase/ssr</code> admin helper — structural outlier.</li>
+        <li><span class="id">L-10</span> Provider (Resend) error messages returned to client in <code>partner/email/*</code> (<code>test:36</code>, <code>setup:38</code>, <code>verify:26</code>).</li>
+      </ul>
+    </div>
+
+    <!-- ============ TESTS ============ -->
+    <h2 class="section" id="tests">Untested critical seams</h2>
+    <div class="card">
+      <p><code>lib/crypto/__tests__/*</code> covers envelope roundtrip/vectors/stream/shamir/worker, and <code>tests/unit/*</code> covers <code>calculateSplit</code>. <strong>No tests</strong> exist for:</p>
+      <ul class="tight">
+        <li>DEK wrap/unwrap + AAD binding and atomic provisioning (<code>lib/api/dek.ts</code>) — where C-2/C-3 live.</li>
+        <li>Stripe webhook idempotency, amendment routing, attorney-verify cents bug — where C-1/H-1/C-8 live.</li>
+        <li>Trustee token MAC verify (incl. legacy <code>.</code>-format path), session forgery, OTP attempt cap.</li>
+      </ul>
+      <p style="margin-bottom:0;">Add characterization tests around these <strong>before</strong> refactoring them.</p>
+    </div>
+
+    <!-- ============ PLAN ============ -->
+    <h2 class="section" id="plan">Suggested execution plan</h2>
+    <div class="card">
+      <ol class="plan">
+        <li><strong>Stop the money/data bleeds (Critical):</strong> C-1 webhook idempotency, C-2/C-3 DEK fixes (test first), C-4/C-5 lock down public document routes, C-6/C-7 role gating, C-8 attorney-verify column+cents.</li>
+        <li><strong>Close auth holes (High):</strong> H-3 fail-closed cron, H-2 role enum, H-8/H-9/H-10 vault error/ownership/RLS, H-12 download authz, H-1 amendment branch, H-6/H-7 partner tier, H-4/H-5 atomic OTP &amp; payout.</li>
+        <li><strong>Reduce drift (Medium, ongoing):</strong> sweep routes onto <code>requireAuth</code> + shared admin client + Zod (M-1/M-2), centralize pricing (M-4), squash migrations (M-3), move rate-limit/verification state to Redis (M-5/M-6).</li>
+        <li><strong>Polish (Low):</strong> types, encoding-helper consolidation, indexes, return types.</li>
+      </ol>
+      <div class="note" style="margin-top:16px;"><span class="k">Process:</span> small verified steps — <code>npx tsc --noEmit &amp;&amp; npm run lint &amp;&amp; npm test</code> after each, not one big rewrite. Never touch pricing/split/hard-stop business logic under "cleanup".</div>
+    </div>
+
+    <footer>EstateVault engineering audit · generated 2026-05-25 · companion to <code>CODE_AUDIT.md</code> · no files modified</footer>
+
+  </main>
+</div>
+
+</body>
+</html>

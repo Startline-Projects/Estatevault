@@ -1,28 +1,19 @@
-import { NextRequest, NextResponse } from "next/server";
-import { z } from "zod";
+import { NextRequest } from "next/server";
 import { requireClientUser, bytesToBytea, byteaToBytes } from "@/lib/api/crypto";
 import { getOrCreateUserDek } from "@/lib/api/dek";
 import { deriveSubKey, INFO, zero } from "@/lib/crypto/keyManager";
 import { encryptBytes, decryptBytes } from "@/lib/crypto/aead";
 import { blindIndex, normalize } from "@/lib/crypto/blindIndex";
+import { withRoute } from "@/lib/api/route";
+import { ok, fail } from "@/lib/api/response";
+import * as vaultItemRepo from "@/lib/repos/server/vaultItemRepo";
+import { vaultItemSchema } from "@/lib/validation/schemas";
 
 export const runtime = "nodejs";
 
 // Option A (server-managed encryption): clients send/receive PLAINTEXT over TLS.
 // The server unwraps the per-user DEK, derives sub-keys, and encrypts/decrypts
 // vault payloads with the existing EV01 (XChaCha20-Poly1305) format.
-
-const CATEGORIES = [
-  "estate_document", "insurance", "financial_account", "digital_account",
-  "physical_location", "contact", "final_wishes", "business",
-] as const;
-
-const PostSchema = z.object({
-  category: z.enum(CATEGORIES),
-  label: z.string().min(1).max(500),
-  data: z.record(z.string(), z.unknown()).default({}),
-  storagePath: z.string().optional(),
-});
 
 type PlainItem = {
   id: string;
@@ -34,18 +25,19 @@ type PlainItem = {
   createdAt: string;
 };
 
-export async function GET(req: NextRequest) {
+export const GET = withRoute(async (req: NextRequest) => {
   const ctx = await requireClientUser(req, { autoCreate: true });
   if ("error" in ctx) return ctx.error;
   const { admin, client } = ctx;
 
-  const { data: rows } = await admin
-    .from("vault_items")
-    .select("id, category, ciphertext, storage_path, created_at")
-    .eq("client_id", client.id)
-    .order("created_at", { ascending: false });
+  const { data: rows, error: listErr } = await vaultItemRepo.listByClient(admin, client.id);
 
-  if (!rows || rows.length === 0) return NextResponse.json({ items: [] });
+  // Don't render a transient DB failure as "your vault is empty".
+  if (listErr) {
+    console.error("[vault/items GET]", listErr);
+    return fail("could not load vault", 500);
+  }
+  if (!rows || rows.length === 0) return ok({ items: [] });
 
   const dek = await getOrCreateUserDek(admin, client);
   const dbKey = await deriveSubKey(dek, INFO.DB);
@@ -70,19 +62,19 @@ export async function GET(req: NextRequest) {
     zero(dek);
   }
 
-  return NextResponse.json({ items });
-}
+  return ok({ items });
+});
 
-export async function POST(request: NextRequest) {
+export const POST = withRoute(async (request: NextRequest) => {
   const ctx = await requireClientUser(request, { autoCreate: true });
   if ("error" in ctx) return ctx.error;
   const { admin, user, client } = ctx;
 
   let body: unknown;
-  try { body = await request.json(); } catch { return NextResponse.json({ error: "bad json" }, { status: 400 }); }
-  const parsed = PostSchema.safeParse(body);
+  try { body = await request.json(); } catch { return fail("bad json", 400); }
+  const parsed = vaultItemSchema.safeParse(body);
   if (!parsed.success) {
-    return NextResponse.json({ error: "invalid payload", details: parsed.error.flatten() }, { status: 400 });
+    return fail("invalid payload", 400, { details: parsed.error.flatten() });
   }
   const p = parsed.data;
 
@@ -112,13 +104,12 @@ export async function POST(request: NextRequest) {
     zero(dek);
   }
 
-  const { data: item, error } = await admin
-    .from("vault_items")
-    .insert(insertRow)
-    .select("id")
-    .single();
+  const { data: item, error } = await vaultItemRepo.insert(admin, insertRow);
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) {
+    console.error("[vault/items POST]", error);
+    return fail("could not save item", 500);
+  }
 
   await admin.from("audit_log").insert({
     actor_id: user.id,
@@ -128,26 +119,22 @@ export async function POST(request: NextRequest) {
     metadata: { category: p.category, encrypted: true },
   }).then(() => undefined, () => undefined);
 
-  return NextResponse.json({ item });
-}
+  return ok({ item });
+});
 
-export async function PATCH(request: NextRequest) {
+export const PATCH = withRoute(async (request: NextRequest) => {
   const ctx = await requireClientUser(request);
   if ("error" in ctx) return ctx.error;
   const { admin, user, client } = ctx;
 
   let body: { id?: string; label?: string; data?: Record<string, unknown> };
-  try { body = await request.json(); } catch { return NextResponse.json({ error: "bad json" }, { status: 400 }); }
+  try { body = await request.json(); } catch { return fail("bad json", 400); }
   const { id, label, data } = body;
-  if (!id) return NextResponse.json({ error: "Missing id" }, { status: 400 });
+  if (!id) return fail("Missing id", 400);
 
-  const { data: existing } = await admin
-    .from("vault_items")
-    .select("client_id, ciphertext")
-    .eq("id", id)
-    .single();
+  const { data: existing } = await vaultItemRepo.getOwnerAndCiphertext(admin, id);
   if (!existing || existing.client_id !== client.id) {
-    return NextResponse.json({ error: "Not found" }, { status: 404 });
+    return fail("Not found", 404);
   }
 
   const dek = await getOrCreateUserDek(admin, client);
@@ -181,8 +168,11 @@ export async function PATCH(request: NextRequest) {
     zero(dek);
   }
 
-  const { error } = await admin.from("vault_items").update(update).eq("id", id);
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  const { error } = await vaultItemRepo.updateForOwner(admin, id, client.id, update);
+  if (error) {
+    console.error("[vault/items PATCH]", error);
+    return fail("could not update item", 500);
+  }
 
   await admin.from("audit_log").insert({
     actor_id: user.id,
@@ -191,25 +181,21 @@ export async function PATCH(request: NextRequest) {
     resource_id: id,
   }).then(() => undefined, () => undefined);
 
-  return NextResponse.json({ item: { id } });
-}
+  return ok({ item: { id } });
+});
 
-export async function DELETE(request: NextRequest) {
+export const DELETE = withRoute(async (request: NextRequest) => {
   const ctx = await requireClientUser(request);
   if ("error" in ctx) return ctx.error;
   const { admin, user, client } = ctx;
 
   const { searchParams } = new URL(request.url);
   const itemId = searchParams.get("id");
-  if (!itemId) return NextResponse.json({ error: "Missing item id" }, { status: 400 });
+  if (!itemId) return fail("Missing item id", 400);
 
-  const { data: item } = await admin
-    .from("vault_items")
-    .select("client_id, ciphertext")
-    .eq("id", itemId)
-    .single();
+  const { data: item } = await vaultItemRepo.getOwnerAndCiphertext(admin, itemId);
   if (!item || item.client_id !== client.id) {
-    return NextResponse.json({ error: "Not found" }, { status: 404 });
+    return fail("Not found", 404);
   }
 
   // Auto-generated items (linked to an order) stamp order_id inside the encrypted
@@ -222,7 +208,7 @@ export async function DELETE(request: NextRequest) {
       const pt = await decryptBytes(dbKey, ct);
       const parsed = JSON.parse(new TextDecoder().decode(pt)) as { data?: Record<string, unknown> };
       if (parsed.data?.order_id) {
-        return NextResponse.json({ error: "Auto-generated items cannot be deleted" }, { status: 403 });
+        return fail("Auto-generated items cannot be deleted", 403);
       }
     } catch {
       // Undecryptable row — allow deletion.
@@ -232,7 +218,7 @@ export async function DELETE(request: NextRequest) {
     }
   }
 
-  await admin.from("vault_items").delete().eq("id", itemId);
+  await vaultItemRepo.deleteForOwner(admin, itemId, client.id);
   await admin.from("audit_log").insert({
     actor_id: user.id,
     action: "vault.item_deleted",
@@ -240,5 +226,5 @@ export async function DELETE(request: NextRequest) {
     resource_id: itemId,
   }).then(() => undefined, () => undefined);
 
-  return NextResponse.json({ success: true });
-}
+  return ok({ success: true });
+});

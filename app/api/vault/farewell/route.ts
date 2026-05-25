@@ -1,10 +1,15 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { Resend } from "resend";
 import { requireClientUser, bytesToBytea, byteaToBytes } from "@/lib/api/crypto";
 import { getOrCreateUserDek } from "@/lib/api/dek";
 import { deriveSubKey, INFO, zero } from "@/lib/crypto/keyManager";
 import { encryptBytes, decryptBytes } from "@/lib/crypto/aead";
 import { blindIndex, normalize } from "@/lib/crypto/blindIndex";
+import { withRoute } from "@/lib/api/route";
+import { ok, fail } from "@/lib/api/response";
+import * as farewellRepo from "@/lib/repos/server/farewellRepo";
+import * as clientRepo from "@/lib/repos/server/clientRepo";
+import { farewellCreateSchema, farewellUpdateSchema } from "@/lib/validation/schemas";
 
 export const runtime = "nodejs";
 
@@ -14,19 +19,18 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 // them at rest (EV01) and can decrypt (recoverable). The video stream key is
 // served via /api/vault/file-key (F2); only its 24-byte header is stored here.
 
-export async function GET(req: NextRequest) {
+export const GET = withRoute(async (req: NextRequest) => {
   const ctx = await requireClientUser(req, { autoCreate: true });
   if ("error" in ctx) return ctx.error;
   const { admin, client } = ctx;
 
-  const { data: rows } = await admin
-    .from("farewell_messages")
-    .select("id, ciphertext, file_size_mb, duration_seconds, vault_farewell_status, created_at, updated_at, storage_path")
-    .eq("client_id", client.id)
-    .not("vault_farewell_status", "in", '("deleted","replaced","expired")')
-    .order("created_at", { ascending: false });
+  const { data: rows, error: listErr } = await farewellRepo.listActiveByClient(admin, client.id);
 
-  if (!rows || rows.length === 0) return NextResponse.json({ messages: [] });
+  if (listErr) {
+    console.error("[vault/farewell GET]", listErr);
+    return fail("could not load messages", 500);
+  }
+  if (!rows || rows.length === 0) return ok({ messages: [] });
 
   const dek = await getOrCreateUserDek(admin, client);
   const dbKey = await deriveSubKey(dek, INFO.DB);
@@ -62,26 +66,26 @@ export async function GET(req: NextRequest) {
     zero(dek);
   }
 
-  return NextResponse.json({ messages });
-}
+  return ok({ messages });
+});
 
-export async function POST(req: NextRequest) {
+export const POST = withRoute(async (req: NextRequest) => {
   const ctx = await requireClientUser(req, { autoCreate: true });
   if ("error" in ctx) return ctx.error;
   const { admin, user, client } = ctx;
 
-  const { data: sub } = await admin
-    .from("clients").select("vault_subscription_status").eq("id", client.id).single();
+  const { data: sub } = await clientRepo.getSubscriptionById(admin, client.id);
   if (sub?.vault_subscription_status !== "active") {
-    return NextResponse.json({ error: "Vault subscription required" }, { status: 403 });
+    return fail("Vault subscription required", 403);
   }
 
-  let body: { title?: string; recipientEmail?: string; storagePath?: string; fileSizeMb?: number; durationSeconds?: number };
-  try { body = await req.json(); } catch { return NextResponse.json({ error: "bad json" }, { status: 400 }); }
-  const { title, recipientEmail, storagePath } = body;
-  if (!title || !recipientEmail) {
-    return NextResponse.json({ error: "Title and recipient email are required" }, { status: 400 });
+  let raw: unknown;
+  try { raw = await req.json(); } catch { return fail("bad json", 400); }
+  const parsed = farewellCreateSchema.safeParse(raw);
+  if (!parsed.success) {
+    return fail("invalid input", 400, { details: parsed.error.flatten() });
   }
+  const { title, recipientEmail, storagePath } = parsed.data;
   // storagePath is optional: clients may create the metadata-only (locked) record
   // first and attach the encrypted video later via PATCH.
 
@@ -103,8 +107,8 @@ export async function POST(req: NextRequest) {
       enc_version: 1,
       title: "",
       recipient_email: "",
-      file_size_mb: body.fileSizeMb ?? null,
-      duration_seconds: body.durationSeconds ?? null,
+      file_size_mb: parsed.data.fileSizeMb ?? null,
+      duration_seconds: parsed.data.durationSeconds ?? null,
       backfilled_at: new Date().toISOString(),
     };
   } finally {
@@ -113,13 +117,10 @@ export async function POST(req: NextRequest) {
     zero(dek);
   }
 
-  const { data: message, error } = await admin
-    .from("farewell_messages")
-    .insert(insertRow)
-    .select("id")
-    .single();
+  const { data: message, error } = await farewellRepo.insert(admin, insertRow);
   if (error || !message) {
-    return NextResponse.json({ error: "Failed to create message" }, { status: 500 });
+    console.error("[vault/farewell POST]", error);
+    return fail("Failed to create message", 500);
   }
 
   const { data: senderProfile } = await admin.from("profiles").select("full_name").eq("id", user.id).single();
@@ -151,28 +152,24 @@ export async function POST(req: NextRequest) {
     metadata: { encrypted: true },
   }).then(() => undefined, () => undefined);
 
-  return NextResponse.json({ id: message.id, messageId: message.id });
-}
+  return ok({ id: message.id, messageId: message.id });
+});
 
-export async function PATCH(req: NextRequest) {
+export const PATCH = withRoute(async (req: NextRequest) => {
   const ctx = await requireClientUser(req);
   if ("error" in ctx) return ctx.error;
   const { admin, user, client } = ctx;
 
-  let body: { messageId?: string; title?: string; recipientEmail?: string; storagePath?: string; fileSizeMb?: number; durationSeconds?: number };
-  try { body = await req.json(); } catch { return NextResponse.json({ error: "bad json" }, { status: 400 }); }
-  const { messageId, title, recipientEmail } = body;
-  if (!messageId) return NextResponse.json({ error: "Missing messageId" }, { status: 400 });
+  let raw: unknown;
+  try { raw = await req.json(); } catch { return fail("bad json", 400); }
+  const parsed = farewellUpdateSchema.safeParse(raw);
+  if (!parsed.success) return fail("invalid input", 400, { details: parsed.error.flatten() });
+  const { messageId, title, recipientEmail } = parsed.data;
 
-  const { data: existing } = await admin
-    .from("farewell_messages")
-    .select("id, vault_farewell_status, ciphertext")
-    .eq("id", messageId)
-    .eq("client_id", client.id)
-    .single();
-  if (!existing) return NextResponse.json({ error: "Message not found" }, { status: 404 });
+  const { data: existing } = await farewellRepo.getForOwner(admin, messageId, client.id);
+  if (!existing) return fail("Message not found", 404);
   if (existing.vault_farewell_status === "unlocked") {
-    return NextResponse.json({ error: "Cannot edit unlocked messages" }, { status: 400 });
+    return fail("Cannot edit unlocked messages", 400);
   }
 
   const dek = await getOrCreateUserDek(admin, client);
@@ -206,11 +203,11 @@ export async function PATCH(req: NextRequest) {
   }
 
   // Attach video (or update its metadata) — no crypto needed.
-  if (body.storagePath !== undefined) update.storage_path = body.storagePath;
-  if (body.fileSizeMb !== undefined) update.file_size_mb = body.fileSizeMb;
-  if (body.durationSeconds !== undefined) update.duration_seconds = body.durationSeconds;
+  if (parsed.data.storagePath !== undefined) update.storage_path = parsed.data.storagePath;
+  if (parsed.data.fileSizeMb !== undefined) update.file_size_mb = parsed.data.fileSizeMb;
+  if (parsed.data.durationSeconds !== undefined) update.duration_seconds = parsed.data.durationSeconds;
 
-  await admin.from("farewell_messages").update(update).eq("id", messageId);
+  await farewellRepo.updateForOwner(admin, messageId, client.id, update);
   await admin.from("audit_log").insert({
     actor_id: user.id,
     action: recipientEmail ? "farewell.recipient_updated" : "farewell.updated",
@@ -218,38 +215,33 @@ export async function PATCH(req: NextRequest) {
     resource_id: messageId,
   }).then(() => undefined, () => undefined);
 
-  return NextResponse.json({ success: true });
-}
+  return ok({ success: true });
+});
 
-export async function DELETE(req: NextRequest) {
+export const DELETE = withRoute(async (req: NextRequest) => {
   const ctx = await requireClientUser(req);
   if ("error" in ctx) return ctx.error;
   const { admin, user, client } = ctx;
 
   let body: { messageId?: string };
-  try { body = await req.json(); } catch { return NextResponse.json({ error: "bad json" }, { status: 400 }); }
+  try { body = await req.json(); } catch { return fail("bad json", 400); }
   const { messageId } = body;
-  if (!messageId) return NextResponse.json({ error: "Missing messageId" }, { status: 400 });
+  if (!messageId) return fail("Missing messageId", 400);
 
-  const { data: existing } = await admin
-    .from("farewell_messages")
-    .select("id, vault_farewell_status, storage_path")
-    .eq("id", messageId)
-    .eq("client_id", client.id)
-    .single();
-  if (!existing) return NextResponse.json({ error: "Message not found" }, { status: 404 });
+  const { data: existing } = await farewellRepo.getOwnerStatusPath(admin, messageId, client.id);
+  if (!existing) return fail("Message not found", 404);
   if (existing.vault_farewell_status === "unlocked") {
-    return NextResponse.json({ error: "Cannot delete unlocked messages" }, { status: 400 });
+    return fail("Cannot delete unlocked messages", 400);
   }
 
   if (existing.storage_path) {
     await admin.storage.from("farewell-videos").remove([existing.storage_path]);
   }
-  await admin.from("farewell_messages").update({
+  await farewellRepo.updateForOwner(admin, messageId, client.id, {
     vault_farewell_status: "deleted",
     deleted_at: new Date().toISOString(),
     storage_path: null,
-  }).eq("id", messageId);
+  });
   await admin.from("farewell_verification_requests")
     .update({ status: "rejected", notes: "Message deleted by owner" })
     .eq("client_id", client.id)
@@ -261,5 +253,5 @@ export async function DELETE(req: NextRequest) {
     resource_id: messageId,
   }).then(() => undefined, () => undefined);
 
-  return NextResponse.json({ success: true });
-}
+  return ok({ success: true });
+});

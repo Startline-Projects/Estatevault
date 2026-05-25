@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { Resend } from "resend";
 import { randomUUID } from "crypto";
 import { requireClientUser, bytesToBytea, byteaToBytes } from "@/lib/api/crypto";
@@ -7,6 +7,11 @@ import { getOrCreateUserDek } from "@/lib/api/dek";
 import { deriveSubKey, INFO, zero } from "@/lib/crypto/keyManager";
 import { encryptBytes, decryptBytes } from "@/lib/crypto/aead";
 import { blindIndex, normalize } from "@/lib/crypto/blindIndex";
+import { withRoute } from "@/lib/api/route";
+import { ok, fail } from "@/lib/api/response";
+import * as trusteeRepo from "@/lib/repos/server/trusteeRepo";
+import * as clientRepo from "@/lib/repos/server/clientRepo";
+import { trusteeCreateSchema, trusteeConfirmSchema } from "@/lib/validation/schemas";
 
 export const runtime = "nodejs";
 
@@ -27,17 +32,18 @@ function parseScope(s: unknown): Scope | null {
   };
 }
 
-export async function GET(req: NextRequest) {
+export const GET = withRoute(async (req: NextRequest) => {
   const ctx = await requireClientUser(req, { autoCreate: true });
   if ("error" in ctx) return ctx.error;
   const { admin, client } = ctx;
 
-  const { data: rows } = await admin
-    .from("vault_trustees")
-    .select("id, ciphertext, status, invite_sent_at, confirmed_at, access_scope")
-    .eq("client_id", client.id);
+  const { data: rows, error: listErr } = await trusteeRepo.listByClient(admin, client.id);
 
-  if (!rows || rows.length === 0) return NextResponse.json({ trustees: [] });
+  if (listErr) {
+    console.error("[vault/trustees GET]", listErr);
+    return fail("could not load trustees", 500);
+  }
+  if (!rows || rows.length === 0) return ok({ trustees: [] });
 
   const dek = await getOrCreateUserDek(admin, client);
   const dbKey = await deriveSubKey(dek, INFO.DB);
@@ -66,25 +72,27 @@ export async function GET(req: NextRequest) {
     zero(dek);
   }
 
-  return NextResponse.json({ trustees });
-}
+  return ok({ trustees });
+});
 
-export async function POST(req: NextRequest) {
+export const POST = withRoute(async (req: NextRequest) => {
   const ctx = await requireClientUser(req, { autoCreate: true });
   if ("error" in ctx) return ctx.error;
   const { admin, user, client } = ctx;
 
   let body: Record<string, unknown>;
-  try { body = await req.json(); } catch { return NextResponse.json({ error: "bad json" }, { status: 400 }); }
+  try { body = await req.json(); } catch { return fail("bad json", 400); }
 
+  // Coalesce the legacy `trustee_*` aliases, then validate (adds email-format).
   const name = String(body.name ?? body.trustee_name ?? "").trim();
   const email = String(body.email ?? body.trustee_email ?? "").trim();
   const relationship = String(body.relationship ?? body.trustee_relationship ?? "").trim();
-  if (!name || !email) return NextResponse.json({ error: "Name and email are required" }, { status: 400 });
+  const parsed = trusteeCreateSchema.safeParse({ name, email, relationship });
+  if (!parsed.success) return fail("invalid input", 400, { details: parsed.error.flatten() });
   const scope = parseScope(body.access_scope ?? body.accessScope);
 
-  const { data: existing } = await admin.from("vault_trustees").select("id").eq("client_id", client.id);
-  if (existing && existing.length >= 2) return NextResponse.json({ error: "Maximum 2 trustees allowed" }, { status: 400 });
+  const { data: existing } = await trusteeRepo.listIdsByClient(admin, client.id);
+  if (existing && existing.length >= 2) return fail("Maximum 2 trustees allowed", 400);
 
   const { data: profile } = await admin.from("profiles").select("full_name, email").eq("id", user.id).single();
   const ownerName = profile?.full_name || profile?.email || user.email || "Your contact";
@@ -98,10 +106,9 @@ export async function POST(req: NextRequest) {
   try {
     emailBlindHex = bytesToBytea(blindIndex(indexKey, normalize(email)));
     // Duplicate check by blind index.
-    const { data: dup } = await admin
-      .from("vault_trustees").select("id").eq("client_id", client.id).eq("email_blind", emailBlindHex).limit(1);
+    const { data: dup } = await trusteeRepo.findByEmailBlind(admin, client.id, emailBlindHex);
     if (dup && dup.length > 0) {
-      return NextResponse.json({ error: "This trustee email is already added" }, { status: 409 });
+      return fail("This trustee email is already added", 409);
     }
     const meta = new TextEncoder().encode(JSON.stringify({ name, email, relationship }));
     const env = await encryptBytes(dbKey, meta);
@@ -126,44 +133,44 @@ export async function POST(req: NextRequest) {
     zero(dek);
   }
 
-  const { error } = await admin.from("vault_trustees").insert(insertRow);
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  const { error } = await trusteeRepo.insert(admin, insertRow);
+  if (error) {
+    console.error("[vault/trustees POST]", error);
+    return fail("could not add trustee", 500);
+  }
 
   try {
     await sendInviteEmail(name, email, ownerName, inviteToken, client.id);
   } catch (emailErr) {
     const msg = emailErr instanceof Error ? emailErr.message : "Email send failed";
-    return NextResponse.json({ success: true, emailError: msg, encrypted: true });
+    return ok({ success: true, emailError: msg, encrypted: true });
   }
 
-  return NextResponse.json({ success: true, encrypted: true });
-}
+  return ok({ success: true, encrypted: true });
+});
 
-export async function PATCH(request: NextRequest) {
-  let body: { token?: string };
-  try { body = await request.json(); } catch { return NextResponse.json({ error: "bad json" }, { status: 400 }); }
-  const token = body.token;
-  if (!token) return NextResponse.json({ error: "Missing token" }, { status: 400 });
+export const PATCH = withRoute(async (request: NextRequest) => {
+  let raw: unknown;
+  try { raw = await request.json(); } catch { return fail("bad json", 400); }
+  const parsed = trusteeConfirmSchema.safeParse(raw);
+  if (!parsed.success) return fail("Missing token", 400);
+  const { token } = parsed.data;
 
   const admin = createAdminClient();
-  const { data: trustee, error: findErr } = await admin
-    .from("vault_trustees")
-    .select("id, status, client_id, ciphertext")
-    .eq("invite_token", token)
-    .single();
-  if (findErr || !trustee) return NextResponse.json({ error: "Invalid or expired link" }, { status: 404 });
-  if (trustee.status === "active") return NextResponse.json({ alreadyConfirmed: true });
+  const { data: trustee, error: findErr } = await trusteeRepo.findByInviteToken(admin, token);
+  if (findErr || !trustee) return fail("Invalid or expired link", 404);
+  if (trustee.status === "active") return ok({ alreadyConfirmed: true });
 
-  const { error: updateErr } = await admin
-    .from("vault_trustees")
-    .update({ status: "active", confirmed_at: new Date().toISOString() })
-    .eq("id", trustee.id);
-  if (updateErr) return NextResponse.json({ error: updateErr.message }, { status: 500 });
+  const { error: updateErr } = await trusteeRepo.markActive(admin, trustee.id);
+  if (updateErr) {
+    console.error("[vault/trustees PATCH]", updateErr);
+    return fail("could not confirm trustee", 500);
+  }
 
   // Acceptance email — decrypt trustee name/email using the OWNER's DEK
   // (server holds the keys under Option A).
   try {
-    const { data: ownerClient } = await admin.from("clients").select("id, wrapped_dek, profile_id").eq("id", trustee.client_id).single();
+    const { data: ownerClient } = await clientRepo.getKeyMaterialById(admin, trustee.client_id);
     if (ownerClient) {
       let trusteeName = "there", trusteeEmail = "";
       const dek = await getOrCreateUserDek(admin, ownerClient);
@@ -191,28 +198,27 @@ export async function PATCH(request: NextRequest) {
     console.error("Acceptance confirmation send failed:", e);
   }
 
-  return NextResponse.json({ success: true });
-}
+  return ok({ success: true });
+});
 
-export async function DELETE(req: NextRequest) {
+export const DELETE = withRoute(async (req: NextRequest) => {
   const ctx = await requireClientUser(req);
   if ("error" in ctx) return ctx.error;
   const { admin, client } = ctx;
 
   const { searchParams } = new URL(req.url);
   const id = searchParams.get("id");
-  if (!id) return NextResponse.json({ error: "Missing id" }, { status: 400 });
+  if (!id) return fail("Missing id", 400);
 
   await admin.from("farewell_verification_requests").update({ trustee_id: null }).eq("trustee_id", id);
-  const { error: delErr, count } = await admin
-    .from("vault_trustees")
-    .delete({ count: "exact" })
-    .eq("id", id)
-    .eq("client_id", client.id);
-  if (delErr) return NextResponse.json({ error: delErr.message }, { status: 500 });
-  if (count === 0) return NextResponse.json({ error: "Trustee not found" }, { status: 404 });
-  return NextResponse.json({ success: true });
-}
+  const { error: delErr, count } = await trusteeRepo.deleteForOwner(admin, id, client.id);
+  if (delErr) {
+    console.error("[vault/trustees DELETE]", delErr);
+    return fail("could not remove trustee", 500);
+  }
+  if (count === 0) return fail("Trustee not found", 404);
+  return ok({ success: true });
+});
 
 async function sendInviteEmail(trustee_name: string, trustee_email: string, ownerName: string, token: string, clientId: string) {
   const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";

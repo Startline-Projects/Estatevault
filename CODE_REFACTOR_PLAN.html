@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EstateVault — Refactor Plan (Architecture & Scalability)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --navy:#1C3557;
+    --navy-soft:#27406b;
+    --gold:#C9A84C;
+    --gold-soft:#e7d49a;
+    --charcoal:#2D2D2D;
+    --white:#FFFFFF;
+    --bg:#f4f6f9;
+    --line:#e3e8f0;
+    --good:#1f8a5b;
+    --warn:#c98a1e;
+    --bad:#c0392b;
+    --muted:#5f6b7c;
+    --crit:#c0392b;
+    --high:#d35400;
+    --med:#c98a1e;
+    --low:#3a7ca5;
+    --b0:#6c5ce7;
+  }
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    margin:0;
+    font-family:'Inter',system-ui,sans-serif;
+    background:var(--bg);
+    color:var(--charcoal);
+    line-height:1.65;
+    font-size:16px;
+  }
+  a{color:var(--navy);text-decoration:none;}
+  a:hover{text-decoration:underline;}
+  code{
+    font-family:'JetBrains Mono',ui-monospace,monospace;
+    font-size:.85em;
+    background:#eef1f6;
+    color:#324; padding:1px 6px;border-radius:5px;
+    border:1px solid #e0e5ee;
+    word-break:break-word;
+  }
+
+  /* ---------- Hero ---------- */
+  header.hero{
+    background:linear-gradient(135deg,var(--navy) 0%,#13243d 100%);
+    color:var(--white);
+    padding:48px 0 52px;
+    border-bottom:4px solid var(--gold);
+  }
+  .hero .tag{
+    display:inline-block;letter-spacing:.18em;text-transform:uppercase;
+    font-size:12px;font-weight:600;color:var(--gold-soft);margin-bottom:14px;
+  }
+  .hero h1{margin:0;font-size:36px;font-weight:800;line-height:1.12;}
+  .hero p.sub{margin:14px 0 0;font-size:18px;color:#cdd6e4;max-width:780px;line-height:1.6;}
+  .hero .meta{margin-top:24px;display:flex;flex-wrap:wrap;gap:10px;}
+  .hero .meta span{
+    background:rgba(255,255,255,.08);border:1px solid rgba(201,168,76,.35);
+    padding:6px 14px;border-radius:999px;font-size:13px;color:#e7ecf4;
+  }
+
+  /* ---------- Layout ---------- */
+  .layout{display:flex;gap:36px;max-width:1280px;margin:0 auto;padding:36px 24px 80px;}
+  main{flex:1;min-width:0;}
+  nav.toc{
+    width:248px;flex-shrink:0;position:sticky;top:24px;align-self:flex-start;
+    max-height:calc(100vh - 48px);overflow-y:auto;
+    background:var(--white);border:1px solid var(--line);border-radius:14px;padding:18px 16px;
+    font-size:14px;
+  }
+  nav.toc h4{margin:0 0 10px;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);}
+  nav.toc a{display:block;padding:5px 8px;border-radius:7px;color:var(--charcoal);}
+  nav.toc a:hover{background:var(--bg);text-decoration:none;}
+  nav.toc a .dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:7px;vertical-align:middle;}
+
+  /* ---------- Cards / sections ---------- */
+  .card{background:var(--white);border:1px solid var(--line);border-radius:16px;padding:28px 30px;margin-bottom:22px;box-shadow:0 1px 2px rgba(20,40,70,.04);}
+  h2.section{font-size:13px;letter-spacing:.16em;text-transform:uppercase;color:var(--navy);margin:38px 0 16px;display:flex;align-items:center;gap:10px;}
+  h2.section::after{content:"";flex:1;height:1px;background:var(--line);}
+  .lead{font-size:15.5px;color:var(--muted);margin:0 0 18px;max-width:840px;}
+
+  /* ---------- Table ---------- */
+  table{width:100%;border-collapse:collapse;margin:6px 0 2px;font-size:14px;}
+  thead th{text-align:left;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:700;padding:9px 12px;border-bottom:2px solid var(--line);}
+  tbody td{padding:11px 12px;border-bottom:1px solid var(--line);vertical-align:top;}
+  tbody tr:last-child td{border-bottom:none;}
+  tbody tr:hover{background:#fafbfd;}
+  td.k{font-weight:700;color:var(--navy);white-space:nowrap;}
+  .bad-num{color:var(--bad);font-weight:700;}
+  .good-num{color:var(--good);font-weight:700;}
+
+  ul.tight{margin:6px 0;padding-left:20px;}
+  ul.tight li{margin:8px 0;font-size:14.5px;}
+  ol.steps{margin:6px 0;padding-left:22px;}
+  ol.steps li{margin:10px 0;font-size:14.5px;}
+
+  /* ---------- Architecture diagram ---------- */
+  pre.diagram{
+    background:#11203a;color:#dbe4f1;border:1px solid #20355a;border-radius:14px;
+    padding:22px 22px;overflow-x:auto;font-family:'JetBrains Mono',monospace;
+    font-size:12.5px;line-height:1.55;margin:0 0 16px;
+  }
+  pre.diagram .gold{color:var(--gold-soft);}
+  pre.diagram .cmt{color:#7fa7d6;}
+
+  /* ---------- Principles ---------- */
+  .principles{counter-reset:p;display:grid;gap:10px;}
+  .principles .p{position:relative;padding:12px 14px 12px 46px;border:1px solid var(--line);border-radius:11px;background:#fbfcfe;font-size:14.5px;}
+  .principles .p::before{counter-increment:p;content:counter(p);position:absolute;left:12px;top:11px;width:24px;height:24px;border-radius:50%;background:var(--navy);color:#fff;font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center;}
+
+  /* ---------- Phase ---------- */
+  .phase{border:1px solid var(--line);border-left:5px solid var(--navy);border-radius:13px;padding:18px 22px;margin-bottom:14px;background:var(--white);}
+  .phase.p0{border-left-color:var(--b0);}
+  .phase.win{border-left-color:var(--good);}
+  .phase h3{margin:0 0 4px;font-size:18px;color:var(--navy);font-weight:800;display:flex;gap:10px;align-items:baseline;flex-wrap:wrap;}
+  .phase .pn{font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:600;color:#fff;background:var(--navy);padding:2px 9px;border-radius:6px;}
+  .phase.p0 .pn{background:var(--b0);}
+  .phase.win .pn{background:var(--good);}
+  .pill{font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:2px 9px;border-radius:999px;background:var(--gold);color:#3a2e07;}
+  .phase p{margin:8px 0;font-size:14.5px;}
+  .phase .payoff{background:#f3f8f4;border:1px solid #d8ebdd;border-radius:9px;padding:9px 12px;margin-top:10px;font-size:13.5px;}
+  .phase .payoff .lab{color:var(--good);font-weight:700;}
+
+  .note{background:#fffaf0;border:1px solid var(--gold-soft);border-radius:11px;padding:16px 20px;font-size:14.5px;}
+  .note .lab{color:var(--warn);font-weight:700;}
+
+  /* ---------- Plain-English callout ---------- */
+  .plain{background:#eef5ff;border:1px solid #cfe0f5;border-left:4px solid var(--low);border-radius:10px;padding:12px 15px 12px 44px;position:relative;font-size:14px;margin:12px 0 0;color:#2a3a4d;}
+  .plain::before{content:"💡";position:absolute;left:13px;top:11px;font-size:16px;}
+  .plain b{color:var(--navy);}
+  .plain .lab{display:block;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--low);font-weight:700;margin-bottom:3px;}
+
+  /* ---------- Glossary ---------- */
+  .gloss{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px;}
+  .gloss .g{border:1px solid var(--line);border-radius:11px;padding:13px 15px;background:#fbfcfe;font-size:14px;}
+  .gloss .g .term{font-weight:700;color:var(--navy);font-size:14.5px;margin-bottom:3px;}
+  .gloss .g .term code{font-size:.82em;}
+
+  /* ---------- Analogy banner ---------- */
+  .analogy{background:linear-gradient(135deg,#fbf7ec,#fdfaf2);border:1px solid var(--gold-soft);border-radius:14px;padding:20px 24px;font-size:15px;color:#4a4230;line-height:1.7;}
+  .analogy h3{margin:0 0 8px;color:var(--navy);font-size:17px;}
+  .analogy b{color:var(--navy);}
+  .gate{background:#11203a;color:#dbe4f1;border-radius:9px;padding:10px 13px;font-size:13px;font-family:'JetBrains Mono',monospace;}
+
+  .size-S{color:var(--good);font-weight:700;} .size-M{color:var(--warn);font-weight:700;} .size-L{color:var(--bad);font-weight:700;}
+  .risk-Low{color:var(--good);font-weight:600;} .risk-Med{color:var(--warn);font-weight:600;}
+
+  footer{text-align:center;color:var(--muted);font-size:13px;padding:30px 24px 50px;}
+
+  @media(max-width:880px){
+    nav.toc{display:none;}
+    .layout{padding:24px 16px 60px;}
+    .card{padding:22px 18px;}
+    table{font-size:13px;} tbody td{padding:9px 8px;}
+    pre.diagram{font-size:10.5px;}
+  }
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div style="max-width:1280px;margin:0 auto;padding:0 24px;">
+    <span class="tag">Architecture &amp; Scalability · 2026-05-25</span>
+    <h1>Structured Refactor Plan</h1>
+    <p class="sub">Generated from a direct full-codebase analysis — not from the bug audit. The theme: stop re-defining the same plumbing in every route and component, establish clear layers, make the code scalable. <b style="color:#fff;">New: plain-English explanations throughout — start with "Start here" and the word list.</b></p>
+    <div class="meta">
+      <span>📖 Plain-English version</span>
+      <span>119 API routes</span>
+      <span>9 phases</span>
+      <span>Plan only — no code changed</span>
+    </div>
+  </div>
+</header>
+
+<div class="layout">
+  <nav class="toc">
+    <h4>Contents</h4>
+    <a href="#start"><span class="dot" style="background:var(--gold)"></span>Start here (plain English)</a>
+    <a href="#glossary"><span class="dot" style="background:var(--muted)"></span>Word list</a>
+    <a href="#problem"><span class="dot" style="background:var(--bad)"></span>The core problem</a>
+    <a href="#target"><span class="dot" style="background:var(--navy)"></span>Target architecture</a>
+    <a href="#principles"><span class="dot" style="background:var(--gold)"></span>Design principles</a>
+    <a href="#phases"><span class="dot" style="background:var(--good)"></span>Phased plan</a>
+    <a href="#risk"><span class="dot" style="background:var(--high)"></span>Will it break things?</a>
+    <a href="#seq"><span class="dot" style="background:var(--low)"></span>Sequencing &amp; effort</a>
+    <a href="#guard"><span class="dot" style="background:var(--crit)"></span>Guardrails</a>
+    <a href="#docs"><span class="dot" style="background:var(--muted)"></span>Stale docs</a>
+  </nav>
+
+  <main>
+
+    <!-- ============ START HERE ============ -->
+    <h2 class="section" id="start">Start here — the whole thing in plain English</h2>
+    <div class="card">
+      <div class="analogy">
+        <h3>🏠 Think of the app like a big office building</h3>
+        <p>Right now, <b>every room built its own front door, its own lock, its own security guard, and its own filing cabinet.</b> 119 rooms (the API routes), each re-doing the same setup slightly differently. When you want to change one rule — say "check ID more carefully" — you have to walk into all 119 rooms and fix each guard by hand. Miss one, and that room is now a security hole.</p>
+        <p style="margin-bottom:0;">This plan builds <b>one shared lobby</b>: one front desk that checks ID (auth), one rulebook (validation), one records department that touches the files (the data layer), and one front-desk phone line the app uses to call the building (the API client). Every room just connects to the lobby. Change a rule once, and all 119 rooms get it. That's what "scalable" means here — <b>add the 120th room without rebuilding the plumbing.</b></p>
+      </div>
+      <div class="plain" style="margin-top:16px;">
+        <span class="lab">Why this matters to you</span>
+        Today the code <b>works</b>, but it's fragile and slow to change because the same things are copy-pasted everywhere. After this refactor, the app does the same things for your users — but it's faster to add features, harder to introduce bugs, and a fix in one place actually fixes everything.
+      </div>
+    </div>
+
+    <!-- ============ GLOSSARY ============ -->
+    <h2 class="section" id="glossary">Word list (so the rest makes sense)</h2>
+    <div class="card">
+      <div class="gloss">
+        <div class="g"><div class="term">API route</div>A single backend endpoint the app calls, e.g. "save a vault item." There are 119 of them. Each lives in a <code>route.ts</code> file.</div>
+        <div class="g"><div class="term">Auth / <code>requireAuth</code></div>Checking <em>who</em> is making the request and whether they're allowed. The "security guard at the door."</div>
+        <div class="g"><div class="term">Admin client</div>A special database connection that can bypass normal restrictions. Powerful — should be created in one place, not copied into 64 files.</div>
+        <div class="g"><div class="term">Repo (repository)</div>The one piece of code allowed to read/write a database table. The "records department." Today routes skip it and grab files themselves.</div>
+        <div class="g"><div class="term">Validation / Zod</div>Checking that incoming data has the right shape before trusting it ("is this actually an email?"). The "rulebook at the desk."</div>
+        <div class="g"><div class="term"><code>.from("table")</code></div>A raw database query written directly inside a route. There are 581 of these scattered around — the thing we want to centralize.</div>
+        <div class="g"><div class="term">fetch</div>How the screen (browser) calls the backend. Today copy-pasted in many components, each handling errors its own way.</div>
+        <div class="g"><div class="term">RLS</div>Row-Level Security — database rules that stop user A from seeing user B's data. Easy to bypass by accident with the admin client.</div>
+        <div class="g"><div class="term">DEK / crypto</div>The encryption keys that lock each user's private vault. The most sensitive code — a mistake here means lost or exposed data.</div>
+        <div class="g"><div class="term">Migration</div>A versioned change to the database structure. They should apply in a clear order; right now two competing systems exist.</div>
+        <div class="g"><div class="term">The "gate"</div>Three automatic checks — <code>tsc</code> (type errors), <code>lint</code> (style/rules), <code>test</code> — that must pass before moving on. The safety net.</div>
+        <div class="g"><div class="term">SSOT</div>Single Source of Truth — one place a fact (like a price) is defined, so it can't disagree with itself across the app.</div>
+      </div>
+    </div>
+
+    <!-- ============ PROBLEM ============ -->
+    <h2 class="section" id="problem">The core problem (measured)</h2>
+    <div class="card">
+      <p class="lead">Good building blocks exist but never propagated. The same concern is re-implemented dozens of times instead of being called from one place. Counts come straight from the code.</p>
+      <table>
+        <thead><tr><th>Concern</th><th>Canonical thing that exists</th><th>Reality</th></tr></thead>
+        <tbody>
+          <tr><td class="k">Auth gate</td><td><code>requireAuth()</code> — Bearer + cookie + roles</td><td><span class="bad-num">16 / 119</span> routes use it. 57 raw <code>getUser()</code>, 13 <code>requireClientUser</code>.</td></tr>
+          <tr><td class="k">Service-role client</td><td><code>createAdminClient()</code> in <code>lib/api/auth.ts</code></td><td>Re-declared inline in <span class="bad-num">64 routes</span>. Only 5 import the shared one.</td></tr>
+          <tr><td class="k">Data access</td><td><code>lib/repos/*Repo.ts</code> (8 repos)</td><td><span class="bad-num">0 routes</span> use them (client-only). Routes run <span class="bad-num">581 inline <code>.from()</code></span> queries.</td></tr>
+          <tr><td class="k">Validation</td><td><code>lib/validation/schemas.ts</code> (Zod)</td><td><span class="bad-num">1 route</span> imports it; 8 inline <code>z.object</code>; 62 hand-roll <code>request.json()</code>.</td></tr>
+          <tr><td class="k">Client → server</td><td><code>lib/api/authedFetch.ts</code> (401 refresh)</td><td><span class="bad-num">Unused.</span> Components copy-paste raw <code>fetch</code> + manual try/catch.</td></tr>
+          <tr><td class="k">Prices / promos</td><td><code>calculateSplit()</code> (splits only)</td><td>Prices inlined in ~15 routes; promo codes redefined per-route.</td></tr>
+          <tr><td class="k">Byte encoding</td><td><code>byteaToBytes</code>/<code>bytesToBytea</code></td><td><span class="bad-num">7 copies</span> of b64/bytea helpers across repos &amp; utils.</td></tr>
+          <tr><td class="k">DB types</td><td>—</td><td>No generated Supabase types; redefined ad hoc per route/repo.</td></tr>
+          <tr><td class="k">Return types</td><td>convention <code>Promise&lt;NextResponse&gt;</code></td><td><span class="bad-num">0 handlers</span> declare one.</td></tr>
+        </tbody>
+      </table>
+      <div class="note" style="margin-top:18px;"><span class="lab">Why it doesn't scale:</span> every new route re-writes auth + admin client + validation + error handling + a raw query; every new component re-writes fetch + error handling. Changing any cross-cutting rule (auth, RLS, error shape, a price) means hand-editing 50+ places — and it silently rots where missed. <em>This is the "APIs defined everywhere" problem.</em></div>
+      <div class="plain"><span class="lab">In simple words</span> Each red number is something that <b>should exist once but exists many times.</b> Example: there's one good "security guard" function, but only 16 of 119 doors use it — the other doors hand-built their own. The whole plan below is about deleting the duplicates and pointing everything at the one shared version.</div>
+    </div>
+
+    <!-- ============ TARGET ============ -->
+    <h2 class="section" id="target">Target architecture</h2>
+    <div class="card">
+      <p class="lead">A thin, repeatable request pipeline. Each layer is written <strong>once</strong> and reused; new features compose layers instead of re-implementing them.</p>
+<pre class="diagram">  Browser / Mobile  ─►  <span class="gold">Typed API client</span>  (lib/api-client/*)        <span class="cmt">← one fetch wrapper, typed</span>
+                        authedFetch · typed endpoints · envelope   <span class="cmt">  responses, 401 refresh, 1 error shape</span>
+                                     │
+  app/api/**/route.ts ─►  <span class="gold">Route handler (THIN)</span>                       <span class="cmt">← no inline admin client,</span>
+                        withRoute(): auth → validate → service       <span class="cmt">  no inline query, no inline zod</span>
+                                     │
+                        <span class="gold">Service / domain layer</span>  (lib/&lt;domain&gt;)         <span class="cmt">← business rules: pricing,</span>
+                        vault · checkout · trustee · partner …       <span class="cmt">  splits, hard stops</span>
+                                     │
+                        <span class="gold">Server repos</span>  (lib/repos/server/*)             <span class="cmt">← the ONLY place that</span>
+                        all .from("table") lives here                <span class="cmt">  touches Supabase tables</span>
+                                     │
+                        <span class="gold">Supabase</span> (Postgres + RLS)
+
+  <span class="cmt">Shared kernel (every layer): requireAuth · createAdminClient · zod registry ·</span>
+  <span class="cmt">lib/crypto/encoding.ts (one b64/bytea) · lib/orders/pricing.ts (SSOT) · types/db.generated.ts</span></pre>
+      <div class="plain">
+        <span class="lab">Reading the diagram top to bottom</span>
+        A request flows downward through layers, each with <b>one job</b>: the <b>screen</b> calls through one phone line → the <b>route</b> just greets and directs (no real work) → the <b>service</b> applies business rules → the <b>repo</b> is the only thing that touches the database → the <b>database</b> stores it. The bottom strip ("shared kernel") is the stuff every layer borrows instead of re-making: the ID checker, the rulebook, the price list, the data types.
+      </div>
+    </div>
+
+    <!-- ============ PRINCIPLES ============ -->
+    <h2 class="section" id="principles">Design principles</h2>
+    <div class="card">
+      <div class="principles">
+        <div class="p"><strong>One way to do each thing.</strong> A route never re-declares auth, an admin client, validation, or a query — it calls the shared layer.</div>
+        <div class="p"><strong>Thin routes, fat services, single data layer.</strong> Tables touched only in <code>lib/repos</code>; rules in <code>lib/&lt;domain&gt;</code>; routes orchestrate.</div>
+        <div class="p"><strong>Validate at the boundary, type through the stack.</strong> Every body/query parsed by a named Zod schema; generated DB types make a column rename break the build, not production.</div>
+        <div class="p"><strong>One client transport.</strong> Components call a typed API client, never raw <code>fetch</code>. One place owns auth refresh + error envelope.</div>
+        <div class="p"><strong>Single source of truth for money &amp; config.</strong> Prices, promo codes, splits live in one module. Never inlined.</div>
+        <div class="p"><strong>Make wrong code not compile / not lint.</strong> ESLint-error rules + return types + CI so drift can't re-accumulate.</div>
+        <div class="p"><strong>Never touch pricing/split/hard-stop values under "cleanup."</strong> Relocate, don't change (<code>CLAUDE.md</code> law).</div>
+      </div>
+    </div>
+
+    <!-- ============ PHASES ============ -->
+    <h2 class="section" id="phases">Phased plan</h2>
+    <p class="lead">Each phase is independently shippable and gated by <code>npx tsc --noEmit &amp;&amp; npm run lint &amp;&amp; npm test</code>. Foundations land before the mass migrations that depend on them. Big sweeps run route-group by route-group, not all at once.</p>
+
+    <div class="phase p0">
+      <h3><span class="pn">Phase 0</span> Safety net <span class="pill">do first</span></h3>
+      <p>Pin behavior on the seams later phases will move.</p>
+      <ul class="tight">
+        <li>Generate Supabase types → <code>types/db.generated.ts</code> (wire <code>npm run db:types</code>). Foundation for every typed layer.</li>
+        <li>Add characterization tests on the flows Phase 2 refactors: vault items CRUD, checkout → webhook, trustee unlock.</li>
+      </ul>
+      <div class="payoff"><span class="lab">Payoff:</span> later phases can prove they preserved behavior.</div>
+      <div class="plain"><span class="lab">In simple words</span> Before changing anything, take photos of how things work now (tests) and make the database describe its own shape to the code (types). So later, if a change accidentally breaks something, an alarm goes off immediately.</div>
+    </div>
+
+    <div class="phase">
+      <h3><span class="pn">Phase 1</span> Establish the shared kernel</h3>
+      <p>Build the single implementations everything else calls. Low-risk, no mass migration yet.</p>
+      <ul class="tight">
+        <li><code>lib/api/route.ts</code> — a <code>withRoute()</code> wrapper: try/catch + generic error, enforced <code>Promise&lt;NextResponse&gt;</code>, auth + Zod hooks. The standard handler shape.</li>
+        <li>Confirm <code>requireAuth</code> = only auth path, <code>createAdminClient</code> = only admin client. Make <code>UserType</code> the SSOT (add the real DB role strings).</li>
+        <li><code>lib/api/response.ts</code> — <code>ok(data)</code> / <code>fail(msg, status)</code> envelope.</li>
+        <li><code>lib/crypto/encoding.ts</code> — consolidate the 7 b64/bytea copies; migrate call sites.</li>
+        <li><code>lib/orders/pricing.ts</code> — <code>PRICES</code> + <code>PROMO_CODES</code> registry. Move inlined values here. <strong>Change no value.</strong></li>
+      </ul>
+      <div class="payoff"><span class="lab">Payoff:</span> the toolkit exists — from here, migrating a route <em>removes</em> code.</div>
+      <div class="plain"><span class="lab">In simple words</span> Build the shared lobby — one ID checker, one rulebook, one error format, one price list. Nothing else changes yet; we just create the shared tools so every room can start using them next.</div>
+    </div>
+
+    <div class="phase win">
+      <h3><span class="pn">Phase 2</span> Server data-access layer <span class="pill">biggest win</span></h3>
+      <p>581 <code>.from()</code> calls live inside routes today. Move them behind server repos so tables are touched in one layer.</p>
+      <ul class="tight">
+        <li>Create <code>lib/repos/server/</code> (current repos are client-only / import browser code — a server split is required).</li>
+        <li>Per group (<code>vault</code> → <code>checkout</code> → <code>documents</code> → <code>partner</code> → <code>sales</code> → <code>trustee</code> → <code>admin</code>): extract inline queries into typed repo functions. Route becomes <code>withRoute → requireAuth → parse → repo.x() → ok()</code>.</li>
+        <li>Bake ownership scoping into repo writes (<code>.eq("client_id", …)</code>) so authorization is structural.</li>
+      </ul>
+      <div class="payoff"><span class="lab">Payoff:</span> a schema/RLS/ownership change = one repo edit, not 50 routes; routes shrink ~60–70%.</div>
+      <div class="plain"><span class="lab">In simple words</span> The 581 places that reach into the database directly get moved into one tidy "records department." Done one section at a time (vault first). This is the biggest change — and the biggest payoff — so it gets the most testing.</div>
+    </div>
+
+    <div class="phase">
+      <h3><span class="pn">Phase 3</span> Validation at every boundary</h3>
+      <ul class="tight">
+        <li>Grow <code>lib/validation/schemas.ts</code> into a per-domain registry: <code>vaultItemSchema</code>, <code>trusteeSchema</code>, <code>farewellSchema</code>, <code>checkoutSchema</code>, <code>partnerClientSchema</code>, amendment…</li>
+        <li>Wire <code>withRoute</code> to <code>safeParse</code> body/query, reject early with the standard envelope. Reconcile the duplicate <code>WillIntake</code> interface vs <code>willIntakeSchema</code>.</li>
+      </ul>
+      <div class="payoff"><span class="lab">Payoff:</span> no route trusts client shape; one validation style.</div>
+      <div class="plain"><span class="lab">In simple words</span> Every door checks incoming data against the rulebook before trusting it — so bad or malicious input is rejected at the entrance, the same way everywhere.</div>
+    </div>
+
+    <div class="phase">
+      <h3><span class="pn">Phase 4</span> One typed client transport <span class="pill">kills fetch-everywhere</span></h3>
+      <ul class="tight">
+        <li><code>lib/api-client/</code> — typed client on the existing <code>authedFetch</code>: functions per endpoint returning typed data, throwing one <code>ApiError</code>.</li>
+        <li>Migrate components/pages off raw <code>fetch("/api/…")</code>, group by group. Shared async-state hook for loading/error/success.</li>
+      </ul>
+      <div class="payoff"><span class="lab">Payoff:</span> components drop ~20–30% boilerplate; auth refresh + error shape owned once; renaming a route updates one client fn.</div>
+      <div class="plain"><span class="lab">In simple words</span> The screens stop each writing their own way to call the backend. One shared phone line handles every call, deals with expired logins, and reports errors the same way — so pages get smaller and behave consistently.</div>
+    </div>
+
+    <div class="phase">
+      <h3><span class="pn">Phase 5</span> Single-source config cleanup</h3>
+      <ul class="tight">
+        <li>Replace every remaining inlined price/promo with imports from <code>lib/orders/pricing.ts</code>.</li>
+        <li>Tighten <code>calculateSplit(productType: ProductType)</code> to a union — no silent all-zeros on a typo.</li>
+      </ul>
+      <div class="payoff"><span class="lab">Payoff:</span> price/promo change = one edit.</div>
+      <div class="plain"><span class="lab">In simple words</span> Prices and promo codes live in one file instead of being typed into ~15 places. Change $400 once, everywhere updates. (The numbers themselves are <b>not</b> changed — just moved.)</div>
+    </div>
+
+    <div class="phase">
+      <h3><span class="pn">Phase 6</span> Type system hardening</h3>
+      <ul class="tight">
+        <li>Flow <code>types/db.generated.ts</code> through repos/services; remove ad-hoc per-route row types.</li>
+        <li>Add explicit <code>Promise&lt;NextResponse&gt;</code> to all handlers (trivial via <code>withRoute</code>). Remove stray <code>as any</code> CSS casts.</li>
+      </ul>
+      <div class="payoff"><span class="lab">Payoff:</span> a column/enum change fails the build.</div>
+      <div class="plain"><span class="lab">In simple words</span> Make the code and the database agree on exact data shapes. If someone renames a database column, the code refuses to build instead of silently breaking in front of a user.</div>
+    </div>
+
+    <div class="phase">
+      <h3><span class="pn">Phase 7</span> Migration lineage baseline</h3>
+      <ul class="tight">
+        <li>Squash 18 legacy <code>migration-*.sql</code> + <code>database.sql</code> into one timestamped baseline; keep only the 28 dated migrations after it.</li>
+      </ul>
+      <div class="payoff"><span class="lab">Payoff:</span> reproducible rebuilds; no lexical-order landmine.</div>
+      <div class="plain"><span class="lab">In simple words</span> The database's change-history is currently a messy mix of two systems. Tidy it into one clean ordered list, so rebuilding the database from scratch always works the same way.</div>
+    </div>
+
+    <div class="phase">
+      <h3><span class="pn">Phase 8</span> Lock it in (prevent re-drift)</h3>
+      <ul class="tight">
+        <li>Promote ESLint rules <code>warn → error</code>: ban raw <code>fetch("/api/…")</code> in components, ban inline <code>createAdminClient</code>, ban <code>.from()</code> outside repos, require <code>requireAuth</code> in routes.</li>
+        <li>Add a CI step running the gate on every PR. Update stale docs (<code>new-api-route.md</code>, <code>app/CLAUDE.md</code>, <code>conventions.md</code>).</li>
+      </ul>
+      <div class="payoff"><span class="lab">Payoff:</span> the architecture becomes the path of least resistance; drift can't silently return.</div>
+      <div class="plain"><span class="lab">In simple words</span> Turn the new rules into automatic enforcers. If a future developer tries to go back to the old copy-paste habits, the tools block it — so the cleanup stays clean.</div>
+    </div>
+
+    <!-- ============ RISK ============ -->
+    <h2 class="section" id="risk">Will this break functionality?</h2>
+    <div class="card">
+      <p class="lead" style="color:var(--charcoal);font-size:16px;"><strong>Honest answer: no refactor of this size is zero-risk.</strong> The plan is built to keep risk low and <em>catchable before shipping</em> — but the safety lives in the discipline, not the document.</p>
+
+      <h3 style="font-size:15px;color:var(--navy);margin:18px 0 6px;">Mostly behavior-preserving — with deliberate exceptions</h3>
+      <p style="font-size:14.5px;margin:0 0 8px;">The intent is to move code, not change what it does. A few steps <strong>intentionally change behavior because the current behavior is buggy</strong>:</p>
+      <ul class="tight" style="margin:0 0 6px;">
+        <li>Phase 1: <code>UserType</code> gains the real DB role strings → role gating starts matching where it silently failed.</li>
+        <li>Phase 2: ownership scoping baked into repo writes → loosely-scoped writes get tighter.</li>
+      </ul>
+      <p style="font-size:14.5px;margin:6px 0 0;">Fixes, not regressions. The honest claim is <strong>"no unintended loss of working features,"</strong> not "no change at all."</p>
+
+      <h3 style="font-size:15px;color:var(--navy);margin:22px 0 6px;">Risk is not uniform</h3>
+      <table>
+        <thead><tr><th>Phase</th><th>Risk</th><th>Why</th></tr></thead>
+        <tbody>
+          <tr><td class="k">0 (types+tests), 5 (pricing move), 8 (lint/CI)</td><td class="risk-Low">Low</td><td>additive or mechanical; no value changes</td></tr>
+          <tr><td class="k">1 (kernel), 3 (zod), 6 (types)</td><td class="risk-Med">Low–Med</td><td>new code; old code keeps working until switched over</td></tr>
+          <tr><td class="k">7 (migration squash)</td><td class="risk-Med">Med</td><td>rebuild correctness — test on a fresh DB</td></tr>
+          <tr><td class="k"><strong>2 (server repos, 581 queries), 4 (fetch sweep)</strong></td><td class="bad-num">Highest</td><td>most surface touched; subtle bugs hide here</td></tr>
+        </tbody>
+      </table>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:18px;">
+        <div class="payoff" style="margin:0;">
+          <p style="margin:0 0 6px;"><span class="lab">What keeps it safe</span></p>
+          <ul class="tight" style="margin:0;">
+            <li>Characterization tests <strong>first</strong> (Phase 0) — prove a flow behaves the same before/after.</li>
+            <li>Per-group migration, never big-bang — a mistake breaks one group, not the app.</li>
+            <li>Verify gate green before each next step.</li>
+            <li>No pricing / split / hard-stop <strong>value</strong> edits.</li>
+          </ul>
+        </div>
+        <div class="payoff" style="margin:0;background:#fbf3f2;border-color:#f0dcd9;">
+          <p style="margin:0 0 6px;"><span class="lab" style="color:var(--bad);">Gaps you must respect (where it CAN bite)</span></p>
+          <ul class="tight" style="margin:0;">
+            <li><strong>The gate won't catch everything.</strong> Stripe webhooks, RLS, auth cookies, crypto/DEK, trustee access need <strong>live secrets</strong> → verify with e2e + manual run.</li>
+            <li><strong>Tests only protect what they cover.</strong> Money/crypto/auth flows need real tests <em>before</em> Phase 2 touches them.</li>
+            <li><strong>Crypto/DEK + money = danger zone.</strong> A slip there is silent data loss / mis-pay, not a loud crash. Do those groups last, with most coverage.</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="note" style="margin-top:18px;"><span class="lab">Bottom line:</span> done as written — small steps, tests first, per-group, gate each step, verify money/crypto/auth flows live — the chance of breaking working functionality is <strong>low and catchable before shipping.</strong> Skip those steps and it becomes <strong>high.</strong></div>
+    </div>
+
+    <!-- ============ SEQUENCING ============ -->
+    <h2 class="section" id="seq">Sequencing &amp; effort</h2>
+    <div class="card">
+      <table>
+        <thead><tr><th>Phase</th><th>Theme</th><th>Risk</th><th>Size</th></tr></thead>
+        <tbody>
+          <tr><td class="k">0</td><td>Types codegen + characterization tests</td><td class="risk-Low">Low</td><td class="size-S">S</td></tr>
+          <tr><td class="k">1</td><td>Shared kernel (withRoute, response, encoding, pricing SSOT)</td><td class="risk-Low">Low</td><td class="size-M">M</td></tr>
+          <tr><td class="k">2</td><td>Server repos + thin routes (per group)</td><td class="risk-Med">Med</td><td class="size-L">L — largest</td></tr>
+          <tr><td class="k">3</td><td>Zod at boundary</td><td class="risk-Low">Low</td><td class="size-M">M</td></tr>
+          <tr><td class="k">4</td><td>Typed API client; kill scattered fetch</td><td class="risk-Med">Med</td><td class="size-L">L</td></tr>
+          <tr><td class="k">5</td><td>Price/promo SSOT finish</td><td class="risk-Low">Low</td><td class="size-S">S</td></tr>
+          <tr><td class="k">6</td><td>DB types through stack + return types</td><td class="risk-Low">Low</td><td class="size-M">M</td></tr>
+          <tr><td class="k">7</td><td>Migration baseline squash</td><td class="risk-Med">Med</td><td class="size-M">M</td></tr>
+          <tr><td class="k">8</td><td>ESLint-error + CI + doc fixes</td><td class="risk-Low">Low</td><td class="size-S">S</td></tr>
+        </tbody>
+      </table>
+      <div class="note" style="margin-top:16px;"><span class="lab">Recommended first slice:</span> Phase 0 → Phase 1 → Phase 2 for the <code>vault</code> group only. Proves the full pipeline end-to-end on one domain before sweeping the rest.</div>
+    </div>
+
+    <!-- ============ GUARDRAILS ============ -->
+    <h2 class="section" id="guard">Guardrails (every phase)</h2>
+    <div class="card" style="border-left:5px solid var(--bad);">
+      <ul class="tight" style="margin:0 0 14px;">
+        <li>Never alter pricing, revenue-split, or hard-stop <strong>values</strong> under cleanup — relocate, don't edit (<code>CLAUDE.md</code>).</li>
+        <li>No public-shape change without updating every caller in the same step. Half-migrated is worse than not migrated — finish a route group before moving on.</li>
+        <li>No <code>any</code> / <code>@ts-ignore</code> / <code>as</code> to make the gate pass.</li>
+        <li>Small reviewable commits per group; gate green before the next.</li>
+      </ul>
+      <div class="gate">npx tsc --noEmit &amp;&amp; npm run lint &amp;&amp; npm test</div>
+    </div>
+
+    <!-- ============ DOCS ============ -->
+    <h2 class="section" id="docs">Stale docs found during analysis</h2>
+    <div class="card">
+      <ul class="tight" style="margin:0;">
+        <li><code>app/CLAUDE.md</code>: "DB queries in <code>/lib/db</code>" → real location <code>lib/repos/*</code> (post-refactor <code>lib/repos/server/*</code>).</li>
+        <li><code>app/CLAUDE.md</code>: "Current phase: PHASE 1" → vault / payments / portals already shipped.</li>
+        <li>Scaffolding skills (<code>new-api-route</code>, <code>new-db-helper</code>) describe <code>getUser()</code> / <code>/lib/db</code> patterns the code abandoned.</li>
+      </ul>
+    </div>
+
+  </main>
+</div>
+
+<footer>
+  EstateVault — Structured Refactor Plan (Architecture &amp; Scalability) · generated from full-codebase analysis · 2026-05-25 · plan only, no files modified
+</footer>
+
+</body>
+</html>

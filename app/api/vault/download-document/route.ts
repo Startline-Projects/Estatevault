@@ -1,59 +1,47 @@
-import { NextResponse } from "next/server";
+import { type NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { createServerClient } from "@supabase/ssr";
+import { createAdminClient } from "@/lib/api/auth";
+import { withRoute } from "@/lib/api/route";
+import { ok, fail } from "@/lib/api/response";
+import * as vaultItemRepo from "@/lib/repos/server/vaultItemRepo";
+import * as clientRepo from "@/lib/repos/server/clientRepo";
 
-function createAdminClient() {
-  return createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    { cookies: { getAll: () => [], setAll: () => {} } }
-  );
-}
-
-export async function GET(request: Request) {
+export const GET = withRoute(async (request: NextRequest) => {
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!user) return fail("Unauthorized", 401);
 
   const { searchParams } = new URL(request.url);
   const itemId = searchParams.get("item_id");
-  if (!itemId) return NextResponse.json({ error: "Missing item_id" }, { status: 400 });
+  if (!itemId) return fail("Missing item_id", 400);
 
   const admin = createAdminClient();
 
   // Verify ownership
-  const { data: client } = await admin
-    .from("clients")
-    .select("id, vault_subscription_status")
-    .eq("profile_id", user.id)
-    .single();
+  const { data: client } = await clientRepo.findIdAndSubByProfile(admin, user.id);
 
-  if (!client) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!client) return fail("Unauthorized", 401);
   if (client.vault_subscription_status !== "active") {
-    return NextResponse.json({ error: "Vault subscription required" }, { status: 403 });
+    return fail("Vault subscription required", 403);
   }
 
-  const { data: item } = await admin
-    .from("vault_items")
-    .select("client_id, data")
-    .eq("id", itemId)
-    .single();
+  const { data: item } = await vaultItemRepo.getOwnerAndData(admin, itemId);
 
   if (!item || item.client_id !== client.id) {
-    return NextResponse.json({ error: "Not found" }, { status: 404 });
+    return fail("Not found", 404);
   }
 
   const itemData = item.data as Record<string, unknown>;
   const storagePath = itemData?.storage_path as string | null;
-  if (!storagePath) return NextResponse.json({ error: "No file attached" }, { status: 404 });
+  if (!storagePath) return fail("No file attached", 404);
 
   const { data: signedUrl } = await admin.storage
     .from("documents")
     .createSignedUrl(storagePath, 3600);
 
   if (!signedUrl?.signedUrl) {
-    return NextResponse.json({ error: "Could not generate download link" }, { status: 500 });
+    return fail("Could not generate download link", 500);
   }
 
-  return NextResponse.json({ url: signedUrl.signedUrl });
-}
+  return ok({ url: signedUrl.signedUrl });
+});

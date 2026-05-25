@@ -18,7 +18,8 @@
     "test:db:reset:shared": "TEST_MODE=1 TEST_ALLOW_SHARED_DB=1 tsx scripts/test-db-reset.ts",
     "test:db:seed:shared": "TEST_MODE=1 TEST_ALLOW_SHARED_DB=1 tsx scripts/test-db-seed.ts",
     "crypto:vectors:check": "tsx scripts/generate-crypto-vectors.ts --check",
-    "crypto:vectors:generate": "tsx scripts/generate-crypto-vectors.ts"
+    "crypto:vectors:generate": "tsx scripts/generate-crypto-vectors.ts",
+    "db:types": "supabase gen types typescript --linked > types/db.generated.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.80.0",

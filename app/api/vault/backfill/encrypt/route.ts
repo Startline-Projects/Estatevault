@@ -1,9 +1,15 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/api/auth";
 import { b64decode, bytesToBytea, validateEnvelope } from "@/lib/api/crypto";
 import { apiRateLimit } from "@/lib/rate-limit";
+import { withRoute } from "@/lib/api/route";
+import { ok, fail } from "@/lib/api/response";
+import * as clientRepo from "@/lib/repos/server/clientRepo";
+import * as vaultItemRepo from "@/lib/repos/server/vaultItemRepo";
+import * as trusteeRepo from "@/lib/repos/server/trusteeRepo";
+import * as farewellRepo from "@/lib/repos/server/farewellRepo";
 
 export const runtime = "nodejs";
 
@@ -31,22 +37,22 @@ function decodeOrFail(s: string, expectedLen?: number): Uint8Array {
   return b;
 }
 
-export async function POST(req: NextRequest) {
+export const POST = withRoute(async (req: NextRequest) => {
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!user) return fail("Unauthorized", 401);
 
   const rl = await apiRateLimit.limit(`backfill-encrypt:${user.id}`);
-  if (!rl.success) return NextResponse.json({ error: "rate limited" }, { status: 429 });
+  if (!rl.success) return fail("rate limited", 429);
 
   let body: unknown;
-  try { body = await req.json(); } catch { return NextResponse.json({ error: "bad json" }, { status: 400 }); }
+  try { body = await req.json(); } catch { return fail("bad json", 400); }
   const parsed = Schema.safeParse(body);
-  if (!parsed.success) return NextResponse.json({ error: "invalid payload", details: parsed.error.flatten() }, { status: 400 });
+  if (!parsed.success) return fail("invalid payload", 400, { details: parsed.error.flatten() });
 
   const admin = createAdminClient();
-  const { data: client } = await admin.from("clients").select("id").eq("profile_id", user.id).single();
-  if (!client) return NextResponse.json({ error: "no client" }, { status: 400 });
+  const { data: client } = await clientRepo.getIdByProfile(admin, user.id);
+  if (!client) return fail("no client", 400);
 
   const updated: string[] = [];
   const failed: { id: string; error: string }[] = [];
@@ -72,12 +78,7 @@ export async function POST(req: NextRequest) {
           update.label = null;
           update.data = null;
           // Idempotent guard: only update if ciphertext is still NULL + row owned by client.
-          const { error, count } = await admin
-            .from("vault_items")
-            .update(update, { count: "exact" })
-            .eq("id", row.id)
-            .eq("client_id", client.id)
-            .is("ciphertext", null);
+          const { error, count } = await vaultItemRepo.encryptRow(admin, row.id, client.id, update);
           if (error) throw new Error(error.message);
           if ((count ?? 0) === 0) throw new Error("row already backfilled or not owned");
           break;
@@ -87,12 +88,7 @@ export async function POST(req: NextRequest) {
           update.trustee_name = "";
           update.trustee_email = "";
           update.trustee_relationship = "";
-          const { error, count } = await admin
-            .from("vault_trustees")
-            .update(update, { count: "exact" })
-            .eq("id", row.id)
-            .eq("client_id", client.id)
-            .is("ciphertext", null);
+          const { error, count } = await trusteeRepo.encryptRow(admin, row.id, client.id, update);
           if (error) throw new Error(error.message);
           if ((count ?? 0) === 0) throw new Error("row already backfilled or not owned");
           break;
@@ -101,12 +97,7 @@ export async function POST(req: NextRequest) {
           if (row.recipientBlind) update.recipient_blind = bytesToBytea(decodeOrFail(row.recipientBlind, 32));
           update.title = "";
           update.recipient_email = "";
-          const { error, count } = await admin
-            .from("farewell_messages")
-            .update(update, { count: "exact" })
-            .eq("id", row.id)
-            .eq("client_id", client.id)
-            .is("ciphertext", null);
+          const { error, count } = await farewellRepo.encryptRow(admin, row.id, client.id, update);
           if (error) throw new Error(error.message);
           if ((count ?? 0) === 0) throw new Error("row already backfilled or not owned");
           break;
@@ -124,5 +115,5 @@ export async function POST(req: NextRequest) {
     metadata: { table: parsed.data.table, updated: updated.length, failed: failed.length },
   }).then(() => undefined, () => undefined);
 
-  return NextResponse.json({ updated, failed });
-}
+  return ok({ updated, failed });
+});

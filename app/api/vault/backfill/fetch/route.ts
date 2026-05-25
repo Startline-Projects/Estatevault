@@ -1,8 +1,14 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/api/auth";
 import { apiRateLimit } from "@/lib/rate-limit";
+import { withRoute } from "@/lib/api/route";
+import { ok, fail } from "@/lib/api/response";
+import * as clientRepo from "@/lib/repos/server/clientRepo";
+import * as vaultItemRepo from "@/lib/repos/server/vaultItemRepo";
+import * as trusteeRepo from "@/lib/repos/server/trusteeRepo";
+import * as farewellRepo from "@/lib/repos/server/farewellRepo";
 
 export const runtime = "nodejs";
 
@@ -11,65 +17,43 @@ const Schema = z.object({
   limit: z.coerce.number().int().min(1).max(100).default(50),
 });
 
-export async function GET(req: NextRequest) {
+export const GET = withRoute(async (req: NextRequest) => {
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!user) return fail("Unauthorized", 401);
 
   const rl = await apiRateLimit.limit(`backfill-fetch:${user.id}`);
-  if (!rl.success) return NextResponse.json({ error: "rate limited" }, { status: 429 });
+  if (!rl.success) return fail("rate limited", 429);
 
   const url = new URL(req.url);
   const parsed = Schema.safeParse({
     table: url.searchParams.get("table"),
     limit: url.searchParams.get("limit") ?? undefined,
   });
-  if (!parsed.success) return NextResponse.json({ error: "invalid query" }, { status: 400 });
+  if (!parsed.success) return fail("invalid query", 400);
 
   const admin = createAdminClient();
-  const { data: client } = await admin.from("clients").select("id").eq("profile_id", user.id).single();
-  if (!client) return NextResponse.json({ rows: [] });
+  const { data: client } = await clientRepo.getIdByProfile(admin, user.id);
+  if (!client) return ok({ rows: [] });
 
   let rows: unknown[] = [];
   switch (parsed.data.table) {
     case "vault_items": {
-      const { data } = await admin
-        .from("vault_items")
-        .select("id, category, label, data")
-        .eq("client_id", client.id)
-        .is("ciphertext", null)
-        .not("label", "is", null)
-        .eq("auto_generated", false)
-        .order("created_at", { ascending: true })
-        .limit(parsed.data.limit);
+      const { data } = await vaultItemRepo.fetchUnencrypted(admin, client.id, parsed.data.limit);
       rows = data ?? [];
       break;
     }
     case "vault_trustees": {
-      const { data } = await admin
-        .from("vault_trustees")
-        .select("id, trustee_name, trustee_email, trustee_relationship")
-        .eq("client_id", client.id)
-        .is("ciphertext", null)
-        .neq("trustee_email", "")
-        .order("created_at", { ascending: true })
-        .limit(parsed.data.limit);
+      const { data } = await trusteeRepo.fetchUnencrypted(admin, client.id, parsed.data.limit);
       rows = data ?? [];
       break;
     }
     case "farewell_messages": {
-      const { data } = await admin
-        .from("farewell_messages")
-        .select("id, title, recipient_email")
-        .eq("client_id", client.id)
-        .is("ciphertext", null)
-        .neq("title", "")
-        .order("created_at", { ascending: true })
-        .limit(parsed.data.limit);
+      const { data } = await farewellRepo.fetchUnencrypted(admin, client.id, parsed.data.limit);
       rows = data ?? [];
       break;
     }
   }
 
-  return NextResponse.json({ rows });
-}
+  return ok({ rows });
+});

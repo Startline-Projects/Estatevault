@@ -1,27 +1,28 @@
-import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/api/auth";
+import { withRoute } from "@/lib/api/route";
+import { ok, fail } from "@/lib/api/response";
+import * as clientRepo from "@/lib/repos/server/clientRepo";
+import * as vaultItemRepo from "@/lib/repos/server/vaultItemRepo";
+import * as trusteeRepo from "@/lib/repos/server/trusteeRepo";
+import * as farewellRepo from "@/lib/repos/server/farewellRepo";
 
 export const runtime = "nodejs";
 
-export async function GET() {
+export const GET = withRoute(async () => {
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!user) return fail("Unauthorized", 401);
 
   const admin = createAdminClient();
-  const { data: client } = await admin
-    .from("clients")
-    .select("id, crypto_setup_at, crypto_backfill_complete_at")
-    .eq("profile_id", user.id)
-    .single();
-  if (!client) return NextResponse.json({ error: "no client" }, { status: 404 });
+  const { data: client } = await clientRepo.getBackfillStateByProfile(admin, user.id);
+  if (!client) return fail("no client", 404);
 
   // User hasn't bootstrapped E2EE yet (no PIN) — nothing to backfill. Auto-generated
   // server-side rows (will/trust PDFs from Stripe webhook + doc processor) live as
   // plaintext intentionally and should not surface the banner.
   if (!client.crypto_setup_at) {
-    return NextResponse.json({
+    return ok({
       bootstrapped: false,
       completedAt: null,
       complete: true,
@@ -31,22 +32,9 @@ export async function GET() {
   }
 
   const counts = await Promise.all([
-    admin.from("vault_items")
-      .select("id", { count: "exact", head: true })
-      .eq("client_id", client.id)
-      .is("ciphertext", null)
-      .not("label", "is", null)
-      .eq("auto_generated", false),
-    admin.from("vault_trustees")
-      .select("id", { count: "exact", head: true })
-      .eq("client_id", client.id)
-      .is("ciphertext", null)
-      .neq("trustee_email", ""),
-    admin.from("farewell_messages")
-      .select("id", { count: "exact", head: true })
-      .eq("client_id", client.id)
-      .is("ciphertext", null)
-      .neq("title", ""),
+    vaultItemRepo.countUnencrypted(admin, client.id),
+    trusteeRepo.countUnencrypted(admin, client.id),
+    farewellRepo.countUnencrypted(admin, client.id),
   ]);
 
   const remaining = {
@@ -59,17 +47,14 @@ export async function GET() {
 
   // Auto-mark client complete the first time we observe zero remaining.
   if (complete && client.crypto_setup_at && !client.crypto_backfill_complete_at) {
-    await admin
-      .from("clients")
-      .update({ crypto_backfill_complete_at: new Date().toISOString() })
-      .eq("id", client.id);
+    await clientRepo.markBackfillComplete(admin, client.id);
   }
 
-  return NextResponse.json({
+  return ok({
     bootstrapped: !!client.crypto_setup_at,
     completedAt: client.crypto_backfill_complete_at,
     complete,
     remaining,
     totalRemaining,
   });
-}
+});
