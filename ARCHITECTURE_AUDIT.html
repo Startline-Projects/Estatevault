@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EstateVault — Health Check (Plain English)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --navy:#1C3557;
+    --navy-soft:#27406b;
+    --gold:#C9A84C;
+    --gold-soft:#e7d49a;
+    --charcoal:#2D2D2D;
+    --white:#FFFFFF;
+    --bg:#f4f6f9;
+    --line:#e3e8f0;
+    --good:#1f8a5b;
+    --warn:#c98a1e;
+    --bad:#c0392b;
+    --muted:#5f6b7c;
+  }
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    margin:0;
+    font-family:'Inter',system-ui,sans-serif;
+    background:var(--bg);
+    color:var(--charcoal);
+    line-height:1.7;
+    font-size:17px;
+  }
+  a{color:var(--navy);}
+
+  /* ---------- Layout ---------- */
+  .wrap{max-width:980px;margin:0 auto;padding:0 24px;}
+  .layout{display:flex;gap:32px;max-width:1240px;margin:0 auto;padding:0 24px;}
+  main{flex:1;min-width:0;}
+
+  /* ---------- Hero ---------- */
+  header.hero{
+    background:linear-gradient(135deg,var(--navy) 0%,#13243d 100%);
+    color:var(--white);
+    padding:56px 0 64px;
+    border-bottom:4px solid var(--gold);
+  }
+  .hero .tag{
+    display:inline-block;letter-spacing:.18em;text-transform:uppercase;
+    font-size:12px;font-weight:600;color:var(--gold-soft);margin-bottom:14px;
+  }
+  .hero h1{margin:0;font-size:40px;font-weight:800;line-height:1.1;}
+  .hero p.sub{margin:14px 0 0;font-size:19px;color:#cdd6e4;max-width:700px;line-height:1.6;}
+  .hero .meta{margin-top:26px;display:flex;flex-wrap:wrap;gap:10px;}
+  .hero .meta span{
+    background:rgba(255,255,255,.08);border:1px solid rgba(201,168,76,.35);
+    padding:6px 14px;border-radius:999px;font-size:13px;color:#e7ecf4;
+  }
+
+  /* ---------- Verdict banner ---------- */
+  .verdict{
+    margin:-32px auto 0;max-width:980px;
+    background:var(--white);border:1px solid var(--line);
+    border-left:6px solid var(--gold);
+    border-radius:14px;padding:24px 28px;
+    box-shadow:0 12px 30px rgba(28,53,87,.10);
+    position:relative;
+  }
+  .verdict .label{
+    font-size:12px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;
+    color:var(--gold);margin-bottom:8px;
+  }
+  .verdict p{margin:0;font-size:19px;color:var(--navy);font-weight:500;line-height:1.6;}
+  .verdict strong{color:var(--charcoal);}
+
+  /* ---------- Sections ---------- */
+  section{
+    background:var(--white);border:1px solid var(--line);border-radius:14px;
+    padding:30px 34px;margin:24px 0;
+    box-shadow:0 4px 14px rgba(28,53,87,.04);
+  }
+  section h2{
+    font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:var(--gold);
+    margin:0 0 4px;font-weight:700;
+  }
+  section h2 + .h{font-size:27px;font-weight:800;color:var(--navy);margin:0 0 8px;line-height:1.2;}
+  section .lead{font-size:18px;color:var(--muted);margin:0 0 18px;}
+  section h3{font-size:19px;color:var(--navy);font-weight:700;margin:24px 0 8px;}
+  p{margin:12px 0;}
+  ul{margin:12px 0;padding-left:22px;}
+  li{margin:9px 0;}
+  strong{color:var(--navy);}
+  .plain{background:#fafbfd;border:1px dashed #cdd9ec;border-radius:10px;padding:14px 18px;margin:14px 0;font-size:16px;}
+  .plain b{color:var(--navy);}
+
+  /* ---------- Score cards ---------- */
+  .scores{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;margin:18px 0;}
+  .score-card{
+    border:1px solid var(--line);border-radius:12px;padding:16px;background:#fafbfd;
+    display:flex;flex-direction:column;gap:6px;
+  }
+  .score-card .dim{font-size:14px;color:var(--charcoal);font-weight:600;}
+  .score-card .plainname{font-size:12.5px;color:var(--muted);}
+  .score-card .num{font-size:30px;font-weight:800;line-height:1;}
+  .bar{height:7px;border-radius:5px;background:#e7ecf2;overflow:hidden;margin-top:4px;}
+  .bar > i{display:block;height:100%;border-radius:5px;}
+  .overall{
+    margin-top:18px;background:var(--navy);color:#fff;border-radius:12px;padding:20px 24px;
+    display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;
+  }
+  .overall .big{font-size:42px;font-weight:800;color:var(--gold-soft);}
+  .overall .txt{font-size:16px;color:#d6deea;max-width:620px;}
+
+  /* ---------- Tables ---------- */
+  table{width:100%;border-collapse:collapse;margin:16px 0;font-size:15.5px;}
+  th{
+    background:var(--navy);color:#fff;text-align:left;padding:11px 14px;font-weight:600;
+    font-size:13.5px;letter-spacing:.02em;
+  }
+  th:first-child{border-top-left-radius:9px;}
+  th:last-child{border-top-right-radius:9px;}
+  td{padding:11px 14px;border-bottom:1px solid var(--line);vertical-align:top;}
+  tr:nth-child(even) td{background:#fafbfd;}
+  tr:last-child td{border-bottom:none;}
+
+  /* ---------- Badges ---------- */
+  .badge{display:inline-block;padding:3px 10px;border-radius:999px;font-size:12.5px;font-weight:700;letter-spacing:.02em;}
+  .b-good{background:#e3f5ec;color:var(--good);}
+  .b-warn{background:#fbf0d8;color:var(--warn);}
+  .b-bad{background:#fbe6e3;color:var(--bad);}
+  .b-info{background:#e6edf7;color:var(--navy);}
+
+  /* ---------- Callouts ---------- */
+  .callout{
+    border-radius:12px;padding:18px 22px;margin:18px 0;border:1px solid;font-size:16px;
+  }
+  .callout .ttl{font-weight:700;margin-bottom:6px;display:flex;align-items:center;gap:8px;font-size:16.5px;}
+  .c-bad{background:#fdf1ef;border-color:#f3cfc8;color:#7a241a;}
+  .c-bad .ttl{color:var(--bad);}
+  .c-warn{background:#fdf8ec;border-color:#f0e0bd;color:#7a5a14;}
+  .c-warn .ttl{color:var(--warn);}
+  .c-good{background:#eef8f2;border-color:#cce8d8;color:#1c5a3c;}
+  .c-good .ttl{color:var(--good);}
+  .c-key{background:#eef2f9;border-color:#cdd9ec;color:#1f3354;}
+  .c-key .ttl{color:var(--navy);}
+
+  /* ---------- Analogy box ---------- */
+  .analogy{
+    background:linear-gradient(135deg,#fbf6e8,#fdfaf0);border:1px solid #ecdcae;
+    border-radius:12px;padding:20px 24px;margin:18px 0;
+  }
+  .analogy .ttl{color:#8a6d1e;font-weight:800;font-size:15px;letter-spacing:.04em;text-transform:uppercase;margin-bottom:6px;}
+  .analogy p{margin:8px 0;color:#5d4d24;font-size:16.5px;}
+
+  /* ---------- Domino / cascade visual ---------- */
+  .cascade{display:flex;align-items:stretch;gap:12px;flex-wrap:wrap;margin:18px 0;}
+  .cascade .col{flex:1;min-width:260px;border-radius:12px;padding:18px 20px;border:1px solid;}
+  .cascade .now{background:#fdf1ef;border-color:#f3cfc8;}
+  .cascade .goal{background:#eef8f2;border-color:#cce8d8;}
+  .cascade h4{margin:0 0 10px;font-size:16px;}
+  .cascade .now h4{color:var(--bad);}
+  .cascade .goal h4{color:var(--good);}
+  .chip{display:block;background:#fff;border:1px solid var(--line);border-radius:8px;padding:8px 12px;margin:7px 0;font-size:14.5px;}
+  .chip .copy{color:var(--bad);font-weight:700;}
+  .chip .one{color:var(--good);font-weight:700;}
+
+  /* ---------- Decision block ---------- */
+  .decision{
+    background:linear-gradient(135deg,var(--navy),#16294a);color:#fff;border-radius:16px;
+    padding:34px;margin:24px 0;border:1px solid #2a4063;
+  }
+  .decision h2{color:var(--gold-soft);}
+  .decision .pick{font-size:28px;font-weight:800;color:#fff;margin:6px 0 4px;line-height:1.25;}
+  .decision .pick .x{color:var(--gold);}
+  .decision p{color:#d8e0ec;}
+  .decision .opts{display:grid;gap:12px;margin-top:20px;}
+  .decision .opt{
+    background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);
+    border-radius:10px;padding:14px 18px;font-size:15.5px;color:#d8e0ec;
+  }
+  .decision .opt b{color:#fff;}
+  .decision .opt.chosen{border-color:var(--gold);background:rgba(201,168,76,.12);}
+
+  /* ---------- Phase timeline ---------- */
+  .phase{border-left:3px solid var(--gold);padding:4px 0 4px 22px;margin:18px 0;position:relative;}
+  .phase::before{
+    content:"";position:absolute;left:-9px;top:6px;width:15px;height:15px;border-radius:50%;
+    background:var(--gold);border:3px solid #fff;box-shadow:0 0 0 1px var(--gold);
+  }
+  .phase h4{margin:0 0 8px;color:var(--navy);font-size:18px;font-weight:700;}
+  .phase .when{font-size:12px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);font-weight:600;}
+
+  /* ---------- TOC sidebar ---------- */
+  nav.toc{
+    width:240px;flex-shrink:0;position:sticky;top:24px;align-self:flex-start;
+    background:var(--white);border:1px solid var(--line);border-radius:14px;padding:18px 16px;
+    box-shadow:0 4px 14px rgba(28,53,87,.04);
+  }
+  nav.toc .t{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--gold);font-weight:700;margin-bottom:10px;}
+  nav.toc a{display:block;color:var(--charcoal);text-decoration:none;font-size:14px;padding:6px 8px;border-radius:7px;}
+  nav.toc a:hover{background:#f1f4f9;color:var(--navy);}
+  nav.toc a span{color:var(--gold);font-weight:700;margin-right:7px;}
+
+  footer{text-align:center;color:var(--muted);font-size:13px;padding:40px 0 60px;}
+  .pill-row{display:flex;flex-wrap:wrap;gap:8px;margin:14px 0;}
+
+  @media (max-width:1100px){nav.toc{display:none;}.layout{display:block;}}
+  @media (max-width:640px){
+    .hero h1{font-size:30px;}
+    section{padding:22px 18px;}
+    .overall{flex-direction:column;align-items:flex-start;}
+  }
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="wrap">
+    <span class="tag">Plain-English Health Check</span>
+    <h1>EstateVault — How Healthy Is the System?</h1>
+    <p class="sub">A simple, jargon-free look at how your app is built behind the scenes: what's strong, what's risky, why bugs keep coming back, and what to do about it. Written so anyone can follow — no tech background needed.</p>
+    <div class="meta">
+      <span>Reviewed the whole codebase</span>
+      <span>No tech knowledge required</span>
+      <span>Checked: May 22, 2026</span>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+  <div class="verdict">
+    <div class="label">The Short Version</div>
+    <p>Your app works, and some parts are built really well. But the way the code is organised is <strong>messy in the middle</strong> — like a busy restaurant where every waiter has their own set of keys and their own recipe for the same dish. That's exactly why <strong>fixing one thing often breaks another</strong>. Good news: you do <strong>not</strong> need to throw anything away or switch tools. You need to tidy and organise. This page explains it all.</p>
+  </div>
+</div>
+
+<div class="layout">
+  <nav class="toc">
+    <div class="t">On this page</div>
+    <a href="#score"><span>1</span>The Report Card</a>
+    <a href="#cascade"><span>2</span>Why bugs keep coming back</a>
+    <a href="#security"><span>3</span>Is it secure?</a>
+    <a href="#good"><span>4</span>What's built well</a>
+    <a href="#messy"><span>5</span>Where it's messy</a>
+    <a href="#grow"><span>6</span>Will it handle growth?</a>
+    <a href="#rec"><span>7</span>The recommendation</a>
+    <a href="#plan"><span>8</span>The fix-it plan</a>
+  </nav>
+
+  <main>
+
+  <!-- 1. SCORE -->
+  <section id="score">
+    <h2>Part 1</h2>
+    <div class="h">The Report Card</div>
+    <p class="lead">Five simple grades, out of 10. Higher is better.</p>
+    <div class="scores">
+      <div class="score-card">
+        <span class="dim">Can it grow?</span>
+        <span class="plainname">Handling lots more users</span>
+        <span class="num" style="color:var(--warn)">5<small style="font-size:15px;color:var(--muted)">/10</small></span>
+        <div class="bar"><i style="width:50%;background:var(--warn)"></i></div>
+      </div>
+      <div class="score-card">
+        <span class="dim">Easy to maintain?</span>
+        <span class="plainname">Making changes without pain</span>
+        <span class="num" style="color:var(--bad)">4<small style="font-size:15px;color:var(--muted)">/10</small></span>
+        <div class="bar"><i style="width:40%;background:var(--bad)"></i></div>
+      </div>
+      <div class="score-card">
+        <span class="dim">Is it tidy?</span>
+        <span class="plainname">Each part has a clear job</span>
+        <span class="num" style="color:var(--bad)">3<small style="font-size:15px;color:var(--muted)">/10</small></span>
+        <div class="bar"><i style="width:30%;background:var(--bad)"></i></div>
+      </div>
+      <div class="score-card">
+        <span class="dim">Is it safe?</span>
+        <span class="plainname">Protecting customer data</span>
+        <span class="num" style="color:var(--warn)">5<small style="font-size:15px;color:var(--muted)">/10</small></span>
+        <div class="bar"><i style="width:50%;background:var(--warn)"></i></div>
+      </div>
+      <div class="score-card">
+        <span class="dim">Is complexity in the right place?</span>
+        <span class="plainname">Hard parts kept under control</span>
+        <span class="num" style="color:var(--bad)">4<small style="font-size:15px;color:var(--muted)">/10</small></span>
+        <div class="bar"><i style="width:40%;background:var(--bad)"></i></div>
+      </div>
+    </div>
+    <div class="overall">
+      <div class="big">4.3 / 10</div>
+      <div class="txt">Not broken — and the hardest, most valuable parts (like data encryption) are genuinely excellent. The weak spot is <strong style="color:#fff">how the everyday code is organised</strong>. That's fixable without a rebuild.</div>
+    </div>
+  </section>
+
+  <!-- 2. CASCADE — the new section -->
+  <section id="cascade">
+    <h2>Part 2</h2>
+    <div class="h">Why does fixing one bug break another?</div>
+    <p class="lead">This is the most important page for you. It explains the frustration you keep feeling.</p>
+
+    <p>Right now the same instructions are <strong>copied into hundreds of different files</strong> instead of being written once in a shared place. When you fix a problem, your developer fixes <em>one copy</em> — but the other copies still have the old, broken version. So the bug seems to "come back" or "move somewhere else." It didn't move. It was always there, in a copy nobody touched.</p>
+
+    <div class="analogy">
+      <div class="ttl">🍔 Think of it like a restaurant</div>
+      <p>Imagine every waiter wrote down the burger recipe on their own notepad. One day you change the recipe — less salt. You tell <b>one</b> waiter. He updates his notepad. The other 50 waiters never got the memo, so half the burgers still come out salty.</p>
+      <p>Customers complain, you "fix" another waiter, and the problem seems endless. <b>The real fix is to have one recipe card on the wall that everyone reads from.</b> Change it once, and every burger changes instantly.</p>
+    </div>
+
+    <p>Your app is the restaurant with notepads. We counted the proof during the review:</p>
+    <ul>
+      <li><strong>The same database instructions are written out about 600 separate times</strong> across the app, instead of once in a shared spot.</li>
+      <li><strong>Key business rules live in two places at once.</strong> For example, the rule that splits revenue between you and your partners exists in two different files — change one, forget the other, and the numbers quietly disagree.</li>
+      <li><strong>There are three different ways the app checks "is this user allowed in?"</strong> — and some doors have no check at all. Fixing security in one place doesn't fix the others.</li>
+      <li><strong>There's no single master blueprint of the database.</strong> Its design is spread across 45 separate change-files, so it's easy for one change to clash with an assumption made somewhere else.</li>
+      <li><strong>There's almost no automatic safety net.</strong> Nothing re-checks the whole app after a change, so a break stays invisible until a real customer hits it.</li>
+    </ul>
+
+    <div class="cascade">
+      <div class="col now">
+        <h4>● Today — the same rule, copied everywhere</h4>
+        <span class="chip">Checkout page <span class="copy">— its own copy</span></span>
+        <span class="chip">Payment handler <span class="copy">— its own copy</span></span>
+        <span class="chip">Partner dashboard <span class="copy">— its own copy</span></span>
+        <span class="chip">…and ~600 more spots</span>
+        <p style="font-size:14px;color:#7a241a;margin:10px 0 0;">Fix one → the rest stay broken. Bugs feel never-ending.</p>
+      </div>
+      <div class="col goal">
+        <h4>● Goal — one shared rule everyone uses</h4>
+        <span class="chip">One central rulebook <span class="one">✓ the single source</span></span>
+        <span class="chip">Checkout page → reads the rulebook</span>
+        <span class="chip">Payment handler → reads the rulebook</span>
+        <span class="chip">Partner dashboard → reads the rulebook</span>
+        <p style="font-size:14px;color:#1c5a3c;margin:10px 0 0;">Fix once → fixed everywhere. Bugs stop multiplying.</p>
+      </div>
+    </div>
+
+    <h3>How often will this bite you — and how hard?</h3>
+    <p>It depends entirely on <strong>what kind of change</strong> you make. Some changes are perfectly safe. Others are landmines. Here's the honest breakdown:</p>
+    <table>
+      <tr><th>What you want to change</th><th>How risky</th><th>Why</th></tr>
+      <tr><td>Add or rename something in the database</td><td><span class="badge b-bad">Very high</span></td><td>About 600 spots in the code refer to the database directly. Miss one and it quietly breaks.</td></tr>
+      <tr><td>Change a business rule (a price, a revenue split, who's allowed in)</td><td><span class="badge b-bad">High</span></td><td>The same rule is copied in two or more files. Fix one, forget the other → the bug "comes back."</td></tr>
+      <tr><td>Touch logins or permissions</td><td><span class="badge b-bad">High</span></td><td>Three different ways of checking, plus some pages with no check. No single place to fix it.</td></tr>
+      <tr><td>Edit how documents are made</td><td><span class="badge b-warn">Medium-high</span></td><td>It's one giant file doing five jobs. Changing one job can knock over another.</td></tr>
+      <tr><td>Add a brand-new, separate feature</td><td><span class="badge b-good">Low</span></td><td>New code that doesn't touch the old code. Safe.</td></tr>
+      <tr><td>Change how something looks (colors, spacing)</td><td><span class="badge b-good">Low</span></td><td>Appearance only. Doesn't touch the inner workings. Safe.</td></tr>
+    </table>
+
+    <div class="callout c-warn">
+      <div class="ttl">⏱ Roughly how often</div>
+      For changes that touch shared things (data, money, permissions), expect something to break <strong>about 1 in every 3 times</strong> — <em>and</em> the break usually shows up in a <strong>different place</strong> than the one you edited. That's why it feels random and hard to track down. It isn't random; it's the copies.
+    </div>
+
+    <div style="display:flex;gap:14px;flex-wrap:wrap;margin:16px 0;">
+      <div style="flex:1;min-width:240px;background:#eef8f2;border:1px solid #cce8d8;border-radius:10px;padding:16px 18px;">
+        <div style="color:var(--good);font-weight:700;margin-bottom:6px;">✅ Safe to change today</div>
+        <ul style="margin:0;padding-left:20px;font-size:15px;">
+          <li>How things look (styling)</li>
+          <li>Brand-new, self-contained features</li>
+          <li>Small tweaks to a single page</li>
+        </ul>
+      </div>
+      <div style="flex:1;min-width:240px;background:#fdf1ef;border:1px solid #f3cfc8;border-radius:10px;padding:16px 18px;">
+        <div style="color:var(--bad);font-weight:700;margin-bottom:6px;">⚠️ Handle with care (test by hand)</div>
+        <ul style="margin:0;padding-left:20px;font-size:15px;">
+          <li>Orders &amp; payments</li>
+          <li>Revenue splits / pricing</li>
+          <li>Logins &amp; permissions</li>
+          <li>Document generation &amp; database structure</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="callout c-bad">
+      <div class="ttl">📈 If nothing changes</div>
+      It gets <strong>worse as you grow</strong>, not better. More features = more copies = more places to forget. New developers also take longer to get productive, because there's no master blueprint and no safety net to lean on.
+    </div>
+
+    <div class="callout c-good">
+      <div class="ttl">✓ How this gets handled — in plain terms</div>
+      <ul style="margin:6px 0 0;">
+        <li><strong>One shared rulebook.</strong> Move every important rule (pricing, who's allowed in, how documents are made) into <em>one</em> place the whole app reads from. Fix it once, it's fixed everywhere.</li>
+        <li><strong>One front desk.</strong> Make every request pass through a single security check, so a door can never be left unlocked by accident.</li>
+        <li><strong>An automatic safety net (tests).</strong> Set up checks that the computer runs after every change. If a fix accidentally breaks something else, the computer catches it <em>before</em> your customers do.</li>
+        <li><strong>One master blueprint</strong> of the database, so changes can't quietly clash.</li>
+      </ul>
+      <p style="margin:12px 0 0;">The "fix-it plan" in <a href="#plan">Part 8</a> is exactly this work, in order.</p>
+    </div>
+  </section>
+
+  <!-- 3. SECURITY -->
+  <section id="security">
+    <h2>Part 3</h2>
+    <div class="h">Is it secure?</div>
+    <p class="lead">Mostly yes — but it's protected in a confusing, double way that's easy to get wrong.</p>
+
+    <div class="analogy">
+      <div class="ttl">🏦 The two-guards problem</div>
+      <p>Picture a bank with two security systems: a guard at the vault door, <b>and</b> a guard at the building entrance. That's smart — except in your app, most staff skip the vault guard entirely by using a <b>master key</b>. So the vault guard is mostly for show, and all the real protection rests on whichever entrance guard happened to be on duty for that door.</p>
+      <p>If <b>one</b> entrance is left without a guard, anyone walks straight in. We found some doors like that.</p>
+    </div>
+
+    <ul>
+      <li>The app has a built-in database guard (called "RLS") — a good idea. But about <strong>two out of three requests bypass it</strong> using the master key, so it isn't really doing its job.</li>
+      <li>Because of that, safety depends on a hand-written check on each page — and those checks are inconsistent. A few pages have <strong>no check at all</strong>.</li>
+      <li>There's also one risky leftover tool that can run <strong>any command</strong> on the database. It needs to be locked down or removed right away. (Flagged in the plan as the very first task.)</li>
+    </ul>
+
+    <div class="callout c-warn">
+      <div class="ttl">What to do</div>
+      Pick <b>one</b> place to be the real guard (the "front desk" from Part 2), make every door use it, and keep the database guard switched on as a backup. Belt <em>and</em> braces — but with the belt actually buckled.
+    </div>
+  </section>
+
+  <!-- 4. GOOD -->
+  <section id="good">
+    <h2>Part 4</h2>
+    <div class="h">What's built really well</div>
+    <p class="lead">Credit where it's due — these parts are strong and worth keeping.</p>
+    <table>
+      <tr><th>Part</th><th>How good</th><th>In plain words</th></tr>
+      <tr><td>Keeping customers separate</td><td><span class="badge b-good">Strong</span></td><td>Each partner firm's data is properly walled off from the others. The right design for this kind of business.</td></tr>
+      <tr><td>Data encryption (privacy)</td><td><span class="badge b-good">Excellent</span></td><td>Sensitive documents are scrambled so that even you can't read them — only the customer can. This is genuinely advanced, expert-level work. <b>Do not touch it.</b></td></tr>
+      <tr><td>Database speed setup</td><td><span class="badge b-good">Solid</span></td><td>The database is set up to find things quickly. A couple of small tune-ups needed, nothing major.</td></tr>
+      <tr><td>Live updates on screen</td><td><span class="badge b-good">Good</span></td><td>Buttons appear the instant a document is ready, with no page refresh — and it's done in a way that scales.</td></tr>
+    </table>
+    <div class="callout c-good">
+      <div class="ttl">✓ The takeaway</div>
+      The <b>hardest</b> things to get right are already right. The work ahead is housekeeping, not heart surgery.
+    </div>
+  </section>
+
+  <!-- 5. MESSY -->
+  <section id="messy">
+    <h2>Part 5</h2>
+    <div class="h">Where it's messy (the housekeeping list)</div>
+    <p class="lead">The five biggest sources of confusion and repeat bugs.</p>
+    <table>
+      <tr><th>#</th><th>The mess</th><th>Why it causes pain</th></tr>
+      <tr><td>1</td><td><strong>The "master key" is used everywhere</strong></td><td>Most pages skip the built-in guard. One forgotten check = a wide-open door. The biggest hidden risk.</td></tr>
+      <tr><td>2</td><td><strong>Three different security checks</strong></td><td>No one can tell at a glance whether a page is protected. Easy to miss one.</td></tr>
+      <tr><td>3</td><td><strong>One giant "do everything" file</strong></td><td>The document-making code is one huge 500-line file doing five jobs. Hard to change safely.</td></tr>
+      <tr><td>4</td><td><strong>No master blueprint of the database</strong></td><td>Design spread across 45 files. Slows down every change and invites clashes.</td></tr>
+      <tr><td>5</td><td><strong>Weak input checking</strong></td><td>Many pages don't double-check the data coming in, so bad data can sneak through and cause errors later.</td></tr>
+    </table>
+  </section>
+
+  <!-- 6. GROW -->
+  <section id="grow">
+    <h2>Part 6</h2>
+    <div class="h">Will it handle growth?</div>
+    <p class="lead">What happens as you go from today's traffic to 10× and 100× more users.</p>
+
+    <h3>Up to 10× more users &nbsp;<span class="badge b-good">Fine</span></h3>
+    <p>The system holds up. Two things break first and are easy to fix: a counter that limits abuse doesn't work properly across servers, and the document-making step can time out during busy spikes.</p>
+
+    <h3>Toward 100× more users &nbsp;<span class="badge b-warn">Needs prep</span></h3>
+    <ul>
+      <li><strong>Too many database connections.</strong> The app opens a fresh connection for nearly every request. At big scale this clogs up. Fixable with a standard setting.</li>
+      <li><strong>Document-making should run in the background.</strong> Right now customers wait while it happens live. It should be handed off to a "to-do queue" so the page stays fast. (The tool for this already exists in the code — it just needs to be used.)</li>
+      <li><strong>Possible double orders.</strong> If a customer double-clicks or a payment retries, you could accidentally create two orders. Worth a safeguard.</li>
+    </ul>
+    <div class="callout c-key">
+      <div class="ttl">Bottom line on growth</div>
+      No wall that stops you cold. A handful of known tune-ups, all on the fix-it list.
+    </div>
+  </section>
+
+  <!-- 7. RECOMMENDATION -->
+  <div class="decision" id="rec">
+    <h2>Part 7 — The Recommendation</h2>
+    <div class="pick">→ <span class="x">Tidy and organise what you have.</span> Don't switch tools, don't rebuild.</div>
+    <p style="margin-top:10px;">You picked good tools. The problem isn't the tools — it's that the code isn't organised. The fix is to <strong style="color:#fff">give the app one shared rulebook and one front desk</strong> (Part 2), inside what you already have. Cheaper, faster, and far less risky than starting over.</p>
+    <div class="opts">
+      <div class="opt"><b>✗ Leave it as-is.</b> Tempting, but the open doors and the repeat-bug problem are real and will get worse as you grow. Not safe to ignore.</div>
+      <div class="opt"><b>✗ Add a second, separate backend system now.</b> A popular "proper" move, but for you it's overkill today — it adds cost and moving parts to solve a tidiness problem that doesn't need it. Revisit later, only if you outgrow the current setup.</div>
+      <div class="opt"><b>✗ Switch away from your current platform.</b> Worst option. You'd throw away the excellent encryption and the solid customer-separation work and rebuild it from scratch — easily a wasted year, with no real upside.</div>
+      <div class="opt chosen"><b>✓ Organise the code you already have.</b> You don't have a tools problem. You have a "no shared rulebook" problem. Give the app a backbone. <em>This is the recommendation.</em></div>
+    </div>
+  </div>
+
+  <!-- 8. PLAN -->
+  <section id="plan">
+    <h2>Part 8</h2>
+    <div class="h">The fix-it plan</div>
+    <p class="lead">In order, safest-first. Each step can be done while the app stays live — no downtime for customers.</p>
+
+    <div class="phase">
+      <div class="when">Step 1 — this week</div>
+      <h4>Close the open doors</h4>
+      <ul>
+        <li>Lock down (or remove) the risky "run any command" tool — the single most urgent item.</li>
+        <li>Find every page with no security check and either protect it or confirm it's meant to be public.</li>
+        <li>Fix the abuse-limit counter so it works properly across servers.</li>
+      </ul>
+    </div>
+
+    <div class="phase">
+      <div class="when">Step 2 — weeks 1–2</div>
+      <h4>Build the one front desk</h4>
+      <ul>
+        <li>Make every page use the <em>same</em> security check, and add an automatic rule that won't let a new page skip it.</li>
+      </ul>
+    </div>
+
+    <div class="phase">
+      <div class="when">Step 3 — weeks 2–5</div>
+      <h4>Write the shared rulebook</h4>
+      <ul>
+        <li>Move the ~600 scattered copies and the duplicated business rules into <em>one</em> shared place. From now on, fix once = fixed everywhere. <strong>This is what stops the never-ending bugs.</strong></li>
+        <li>Break the giant "do everything" file into smaller, simpler pieces.</li>
+        <li>Move document-making into the background queue so pages stay fast.</li>
+      </ul>
+    </div>
+
+    <div class="phase">
+      <div class="when">Step 4 — weeks 4–6</div>
+      <h4>Tidy the database &amp; add the safety net</h4>
+      <ul>
+        <li>Keep the database guard on as a backup, give it a small speed tune-up, and create one master blueprint.</li>
+        <li>Add automatic tests so future changes get re-checked by the computer before they reach customers.</li>
+      </ul>
+    </div>
+
+    <div class="callout c-good">
+      <div class="ttl">✓ Keep, permanently</div>
+      Your current platform, the customer-separation design, the live updates, and especially the excellent data encryption. None of that needs replacing.
+    </div>
+  </section>
+
+  <!-- Verify -->
+  <section>
+    <div class="h" style="font-size:21px;">Two quick things to double-check</div>
+    <p style="margin-top:4px;color:var(--muted)">This review looked at the code. Two items depend on your live setup and should be confirmed by your developer:</p>
+    <div class="pill-row">
+      <span class="badge b-info">Is the risky "run any command" tool already locked down?</span>
+      <span class="badge b-info">Is the app behind a proper host (e.g. Vercel) so web addresses can't be faked?</span>
+    </div>
+  </section>
+
+  </main>
+</div>
+
+<footer>
+  EstateVault Health Check · Plain-English edition · May 22, 2026
+</footer>
+
+</body>
+</html>

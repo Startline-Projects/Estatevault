@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EstateVault — Architecture Audit (Technical)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --navy:#1C3557; --navy-soft:#27406b; --gold:#C9A84C; --gold-soft:#e7d49a;
+    --charcoal:#2D2D2D; --white:#FFFFFF; --bg:#eef1f5; --line:#dde3ec;
+    --good:#1f8a5b; --warn:#c98a1e; --bad:#c0392b; --muted:#5f6b7c;
+    --code-bg:#0f1f36;
+  }
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{margin:0;font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--charcoal);line-height:1.62;font-size:15.5px;}
+  a{color:var(--navy);}
+  code,pre,.mono{font-family:'JetBrains Mono',ui-monospace,Menlo,Consolas,monospace;}
+
+  .wrap{max-width:1000px;margin:0 auto;padding:0 24px;}
+  .layout{display:flex;gap:30px;max-width:1280px;margin:0 auto;padding:0 24px;}
+  main{flex:1;min-width:0;}
+
+  header.hero{background:linear-gradient(135deg,var(--navy) 0%,#0e1d33 100%);color:#fff;padding:48px 0 56px;border-bottom:4px solid var(--gold);}
+  .hero .tag{display:inline-block;letter-spacing:.18em;text-transform:uppercase;font-size:11.5px;font-weight:600;color:var(--gold-soft);margin-bottom:12px;}
+  .hero h1{margin:0;font-size:36px;font-weight:800;line-height:1.1;}
+  .hero p.sub{margin:13px 0 0;font-size:16.5px;color:#cdd6e4;max-width:760px;}
+  .hero .meta{margin-top:22px;display:flex;flex-wrap:wrap;gap:9px;}
+  .hero .meta span{background:rgba(255,255,255,.07);border:1px solid rgba(201,168,76,.35);padding:5px 12px;border-radius:6px;font-size:12.5px;color:#e7ecf4;}
+  .hero .meta span b{color:var(--gold-soft);}
+
+  .verdict{margin:-30px auto 0;max-width:1000px;background:#fff;border:1px solid var(--line);border-left:6px solid var(--gold);border-radius:12px;padding:22px 26px;box-shadow:0 12px 30px rgba(28,53,87,.10);}
+  .verdict .label{font-size:11.5px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--gold);margin-bottom:7px;}
+  .verdict p{margin:0;font-size:16.5px;color:var(--navy);font-weight:500;}
+  .verdict strong{color:var(--charcoal);}
+
+  section{background:#fff;border:1px solid var(--line);border-radius:12px;padding:28px 32px;margin:22px 0;box-shadow:0 4px 14px rgba(28,53,87,.04);}
+  section h2{font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--gold);margin:0 0 3px;font-weight:700;}
+  section h2 + .h{font-size:24px;font-weight:800;color:var(--navy);margin:0 0 6px;line-height:1.2;}
+  section .lead{font-size:15.5px;color:var(--muted);margin:0 0 16px;}
+  section h3{font-size:17px;color:var(--navy);font-weight:700;margin:22px 0 6px;}
+  p{margin:11px 0;}
+  ul{margin:11px 0;padding-left:22px;} li{margin:6px 0;}
+  strong{color:var(--navy);}
+
+  table{width:100%;border-collapse:collapse;margin:15px 0;font-size:14px;}
+  th{background:var(--navy);color:#fff;text-align:left;padding:10px 13px;font-weight:600;font-size:12.5px;}
+  th:first-child{border-top-left-radius:8px;} th:last-child{border-top-right-radius:8px;}
+  td{padding:10px 13px;border-bottom:1px solid var(--line);vertical-align:top;}
+  tr:nth-child(even) td{background:#f8fafc;}
+  tr:last-child td{border-bottom:none;}
+  td code{font-size:12.5px;}
+
+  .badge{display:inline-block;padding:2px 9px;border-radius:5px;font-size:11.5px;font-weight:700;white-space:nowrap;}
+  .b-good{background:#e3f5ec;color:var(--good);} .b-warn{background:#fbf0d8;color:var(--warn);}
+  .b-bad{background:#fbe6e3;color:var(--bad);} .b-info{background:#e6edf7;color:var(--navy);}
+  .b-crit{background:#c0392b;color:#fff;}
+
+  .callout{border-radius:10px;padding:16px 20px;margin:16px 0;border:1px solid;font-size:14.5px;}
+  .callout .ttl{font-weight:700;margin-bottom:5px;font-size:15px;}
+  .c-bad{background:#fdf1ef;border-color:#f3cfc8;color:#7a241a;} .c-bad .ttl{color:var(--bad);}
+  .c-warn{background:#fdf8ec;border-color:#f0e0bd;color:#7a5a14;} .c-warn .ttl{color:var(--warn);}
+  .c-good{background:#eef8f2;border-color:#cce8d8;color:#1c5a3c;} .c-good .ttl{color:var(--good);}
+  .c-key{background:#eef2f9;border-color:#cdd9ec;color:#1f3354;} .c-key .ttl{color:var(--navy);}
+
+  pre{background:var(--code-bg);color:#dbe4f0;border-radius:9px;padding:15px 17px;overflow-x:auto;font-size:12.8px;line-height:1.55;margin:13px 0;border:1px solid #1c3354;}
+  pre .c{color:#7d93b2;} pre .k{color:#e0b563;} pre .s{color:#7fc9a0;} pre .f{color:#9 db0ff;}
+  code{background:#e9eef5;color:#1f3354;padding:1.5px 6px;border-radius:4px;font-size:13px;}
+  pre code{background:none;color:inherit;padding:0;}
+
+  .metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin:16px 0;}
+  .metric{border:1px solid var(--line);border-radius:10px;padding:14px 16px;background:#f8fafc;}
+  .metric .n{font-size:26px;font-weight:800;color:var(--navy);line-height:1;}
+  .metric .n.r{color:var(--bad);} .metric .n.a{color:var(--warn);} .metric .n.g{color:var(--good);}
+  .metric .l{font-size:12.5px;color:var(--muted);margin-top:5px;}
+
+  .scores{display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:12px;margin:16px 0;}
+  .score-card{border:1px solid var(--line);border-radius:10px;padding:14px;background:#f8fafc;display:flex;flex-direction:column;gap:5px;}
+  .score-card .dim{font-size:13px;color:var(--muted);font-weight:600;}
+  .score-card .num{font-size:27px;font-weight:800;line-height:1;}
+  .bar{height:6px;border-radius:4px;background:#e2e8f0;overflow:hidden;margin-top:3px;}
+  .bar > i{display:block;height:100%;border-radius:4px;}
+  .overall{margin-top:16px;background:var(--navy);color:#fff;border-radius:10px;padding:18px 22px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;}
+  .overall .big{font-size:38px;font-weight:800;color:var(--gold-soft);}
+  .overall .txt{font-size:14.5px;color:#d6deea;max-width:640px;}
+
+  .decision{background:linear-gradient(135deg,var(--navy),#13243d);color:#fff;border-radius:14px;padding:32px;margin:22px 0;border:1px solid #2a4063;}
+  .decision h2{color:var(--gold-soft);}
+  .decision .pick{font-size:26px;font-weight:800;color:#fff;margin:5px 0 4px;line-height:1.25;}
+  .decision .pick .x{color:var(--gold);}
+  .decision p{color:#d3dcea;}
+  .decision .opts{display:grid;gap:11px;margin-top:18px;}
+  .decision .opt{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);border-radius:9px;padding:13px 17px;font-size:14.5px;color:#d3dcea;}
+  .decision .opt b{color:#fff;}
+  .decision .opt.chosen{border-color:var(--gold);background:rgba(201,168,76,.12);}
+
+  .phase{border-left:3px solid var(--gold);padding:3px 0 3px 20px;margin:16px 0;position:relative;}
+  .phase::before{content:"";position:absolute;left:-9px;top:5px;width:14px;height:14px;border-radius:50%;background:var(--gold);border:3px solid #fff;box-shadow:0 0 0 1px var(--gold);}
+  .phase h4{margin:0 0 6px;color:var(--navy);font-size:16px;font-weight:700;}
+  .phase .when{font-size:11.5px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);font-weight:600;}
+  .phase code{font-size:12.5px;}
+
+  nav.toc{width:236px;flex-shrink:0;position:sticky;top:22px;align-self:flex-start;background:#fff;border:1px solid var(--line);border-radius:12px;padding:16px 14px;box-shadow:0 4px 14px rgba(28,53,87,.04);}
+  nav.toc .t{font-size:11.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--gold);font-weight:700;margin-bottom:9px;}
+  nav.toc a{display:block;color:var(--charcoal);text-decoration:none;font-size:13.5px;padding:5px 8px;border-radius:6px;}
+  nav.toc a:hover{background:#f0f3f8;color:var(--navy);}
+  nav.toc a span{color:var(--gold);font-weight:700;margin-right:6px;}
+
+  footer{text-align:center;color:var(--muted);font-size:12.5px;padding:36px 0 56px;}
+  .pill-row{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0;}
+
+  @media (max-width:1120px){nav.toc{display:none;}.layout{display:block;}}
+  @media (max-width:640px){.hero h1{font-size:27px;}section{padding:20px 17px;}.overall{flex-direction:column;align-items:flex-start;}}
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="wrap">
+    <span class="tag">Deep Architecture Audit · Technical Edition</span>
+    <h1>EstateVault — Backend &amp; Data Architecture</h1>
+    <p class="sub">Multi-tenant white-label estate-planning SaaS. Next.js 14 (App Router) · Supabase (Postgres + RLS + Storage + Realtime) · Stripe · Resend · Anthropic. Scope: schema, RLS, migrations, API routes, edge functions, frontend data access, E2EE.</p>
+    <div class="meta">
+      <span><b>118+</b> API routes</span>
+      <span><b>~45</b> migrations</span>
+      <span><b>~39</b> RLS policies</span>
+      <span><b>597</b> direct <code>.from()</code> calls</span>
+      <span><b>76/118</b> routes use service_role</span>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+  <div class="verdict">
+    <div class="label">Executive Verdict</div>
+    <p>The system is a <strong>de-facto hybrid built by accident</strong>: 64% of routes use the <code>service_role</code> key (RLS bypass), yet ~39 RLS policies are maintained. You pay for two authorization models and get the guarantees of neither. The data layer (tenancy, indexing, E2EE) is strong; the <strong>application/access layer lacks a spine</strong> — no DAL, no single auth boundary, no regression net. <strong>Recommendation: B (Hybrid) via a consolidated service layer inside Next.js — not NestJS, not a migration.</strong></p>
+  </div>
+</div>
+
+<div class="layout">
+  <nav class="toc">
+    <div class="t">Contents</div>
+    <a href="#score"><span>1</span>Health Score</a>
+    <a href="#cascade"><span>2</span>Why bugs cascade</a>
+    <a href="#rls"><span>3</span>RLS Evaluation</a>
+    <a href="#db"><span>4</span>Database Design</a>
+    <a href="#logic"><span>5</span>Logic Placement</a>
+    <a href="#scale"><span>6</span>Scaling Risk</a>
+    <a href="#hot"><span>7</span>Complexity Hotspots</a>
+    <a href="#rec"><span>8</span>Recommendation</a>
+    <a href="#plan"><span>9</span>Refactor Plan</a>
+    <a href="#verify"><span>•</span>Verify yourself</a>
+  </nav>
+
+  <main>
+
+  <!-- 1. SCORE -->
+  <section id="score">
+    <h2>Section 1</h2>
+    <div class="h">Architecture Health Score</div>
+    <div class="scores">
+      <div class="score-card"><span class="dim">Scalability</span><span class="num" style="color:var(--warn)">5<small style="font-size:14px;color:var(--muted)">/10</small></span><div class="bar"><i style="width:50%;background:var(--warn)"></i></div></div>
+      <div class="score-card"><span class="dim">Maintainability</span><span class="num" style="color:var(--bad)">4<small style="font-size:14px;color:var(--muted)">/10</small></span><div class="bar"><i style="width:40%;background:var(--bad)"></i></div></div>
+      <div class="score-card"><span class="dim">Separation of Concerns</span><span class="num" style="color:var(--bad)">3<small style="font-size:14px;color:var(--muted)">/10</small></span><div class="bar"><i style="width:30%;background:var(--bad)"></i></div></div>
+      <div class="score-card"><span class="dim">Security Model</span><span class="num" style="color:var(--warn)">5<small style="font-size:14px;color:var(--muted)">/10</small></span><div class="bar"><i style="width:50%;background:var(--warn)"></i></div></div>
+      <div class="score-card"><span class="dim">Complexity Distribution</span><span class="num" style="color:var(--bad)">4<small style="font-size:14px;color:var(--muted)">/10</small></span><div class="bar"><i style="width:40%;background:var(--bad)"></i></div></div>
+    </div>
+    <div class="overall">
+      <div class="big">4.3 / 10</div>
+      <div class="txt">Data layer is staff-level (E2EE, tenancy, indexing). The drag is the access layer: service-role sprawl, no DAL, three auth patterns, no test net. All recoverable without a rewrite.</div>
+    </div>
+  </section>
+
+  <!-- 2. CASCADE -->
+  <section id="cascade">
+    <h2>Section 2</h2>
+    <div class="h">Why fixing one thing breaks another</div>
+    <p class="lead">Root-cause analysis of the regression treadmill. This is a structural symptom, not bad luck.</p>
+
+    <p>The codebase exhibits classic <strong>shotgun surgery</strong> + <strong>missing abstraction layer</strong>. The same concerns (data access, tenant scoping, authz, validation) are reimplemented inline per route instead of factored into shared modules. A fix touches one copy; the other N copies retain the defect, so the bug "reappears" elsewhere. There is no compiler- or test-enforced single source of truth to catch the divergence.</p>
+
+    <div class="metrics">
+      <div class="metric"><div class="n r">597</div><div class="l">direct <code>.from()</code> calls scattered across routes (no DAL)</div></div>
+      <div class="metric"><div class="n r">2×</div><div class="l">copies of revenue-split logic (<code>calculateSplit</code>: webhook + checkout)</div></div>
+      <div class="metric"><div class="n r">3</div><div class="l">distinct auth patterns; 30+ routes with none</div></div>
+      <div class="metric"><div class="n r">45</div><div class="l">migration files, 2 naming schemes, no canonical schema</div></div>
+      <div class="metric"><div class="n a">52</div><div class="l">routes parsing <code>request.json()</code> with no validation</div></div>
+      <div class="metric"><div class="n r">~0</div><div class="l">regression coverage on route business logic</div></div>
+    </div>
+
+    <h3>The four mechanisms</h3>
+    <table>
+      <tr><th>Mechanism</th><th>What it looks like in this repo</th><th>Resulting failure mode</th></tr>
+      <tr><td><strong>Logic duplication (DRY violation)</strong></td><td>~600 inline queries; <code>calculateSplit</code> in two call sites; auth re-checked per route</td><td>Fix one site → other sites still wrong → "the bug came back"</td></tr>
+      <tr><td><strong>Tight coupling to the DB shape</strong></td><td>Every route binds directly to table/column names via <code>supabase.from()</code></td><td>A column rename or rule change ripples to dozens of files; no single edit point</td></tr>
+      <tr><td><strong>Schema drift / no source of truth</strong></td><td><code>database.sql</code> + 44 additive migrations, dual naming, idempotency-masked ordering</td><td>One migration's assumption silently conflicts with another</td></tr>
+      <tr><td><strong>No safety net</strong></td><td>No regression tests on route logic; validation optional</td><td>Breakage is invisible until a user hits it in prod</td></tr>
+    </table>
+
+    <div class="callout c-bad">
+      <div class="ttl">Concrete example of divergence risk</div>
+      Revenue split is computed in <code>lib/stripe-payouts.ts</code> <code>calculateSplit()</code> but invoked from <strong>both</strong> <code>app/api/webhooks/stripe/route.ts</code> and inline in checkout. If pricing rules change in one path and not the other, payouts disagree silently — and nothing tests the equivalence.
+    </div>
+
+    <h3>Change-risk matrix (expected regression frequency)</h3>
+    <p>Blast radius is a function of change type. Cross-cutting concerns (schema, money, authz) have no single edit point, so they regress often — and the failure surfaces away from the edit site, defeating "test what I changed."</p>
+    <table>
+      <tr><th>Change type</th><th>Regression risk</th><th>Coupling mechanism</th></tr>
+      <tr><td>Schema change (add/rename column, table)</td><td><span class="badge b-bad">Very high</span></td><td>~600 direct <code>.from()</code> bindings to table/column names; no DAL to update in one place</td></tr>
+      <tr><td>Business-rule change (pricing, split, eligibility)</td><td><span class="badge b-bad">High</span></td><td>Duplicated logic (e.g. <code>calculateSplit</code> in 2 call sites); no equivalence test</td></tr>
+      <tr><td>AuthZ / RBAC change</td><td><span class="badge b-bad">High</span></td><td>3 auth patterns + 30+ unguarded routes; no central enforcement</td></tr>
+      <tr><td>Document-generation change</td><td><span class="badge b-warn">Med-high</span></td><td>500-LOC monolith, 5 responsibilities, no unit boundaries</td></tr>
+      <tr><td>Migration / DB structural change</td><td><span class="badge b-warn">Med-high</span></td><td>Dual naming, no canonical schema; ordering masked by idempotency</td></tr>
+      <tr><td>New isolated feature</td><td><span class="badge b-good">Low</span></td><td>Greenfield code, no fan-in</td></tr>
+      <tr><td>Visual-only change</td><td><span class="badge b-good">Low</span></td><td>Presentation layer; no data/logic path</td></tr>
+    </table>
+
+    <div class="callout c-warn">
+      <div class="ttl">Empirical estimate</div>
+      For changes touching shared concerns (data access, money, authz), expect a <strong>~1-in-3 regression rate</strong>, with the defect surfacing in a <strong>non-local module</strong>. Root cause: high fan-in to duplicated logic + zero regression coverage. The "randomness" is duplication, not chance.
+    </div>
+
+    <div style="display:flex;gap:12px;flex-wrap:wrap;margin:14px 0;">
+      <div style="flex:1;min-width:240px;background:#eef8f2;border:1px solid #cce8d8;border-radius:10px;padding:14px 17px;">
+        <div style="color:var(--good);font-weight:700;margin-bottom:5px;font-size:14.5px;">Low-risk to touch</div>
+        <ul style="margin:0;padding-left:19px;font-size:13.5px;"><li>Styling / presentation</li><li>New self-contained routes/components</li><li>Single-page, non-shared edits</li></ul>
+      </div>
+      <div style="flex:1;min-width:240px;background:#fdf1ef;border:1px solid #f3cfc8;border-radius:10px;padding:14px 17px;">
+        <div style="color:var(--bad);font-weight:700;margin-bottom:5px;font-size:14.5px;">High-risk (manual verification required)</div>
+        <ul style="margin:0;padding-left:19px;font-size:13.5px;"><li><code>orders</code> / checkout / Stripe</li><li>Revenue split &amp; pricing</li><li>Auth / RBAC</li><li><code>documents/process</code> + schema/migrations</li></ul>
+      </div>
+    </div>
+
+    <div class="callout c-bad">
+      <div class="ttl">Trajectory</div>
+      Coupling cost scales <strong>super-linearly with route count</strong>. Every new route adds another copy site and another unguarded-by-default surface. Onboarding cost rises (no canonical schema, no test net to encode intent). Untreated, velocity decays as the codebase grows.
+    </div>
+
+    <div class="callout c-good">
+      <div class="ttl">✓ How to structurally end the treadmill</div>
+      <ul style="margin:6px 0 0;">
+        <li><strong>Introduce a DAL (repos + services).</strong> One module owns each concern; routes call it. Fix-once semantics. The repos already exist in <code>lib/repos/*</code> — they're just bypassed by the API.</li>
+        <li><strong>Single authz boundary.</strong> Mandatory <code>requireAuth([roles])</code> + lint/CI gate so no route can ship without it.</li>
+        <li><strong>Regression net.</strong> Integration tests around services + a contract test asserting payout/authz invariants. CI catches divergence pre-merge.</li>
+        <li><strong>Canonical schema snapshot.</strong> One generated <code>schema.sql</code> as source of truth; one migration naming convention.</li>
+      </ul>
+      <p style="margin:11px 0 0;">This is precisely the work sequenced in <a href="#plan">Section 9</a>. The cascade stops the moment shared logic has exactly one home.</p>
+    </div>
+  </section>
+
+  <!-- 3. RLS -->
+  <section id="rls">
+    <h2>Section 3</h2>
+    <div class="h">RLS Evaluation</div>
+    <div class="callout c-key"><div class="ttl">Verdict</div>RLS is <b>simultaneously overused and underused</b>. It is not the effective security boundary today.</div>
+    <ul>
+      <li><strong>Underused in practice:</strong> 76/118 routes instantiate a <code>service_role</code> client → RLS bypassed. Effective boundary = per-route handwritten checks.</li>
+      <li><strong>Overused conceptually:</strong> ~39 policies, several with correlated subqueries / <code>EXISTS</code>, maintained while mostly bypassed.</li>
+      <li><strong>Perf risk (confirmed):</strong> SECURITY DEFINER helpers call <em>unwrapped</em> <code>auth.uid()</code> → re-evaluated per row.</li>
+      <li><strong>Fragility:</strong> RLS is load-bearing only for ~25% browser-direct queries (doc polling, profile reads, realtime). One <code>OR</code>/<code>IN</code> bug = cross-tenant leak, no second net.</li>
+    </ul>
+    <p>Current helper (re-runs per row):</p>
+<pre><span class="k">create function</span> public.get_partner_id() <span class="k">returns</span> uuid <span class="k">as</span> $$
+  <span class="k">select</span> id <span class="k">from</span> public.partners <span class="k">where</span> profile_id = auth.uid();
+$$ <span class="k">language</span> sql <span class="k">security definer stable</span>;</pre>
+    <p>Planner-cached fix (Supabase-recommended):</p>
+<pre><span class="c">-- evaluate once per statement, not per row</span>
+<span class="k">where</span> profile_id = (<span class="k">select</span> auth.uid())</pre>
+    <div class="callout c-warn"><div class="ttl">Direction</div>Demote RLS to defense-in-depth; make the API the authoritative boundary. Keep RLS <em>on</em> as a backstop, fix the <code>auth.uid()</code> wrapping, index policy-subquery columns.</div>
+  </section>
+
+  <!-- 4. DB -->
+  <section id="db">
+    <h2>Section 4</h2>
+    <div class="h">Database Design Review</div>
+    <p class="lead">Strongest layer in the system.</p>
+    <table>
+      <tr><th>Area</th><th>Rating</th><th>Detail</th></tr>
+      <tr><td>Tenancy model</td><td><span class="badge b-good">Good</span></td><td>Column-based isolation (<code>partner_id</code>, <code>client_id</code>) + FK + indexes. Correct at 100k-user scale; schema-per-tenant would be unmanageable.</td></tr>
+      <tr><td>Indexing</td><td><span class="badge b-good">Solid</span></td><td>FK/tenant columns indexed. Gaps: <code>attorney_reviews.attorney_id</code> (used in RLS, unindexed); some <code>order_id</code> FKs.</td></tr>
+      <tr><td>E2EE</td><td><span class="badge b-good">Excellent</span></td><td>XChaCha20-Poly1305, blind indexes, sealed PDFs, <code>crypto_box_seal</code> key sharing via <code>item_shares</code>, <code>clients_crypto_bundle_consistent</code> constraint, real rollback migration.</td></tr>
+      <tr><td>Migration quality</td><td><span class="badge b-warn">Weak (ops)</span></td><td>Two naming schemes (<code>20260329_000_*</code> vs <code>migration-phase7.sql</code>), no defined cross-ordering; saved only by aggressive idempotency. No canonical schema.</td></tr>
+    </table>
+    <div class="callout c-bad">
+      <div class="ttl"><span class="badge b-crit">CRITICAL</span> &nbsp;Arbitrary SQL execution — <code>exec_sql(text)</code></div>
+<pre><span class="k">CREATE FUNCTION</span> exec_sql(sql text) <span class="k">RETURNS</span> json
+<span class="k">LANGUAGE</span> plpgsql <span class="k">SECURITY DEFINER</span> <span class="k">AS</span> $$ <span class="k">BEGIN</span> <span class="k">EXECUTE</span> sql; ...</pre>
+      Elevated-privilege arbitrary DDL/DML. If <code>EXECUTE</code> is granted to <code>anon</code>/<code>authenticated</code>, this is full-DB RCE via PostgREST RPC. <strong>Verify grants immediately; revoke; remove from runtime path.</strong>
+    </div>
+  </section>
+
+  <!-- 5. LOGIC -->
+  <section id="logic">
+    <h2>Section 5</h2>
+    <div class="h">Business Logic Placement</div>
+    <table>
+      <tr><th>Logic</th><th>Current location</th><th>Target</th></tr>
+      <tr><td>Revenue splits (<code>calculateSplit</code>)</td><td><code>lib/stripe-payouts.ts</code>, called from webhook <em>and</em> inline checkout</td><td>Single service, one call path</td></tr>
+      <tr><td>Document generation</td><td><code>app/api/documents/process/route.ts</code> — 500 LOC, synchronous Claude call in-request</td><td>Background queue (<code>lib/queue/</code>) + generation service</td></tr>
+      <tr><td>Plan-conflict / attorney routing</td><td>Split: <code>lib/orders/plan-conflict.ts</code>, <code>lib/attorney-review/routing.ts</code> + inline</td><td>Consolidate under <code>lib/services/*</code></td></tr>
+      <tr><td>Email</td><td><code>lib/email.ts</code> (22KB) hard-bound to a service-role client</td><td>Inject client; pure service</td></tr>
+      <tr><td>Arbitrary DDL</td><td><code>exec_sql</code> DB function</td><td>Migration tooling only</td></tr>
+    </table>
+    <div class="callout c-warn"><div class="ttl">Edge functions misused</div><code>vault-pin</code>, <code>vault-trustee-invite</code>, <code>vault-farewell-notify</code> duplicate API-route capability with no latency/trigger justification. Second deploy surface, second drift point. Fold into Next.js routes unless a concrete reason exists.</div>
+    <div class="callout c-bad"><div class="ttl">Dead abstraction</div><code>lib/repos/*</code> (documentRepo, vaultRepo, trusteeRepo, shareRepo…) exist but are referenced only by client-side crypto and tests. The API ignores them and issues 597 direct <code>.from()</code> calls. The correct seam is built — and bypassed.</div>
+  </section>
+
+  <!-- 6. SCALE -->
+  <section id="scale">
+    <h2>Section 6</h2>
+    <div class="h">Scaling Risk Analysis</div>
+    <h3>1× → 10× &nbsp;<span class="badge b-good">Holds</span></h3>
+    <p>Postgres + Supavisor pooling fine. <strong>First breakages:</strong> (1) in-memory <code>Map</code>-based rate limiter in <code>lib/api/auth.ts</code> — per-instance, useless on serverless; (2) synchronous doc-gen route → Vercel function timeout under burst.</p>
+    <h3>10× → 100× &nbsp;<span class="badge b-warn">Strain</span></h3>
+    <ul>
+      <li><strong>Connection exhaustion:</strong> per-request admin client instantiation. Enforce Supavisor/PgBouncer <em>transaction</em> pooling before CPU becomes the limit.</li>
+      <li><strong>RLS subqueries + unwrapped <code>auth.uid()</code></strong> degrade as <code>clients</code>/<code>vault_items</code> grow.</li>
+      <li><strong>Doc generation</strong> (Claude, synchronous, in-request) must move to <code>lib/queue/</code>.</li>
+    </ul>
+    <h3>Concurrency / correctness</h3>
+    <p>No idempotency keys observed on checkout/order creation → double-submit and Stripe webhook retries can create duplicate orders. Add idempotency keys + unique constraints. Realtime is per-user scoped (<code>client-docs-${clientId}</code>, <code>attorney-queue-${userId}</code>) — fine; watch multi-tab fan-out for large partners.</p>
+  </section>
+
+  <!-- 7. HOTSPOTS -->
+  <section id="hot">
+    <h2>Section 7</h2>
+    <div class="h">Complexity Hotspots (Top 5)</div>
+    <table>
+      <tr><th>#</th><th>Hotspot</th><th>Impact</th></tr>
+      <tr><td>1</td><td><strong>Service-role sprawl</strong> (76 routes)</td><td>Each route = own admin client + ad-hoc authz. Largest hidden-breach surface.</td></tr>
+      <tr><td>2</td><td><strong>Three auth patterns</strong></td><td><code>requireAuth()</code> (16), inline manual (58+), none (30+). No at-a-glance protection status.</td></tr>
+      <tr><td>3</td><td><strong><code>documents/process</code> monolith</strong></td><td>500 LOC: intake parse + Claude prompt + PDF + sealing + email.</td></tr>
+      <tr><td>4</td><td><strong>Dual migrations, no canonical schema</strong></td><td>Onboarding + change-safety tax on every DB edit.</td></tr>
+      <tr><td>5</td><td><strong>Validation gaps</strong></td><td>52 routes parse <code>request.json()</code> raw; only 30 use Zod.</td></tr>
+    </table>
+  </section>
+
+  <!-- 8. RECOMMENDATION -->
+  <div class="decision" id="rec">
+    <h2>Section 8 — Decision</h2>
+    <div class="pick">→ <span class="x">B) HYBRID</span> via a service layer inside Next.js. <span class="x">Not</span> NestJS. <span class="x">Not</span> migration.</div>
+    <p style="margin-top:9px;">Keep Supabase (Postgres, Auth, Storage, Realtime, RLS-as-backstop, E2EE). Build a disciplined <strong style="color:#fff">DAL + service layer</strong> in the existing app with <strong style="color:#fff">one authoritative authz boundary</strong> (API). The problem is organization, not runtime.</p>
+    <div class="opts">
+      <div class="opt"><b>✗ A) Keep as-is.</b> 30+ unauthenticated routes + <code style="color:#f3cfc8">exec_sql</code> = breach waiting. "Safe to scale" is false today.</div>
+      <div class="opt"><b>✗ Add NestJS now.</b> Textbook hybrid but premature: adds a deploy target, network hop, pooling complexity to solve a discipline problem. Justified later (persistent workers, event-driven, serverless limits).</div>
+      <div class="opt"><b>✗ C) Migrate off Supabase.</b> Negative ROI. Discards excellent E2EE + sound tenancy to rebuild Auth/Storage/Realtime. ~1 wasted year.</div>
+      <div class="opt chosen"><b>✓ B) Service layer in Next.js.</b> Not a stack problem — a "no shared spine" problem. The Phase-2 service layer is also the seam that makes a future NestJS extraction cheap if ever needed.</div>
+    </div>
+  </div>
+
+  <!-- 9. PLAN -->
+  <section id="plan">
+    <h2>Section 9</h2>
+    <div class="h">Refactor Plan <span style="font-size:13px;font-weight:500;color:var(--muted)">— zero-downtime, ordered by risk reduction</span></div>
+
+    <div class="phase">
+      <div class="when">Phase 0 — this week</div>
+      <h4>Stop the bleeding</h4>
+      <ul>
+        <li><code>REVOKE</code> all grants on <code>exec_sql</code> from <code>anon</code>/<code>authenticated</code>/<code>public</code>; ideally <code>DROP</code> and move DDL to migration tooling.</li>
+        <li>Enumerate the 30+ no-auth routes; protect or explicitly allowlist as public.</li>
+        <li>Replace in-memory rate limiter with the Upstash limiter everywhere (auth, checkout, documents/process).</li>
+      </ul>
+    </div>
+    <div class="phase">
+      <div class="when">Phase 1 — weeks 1–2</div>
+      <h4>One authoritative authz boundary</h4>
+      <ul>
+        <li>Mandate <code>requireAuth([...roles])</code>; convert all 58 inline-auth routes.</li>
+        <li>CI/lint gate: every <code>app/api/**/route.ts</code> imports the guard or is on a public allowlist.</li>
+        <li>Single <code>getAdminClient()</code>/<code>getUserClient()</code> factory; lint-ban inline <code>service_role</code> instantiation.</li>
+      </ul>
+    </div>
+    <div class="phase">
+      <div class="when">Phase 2 — weeks 2–5</div>
+      <h4>Resurrect the DAL / service layer</h4>
+      <ul>
+        <li>Route all DB access through <code>lib/repos/*</code> + new <code>lib/services/*</code>; each repo enforces tenant scoping in code (isolation independent of RLS state). Migrate the 597 <code>.from()</code> calls incrementally — API contract unchanged → zero downtime.</li>
+        <li>De-duplicate <code>calculateSplit</code> + attorney routing into single services; add invariant tests.</li>
+        <li>Decompose <code>documents/process</code>; offload generation to <code>lib/queue/</code>.</li>
+      </ul>
+    </div>
+    <div class="phase">
+      <div class="when">Phase 3 — weeks 4–6</div>
+      <h4>Demote RLS to backstop, clean DB, add net</h4>
+      <ul>
+        <li>Keep RLS on; wrap <code>auth.uid()</code> → <code>(select auth.uid())</code>; add <code>attorney_reviews.attorney_id</code> index.</li>
+        <li>Consolidate migration naming; generate canonical <code>schema.sql</code>.</li>
+        <li>Cleanup job for plaintext quiz-answer purge window (currently manual).</li>
+        <li>Integration + contract tests in CI so divergence is caught pre-merge.</li>
+      </ul>
+    </div>
+
+    <div class="callout c-good"><div class="ttl">✓ Keep permanently</div>Supabase platform, column-based tenancy, Realtime, RLS-as-backstop, full E2EE stack.</div>
+    <div class="callout c-key"><div class="ttl">Reconsider NestJS only when</div>Persistent workers, serverless cold-start/timeout walls queues can't fix, or background volume justifies a dedicated runtime. Phase 2's service layer makes that extraction cheap.</div>
+  </section>
+
+  <!-- VERIFY -->
+  <section id="verify">
+    <div class="h" style="font-size:20px;">Verify yourself (infra, not code)</div>
+    <p style="margin-top:4px;color:var(--muted)">Two items depend on live config the audit can't see:</p>
+    <div class="pill-row">
+      <span class="badge b-info">Live grants on <code>exec_sql</code> (must be revoked from anon/authenticated)</span>
+      <span class="badge b-info">Prod behind Vercel — tenant resolution reads <code>request.headers.get("host")</code> directly; ensure Host header is trusted/normalized</span>
+    </div>
+  </section>
+
+  </main>
+</div>
+
+<footer>
+  EstateVault Architecture Audit · Technical edition · May 22, 2026 · Next.js 14 · Supabase (Postgres + RLS) · Stripe · Resend · Anthropic
+</footer>
+
+</body>
+</html>

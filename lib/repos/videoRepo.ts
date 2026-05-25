@@ -1,44 +1,58 @@
 "use client";
 
-// Farewell video repo. Streams ciphertext via secretstream worker session
-// and PUTs to signed URL with one HTTP request. Header (24B) stored separately
-// on farewell_messages so streaming reads can init pull before fetching chunks.
+// Option A (F2): farewell video. Cross-platform chunked byte-AEAD ("EVC1") so
+// web and Flutter produce/consume identical ciphertext (no secretstream — the
+// Dart high-level API can't match libsodium's stream framing).
+//
+// Layout: "EVC1"(4) | version(1) | u32be(numChunks)(4) | frame*
+//   frame = u32be(frameLen) | nonce(24) | ct+tag
+//   ct    = XChaCha20-Poly1305-IETF(chunk, ad, nonce, fileKey)
+//   ad    = utf8("ev:file:chunk:v1") | u32be(index)
 
-import { getCryptoWorker } from "@/lib/crypto/worker/client";
-import { INFO } from "@/lib/crypto/keyManager";
+import { getSodium } from "@/lib/crypto/sodium";
 
-const CHUNK = 256 * 1024; // 256 KiB
+const CHUNK = 1024 * 1024; // 1 MiB
+const MAGIC = new Uint8Array([0x45, 0x56, 0x43, 0x31]); // "EVC1"
+const VERSION = 1;
+const NONCE_LEN = 24;
+const AD_PREFIX = new TextEncoder().encode("ev:file:chunk:v1");
 
-function b64(b: Uint8Array): string {
-  let s = ""; for (let i = 0; i < b.length; i++) s += String.fromCharCode(b[i]);
-  return btoa(s);
-}
-function fromB64(s: string): Uint8Array {
+function fromB64(s: string): Uint8Array<ArrayBuffer> {
   const bin = atob(s); const out = new Uint8Array(bin.length);
   for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
   return out;
 }
-function decodeBytea(raw: string | Uint8Array | null | undefined): Uint8Array | null {
-  if (raw == null) return null;
-  if (raw instanceof Uint8Array) return raw;
-  if (typeof raw === "string") {
-    if (raw.startsWith("\\x")) {
-      const hex = raw.slice(2);
-      const out = new Uint8Array(hex.length / 2);
-      for (let i = 0; i < out.length; i++) out[i] = parseInt(hex.substr(i * 2, 2), 16);
-      return out;
-    }
-    return fromB64(raw);
-  }
-  return null;
+
+async function getFileKey(): Promise<Uint8Array> {
+  const res = await fetch("/api/vault/file-key");
+  if (!res.ok) throw new Error(`file-key failed: ${res.status}`);
+  const { key } = await res.json() as { key: string };
+  return fromB64(key);
 }
 
-type SignedUploadResp = {
-  bucket: string;
-  path: string;
-  signedUrl: string;
-  sizeLimit: number;
-};
+function u32be(n: number): Uint8Array {
+  const b = new Uint8Array(4);
+  new DataView(b.buffer).setUint32(0, n, false);
+  return b;
+}
+function readU32be(b: Uint8Array, off: number): number {
+  return new DataView(b.buffer, b.byteOffset, b.byteLength).getUint32(off, false);
+}
+function u8toAB(u: Uint8Array): ArrayBuffer {
+  const ab = new ArrayBuffer(u.byteLength);
+  new Uint8Array(ab).set(u);
+  return ab;
+}
+function concat(a: Uint8Array, b: Uint8Array): Uint8Array<ArrayBuffer> {
+  const out = new Uint8Array(a.length + b.length);
+  out.set(a, 0); out.set(b, a.length);
+  return out;
+}
+function ad(index: number): Uint8Array {
+  return concat(AD_PREFIX, u32be(index));
+}
+
+type SignedUploadResp = { bucket: string; path: string; signedUrl: string; sizeLimit: number };
 
 async function getSignedUpload(expectedSize: number): Promise<SignedUploadResp> {
   const res = await fetch("/api/vault/upload-url", {
@@ -53,111 +67,71 @@ async function getSignedUpload(expectedSize: number): Promise<SignedUploadResp> 
   return res.json();
 }
 
-function u32be(n: number): Uint8Array {
-  const b = new Uint8Array(4);
-  new DataView(b.buffer).setUint32(0, n, false);
-  return b;
-}
+async function encryptToBlob(plaintext: Blob, fileKey: Uint8Array): Promise<Blob> {
+  const s = await getSodium();
+  const numChunks = Math.max(1, Math.ceil(plaintext.size / CHUNK));
+  const parts: BlobPart[] = [u8toAB(MAGIC), u8toAB(new Uint8Array([VERSION])), u8toAB(u32be(numChunks))];
 
-// Encrypt full blob to framed ciphertext Blob (4B-BE length || ct per chunk).
-// Buffered to a Blob so PUT has a known Content-Length — Supabase Storage
-// rejects chunked/streaming PUTs with 400.
-function u8toAB(u: Uint8Array): ArrayBuffer {
-  const ab = new ArrayBuffer(u.byteLength);
-  new Uint8Array(ab).set(u);
-  return ab;
-}
-
-async function encryptToBlob(plaintext: Blob, sessionId: string): Promise<Blob> {
-  const worker = getCryptoWorker();
   const reader = plaintext.stream().getReader();
-  const parts: BlobPart[] = [];
-  let buffer = new Uint8Array(0);
-  let done = false;
-
-  while (!done) {
-    while (buffer.length < CHUNK && !done) {
+  let buffer: Uint8Array<ArrayBuffer> = new Uint8Array(0);
+  let streamDone = false;
+  async function fill(min: number) {
+    while (buffer.length < min && !streamDone) {
       const r = await reader.read();
-      if (r.done) { done = true; break; }
-      const next = new Uint8Array(buffer.length + r.value.length);
-      next.set(buffer, 0); next.set(r.value, buffer.length);
-      buffer = next;
+      if (r.done) { streamDone = true; break; }
+      buffer = concat(buffer, r.value);
     }
-    const take = Math.min(CHUNK, buffer.length);
-    const chunk = buffer.slice(0, take);
-    buffer = buffer.slice(take);
-    const isFinal = done && buffer.length === 0;
-    const ct = await worker.pushEncryptStream(sessionId, chunk, isFinal);
-    parts.push(u8toAB(u32be(ct.length)));
-    parts.push(u8toAB(ct));
-    if (isFinal) break;
   }
 
-  if (parts.length === 0) {
-    const ct = await worker.pushEncryptStream(sessionId, new Uint8Array(0), true);
-    parts.push(u8toAB(u32be(ct.length)));
-    parts.push(u8toAB(ct));
+  for (let index = 0; index < numChunks; index++) {
+    await fill(CHUNK);
+    const take = Math.min(CHUNK, buffer.length);
+    const chunk = buffer.subarray(0, take);
+    buffer = buffer.subarray(take);
+    const nonce = s.randombytes_buf(NONCE_LEN);
+    const ct = s.crypto_aead_xchacha20poly1305_ietf_encrypt(chunk, ad(index), null, nonce, fileKey);
+    const frame = concat(nonce, ct);
+    parts.push(u8toAB(u32be(frame.length)));
+    parts.push(u8toAB(frame));
   }
 
   return new Blob(parts, { type: "application/octet-stream" });
 }
 
 export type UploadFarewellArgs = {
-  blob: Blob;                       // recorded or selected video
+  blob: Blob;
   title: string;
   recipientEmail: string;
   durationSeconds?: number;
 };
 
-export type UploadFarewellResult = {
-  messageId: string;
-  storagePath: string;
-};
+export type UploadFarewellResult = { messageId: string; storagePath: string };
 
 export async function uploadFarewell(args: UploadFarewellArgs): Promise<UploadFarewellResult> {
-  const worker = getCryptoWorker();
-
   const signed = await getSignedUpload(args.blob.size);
   if (args.blob.size > signed.sizeLimit) throw new Error("file too large");
 
-  // Begin worker session
-  const { sessionId, header } = await worker.beginEncryptStream(INFO.FILES);
-
-  // Encrypt to a Blob first so PUT has a known Content-Length.
-  // Supabase Storage returns 400 on chunked/streaming PUTs.
-  const cipherBlob = await encryptToBlob(args.blob, sessionId);
+  const fileKey = await getFileKey();
+  const cipherBlob = await encryptToBlob(args.blob, fileKey);
 
   const putRes = await fetch(signed.signedUrl, {
     method: "PUT",
     headers: { "Content-Type": "application/octet-stream", "x-upsert": "true" },
     body: cipherBlob,
   });
-
-  if (!putRes.ok) {
-    await worker.endStream(sessionId).catch(() => undefined);
-    throw new Error(`storage upload failed: ${putRes.status}`);
-  }
-
-  // Encrypt metadata (title + recipient_email) + blind index
-  const meta = JSON.stringify({ title: args.title, recipient_email: args.recipientEmail });
-  const env = await worker.encryptBytes(new TextEncoder().encode(meta), INFO.DB);
-  const recipientBlind = await worker.blindIndex(args.recipientEmail.trim().toLowerCase());
+  if (!putRes.ok) throw new Error(`storage upload failed: ${putRes.status}`);
 
   const res = await fetch("/api/vault/farewell", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      ciphertext: b64(env.envelope),
-      nonce: b64(env.nonce),
-      recipientBlind: b64(recipientBlind),
-      storageHeader: b64(header),
+      title: args.title,
+      recipientEmail: args.recipientEmail,
       storagePath: signed.path,
       fileSizeMb: Number((args.blob.size / 1024 / 1024).toFixed(2)),
       durationSeconds: args.durationSeconds,
-      encVersion: 1,
     }),
   });
-
   if (!res.ok) {
     const j = await res.json().catch(() => ({}));
     throw new Error(j.error ?? `farewell create failed: ${res.status}`);
@@ -175,87 +149,38 @@ export type FarewellMessagePlaintext = {
   status: string;
   encrypted: boolean;
   storagePath: string | null;
-  storageHeader: Uint8Array | null;
   createdAt: string;
   updatedAt: string;
 };
 
-type RawFarewellRow = {
+type ServerFarewell = {
   id: string;
-  title: string | null;
-  recipient_email: string | null;
-  file_size_mb: number | null;
-  duration_seconds: number | null;
-  vault_farewell_status: string;
-  created_at: string;
-  updated_at: string;
-  // E2EE rows (Phase 9). The list endpoint may not return these yet; safe-defaults below.
-  ciphertext?: string | Uint8Array | null;
-  nonce?: string | Uint8Array | null;
-  enc_version?: number | null;
-  storage_path?: string | null;
-  storage_header?: string | Uint8Array | null;
+  title: string;
+  recipientEmail: string;
+  fileSizeMb: number | null;
+  durationSeconds: number | null;
+  status: string;
+  storagePath: string | null;
+  createdAt: string;
+  updatedAt: string;
 };
 
 export async function listFarewellMessages(): Promise<FarewellMessagePlaintext[]> {
   const res = await fetch("/api/vault/farewell");
   if (!res.ok) throw new Error(`farewell list failed: ${res.status}`);
-  const j = await res.json() as { messages: RawFarewellRow[] };
-  const worker = getCryptoWorker();
-
-  const out: FarewellMessagePlaintext[] = [];
-  for (const r of j.messages ?? []) {
-    const ct = decodeBytea(r.ciphertext);
-    const header = decodeBytea(r.storage_header);
-    if (ct) {
-      try {
-        const pt = await worker.decryptBytes(ct, INFO.DB);
-        const meta = JSON.parse(new TextDecoder().decode(pt)) as { title: string; recipient_email: string };
-        out.push({
-          id: r.id,
-          title: meta.title ?? "",
-          recipientEmail: meta.recipient_email ?? "",
-          fileSizeMb: r.file_size_mb,
-          durationSeconds: r.duration_seconds,
-          status: r.vault_farewell_status,
-          encrypted: true,
-          storagePath: r.storage_path ?? null,
-          storageHeader: header,
-          createdAt: r.created_at,
-          updatedAt: r.updated_at,
-        });
-      } catch {
-        out.push({
-          id: r.id,
-          title: "[decryption failed]",
-          recipientEmail: "",
-          fileSizeMb: r.file_size_mb,
-          durationSeconds: r.duration_seconds,
-          status: r.vault_farewell_status,
-          encrypted: true,
-          storagePath: r.storage_path ?? null,
-          storageHeader: header,
-          createdAt: r.created_at,
-          updatedAt: r.updated_at,
-        });
-      }
-    } else {
-      out.push({
-        id: r.id,
-        title: r.title ?? "",
-        recipientEmail: r.recipient_email ?? "",
-        fileSizeMb: r.file_size_mb,
-        durationSeconds: r.duration_seconds,
-        status: r.vault_farewell_status,
-        encrypted: false,
-        storagePath: null,
-        storageHeader: null,
-        createdAt: r.created_at,
-        updatedAt: r.updated_at,
-      });
-    }
-  }
-  return out;
+  const j = await res.json() as { messages: ServerFarewell[] };
+  return (j.messages ?? []).map((r) => ({
+    id: r.id,
+    title: r.title ?? "",
+    recipientEmail: r.recipientEmail ?? "",
+    fileSizeMb: r.fileSizeMb,
+    durationSeconds: r.durationSeconds,
+    status: r.status,
+    encrypted: true,
+    storagePath: r.storagePath,
+    createdAt: r.createdAt,
+    updatedAt: r.updatedAt,
+  }));
 }
 
 export async function deleteFarewellMessage(messageId: string): Promise<void> {
@@ -270,10 +195,7 @@ export async function deleteFarewellMessage(messageId: string): Promise<void> {
   }
 }
 
-export async function downloadFarewell(args: {
-  storagePath: string;
-  storageHeader: Uint8Array;
-}): Promise<Blob> {
+export async function downloadFarewell(args: { storagePath: string }): Promise<Blob> {
   const dlRes = await fetch("/api/vault/download-url", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -284,49 +206,27 @@ export async function downloadFarewell(args: {
 
   const cipherRes = await fetch(signedUrl);
   if (!cipherRes.ok) throw new Error(`storage download failed: ${cipherRes.status}`);
-  const cipherStream = cipherRes.body;
-  if (!cipherStream) throw new Error("no body");
+  const cipher = new Uint8Array(await cipherRes.arrayBuffer());
 
-  const worker = getCryptoWorker();
-  const { sessionId } = await worker.beginDecryptStream(INFO.FILES, args.storageHeader);
+  const s = await getSodium();
+  const fileKey = await getFileKey();
 
-  const reader = cipherStream.getReader();
-  let buffer = new Uint8Array(0);
-  const plain: Uint8Array[] = [];
-  let done = false;
-  let final = false;
+  if (cipher.length < 9 || cipher[0] !== MAGIC[0] || cipher[1] !== MAGIC[1] || cipher[2] !== MAGIC[2] || cipher[3] !== MAGIC[3]) {
+    throw new Error("bad magic");
+  }
+  if (cipher[4] !== VERSION) throw new Error("unsupported version");
+  const numChunks = readU32be(cipher, 5);
 
-  function readU32be(b: Uint8Array, off: number): number {
-    return new DataView(b.buffer, b.byteOffset, b.byteLength).getUint32(off, false);
+  const parts: BlobPart[] = [];
+  let off = 9;
+  for (let index = 0; index < numChunks; index++) {
+    const frameLen = readU32be(cipher, off); off += 4;
+    const frame = cipher.subarray(off, off + frameLen); off += frameLen;
+    const nonce = frame.subarray(0, NONCE_LEN);
+    const ct = frame.subarray(NONCE_LEN);
+    const pt = s.crypto_aead_xchacha20poly1305_ietf_decrypt(null, ct, ad(index), nonce, fileKey);
+    parts.push(u8toAB(pt));
   }
 
-  async function fill(min: number) {
-    while (buffer.length < min && !done) {
-      const r = await reader.read();
-      if (r.done) { done = true; break; }
-      const next = new Uint8Array(buffer.length + r.value.length);
-      next.set(buffer, 0); next.set(r.value, buffer.length);
-      buffer = next;
-    }
-    return buffer.length >= min;
-  }
-
-  while (!final) {
-    if (!(await fill(4))) break;
-    const len = readU32be(buffer, 0);
-    buffer = buffer.slice(4);
-    if (!(await fill(len))) throw new Error("truncated farewell stream");
-    const ct = buffer.slice(0, len);
-    buffer = buffer.slice(len);
-    const out = await worker.pullDecryptStream(sessionId, ct);
-    if (out.plaintext.length > 0) plain.push(out.plaintext);
-    final = out.final;
-  }
-
-  await worker.endStream(sessionId).catch(() => undefined);
-  return new Blob(plain.map((u) => {
-    const ab = new ArrayBuffer(u.byteLength);
-    new Uint8Array(ab).set(u);
-    return ab;
-  }));
+  return new Blob(parts);
 }

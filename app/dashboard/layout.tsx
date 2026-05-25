@@ -4,8 +4,6 @@ import { redirect } from "next/navigation";
 import { headers } from "next/headers";
 import DashboardShell from "@/components/dashboard/DashboardShell";
 import PasswordChangeBanner from "@/components/dashboard/PasswordChangeBanner";
-import { UnlockModal } from "@/components/vault/UnlockModal";
-import { BackfillBanner } from "@/components/vault/BackfillBanner";
 
 function createAdminClient() {
   return createServerClient(
@@ -89,9 +87,6 @@ export default async function DashboardLayout({
   const isVaultOnlyClient =
     client?.vault_subscription_status === "active" && !hasEstatePlanOrder;
 
-  const vaultEntitled =
-    client?.vault_subscription_status === "active" || hasEstatePlanOrder;
-
   const pathname = headers().get("x-url") || "/dashboard";
   const vaultOnlyAllowedPaths = ["/dashboard/vault", "/dashboard/settings"];
   const isVaultOnlyPathAllowed = vaultOnlyAllowedPaths.some(
@@ -101,10 +96,6 @@ export default async function DashboardLayout({
   if (isVaultOnlyClient && !isVaultOnlyPathAllowed) {
     redirect("/dashboard/vault");
   }
-  // NB: don't gate UnlockModal on server pathname — App Router layouts don't
-  // re-run on client nav, so a header-captured pathname goes stale and the
-  // modal would never mount when the user navigates into /dashboard/vault
-  // from another dashboard route. The modal self-gates on usePathname().
 
   const name = profile?.full_name || profile?.email || user.email || "Client";
   const requiresPasswordChange = profile?.requires_password_change === true;
@@ -112,9 +103,7 @@ export default async function DashboardLayout({
   return (
     <DashboardShell userName={name} vaultOnly={isVaultOnlyClient} accentColor={partnerAccent} portalTitle={partnerTitle} businessUrl={partnerBusinessUrl}>
       {requiresPasswordChange && <PasswordChangeBanner />}
-      <BackfillBanner />
       {children}
-      <UnlockModal entitled={vaultEntitled} />
     </DashboardShell>
   );
 }

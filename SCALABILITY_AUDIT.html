@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EstateVault — Scalability & Duplication Audit</title>
+<style>
+  :root{
+    --navy:#1C3557; --gold:#C9A84C; --white:#FFFFFF; --charcoal:#2D2D2D;
+    --bg:#F4F6F9; --card:#FFFFFF; --line:#E2E7EE;
+    --red:#C0392B; --red-bg:#FBEAE8;
+    --orange:#D08114; --orange-bg:#FBF1E2;
+    --yellow:#B8902A; --yellow-bg:#FBF6E7;
+    --green:#2E7D52; --green-bg:#E7F3EC;
+    --mute:#6B7785;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+    background:var(--bg); color:var(--charcoal); line-height:1.6;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:1080px;margin:0 auto;padding:0 24px 80px}
+
+  /* Header */
+  header{
+    background:linear-gradient(135deg,var(--navy) 0%,#24416b 100%);
+    color:var(--white); padding:56px 0 48px; margin-bottom:40px;
+    border-bottom:4px solid var(--gold);
+  }
+  header .wrap{padding-bottom:0}
+  .eyebrow{
+    color:var(--gold); font-weight:600; letter-spacing:.12em;
+    text-transform:uppercase; font-size:12px; margin-bottom:12px;
+  }
+  header h1{font-size:34px; font-weight:700; letter-spacing:-.02em; margin-bottom:10px}
+  header p{color:#C4D0E0; font-size:16px; max-width:680px}
+  .meta{margin-top:24px; display:flex; gap:14px; flex-wrap:wrap}
+  .meta .pill{
+    background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.18);
+    padding:8px 16px; border-radius:999px; font-size:13px; color:#E4EBF4;
+  }
+  .meta .pill b{color:var(--white)}
+
+  /* Score band */
+  .scoreband{
+    display:grid; grid-template-columns:repeat(4,1fr); gap:16px; margin-bottom:40px;
+  }
+  .scorecard{
+    background:var(--card); border:1px solid var(--line); border-radius:14px;
+    padding:20px; text-align:center; box-shadow:0 1px 3px rgba(28,53,87,.05);
+  }
+  .scorecard .num{font-size:32px; font-weight:700; color:var(--navy); line-height:1}
+  .scorecard .lbl{font-size:12px; color:var(--mute); margin-top:8px; text-transform:uppercase; letter-spacing:.05em}
+  .scorecard.rate .num{color:var(--red)}
+
+  /* Section */
+  section{margin-bottom:36px}
+  h2.sec{
+    font-size:22px; color:var(--navy); font-weight:700; margin-bottom:18px;
+    padding-bottom:10px; border-bottom:2px solid var(--line); letter-spacing:-.01em;
+  }
+
+  /* Blocker card */
+  .blocker{
+    background:var(--card); border:1px solid var(--line); border-left-width:6px;
+    border-radius:12px; padding:24px 26px; margin-bottom:20px;
+    box-shadow:0 1px 3px rgba(28,53,87,.05);
+  }
+  .blocker.crit{border-left-color:var(--red)}
+  .blocker.high{border-left-color:var(--orange)}
+  .blocker.med{border-left-color:var(--yellow)}
+  .blocker-head{display:flex; align-items:center; gap:12px; margin-bottom:8px; flex-wrap:wrap}
+  .blocker-head h3{font-size:18px; color:var(--navy); font-weight:700; flex:1; min-width:200px}
+  .sev{
+    font-size:11px; font-weight:700; padding:4px 12px; border-radius:6px;
+    text-transform:uppercase; letter-spacing:.05em; white-space:nowrap;
+  }
+  .sev.crit{background:var(--red-bg); color:var(--red)}
+  .sev.high{background:var(--orange-bg); color:var(--orange)}
+  .sev.med{background:var(--yellow-bg); color:var(--yellow)}
+  .count-chip{
+    background:var(--navy); color:var(--white); font-size:13px; font-weight:700;
+    padding:4px 12px; border-radius:6px; white-space:nowrap;
+  }
+  .blocker p{margin-bottom:12px; font-size:15px}
+  .blocker .label{font-size:12px; font-weight:700; color:var(--mute); text-transform:uppercase; letter-spacing:.06em; margin:16px 0 8px}
+
+  .why{
+    background:var(--red-bg); border-radius:8px; padding:12px 16px; margin-top:14px;
+    font-size:14px; border-left:3px solid var(--red);
+  }
+  .why b{color:var(--red)}
+  .blocker.high .why{background:var(--orange-bg); border-left-color:var(--orange)}
+  .blocker.high .why b{color:var(--orange)}
+  .blocker.med .why{background:var(--yellow-bg); border-left-color:var(--yellow)}
+  .blocker.med .why b{color:var(--yellow)}
+
+  code{
+    font-family:'SF Mono',Menlo,Consolas,monospace; font-size:13px;
+    background:#EEF1F6; color:var(--navy); padding:2px 6px; border-radius:4px;
+  }
+  pre{
+    background:#1C2530; color:#E6EDF3; border-radius:10px; padding:18px 20px;
+    overflow-x:auto; font-family:'SF Mono',Menlo,Consolas,monospace; font-size:13px;
+    line-height:1.55; margin:12px 0;
+  }
+  pre .k{color:#7CB7FF} pre .s{color:#9BE7A0} pre .c{color:#7E8B99}
+
+  /* file tags */
+  .files{display:flex; flex-wrap:wrap; gap:7px; margin-top:6px}
+  .files .ft{
+    background:#EEF1F6; border:1px solid var(--line); border-radius:6px;
+    padding:4px 10px; font-family:'SF Mono',Menlo,monospace; font-size:12px; color:var(--navy);
+  }
+  .areagroup{margin:10px 0}
+  .areagroup .area{font-weight:700; color:var(--navy); font-size:13px; margin-bottom:4px}
+
+  /* Table */
+  table{width:100%; border-collapse:collapse; background:var(--card); border-radius:12px; overflow:hidden; box-shadow:0 1px 3px rgba(28,53,87,.05); border:1px solid var(--line)}
+  th{background:var(--navy); color:var(--white); text-align:left; padding:13px 16px; font-size:13px; font-weight:600; letter-spacing:.03em}
+  td{padding:12px 16px; border-top:1px solid var(--line); font-size:14px; vertical-align:top}
+  tr:nth-child(even) td{background:#FAFBFD}
+  .tag{display:inline-block; font-size:11px; font-weight:700; padding:3px 9px; border-radius:5px; text-transform:uppercase; letter-spacing:.04em}
+  .tag.low{background:var(--green-bg); color:var(--green)}
+  .tag.med{background:var(--orange-bg); color:var(--orange)}
+  .tag.high{background:var(--red-bg); color:var(--red)}
+  td.num{font-weight:700; color:var(--navy); text-align:center}
+
+  /* Verdict */
+  .verdict{
+    background:linear-gradient(135deg,var(--navy) 0%,#24416b 100%); color:var(--white);
+    border-radius:14px; padding:30px 32px; margin-top:36px; border-bottom:4px solid var(--gold);
+  }
+  .verdict h2{color:var(--gold); font-size:20px; margin-bottom:14px}
+  .verdict p{color:#DCE5F0; font-size:15px; margin-bottom:12px}
+  .verdict b{color:var(--white)}
+  .verdict .gold{color:var(--gold); font-weight:700}
+
+  footer{text-align:center; color:var(--mute); font-size:13px; margin-top:48px}
+
+  @media(max-width:720px){
+    .scoreband{grid-template-columns:repeat(2,1fr)}
+    header h1{font-size:26px}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <div class="eyebrow">EstateVault · Architecture Review</div>
+    <h1>Scalability &amp; API Duplication Audit</h1>
+    <p>Where backend logic is repeated, where UI and data are tangled, and what blocks the app from scaling. Every number below is a real grep count against the codebase.</p>
+    <div class="meta">
+      <span class="pill"><b>118</b> API routes</span>
+      <span class="pill"><b>112</b> pages</span>
+      <span class="pill"><b>55</b> components</span>
+      <span class="pill">Separation score <b>4 / 10</b></span>
+      <span class="pill">Audit only — <b>no code changed</b></span>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <!-- Score band -->
+  <div class="scoreband">
+    <div class="scorecard"><div class="num">67</div><div class="lbl">Admin client copies</div></div>
+    <div class="scorecard"><div class="num">51</div><div class="lbl">UI files hit DB direct</div></div>
+    <div class="scorecard"><div class="num">28</div><div class="lbl">Inline Resend inits</div></div>
+    <div class="scorecard rate"><div class="num">1</div><div class="lbl">Files use authedFetch</div></div>
+  </div>
+
+  <!-- The core finding -->
+  <section>
+    <h2 class="sec">The Core Finding</h2>
+    <div class="blocker high">
+      <p style="font-size:16px;margin-bottom:0"><b>This is not a design problem — it's an adoption problem.</b> The right abstractions already exist and are well built: <code>createAdminClient</code> (lib/api/auth.ts), <code>requireAuth</code>, <code>lib/email.ts</code>, <code>authedFetch</code>, and Zod schemas. The routes just don't use them — they copy-paste instead. Folders look like clean layers; the actual dependency flow is ad-hoc. Most fixes below are mechanical, not redesign.</p>
+    </div>
+  </section>
+
+  <!-- BLOCKERS -->
+  <section>
+    <h2 class="sec">Scalability Blockers</h2>
+
+    <!-- B1 -->
+    <div class="blocker crit">
+      <div class="blocker-head">
+        <h3>1 · <code>createAdminClient()</code> copy-pasted everywhere</h3>
+        <span class="count-chip">67 files</span>
+        <span class="sev crit">Critical</span>
+      </div>
+      <p>The exact same function is redefined byte-for-byte in <b>67 route files</b>. A shared version exists in <code>lib/api/auth.ts</code> — only <b>15 files</b> import it.</p>
+      <pre><span class="k">function</span> createAdminClient() {
+  <span class="k">return</span> createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    { cookies: { getAll: () => [], setAll: () => {} } }
+  );
+}</pre>
+      <div class="label">Affected areas</div>
+      <div class="areagroup"><div class="area">checkout/ (8)</div><div class="files"><span class="ft">will</span><span class="ft">trust</span><span class="ft">attorney</span><span class="ft">amendment</span><span class="ft">partner</span><span class="ft">verify</span><span class="ft">check-conflict</span><span class="ft">vault-subscription</span></div></div>
+      <div class="areagroup"><div class="area">documents/ (9)</div><div class="files"><span class="ft">download</span><span class="ft">download-zip</span><span class="ft">download-by-session</span><span class="ft">process</span><span class="ft">process-now</span><span class="ft">check-status</span><span class="ft">send-email</span><span class="ft">regenerate-missing</span><span class="ft">cleanup-test-orders</span></div></div>
+      <div class="areagroup"><div class="area">attorney/ (6)</div><div class="files"><span class="ft">approve</span><span class="ft">review</span><span class="ft">review-docx</span><span class="ft">upload-reviewed</span><span class="ft">notify-client</span><span class="ft">check-sla</span></div></div>
+      <div class="areagroup"><div class="area">auth/ (6)</div><div class="files"><span class="ft">signup</span><span class="ft">recovery</span><span class="ft">resend-verification</span><span class="ft">set-password</span><span class="ft">welcome</span><span class="ft">check-email</span></div></div>
+      <div class="areagroup"><div class="area">vault/ (6)</div><div class="files"><span class="ft">trustees</span><span class="ft">pin</span><span class="ft">farewell</span><span class="ft">farewell/upload-complete</span><span class="ft">farewell/[id]/signed-url</span><span class="ft">download-document</span></div></div>
+      <div class="areagroup"><div class="area">sales/ (8)</div><div class="files"><span class="ft">reps</span><span class="ft">create-partner</span><span class="ft">create-rep</span><span class="ft">partner-notes</span><span class="ft">partner-last-login</span><span class="ft">send-welcome-email</span><span class="ft">affiliates/[id]/payout</span><span class="ft">affiliates/[id]/status</span></div></div>
+      <div class="areagroup"><div class="area">partner/ (7)</div><div class="files"><span class="ft">clients</span><span class="ft">revenue</span><span class="ft">add-domain</span><span class="ft">verify-domain</span><span class="ft">stripe-connect</span><span class="ft">vault-subdomain</span><span class="ft">vault-client-checkout</span></div></div>
+      <div class="areagroup"><div class="area">others (17)</div><div class="files"><span class="ft">marketing/* (4)</span><span class="ft">admin/* (3)</span><span class="ft">stripe/connect/* (2)</span><span class="ft">webhooks/stripe</span><span class="ft">affiliate/*</span><span class="ft">subscription/cancel</span><span class="ft">client/mark-executed</span><span class="ft">partners/branding</span></div></div>
+      <div class="why"><b>Why it blocks scale:</b> change Supabase client config — cookie handling, timeout, a new key — and you edit 67 files. Drift is guaranteed. New devs copy the nearest route, so the pattern keeps spreading.</div>
+    </div>
+
+    <!-- B2 -->
+    <div class="blocker crit">
+      <div class="blocker-head">
+        <h3>2 · UI talks directly to the database</h3>
+        <span class="count-chip">51 files</span>
+        <span class="sev crit">Critical</span>
+      </div>
+      <p>51 UI files import the browser Supabase client and run <code>.from().select/insert/update</code> queries inside the screen itself — no API route, no backend boundary. The only guard is RLS.</p>
+      <div class="label">Worst zones</div>
+      <div class="areagroup"><div class="area">All of app/pro/ — incl. 11 onboarding steps</div><div class="files"><span class="ft">dashboard</span><span class="ft">clients</span><span class="ft">clients/[id]</span><span class="ft">documents</span><span class="ft">revenue</span><span class="ft">referrals</span><span class="ft">vault-clients</span><span class="ft">marketing</span><span class="ft">preview</span><span class="ft">support</span><span class="ft">training</span><span class="ft">training/exam</span><span class="ft">settings</span><span class="ft">onboarding/step-1…7</span></div></div>
+      <div class="areagroup"><div class="area">All of sales/ + pro/sales/</div><div class="files"><span class="ft">dashboard</span><span class="ft">pipeline</span><span class="ft">partners</span><span class="ft">partners/[id]</span><span class="ft">commission</span></div></div>
+      <div class="areagroup"><div class="area">dashboard / attorney / checkout success</div><div class="files"><span class="ft">dashboard/documents</span><span class="ft">dashboard/settings</span><span class="ft">funding-checklist</span><span class="ft">attorney/pipeline</span><span class="ft">attorney/reviews</span><span class="ft">will/success</span><span class="ft">trust/success</span></div></div>
+      <div class="areagroup"><div class="area">components/</div><div class="files"><span class="ft">DocumentActions</span><span class="ft">PackageStatusCard</span><span class="ft">PasswordChangeBanner</span><span class="ft">PasswordSetup</span><span class="ft">AuthHandler</span></div></div>
+      <div class="why"><b>Why it blocks scale:</b> business rules live inside screens. Want to add logging, caching, validation, or rate-limiting to a data op? There's no single place — you edit every screen. A second frontend (mobile app) can't reuse any of it = full rewrite. One weak RLS policy = direct data exposure with no server-side backstop.</div>
+    </div>
+
+    <!-- B3 -->
+    <div class="blocker high">
+      <div class="blocker-head">
+        <h3>3 · Email sending duplicated</h3>
+        <span class="count-chip">28 / 25 files</span>
+        <span class="sev high">High</span>
+      </div>
+      <p><code>new Resend(...)</code> inline in <b>28 files</b> across 4 inconsistent forms (<code>KEY</code>, <code>KEY!</code>, <code>KEY || "re_placeholder"</code>, a var). <code>resend.emails.send()</code> inline in <b>25 files</b>, bypassing the central <code>lib/email.ts</code>. From-address hardcoded <b>19×</b>.</p>
+      <div class="label">Affected areas</div>
+      <div class="files">
+        <span class="ft">auth/recovery</span><span class="ft">auth/welcome</span><span class="ft">auth/send-verify-code</span><span class="ft">auth/send-verify-link</span><span class="ft">auth/resend-verification</span><span class="ft">checkout/attorney(+verify)</span><span class="ft">contact</span><span class="ft">cron/farewell-*</span><span class="ft">documents/send-email</span><span class="ft">farewell/access</span><span class="ft">farewell/verify</span><span class="ft">farewell/owner-veto</span><span class="ft">sales/create-partner</span><span class="ft">sales/create-rep</span><span class="ft">sales/send-welcome-email</span><span class="ft">trustee/unlock-otp</span><span class="ft">vault/trustees</span><span class="ft">vault/farewell</span><span class="ft">professionals/request-access</span><span class="ft">email/partner-activated</span><span class="ft">webhooks/stripe</span><span class="ft">admin/farewell-verification</span>
+      </div>
+      <div class="why"><b>Why it blocks scale:</b> change the sender domain or email branding and you touch 19–28 files. <code>lib/email.ts</code> is already built with branded templates — and bypassed by ~2× as many routes as use it.</div>
+    </div>
+
+    <!-- B4 -->
+    <div class="blocker high">
+      <div class="blocker-head">
+        <h3>4 · Auth / role guard repeated inline</h3>
+        <span class="count-chip">20 files</span>
+        <span class="sev high">High</span>
+      </div>
+      <p>20 routes inline the same dance: <code>getUser()</code> → fetch <code>profiles.user_type</code> → 401/403. Shared <code>requireAuth()</code> exists; only ~7 routes use it. Error strings are inconsistent: <code>"Unauthorized"</code> ×63, <code>"Not authenticated"</code> ×11, <code>"unauthorized"</code> ×4.</p>
+      <div class="why"><b>Why it blocks scale:</b> change one auth rule — add a role, an audit log, a lockout — and you edit 20 places. Inconsistent error strings break client-side error handling.</div>
+    </div>
+
+    <!-- B5 -->
+    <div class="blocker high">
+      <div class="blocker-head">
+        <h3>5 · No shared data-access layer</h3>
+        <span class="count-chip">61 files · 122 calls</span>
+        <span class="sev high">High</span>
+      </div>
+      <p><b>61 UI files</b> fire raw inline <code>fetch("/api/...")</code> — <b>122 calls</b> total. The shared wrapper <code>lib/api/authedFetch.ts</code> (handles 401 → token refresh → retry) is used in exactly <b>1 file</b>: <code>app/attorney/review/[id]/page.tsx</code>.</p>
+      <div class="why"><b>Why it blocks scale:</b> 60 screens have no 401-refresh = random logouts on expired tokens. No shared loading / error / retry behavior. A URL or header change means hunting 122 call sites.</div>
+    </div>
+
+    <!-- B6 -->
+    <div class="blocker med">
+      <div class="blocker-head">
+        <h3>6 · Pricing magic numbers inline</h3>
+        <span class="count-chip">6 files</span>
+        <span class="sev med">Medium</span>
+      </div>
+      <p>Fixed prices (CLAUDE.md: <em>"never change"</em>) are hardcoded as raw cents across checkout routes instead of one constants file.</p>
+      <pre><span class="c">// checkout/will/route.ts:213</span>   <span class="k">const</span> willAmount = 40000;   <span class="c">// $400</span>
+<span class="c">// checkout/will/route.ts:214</span>   <span class="k">const</span> attorneyAmount = 30000; <span class="c">// $300</span>
+<span class="c">// checkout/trust/route.ts:193</span>  <span class="k">const</span> trustAmount = 60000;  <span class="c">// $600</span>
+<span class="c">// checkout/amendment/route.ts</span>    5000 ×3
+<span class="c">// checkout/partner/route.ts:19</span>  600000 / 50000 / 120000
+<span class="c">// checkout/attorney/route.ts:140</span> 600000 / 120000</pre>
+      <div class="why"><b>Why it blocks scale:</b> a price change means scattered edits — easy to miss one and ship a mismatched charge. Should be a single <code>lib/pricing.ts</code>.</div>
+    </div>
+
+    <!-- B7 -->
+    <div class="blocker med">
+      <div class="blocker-head">
+        <h3>7 · App-URL env var has 3 names</h3>
+        <span class="count-chip">12 files</span>
+        <span class="sev med">Medium</span>
+      </div>
+      <p>Same concept, three names: <code>NEXT_PUBLIC_SITE_URL</code> (10 files) vs <code>NEXT_PUBLIC_APP_URL</code> (1) vs <code>NEXT_PUBLIC_BASE_URL</code> (1).</p>
+      <div class="why"><b>Why it blocks scale:</b> this is a correctness bug, not just DRY — password-reset and verify links can be built from the wrong domain depending on which route runs.</div>
+    </div>
+
+    <!-- B8 -->
+    <div class="blocker med">
+      <div class="blocker-head">
+        <h3>8 · No shared types / contract</h3>
+        <span class="count-chip">all layers</span>
+        <span class="sev med">Medium</span>
+      </div>
+      <p>No generated Supabase DB types (<code>database.types.ts</code> absent). Zod schemas in <code>lib/validation/schemas.ts</code> are imported by <b>1 route, 0 components</b>. Request/response shapes are redefined on each side of every fetch.</p>
+      <div class="why"><b>Why it blocks scale:</b> rename a DB column and nothing fails at compile time — it breaks silently at runtime. Frontend and backend payloads drift with no enforcement.</div>
+    </div>
+  </section>
+
+  <!-- Priority table -->
+  <section>
+    <h2 class="sec">Fix Priority — Effort vs Payoff</h2>
+    <table>
+      <thead><tr><th>#</th><th>Fix</th><th>Files</th><th>Risk</th><th>Effort</th></tr></thead>
+      <tbody>
+        <tr><td class="num">1</td><td>Import shared <code>createAdminClient</code></td><td class="num">67</td><td><span class="tag low">Low</span></td><td>Mechanical</td></tr>
+        <tr><td class="num">2</td><td>Adopt <code>requireAuth()</code> everywhere</td><td class="num">20</td><td><span class="tag low">Low</span></td><td>Mechanical</td></tr>
+        <tr><td class="num">3</td><td>Route all email via <code>lib/email.ts</code></td><td class="num">25</td><td><span class="tag med">Med</span></td><td>Medium</td></tr>
+        <tr><td class="num">4</td><td>Create <code>lib/pricing.ts</code> constants</td><td class="num">6</td><td><span class="tag low">Low</span></td><td>Quick</td></tr>
+        <tr><td class="num">5</td><td>One app-URL accessor (<code>getAppUrl()</code>)</td><td class="num">12</td><td><span class="tag low">Low</span></td><td>Quick · correctness</td></tr>
+        <tr><td class="num">6</td><td>Move UI direct-DB behind API routes</td><td class="num">51</td><td><span class="tag high">High</span></td><td>Big — phase it</td></tr>
+        <tr><td class="num">7</td><td>Adopt <code>authedFetch</code> / data layer</td><td class="num">61</td><td><span class="tag med">Med</span></td><td>Medium</td></tr>
+        <tr><td class="num">8</td><td>Generate DB types + share Zod schemas</td><td class="num">all</td><td><span class="tag low">Low</span></td><td>Medium</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- Verdict -->
+  <div class="verdict">
+    <h2>Verdict</h2>
+    <p>The layers <b>exist as folders</b> — <code>app/</code> pages, <code>app/api/</code> routes, <code>lib/</code> domain logic — and the genuine domain logic (document generation, templates, revenue-split math, validation) is properly extracted and kept out of React components. <span class="gold">That layer is solid.</span></p>
+    <p>But the UI ↔ backend boundary is <b>not enforced</b>. The real flow is <code>UI → (raw fetch | direct DB)</code>, not <code>UI → data layer → API → lib</code>. 67 routes copy the admin client, 51 screens query the DB directly, and the one token-refresh wrapper is used once.</p>
+    <p><b>The good news:</b> nearly every fix is adoption, not redesign. Items 1, 2, 4, 5 are mechanical and low-risk — do them first for a fast structural win. Item 6 (UI direct-DB) is the real architecture work and the main security exposure — phase it deliberately.</p>
+  </div>
+
+  <footer>
+    EstateVault · Scalability &amp; Duplication Audit · Generated 2026-05-23 · Analysis only, no code modified.
+  </footer>
+
+</div>
+</body>
+</html>

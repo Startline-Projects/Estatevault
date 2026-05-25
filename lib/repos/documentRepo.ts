@@ -1,15 +1,12 @@
 "use client";
 
-// Document repo — encrypted file upload/download via signed URLs.
-// Files >5 MB go through streaming AEAD; smaller files use byte AEAD for simpler
-// progress reporting. Both produce envelopes that decrypt with the same key.
+// Option A (F2): the server holds the keys. The client fetches its per-user FILES
+// sub-key over TLS, encrypts the file locally, and uploads ciphertext to Storage.
+// The bucket only ever holds ciphertext; the server can still decrypt (it derives
+// the same key), keeping files recoverable.
 
-import { getCryptoWorker } from "@/lib/crypto/worker/client";
-import { encryptStream, decryptStream } from "@/lib/crypto/streamAead";
-import { INFO } from "@/lib/crypto/keyManager";
+import { encryptBytes, decryptBytes } from "@/lib/crypto/aead";
 import { createItem, deleteItem, type VaultCategory, type VaultItemPlaintext } from "./vaultRepo";
-
-const STREAM_THRESHOLD = 5 * 1024 * 1024;
 
 type SignedUploadResp = {
   bucket: string;
@@ -19,6 +16,16 @@ type SignedUploadResp = {
   expiresInSec: number;
   sizeLimit: number;
 };
+
+async function getFileKey(): Promise<Uint8Array> {
+  const res = await fetch("/api/vault/file-key");
+  if (!res.ok) throw new Error(`file-key failed: ${res.status}`);
+  const { key } = await res.json() as { key: string };
+  const bin = atob(key);
+  const out = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+  return out;
+}
 
 async function getSignedUpload(kind: "document" | "farewell", expectedSize?: number): Promise<SignedUploadResp> {
   const res = await fetch("/api/vault/upload-url", {
@@ -44,18 +51,6 @@ async function getSignedDownload(bucket: "documents" | "farewell-videos", path: 
   return j.signedUrl;
 }
 
-// Worker-side file key. For Phase 8 we use a single derived DEK per HKDF info
-// string; per-item DEK + sealed-share comes in Phase 11.
-async function deriveFileKey(): Promise<Uint8Array> {
-  const worker = getCryptoWorker();
-  const dek = await (worker as unknown as {
-    deriveSubKey: (info: string) => Promise<Uint8Array>;
-  }).deriveSubKey?.(INFO.FILES) ?? null;
-  if (dek) return dek;
-  // Fallback: derive via encryptBytes round-trip is impossible; expose a helper.
-  throw new Error("worker.deriveSubKey not exposed; add to api.ts");
-}
-
 export type UploadDocArgs = {
   file: File;
   label: string;
@@ -72,23 +67,10 @@ export async function uploadDocument(args: UploadDocArgs): Promise<UploadDocResu
   const signed = await getSignedUpload("document", file.size);
   if (file.size > signed.sizeLimit) throw new Error("file too large");
 
-  const worker = getCryptoWorker();
-
-  if (file.size <= STREAM_THRESHOLD) {
-    // Byte path
-    const buf = new Uint8Array(await file.arrayBuffer());
-    const env = await worker.encryptBytes(buf, INFO.FILES);
-    await putToStorage(signed.signedUrl, env.envelope);
-  } else {
-    // Stream path — derive raw key in worker via wrap helper
-    // For now we use byte path since exposing the raw DEK breaks the
-    // worker-only invariant. Streaming with worker-internal key requires
-    // round-tripping chunks through Comlink; deferred to Phase 9 (videos)
-    // where the cost matters.
-    const buf = new Uint8Array(await file.arrayBuffer());
-    const env = await worker.encryptBytes(buf, INFO.FILES);
-    await putToStorage(signed.signedUrl, env.envelope);
-  }
+  const fileKey = await getFileKey();
+  const buf = new Uint8Array(await file.arrayBuffer());
+  const env = await encryptBytes(fileKey, buf);
+  await putToStorage(signed.signedUrl, env.bytes);
 
   const { id } = await createItem({
     category: "estate_document" as VaultCategory,
@@ -106,10 +88,12 @@ export async function uploadDocument(args: UploadDocArgs): Promise<UploadDocResu
 }
 
 async function putToStorage(signedUrl: string, body: Uint8Array): Promise<void> {
+  const ab = new ArrayBuffer(body.byteLength);
+  new Uint8Array(ab).set(body);
   const res = await fetch(signedUrl, {
     method: "PUT",
     headers: { "Content-Type": "application/octet-stream" },
-    body: body as BodyInit,
+    body: ab,
   });
   if (!res.ok) {
     const text = await res.text().catch(() => "");
@@ -124,19 +108,13 @@ export async function downloadDocument(item: VaultItemPlaintext): Promise<Blob> 
   if (!res.ok) throw new Error(`download failed: ${res.status}`);
   const ct = new Uint8Array(await res.arrayBuffer());
 
-  const worker = getCryptoWorker();
-  const pt = await worker.decryptBytes(ct, INFO.FILES);
+  const fileKey = await getFileKey();
+  const pt = await decryptBytes(fileKey, ct);
   const ab = new ArrayBuffer(pt.byteLength);
   new Uint8Array(ab).set(pt);
   return new Blob([ab], { type: "application/pdf" });
 }
 
 export async function deleteDocument(itemId: string): Promise<void> {
-  // TODO Phase 9: also delete the storage object via admin route.
-  // Current API DELETE removes the row; storage cleanup happens via
-  // periodic sweep of orphaned objects.
   await deleteItem(itemId);
 }
-
-// Re-export streaming helpers in case future code wants them.
-export { encryptStream, decryptStream };

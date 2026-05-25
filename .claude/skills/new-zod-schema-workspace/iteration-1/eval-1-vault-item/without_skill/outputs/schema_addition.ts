@@ -1,3 +1,5 @@
+import { z } from "zod";
+
 export const vaultItemSchema = z.object({
   item_name: z.string().min(1, "Item name is required"),
   category: z.enum([

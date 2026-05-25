@@ -6,7 +6,7 @@ description: Scaffold a Supabase SQL migration file with RLS policies, correct n
 Scaffold a new Supabase migration file for EstateVault based on the schema change the user describes.
 
 ## Output
-Create a file at the project root named `migration-[feature].sql`.
+Create a file at `supabase/migrations/YYYYMMDD_[feature].sql` (date prefix, e.g. `20260524_option_a_dek.sql`). Read the newest existing migration in that folder first and match its style.
 
 ## Template to follow
 

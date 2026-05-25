@@ -1,24 +1,17 @@
-import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
-import { createServerClient } from "@supabase/ssr";
+import { NextResponse, type NextRequest } from "next/server";
 import bcrypt from "bcryptjs";
+import { requireAuth } from "@/lib/api/auth";
 
-function createAdminClient() {
-  return createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    { cookies: { getAll: () => [], setAll: () => {} } }
-  );
-}
+export const runtime = "nodejs";
 
-// Create or verify PIN
-export async function POST(request: Request) {
-  const supabase = createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+// 6-digit vault app-lock PIN (server-side bcrypt). UX gate only — NOT the
+// encryption key. Accepts cookie (web) or Bearer (mobile) auth.
+export async function POST(request: NextRequest) {
+  const auth = await requireAuth(["client"], request);
+  if ("error" in auth) return auth.error;
+  const { user, admin } = auth;
 
   const { action, pin, newPin } = await request.json();
-  const admin = createAdminClient();
 
   if (action === "check") {
     const { data: profile } = await admin.from("profiles").select("vault_pin_hash").eq("id", user.id).single();
@@ -37,7 +30,7 @@ export async function POST(request: Request) {
   }
 
   if (action === "create") {
-    if (!pin || pin.length !== 4) return NextResponse.json({ error: "PIN must be 4 digits" }, { status: 400 });
+    if (!pin || pin.length !== 6) return NextResponse.json({ error: "PIN must be 6 digits" }, { status: 400 });
     const hash = await bcrypt.hash(pin, 10);
     await admin.from("profiles").update({ vault_pin_hash: hash }).eq("id", user.id);
     await admin.from("audit_log").insert({ actor_id: user.id, action: "vault.pin_created", resource_type: "profile", resource_id: user.id });
@@ -55,7 +48,7 @@ export async function POST(request: Request) {
   }
 
   if (action === "change") {
-    if (!pin || !newPin || newPin.length !== 4) return NextResponse.json({ error: "Invalid input" }, { status: 400 });
+    if (!pin || !newPin || newPin.length !== 6) return NextResponse.json({ error: "Invalid input" }, { status: 400 });
     const { data: profile } = await admin.from("profiles").select("vault_pin_hash").eq("id", user.id).single();
     if (!profile?.vault_pin_hash) return NextResponse.json({ error: "No PIN set" }, { status: 400 });
     const valid = await bcrypt.compare(pin, profile.vault_pin_hash);

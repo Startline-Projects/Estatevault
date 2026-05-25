@@ -1,17 +1,15 @@
 ---
 name: new-db-helper
-description: Scaffold a typed database query helper in /lib/db/ for EstateVault. Use this whenever adding reusable Supabase queries so API routes stay thin.
+description: Scaffold a typed database repo in /lib/repos/ for EstateVault. Use this whenever adding reusable Supabase queries so API routes stay thin.
 ---
 
-Scaffold a new typed database helper file under `/lib/db/[name].ts` for EstateVault.
+Scaffold a new typed repo file at `/lib/repos/[entity]Repo.ts` for EstateVault.
 
 ## Why this pattern exists
-API routes should contain minimal DB logic. Reusable queries live in `/lib/db/` so they can be shared across routes and tested in isolation.
+API routes should contain minimal DB logic. Reusable queries live in `/lib/repos/` so they can be shared across routes and tested in isolation.
 
 ## Output
-Create a file at `/lib/db/[name].ts`.
-
-Note: `/lib/db/` may not exist yet — create the directory by creating the file at the full path.
+Create a file at `/lib/repos/[entity]Repo.ts` (e.g. `ordersRepo.ts`). Read an existing repo such as `documentRepo.ts` first and match its shape — some repos are server-side (call Supabase directly), some are `"use client"` and call `/api/...` via `fetch`.
 
 ## Two client patterns — pick the right one
 

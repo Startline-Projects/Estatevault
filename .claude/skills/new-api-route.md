@@ -30,35 +30,27 @@ function createAdminClient() {
 
 ## Standard user-auth route template
 
+Current canonical auth is `requireAuth()` from `@/lib/api/auth.ts` — it handles both web session cookies and mobile `Bearer` tokens, plus role gating. Use it instead of calling `getUser()` directly. Read a neighbor route under `app/api/vault/` to confirm the live shape.
+
 ```ts
-import { NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { NextResponse, type NextRequest } from 'next/server'
+import { requireAuth } from '@/lib/api/auth'
+import { someSchema } from '@/lib/validation/schemas'
 
-interface RequestBody {
-  // typed fields here
-}
-
-interface ResponseBody {
-  // typed fields here
-}
-
-export async function POST(request: Request): Promise<NextResponse> {
+export async function POST(req: NextRequest): Promise<NextResponse> {
   try {
-    const supabase = createClient()
+    const auth = await requireAuth(['client'], req) // pass req so Bearer auth works
+    if ('error' in auth) return auth.error
+    const { user } = auth
 
-    // Auth check — always getUser(), never getSession()
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const parsed = someSchema.safeParse(await req.json())
+    if (!parsed.success) {
+      return NextResponse.json({ error: 'invalid input' }, { status: 400 })
     }
 
-    const body: RequestBody = await request.json()
+    // business logic — call a repo from /lib/repos with parsed.data and user.id
 
-    // TODO: validate body fields
-
-    // TODO: business logic
-
-    return NextResponse.json({ /* response */ } satisfies ResponseBody)
+    return NextResponse.json({ ok: true })
   } catch (error) {
     console.error('[route-name]', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
@@ -67,9 +59,9 @@ export async function POST(request: Request): Promise<NextResponse> {
 ```
 
 ## Rules
-- Use `createClient` from `@/lib/supabase/server` — never `createRouteHandlerClient` (deprecated)
-- Auth check uses `getUser()` — never `getSession()` (getSession is not secure server-side)
-- Admin client only for: Stripe webhooks, background jobs, cross-user admin operations
+- Auth via `requireAuth(allowed?, req)` from `@/lib/api/auth.ts` — handle the `'error' in auth` branch first; pass `req` so mobile Bearer tokens work
+- Never `getSession()` server-side (not secure); never `createRouteHandlerClient` (deprecated)
+- Admin/service-role only via `createAdminClient()` from `@/lib/api/auth.ts`, and only for: Stripe webhooks, background jobs, cross-user admin operations
 - Explicit `Promise<NextResponse>` return type on every handler
 - Return typed `{ error: string }` on failure — never expose raw DB errors or stack traces
 - Log errors with `console.error('[route-name]', error)` prefix for easy log filtering

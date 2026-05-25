@@ -6,7 +6,6 @@ import { useRouter } from "next/navigation";
 import SubscriptionBanner from "@/components/dashboard/SubscriptionBanner";
 import { listItems, createItem, deleteItem, type VaultCategory } from "@/lib/repos/vaultRepo";
 import { downloadDocument } from "@/lib/repos/documentRepo";
-import { useVaultLock } from "@/hooks/useVaultLock";
 
 interface VaultItem {
   id: string;
@@ -94,7 +93,6 @@ const RESTORABLE_SCREENS = new Set<Screen>(["vault", "category", "add-item", "up
 
 export default function VaultPage() {
   const router = useRouter();
-  const { isLocked } = useVaultLock();
   const initRef = useRef(false);
   const [screen, setScreen] = useState<Screen>("pin-check");
   const [pin, setPin] = useState("");
@@ -106,7 +104,6 @@ export default function VaultPage() {
   const [saving, setSaving] = useState(false);
   const [pinExpiry, setPinExpiry] = useState(0);
   const [isSubscribed, setIsSubscribed] = useState(false);
-  const [isBootstrapped, setIsBootstrapped] = useState<boolean | null>(null);
   const [showUpgradePrompt, setShowUpgradePrompt] = useState(false);
 
   // Upload state
@@ -172,15 +169,6 @@ export default function VaultPage() {
         setScreen(pinData.hasPin ? "pin-enter" : "pin-create");
       }
 
-      // Track passphrase/crypto bootstrap separately. Used to gate item-add actions
-      // and redirect into /onboarding/vault-setup when user tries to use vault before finishing setup.
-      try {
-        const bundleRes = await fetch("/api/crypto/bundle", { method: "HEAD" });
-        setIsBootstrapped(bundleRes.status !== 404);
-      } catch {
-        setIsBootstrapped(false);
-      }
-
       if (justSubscribed && typeof window !== "undefined") {
         const url = new URL(window.location.href);
         url.searchParams.delete("subscribed");
@@ -224,7 +212,6 @@ export default function VaultPage() {
   );
 
   const loadItems = useCallback(async () => {
-    if (isLocked) return;
     try {
       const list = await listItems();
       setItems(list.map((i) => ({
@@ -239,17 +226,16 @@ export default function VaultPage() {
     } catch (e) {
       console.error("vault list failed:", (e as Error).message);
     }
-  }, [isLocked]);
+  }, []);
 
-  // Auto-reload items when MK unlocks while user is already past PIN gate.
+  // Reload items when entering the vault/category view.
   useEffect(() => {
-    if (isLocked) return;
     if (screen !== "vault" && screen !== "category") return;
     void loadItems();
-  }, [isLocked, screen, loadItems]);
+  }, [screen, loadItems]);
 
   async function handleCreatePin() {
-    if (pin.length !== 4 || !/^\d{4}$/.test(pin)) { setPinError("PIN must be exactly 4 digits"); return; }
+    if (pin.length !== 6 || !/^\d{6}$/.test(pin)) { setPinError("PIN must be exactly 6 digits"); return; }
     if (pin !== confirmPin) { setPinError("PINs do not match"); return; }
     const res = await fetch("/api/vault/pin", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "create", pin }) });
     if (!res.ok) { setPinError("Failed to create PIN"); return; }
@@ -387,11 +373,11 @@ export default function VaultPage() {
       <div className="max-w-sm mx-auto py-16 text-center">
         <div className="flex justify-center"><div className="h-16 w-16 rounded-full bg-gold/10 flex items-center justify-center"><span className="text-3xl">🔐</span></div></div>
         <h1 className="mt-6 text-xl font-bold text-navy">Create Your Vault PIN</h1>
-        <p className="mt-2 text-sm text-charcoal/60">Choose a 4-digit PIN to secure your vault. This is separate from your account password.</p>
+        <p className="mt-2 text-sm text-charcoal/60">Choose a 6-digit PIN to secure your vault. This is separate from your account password.</p>
         {pinError && <p className="mt-3 text-sm text-red-600">{pinError}</p>}
-        <input type="password" maxLength={4} inputMode="numeric" pattern="[0-9]*" value={pin} onChange={(e) => { setPin(e.target.value.replace(/\D/g, "")); setPinError(""); }} placeholder="Enter 4-digit PIN" className={`mt-6 w-full text-center rounded-xl border-2 border-gray-200 py-4 leading-none focus:border-gold focus:outline-none ${pin ? "text-2xl tracking-[0.5em]" : "text-sm tracking-normal"}`} />
-        <input type="password" maxLength={4} inputMode="numeric" pattern="[0-9]*" value={confirmPin} onChange={(e) => setConfirmPin(e.target.value.replace(/\D/g, ""))} placeholder="Confirm PIN" className={`mt-3 w-full text-center rounded-xl border-2 border-gray-200 py-4 leading-none focus:border-gold focus:outline-none ${confirmPin ? "text-2xl tracking-[0.5em]" : "text-sm tracking-normal"}`} />
-        <button onClick={handleCreatePin} disabled={pin.length !== 4 || confirmPin.length !== 4} className="mt-6 w-full min-h-[44px] rounded-full bg-gold py-3 text-sm font-semibold text-white hover:bg-gold/90 disabled:opacity-50 disabled:cursor-not-allowed">Create PIN</button>
+        <input type="password" maxLength={6} inputMode="numeric" pattern="[0-9]*" value={pin} onChange={(e) => { setPin(e.target.value.replace(/\D/g, "")); setPinError(""); }} placeholder="Enter 6-digit PIN" className={`mt-6 w-full text-center rounded-xl border-2 border-gray-200 py-4 leading-none focus:border-gold focus:outline-none ${pin ? "text-2xl tracking-[0.5em]" : "text-sm tracking-normal"}`} />
+        <input type="password" maxLength={6} inputMode="numeric" pattern="[0-9]*" value={confirmPin} onChange={(e) => setConfirmPin(e.target.value.replace(/\D/g, ""))} placeholder="Confirm PIN" className={`mt-3 w-full text-center rounded-xl border-2 border-gray-200 py-4 leading-none focus:border-gold focus:outline-none ${confirmPin ? "text-2xl tracking-[0.5em]" : "text-sm tracking-normal"}`} />
+        <button onClick={handleCreatePin} disabled={pin.length !== 6 || confirmPin.length !== 6} className="mt-6 w-full min-h-[44px] rounded-full bg-gold py-3 text-sm font-semibold text-white hover:bg-gold/90 disabled:opacity-50 disabled:cursor-not-allowed">Create PIN</button>
       </div>
     );
   }
@@ -402,9 +388,9 @@ export default function VaultPage() {
         <div className="flex justify-center"><div className="h-16 w-16 rounded-full bg-gold/10 flex items-center justify-center"><span className="text-3xl">🔐</span></div></div>
         <h1 className="mt-6 text-xl font-bold text-navy">Enter Your Vault PIN</h1>
         {pinError && <p className="mt-3 text-sm text-red-600">{pinError}</p>}
-        <input type="password" maxLength={4} inputMode="numeric" pattern="[0-9]*" value={pin} onChange={(e) => { setPin(e.target.value.replace(/\D/g, "")); setPinError(""); }} placeholder="4-digit PIN" className={`mt-6 w-full text-center rounded-xl border-2 border-gray-200 py-4 leading-none focus:border-gold focus:outline-none ${pin ? "text-2xl tracking-[0.5em]" : "text-sm tracking-normal"}`}
-          onKeyDown={(e) => { if (e.key === "Enter" && pin.length === 4) handleVerifyPin(); }} />
-        <button onClick={handleVerifyPin} disabled={pin.length !== 4} className="mt-6 w-full min-h-[44px] rounded-full bg-gold py-3 text-sm font-semibold text-white hover:bg-gold/90 disabled:opacity-50 disabled:cursor-not-allowed">Unlock Vault</button>
+        <input type="password" maxLength={6} inputMode="numeric" pattern="[0-9]*" value={pin} onChange={(e) => { setPin(e.target.value.replace(/\D/g, "")); setPinError(""); }} placeholder="6-digit PIN" className={`mt-6 w-full text-center rounded-xl border-2 border-gray-200 py-4 leading-none focus:border-gold focus:outline-none ${pin ? "text-2xl tracking-[0.5em]" : "text-sm tracking-normal"}`}
+          onKeyDown={(e) => { if (e.key === "Enter" && pin.length === 6) handleVerifyPin(); }} />
+        <button onClick={handleVerifyPin} disabled={pin.length !== 6} className="mt-6 w-full min-h-[44px] rounded-full bg-gold py-3 text-sm font-semibold text-white hover:bg-gold/90 disabled:opacity-50 disabled:cursor-not-allowed">Unlock Vault</button>
       </div>
     );
   }
@@ -785,7 +771,6 @@ export default function VaultPage() {
               key={cat.key}
               onClick={() => {
                 if (requiresUpgrade) { setShowUpgradePrompt(true); return; }
-                if (isBootstrapped === false) { router.push("/onboarding/vault-setup"); return; }
                 setSelectedCategory(cat.key);
                 setScreen("category");
               }}
@@ -810,12 +795,23 @@ export default function VaultPage() {
         })}
 
         {/* Farewell Messages card */}
-        <Link href="/dashboard/vault/farewell"
-          className="rounded-xl p-5 text-left transition-all hover:shadow-md bg-gold/5 border border-gold/30 text-navy">
+        <button
+          onClick={() => {
+            if (!isSubscribed) { setShowUpgradePrompt(true); return; }
+            router.push("/dashboard/vault/farewell");
+          }}
+          className="relative rounded-xl p-5 text-left transition-all hover:shadow-md bg-gold/5 border border-gold/30 text-navy">
+          {!isSubscribed && (
+            <div className="absolute top-2.5 right-2.5 text-charcoal/30">
+              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
+              </svg>
+            </div>
+          )}
           <span className="text-2xl">🎥</span>
           <p className="mt-3 text-sm font-semibold">Farewell Messages</p>
-          <p className="mt-1 text-xs text-charcoal/60">Video messages for loved ones</p>
-        </Link>
+          <p className="mt-1 text-xs text-charcoal/60">{!isSubscribed ? "Vault plan required" : "Video messages for loved ones"}</p>
+        </button>
       </div>
     </div>
   );

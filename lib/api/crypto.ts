@@ -59,12 +59,12 @@ export function validateEnvelope(buf: Uint8Array, maxLen = 1024) {
 
 // ---- Auth + client lookup ----
 
-export async function requireClientUser(_req: NextRequest, opts: { autoCreate?: boolean } = {}) {
-  const auth = await requireAuth(["client"] as UserType[]);
+export async function requireClientUser(req: NextRequest, opts: { autoCreate?: boolean } = {}) {
+  const auth = await requireAuth(["client"] as UserType[], req);
   if ("error" in auth) return { error: auth.error };
   const { admin, user, profile } = auth;
 
-  const selectCols = "id, profile_id, kdf_salt, kdf_params, wrapped_mk_pass, wrapped_mk_recovery, pubkey_x25519, pubkey_ed25519, enc_version, crypto_setup_at";
+  const selectCols = "id, profile_id, kdf_salt, kdf_params, wrapped_mk_pass, wrapped_mk_recovery, pubkey_x25519, pubkey_ed25519, enc_version, crypto_setup_at, wrapped_dek, dek_setup_at";
 
   let { data: client, error } = await admin
     .from("clients")

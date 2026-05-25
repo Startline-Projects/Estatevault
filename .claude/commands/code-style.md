@@ -12,14 +12,15 @@ Apply these rules to all code written in this project.
 - One component per file under `/components`
 - Pages and layouts only in `/app` (Next.js App Router)
 - API routes in `/app/api/[route-name]/route.ts`
-- All database queries in `/lib/db`
-- Shared utilities in `/lib`
+- All database access in `/lib/repos/*Repo.ts` (one repo per entity)
+- Route auth via `requireAuth()` from `/lib/api/auth.ts`
+- Shared utilities and domain logic in `/lib`
 
 ## Naming Conventions
 - Components: PascalCase → `HeroSection.tsx`
 - Hooks & utilities: camelCase → `useVaultPin.ts`
 - API route folders: kebab-case → `/app/api/create-will/route.ts`
-- Database helpers: snake_case to match Postgres column names
+- Repo files: camelCase + `Repo` suffix → `vaultRepo.ts`; DB columns snake_case to match Postgres
 
 ## Components
 - Every form must have: loading state, error state, success feedback

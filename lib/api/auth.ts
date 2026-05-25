@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextResponse, type NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createServerClient } from "@supabase/ssr";
 
@@ -19,13 +19,29 @@ type AuthOk = {
 };
 type AuthErr = { error: NextResponse };
 
-export async function requireAuth(allowed?: UserType[]): Promise<AuthOk | AuthErr> {
-  const supabase = createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+export async function requireAuth(allowed?: UserType[], req?: NextRequest): Promise<AuthOk | AuthErr> {
+  const admin = createAdminClient();
+
+  let user: { id: string; email?: string } | null = null;
+  const authz = req?.headers.get("authorization");
+  if (authz?.startsWith("Bearer ")) {
+    // Mobile clients send the Supabase access token as a Bearer header.
+    const token = authz.slice("Bearer ".length).trim();
+    const { data, error } = await admin.auth.getUser(token);
+    if (!error && data.user) {
+      user = { id: data.user.id, email: data.user.email };
+    }
+  } else {
+    // Web clients authenticate via the Supabase session cookie.
+    const supabase = createClient();
+    const { data: { user: cookieUser } } = await supabase.auth.getUser();
+    if (cookieUser) user = { id: cookieUser.id, email: cookieUser.email };
+  }
+
   if (!user) {
     return { error: NextResponse.json({ error: "unauthorized" }, { status: 401 }) };
   }
-  const admin = createAdminClient();
+
   const { data: profile } = await admin
     .from("profiles")
     .select("id, user_type")

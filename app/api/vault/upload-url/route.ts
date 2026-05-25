@@ -1,38 +1,31 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { randomUUID } from "crypto";
-import { createClient } from "@/lib/supabase/server";
-import { createAdminClient } from "@/lib/api/auth";
+import { requireClientUser } from "@/lib/api/crypto";
 import { apiRateLimit } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
 
-// Mint a signed upload URL for the documents bucket. Client uploads opaque
-// ciphertext (.bin). Server enforces only path scoping + size cap (set by
-// signed URL options); content type is opaque.
+// Mint a signed upload URL. Client PUTs opaque ciphertext (.bin) — encryption is
+// client-side with the per-user FILES key (Option A / F2). Server only scopes the
+// path + size; content is opaque.
 const Schema = z.object({
   kind: z.enum(["document", "farewell"]).default("document"),
-  // Optional client-supplied UUID to allow PUT before DB row exists.
   uploadId: z.string().uuid().optional(),
   expectedSize: z.number().int().positive().optional(),
 });
 
 const SIZE_LIMITS = {
-  document: 20 * 1024 * 1024,        // 20 MB
-  farewell: 500 * 1024 * 1024,       // 500 MB
+  document: 20 * 1024 * 1024,
+  farewell: 500 * 1024 * 1024,
 };
-
-const BUCKETS = {
-  document: "documents",
-  farewell: "farewell-videos",
-};
-
-const SIGNED_URL_TTL_S = 60 * 5; // 5 min
+const BUCKETS = { document: "documents", farewell: "farewell-videos" };
+const SIGNED_URL_TTL_S = 60 * 5;
 
 export async function POST(req: NextRequest) {
-  const supabase = createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const ctx = await requireClientUser(req);
+  if ("error" in ctx) return ctx.error;
+  const { admin, user, client } = ctx;
 
   const rl = await apiRateLimit.limit(`upload-url:${user.id}`);
   if (!rl.success) return NextResponse.json({ error: "rate limited" }, { status: 429 });
@@ -47,14 +40,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "file too large" }, { status: 413 });
   }
 
-  const admin = createAdminClient();
-  const { data: client } = await admin
-    .from("clients")
-    .select("id, vault_subscription_status")
-    .eq("profile_id", user.id)
-    .single();
-  if (!client) return NextResponse.json({ error: "No client record" }, { status: 400 });
-  if (client.vault_subscription_status !== "active") {
+  const { data: sub } = await admin
+    .from("clients").select("vault_subscription_status").eq("id", client.id).single();
+  if (sub?.vault_subscription_status !== "active") {
     return NextResponse.json({ error: "Vault subscription required" }, { status: 403 });
   }
 
@@ -62,10 +50,7 @@ export async function POST(req: NextRequest) {
   const path = `vault/${client.id}/${uploadId}.bin`;
   const bucket = BUCKETS[kind];
 
-  const { data, error } = await admin.storage
-    .from(bucket)
-    .createSignedUploadUrl(path);
-
+  const { data, error } = await admin.storage.from(bucket).createSignedUploadUrl(path);
   if (error || !data) {
     return NextResponse.json({ error: "failed to mint signed url" }, { status: 500 });
   }

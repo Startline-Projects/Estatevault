@@ -11,12 +11,10 @@ import {
   downloadFarewell,
   type FarewellMessagePlaintext,
 } from "@/lib/repos/videoRepo";
-import { useVaultLock } from "@/hooks/useVaultLock";
 
 type Mode = "list" | "new" | "record" | "upload";
 
 export default function FarewellMessagesPage() {
-  const { isLocked } = useVaultLock();
   const [isSubscribed, setIsSubscribed] = useState(false);
   const [messages, setMessages] = useState<FarewellMessagePlaintext[]>([]);
   const [loading, setLoading] = useState(true);
@@ -37,7 +35,6 @@ export default function FarewellMessagesPage() {
   }, []);
 
   const fetchMessages = useCallback(async () => {
-    if (isLocked) { setLoading(false); return; }
     try {
       const list = await listFarewellMessages();
       setMessages(list);
@@ -46,7 +43,7 @@ export default function FarewellMessagesPage() {
     } finally {
       setLoading(false);
     }
-  }, [isLocked]);
+  }, []);
 
   useEffect(() => { fetchMessages(); }, [fetchMessages]);
 
@@ -80,10 +77,9 @@ export default function FarewellMessagesPage() {
     setPreviewLoading(true);
     setPreviewTitle(msg.title);
     try {
-      if (msg.encrypted && msg.storagePath && msg.storageHeader) {
+      if (msg.encrypted && msg.storagePath) {
         const blob = await downloadFarewell({
           storagePath: msg.storagePath,
-          storageHeader: msg.storageHeader,
         });
         setPreviewUrl(URL.createObjectURL(blob));
       } else {
@@ -127,10 +123,6 @@ export default function FarewellMessagesPage() {
       case "unlocked": return <span className="px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-700">Unlocked</span>;
       default: return <span className="px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-600">{status}</span>;
     }
-  }
-
-  if (isLocked) {
-    return <div className="py-20 text-center text-charcoal/60 text-sm">Unlock your vault to view farewell messages.</div>;
   }
 
   if (!loading && !isSubscribed) {
