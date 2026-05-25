@@ -2,13 +2,11 @@
  * POST /api/trustee/unlock-verify
  * Body: { token, code }
  *
- * On success returns vault material for client-side reconstruction:
- *   - shareA (plain, server-held)
- *   - shareC (decrypted from vault_master_share_c_enc with TRUSTEE_RELEASE_KEY)
- *   - wrappedMkShamir (MK encrypted under shamir master_key)
- *
- * Browser combines shareA + shareC → master_key → unwraps MK → decrypts vault.
- * Burns the unlock token + OTP on success. Increments attempt counter on failure.
+ * Option A (server-managed): verifies the emailed OTP, then issues a trustee
+ * session cookie. Vault content is decrypted server-side on demand (see
+ * /api/trustee/vault/items and /api/trustee/vault/file-key) — no key material
+ * is returned to the browser. Burns the OTP on success; the access token stays
+ * valid until access_expires_at so the trustee can re-enter from the email link.
  */
 import { NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
@@ -17,8 +15,6 @@ import {
   hashToken,
   hashOtp,
 } from "@/lib/security/trusteeToken";
-import { decryptShareC } from "@/lib/crypto/trusteeRelease";
-import { byteaToBytes } from "@/lib/api/crypto";
 import { issueSession, SESSION_COOKIE, SESSION_TTL_SECONDS } from "@/lib/security/trusteeSession";
 
 export const runtime = "nodejs";
@@ -30,10 +26,6 @@ function admin() {
     process.env.SUPABASE_SERVICE_ROLE_KEY!,
     { cookies: { getAll: () => [], setAll: () => {} } },
   );
-}
-
-function b64(b: Uint8Array): string {
-  return Buffer.from(b).toString("base64");
 }
 
 export async function POST(req: Request) {
@@ -83,24 +75,6 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "wrong code" }, { status: 401 });
   }
 
-  // Load owner crypto material.
-  const { data: client } = await db
-    .from("clients")
-    .select("vault_master_share_a, vault_master_share_c_enc, vault_wrapped_mk_shamir, vault_shamir_version, kdf_params, kdf_salt, wrapped_mk_pass, pubkey_x25519, pubkey_ed25519")
-    .eq("id", r.client_id)
-    .single();
-  if (!client?.vault_master_share_a || !client.vault_master_share_c_enc || !client.vault_wrapped_mk_shamir) {
-    return NextResponse.json({ error: "vault not initialized for trustee access" }, { status: 409 });
-  }
-
-  let shareCPlain: Uint8Array;
-  try {
-    shareCPlain = await decryptShareC(byteaToBytes(client.vault_master_share_c_enc));
-  } catch (e) {
-    console.error("[unlock-verify] decrypt share C failed:", e);
-    return NextResponse.json({ error: "release key error" }, { status: 500 });
-  }
-
   // Burn OTP only — keep the access token valid until access_expires_at (7d)
   // so the trustee can re-enter from the email link if their session ends.
   // Each new sign-in still requires a fresh OTP via /unlock-otp.
@@ -123,11 +97,6 @@ export async function POST(req: Request) {
 
   const res = NextResponse.json({
     ok: true,
-    shareA: b64(byteaToBytes(client.vault_master_share_a)),
-    shareC: b64(shareCPlain),
-    wrappedMkShamir: b64(byteaToBytes(client.vault_wrapped_mk_shamir)),
-    shamirVersion: client.vault_shamir_version ?? 1,
-    pubX25519: b64(byteaToBytes(client.pubkey_x25519)),
     accessExpiresAt: r.access_expires_at,
     sessionExpiresAt: new Date(session.expiresAt).toISOString(),
   });

@@ -1,12 +1,15 @@
 import { NextResponse } from "next/server";
-import { createServerClient } from "@supabase/ssr";
 import { Resend } from "resend";
+import { createAdminClient } from "@/lib/api/auth";
+import { getOrCreateUserDek } from "@/lib/api/dek";
+import { deriveSubKey, INFO, zero } from "@/lib/crypto/keyManager";
+import { decryptBytes } from "@/lib/crypto/aead";
+import { byteaToBytes, bytesToBytea } from "@/lib/api/crypto";
+import { blindIndex, normalize } from "@/lib/crypto/blindIndex";
+
+export const runtime = "nodejs";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
-
-function createAdminClient() {
-  return createServerClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, { cookies: { getAll: () => [], setAll: () => {} } });
-}
 
 export async function POST(request: Request) {
   try {
@@ -32,17 +35,56 @@ export async function POST(request: Request) {
 
     const supabase = createAdminClient();
 
-    // Verify trustee exists for this client
-    const { data: trustee } = await supabase
-      .from("vault_trustees")
-      .select("id, trustee_name, access_scope")
-      .eq("client_id", clientId)
-      .ilike("trustee_email", trusteeEmail)
+    // Option A: trustee email is encrypted at rest; matching is done via the
+    // per-user blind index (HMAC over normalized email), not plaintext.
+    const { data: ownerClient } = await supabase
+      .from("clients")
+      .select("id, wrapped_dek")
+      .eq("id", clientId)
       .maybeSingle();
-
-    if (!trustee) {
+    if (!ownerClient) {
       return NextResponse.json({ error: "No trustee found with this email for this account" }, { status: 404 });
     }
+
+    const dek = await getOrCreateUserDek(supabase, ownerClient);
+    const indexKey = await deriveSubKey(dek, INFO.INDEX);
+    const dbKey = await deriveSubKey(dek, INFO.DB);
+    let emailBlindHex: string;
+    try {
+      emailBlindHex = bytesToBytea(blindIndex(indexKey, normalize(trusteeEmail)));
+    } finally {
+      zero(indexKey);
+    }
+
+    const { data: trusteeRow } = await supabase
+      .from("vault_trustees")
+      .select("id, ciphertext, access_scope")
+      .eq("client_id", clientId)
+      .eq("email_blind", emailBlindHex)
+      .maybeSingle();
+
+    if (!trusteeRow) {
+      zero(dbKey);
+      zero(dek);
+      return NextResponse.json({ error: "No trustee found with this email for this account" }, { status: 404 });
+    }
+
+    // Decrypt trustee name (stored in ciphertext) for notification emails.
+    let trusteeName = "Trustee";
+    try {
+      const ct = byteaToBytes(trusteeRow.ciphertext);
+      if (ct.length > 0) {
+        const pt = await decryptBytes(dbKey, ct);
+        const m = JSON.parse(new TextDecoder().decode(pt)) as { name?: string };
+        trusteeName = m.name?.trim() || trusteeName;
+      }
+    } catch { /* fall back to default name */ }
+    finally {
+      zero(dbKey);
+      zero(dek);
+    }
+
+    const trustee = { id: trusteeRow.id, trustee_name: trusteeName, access_scope: trusteeRow.access_scope };
 
     // Scope-aware availability check. If trustee has any granted scope and the
     // client has matching content, request can proceed. Legacy (null scope) =
@@ -92,10 +134,10 @@ export async function POST(request: Request) {
     // Upload certificate
     const buffer = Buffer.from(await certificate.arrayBuffer());
     const ext = certificate.name.split(".").pop() || "pdf";
-    const certPath = `${clientId}/certificates/${Date.now()}.${ext}`;
+    const certPath = `${clientId}/${Date.now()}.${ext}`;
 
     const { error: uploadErr } = await supabase.storage
-      .from("farewell-videos")
+      .from("death-certificates")
       .upload(certPath, buffer, { contentType: certificate.type, upsert: true });
 
     if (uploadErr) {

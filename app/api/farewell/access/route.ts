@@ -1,19 +1,17 @@
 import { NextResponse } from "next/server";
-import { createServerClient } from "@supabase/ssr";
 import { Resend } from "resend";
 import { issueTrusteeToken, hashToken } from "@/lib/security/trusteeToken";
+import { createAdminClient } from "@/lib/api/auth";
+import { getOrCreateUserDek } from "@/lib/api/dek";
+import { deriveSubKey, INFO, zero } from "@/lib/crypto/keyManager";
+import { bytesToBytea } from "@/lib/api/crypto";
+import { blindIndex, normalize } from "@/lib/crypto/blindIndex";
+
+export const runtime = "nodejs";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 const ACCESS_TTL_SECONDS = 7 * 24 * 3600;
 const RESEND_COOLDOWN_MS = 60 * 1000;
-
-function createAdminClient() {
-  return createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    { cookies: { getAll: () => [], setAll: () => {} } }
-  );
-}
 
 // POST /api/farewell/access
 // Trustee verifies identity and gets signed URLs for unlocked messages.
@@ -28,13 +26,36 @@ export async function POST(request: Request) {
 
     const admin = createAdminClient();
 
-    // 1. Verify this email is a registered trustee for this client
+    // 1. Verify this email is a registered trustee for this client.
+    // Option A: trustee email is encrypted; match via per-user blind index.
+    const { data: ownerClient } = await admin
+      .from("clients")
+      .select("id, wrapped_dek")
+      .eq("id", clientId)
+      .maybeSingle();
+    if (!ownerClient) {
+      return NextResponse.json(
+        { error: "No trustee account found for this email. Please check your email address." },
+        { status: 404 }
+      );
+    }
+
+    const dek = await getOrCreateUserDek(admin, ownerClient);
+    const indexKey = await deriveSubKey(dek, INFO.INDEX);
+    let emailBlindHex: string;
+    try {
+      emailBlindHex = bytesToBytea(blindIndex(indexKey, normalize(trusteeEmail)));
+    } finally {
+      zero(indexKey);
+      zero(dek);
+    }
+
     const { data: trustee } = await admin
       .from("vault_trustees")
-      .select("id, trustee_name, status, confirmed_at, access_scope")
+      .select("id, status, confirmed_at, access_scope")
       .eq("client_id", clientId)
-      .eq("trustee_email", trusteeEmail.toLowerCase().trim())
-      .single();
+      .eq("email_blind", emailBlindHex)
+      .maybeSingle();
 
     if (!trustee) {
       return NextResponse.json(

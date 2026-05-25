@@ -3,7 +3,6 @@
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { listTrustees, addTrustee, deleteTrustee, FULL_SCOPE, type TrusteePlaintext, type AccessScope } from "@/lib/repos/trusteeRepo";
-import { useVaultLock } from "@/hooks/useVaultLock";
 
 const REL_OPTIONS = ["Spouse/Partner", "Adult Child", "Sibling", "Parent", "Attorney", "Friend", "Other"];
 
@@ -27,7 +26,6 @@ function scopeSummary(s: AccessScope): string {
 }
 
 export default function TrusteesPage() {
-  const { isLocked, state } = useVaultLock();
   const [trustees, setTrustees] = useState<TrusteePlaintext[]>([]);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -49,7 +47,6 @@ export default function TrusteesPage() {
   const scopeEmpty = scope.categories.length === 0 && !scope.documents && !scope.farewell;
 
   const loadTrustees = useCallback(async () => {
-    if (isLocked) { setLoading(false); return; }
     try {
       const list = await listTrustees();
       setTrustees(list);
@@ -58,7 +55,7 @@ export default function TrusteesPage() {
     } finally {
       setLoading(false);
     }
-  }, [isLocked]);
+  }, []);
 
   useEffect(() => { loadTrustees(); }, [loadTrustees]);
 
@@ -102,13 +99,6 @@ export default function TrusteesPage() {
     }
   }
 
-  if (isLocked) {
-    return (
-      <div className="py-20 text-center text-charcoal/50">
-        {state === "uninitialized" ? "Loading..." : "Unlocking vault…"}
-      </div>
-    );
-  }
   if (loading) return <div className="py-20 text-center text-charcoal/50">Loading...</div>;
 
   return (

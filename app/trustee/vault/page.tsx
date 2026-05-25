@@ -1,6 +1,12 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { decryptBytes } from "@/lib/crypto/aead";
+import { decryptFarewellCipher } from "@/lib/repos/videoRepo";
+
+// Option A: the server decrypts vault metadata and hands it back as plaintext.
+// File/video bytes stay encrypted in Storage; the trustee fetches the owner's
+// FILES sub-key once and decrypts blobs locally (mirrors the owner repos).
 
 function fromB64(s: string): Uint8Array {
   const bin = atob(s);
@@ -9,38 +15,30 @@ function fromB64(s: string): Uint8Array {
   return out;
 }
 
-interface RawVaultItem {
+interface ServerVaultItem {
   id: string;
   category: string;
-  ciphertext: string | null;
-  nonce: string | null;
-  encVersion: number;
+  label: string;
+  data: Record<string, unknown>;
   storagePath: string | null;
   updatedAt: string;
-  decrypted?: string;
 }
 
-interface RawDocItem {
+interface ServerDoc {
   id: string;
-  filename: string;
-  mimeType: string;
-  sizeBytes: number;
-  storagePath: string;
-  ciphertext: string | null;
-  nonce: string | null;
-  encVersion: number;
+  documentType: string | null;
+  status: string | null;
+  storagePath: string | null;
   createdAt: string;
 }
 
-interface RawFarewell {
+interface ServerFarewell {
   id: string;
   title: string;
   durationSeconds: number;
   storagePath: string | null;
   status: string;
   createdAt: string;
-  storageHeader: string | null;
-  encVersion: number | null;
 }
 
 interface NormalDoc {
@@ -66,7 +64,11 @@ interface RegularItem {
 
 const IDLE_LIMIT_MS = 30 * 60 * 1000;
 const WARN_AT_MS = 25 * 60 * 1000;
-const INFO_FILES = "ev:dek:files:v1";
+
+function prettyDocType(t: string | null): string {
+  if (!t) return "Document";
+  return t.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
+}
 
 const NAVY = "#1C3557";
 const GOLD = "#C9A84C";
@@ -261,7 +263,7 @@ function ItemCard({ item }: { item: RegularItem }) {
 export default function TrusteeVaultPage() {
   const [items, setItems] = useState<RegularItem[]>([]);
   const [documents, setDocuments] = useState<NormalDoc[]>([]);
-  const [farewell, setFarewell] = useState<RawFarewell[]>([]);
+  const [farewell, setFarewell] = useState<ServerFarewell[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [idleWarning, setIdleWarning] = useState(false);
@@ -271,6 +273,19 @@ export default function TrusteeVaultPage() {
   const [videoTitle, setVideoTitle] = useState<string>("");
   const idleTimer = useRef<number | null>(null);
   const warnTimer = useRef<number | null>(null);
+  const fileKeyRef = useRef<Uint8Array | null>(null);
+
+  // Fetch the owner's FILES sub-key once (server-managed; trustee-scoped) and
+  // cache it for the session so file/video decryption doesn't re-request it.
+  async function getFileKey(): Promise<Uint8Array> {
+    if (fileKeyRef.current) return fileKeyRef.current;
+    const res = await fetch("/api/trustee/vault/file-key");
+    if (!res.ok) throw new Error(`file-key failed: ${res.status}`);
+    const { key } = await res.json() as { key: string };
+    const k = fromB64(key);
+    fileKeyRef.current = k;
+    return k;
+  }
 
   function resetIdle() {
     setIdleWarning(false);
@@ -307,49 +322,24 @@ export default function TrusteeVaultPage() {
           throw new Error(j.error || `HTTP ${res.status}`);
         }
         const j = await res.json();
-        const rawItems = (j.vaultItems || []) as RawVaultItem[];
-        const rawDocs = (j.documents || []) as RawDocItem[];
-        const rawFarewell = (j.farewell || []) as RawFarewell[];
-
-        const { getCryptoWorker } = await import("@/lib/crypto/worker/client");
-        const worker = getCryptoWorker();
+        const serverItems = (j.vaultItems || []) as ServerVaultItem[];
+        const serverDocs = (j.documents || []) as ServerDoc[];
+        const serverFarewell = (j.farewell || []) as ServerFarewell[];
 
         const regular: RegularItem[] = [];
         const docFromVault: NormalDoc[] = [];
 
-        for (const it of rawItems) {
-          let decrypted: string | undefined;
-          if (it.ciphertext) {
-            try {
-              const plain = await worker.decryptBytes(fromB64(it.ciphertext), "ev:dek:db:v1");
-              decrypted = new TextDecoder().decode(plain);
-            } catch {
-              decrypted = undefined;
-            }
-          }
-
-          let label = "";
-          let data: Record<string, unknown> = {};
-          let raw: string | undefined;
-          let parseFailed = !decrypted && !!it.ciphertext;
-
-          if (decrypted) {
-            try {
-              const parsed = JSON.parse(decrypted);
-              label = typeof parsed?.label === "string" ? parsed.label : "";
-              data = parsed?.data && typeof parsed.data === "object" ? parsed.data : {};
-            } catch {
-              raw = decrypted;
-            }
-          }
-
+        // Server already decrypted item metadata. Uploaded estate documents are
+        // vault_items with a storage_path; split those into the Documents list.
+        for (const it of serverItems) {
+          const data = it.data ?? {};
           if (it.category.toLowerCase() === "estate_document" && it.storagePath) {
             const fileName = typeof data.file_name === "string" ? data.file_name : "";
             docFromVault.push({
               source: "vault_item",
               id: it.id,
-              title: label || fileName || "Document",
-              filename: fileName || label || "document",
+              title: it.label || fileName || "Document",
+              filename: fileName || it.label || "document",
               sizeBytes: typeof data.file_size === "number" ? data.file_size : null,
               createdAt: typeof data.uploaded_at === "string" ? data.uploaded_at : it.updatedAt,
               storagePath: it.storagePath,
@@ -361,27 +351,28 @@ export default function TrusteeVaultPage() {
           regular.push({
             id: it.id,
             category: it.category,
-            label,
+            label: it.label,
             data,
-            raw,
-            parseFailed,
+            parseFailed: it.label === "[decryption failed]",
             updatedAt: it.updatedAt,
           });
         }
 
-        const docsFromTable: NormalDoc[] = rawDocs.map(d => ({
+        // Generated wills/trusts (plaintext PDFs in the documents bucket).
+        const docsFromTable: NormalDoc[] = serverDocs.map(d => ({
           source: "document",
           id: d.id,
-          title: d.filename,
-          filename: d.filename,
-          sizeBytes: d.sizeBytes,
+          title: prettyDocType(d.documentType),
+          filename: `${prettyDocType(d.documentType)}.pdf`,
+          sizeBytes: null,
           createdAt: d.createdAt,
           storagePath: d.storagePath,
+          docType: d.documentType ?? undefined,
         }));
 
         setItems(regular);
         setDocuments([...docsFromTable, ...docFromVault]);
-        setFarewell(rawFarewell);
+        setFarewell(serverFarewell);
       } catch (e: any) {
         setError(e?.message || "Failed to load");
       } finally {
@@ -399,13 +390,21 @@ export default function TrusteeVaultPage() {
       const { url } = await r.json();
       const cipherRes = await fetch(url);
       if (!cipherRes.ok) throw new Error("storage fetch failed");
-      const cipher = new Uint8Array(await cipherRes.arrayBuffer());
 
-      const { getCryptoWorker } = await import("@/lib/crypto/worker/client");
-      const worker = getCryptoWorker();
-      const plain = await worker.decryptBytes(cipher, INFO_FILES);
+      let blob: Blob;
+      if (doc.source === "vault_item") {
+        // Uploaded estate document — encrypted with the owner's FILES sub-key.
+        const cipher = new Uint8Array(await cipherRes.arrayBuffer());
+        const fileKey = await getFileKey();
+        const plain = await decryptBytes(fileKey, cipher);
+        const ab = new ArrayBuffer(plain.byteLength);
+        new Uint8Array(ab).set(plain);
+        blob = new Blob([ab], { type: "application/pdf" });
+      } else {
+        // Generated will/trust — plaintext PDF in storage.
+        blob = await cipherRes.blob();
+      }
 
-      const blob = new Blob([plain.slice().buffer as ArrayBuffer]);
       const blobUrl = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = blobUrl;
@@ -421,12 +420,8 @@ export default function TrusteeVaultPage() {
     }
   }
 
-  async function playFarewell(f: RawFarewell) {
+  async function playFarewell(f: ServerFarewell) {
     if (!f.storagePath) return;
-    if (!f.storageHeader) {
-      alert("This message is missing playback metadata. Ask the owner to re-upload.");
-      return;
-    }
     setBusyId(f.id);
     try {
       const r = await fetch(`/api/trustee/vault/download-url?type=farewell&id=${f.id}`);
@@ -434,50 +429,12 @@ export default function TrusteeVaultPage() {
       const { url } = await r.json();
       const cipherRes = await fetch(url);
       if (!cipherRes.ok) throw new Error("storage fetch failed");
+      const cipher = new Uint8Array(await cipherRes.arrayBuffer());
 
-      const { getCryptoWorker } = await import("@/lib/crypto/worker/client");
-      const worker = getCryptoWorker();
-      const { sessionId } = await worker.beginDecryptStream(INFO_FILES, fromB64(f.storageHeader));
+      // Same EVC1 chunked format the owner uploads (lib/repos/videoRepo).
+      const fileKey = await getFileKey();
+      const blob = await decryptFarewellCipher(cipher, fileKey);
 
-      const reader = cipherRes.body!.getReader();
-      let buffer = new Uint8Array(0);
-      let done = false;
-      let final = false;
-      const plainChunks: Uint8Array[] = [];
-
-      const fill = async (min: number) => {
-        while (buffer.length < min && !done) {
-          const c = await reader.read();
-          if (c.done) { done = true; break; }
-          const next = new Uint8Array(buffer.length + c.value.length);
-          next.set(buffer, 0);
-          next.set(c.value, buffer.length);
-          buffer = next;
-        }
-        return buffer.length >= min;
-      };
-
-      while (!final) {
-        if (!(await fill(4))) break;
-        const len = new DataView(buffer.buffer, buffer.byteOffset, buffer.byteLength).getUint32(0, false);
-        buffer = buffer.slice(4);
-        if (!(await fill(len))) throw new Error("truncated stream");
-        const ct = buffer.slice(0, len);
-        buffer = buffer.slice(len);
-        const out = await worker.pullDecryptStream(sessionId, ct);
-        if (out.plaintext.length > 0) plainChunks.push(out.plaintext);
-        final = out.final;
-      }
-      await worker.endStream(sessionId).catch(() => undefined);
-
-      const blob = new Blob(
-        plainChunks.map((u) => {
-          const ab = new ArrayBuffer(u.byteLength);
-          new Uint8Array(ab).set(u);
-          return ab;
-        }),
-        { type: "video/mp4" },
-      );
       if (videoUrl) URL.revokeObjectURL(videoUrl);
       setVideoUrl(URL.createObjectURL(blob));
       setVideoTitle(f.title);

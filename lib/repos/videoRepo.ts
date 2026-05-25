@@ -195,21 +195,12 @@ export async function deleteFarewellMessage(messageId: string): Promise<void> {
   }
 }
 
-export async function downloadFarewell(args: { storagePath: string }): Promise<Blob> {
-  const dlRes = await fetch("/api/vault/download-url", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ bucket: "farewell-videos", path: args.storagePath }),
-  });
-  if (!dlRes.ok) throw new Error(`download-url failed: ${dlRes.status}`);
-  const { signedUrl } = await dlRes.json() as { signedUrl: string };
-
-  const cipherRes = await fetch(signedUrl);
-  if (!cipherRes.ok) throw new Error(`storage download failed: ${cipherRes.status}`);
-  const cipher = new Uint8Array(await cipherRes.arrayBuffer());
-
+// Decode an EVC1 farewell ciphertext blob to a playable Blob, given the raw
+// FILES sub-key. Shared by the owner download path and the trustee vault view
+// (which fetches the key from /api/trustee/vault/file-key) so both decode the
+// same format identically.
+export async function decryptFarewellCipher(cipher: Uint8Array, fileKey: Uint8Array): Promise<Blob> {
   const s = await getSodium();
-  const fileKey = await getFileKey();
 
   if (cipher.length < 9 || cipher[0] !== MAGIC[0] || cipher[1] !== MAGIC[1] || cipher[2] !== MAGIC[2] || cipher[3] !== MAGIC[3]) {
     throw new Error("bad magic");
@@ -228,5 +219,22 @@ export async function downloadFarewell(args: { storagePath: string }): Promise<B
     parts.push(u8toAB(pt));
   }
 
-  return new Blob(parts);
+  return new Blob(parts, { type: "video/mp4" });
+}
+
+export async function downloadFarewell(args: { storagePath: string }): Promise<Blob> {
+  const dlRes = await fetch("/api/vault/download-url", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ bucket: "farewell-videos", path: args.storagePath }),
+  });
+  if (!dlRes.ok) throw new Error(`download-url failed: ${dlRes.status}`);
+  const { signedUrl } = await dlRes.json() as { signedUrl: string };
+
+  const cipherRes = await fetch(signedUrl);
+  if (!cipherRes.ok) throw new Error(`storage download failed: ${cipherRes.status}`);
+  const cipher = new Uint8Array(await cipherRes.arrayBuffer());
+
+  const fileKey = await getFileKey();
+  return decryptFarewellCipher(cipher, fileKey);
 }

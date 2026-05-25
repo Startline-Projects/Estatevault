@@ -1,7 +1,12 @@
 /**
  * GET /api/trustee/vault/items
- * Returns encrypted vault_items + documents + farewell_messages for the
- * client_id bound to the trustee session. Browser worker decrypts.
+ * Returns the owner's vault content for the client_id bound to the trustee
+ * session, scoped by access_scope.
+ *
+ * Option A (server-managed): vault_items are decrypted server-side with the
+ * owner's DEK and returned as plaintext metadata. File/video bytes stay in
+ * Storage (downloaded via signed URL + /api/trustee/vault/file-key). Generated
+ * documents (documents table) are already plaintext PDFs.
  *
  * Read-only. Every call audited. Refreshes session cookie.
  */
@@ -14,6 +19,9 @@ import {
   SESSION_TTL_SECONDS,
 } from "@/lib/security/trusteeSession";
 import { byteaToBytes } from "@/lib/api/crypto";
+import { getOrCreateUserDek } from "@/lib/api/dek";
+import { deriveSubKey, INFO, zero } from "@/lib/crypto/keyManager";
+import { decryptBytes } from "@/lib/crypto/aead";
 
 export const runtime = "nodejs";
 
@@ -25,10 +33,22 @@ function admin() {
   );
 }
 
-function b64(b: Uint8Array): string { return Buffer.from(b).toString("base64"); }
-function maybeB64(v: unknown): string | null {
-  if (!v) return null;
-  try { return b64(byteaToBytes(v)); } catch { return null; }
+interface TrusteeVaultItem {
+  id: string;
+  category: string;
+  label: string;
+  data: Record<string, unknown>;
+  storagePath: string | null;
+  updatedAt: string;
+}
+
+interface TrusteeFarewell {
+  id: string;
+  title: string;
+  durationSeconds: number | null;
+  storagePath: string | null;
+  status: string;
+  createdAt: string;
 }
 
 export async function GET(req: Request) {
@@ -61,9 +81,19 @@ export async function GET(req: Request) {
   const allowDocuments = allowAll ? true : !!scope.documents;
   const allowFarewell = allowAll ? true : !!scope.farewell;
 
+  // Load the owner's client row to obtain the DEK for server-side decryption.
+  const { data: ownerClient } = await db
+    .from("clients")
+    .select("id, wrapped_dek")
+    .eq("id", sess.clientId)
+    .single();
+  if (!ownerClient) {
+    return NextResponse.json({ error: "owner not found" }, { status: 404 });
+  }
+
   let itemsQuery = db
     .from("vault_items")
-    .select("id, category, ciphertext, nonce, enc_version, label_blind, storage_path, created_at, updated_at")
+    .select("id, category, ciphertext, storage_path, created_at, updated_at")
     .eq("client_id", sess.clientId);
   if (allowCategories !== null) {
     if (allowCategories.length === 0) {
@@ -72,24 +102,86 @@ export async function GET(req: Request) {
       itemsQuery = itemsQuery.in("category", allowCategories);
     }
   }
-  const { data: items } = await itemsQuery
+  const { data: rawItems } = await itemsQuery
     .order("category", { ascending: true })
     .order("updated_at", { ascending: false });
 
+  // Generated documents (wills/trusts) are plaintext PDFs in the documents bucket.
   const { data: docs } = allowDocuments
     ? await db
         .from("documents")
-        .select("id, filename, mime_type, size_bytes, storage_path, ciphertext, nonce, enc_version, created_at")
+        .select("id, document_type, status, storage_path, created_at")
         .eq("client_id", sess.clientId)
         .order("created_at", { ascending: false })
     : { data: [] as never[] };
 
-  const { data: farewell } = allowFarewell
+  // Farewell title/recipient are encrypted (ciphertext); decrypt below.
+  const { data: rawFarewell } = allowFarewell
     ? await db
         .from("farewell_messages")
-        .select("id, title, duration_seconds, storage_path, storage_header, enc_version, vault_farewell_status, created_at")
+        .select("id, ciphertext, duration_seconds, storage_path, vault_farewell_status, created_at")
         .eq("client_id", sess.clientId)
+        .not("vault_farewell_status", "in", '("deleted","replaced","expired")')
+        .order("created_at", { ascending: false })
     : { data: [] as never[] };
+
+  // Decrypt vault_items + farewell titles server-side with the owner's DB sub-key.
+  const vaultItems: TrusteeVaultItem[] = [];
+  const farewell: TrusteeFarewell[] = [];
+  if ((rawItems && rawItems.length > 0) || (rawFarewell && rawFarewell.length > 0)) {
+    const dek = await getOrCreateUserDek(db, ownerClient);
+    const dbKey = await deriveSubKey(dek, INFO.DB);
+    try {
+      for (const it of rawItems ?? []) {
+        let label = "";
+        let data: Record<string, unknown> = {};
+        const ct = byteaToBytes(it.ciphertext);
+        if (ct.length > 0) {
+          try {
+            const pt = await decryptBytes(dbKey, ct);
+            const parsed = JSON.parse(new TextDecoder().decode(pt)) as { label?: string; data?: Record<string, unknown> };
+            label = typeof parsed.label === "string" ? parsed.label : "";
+            data = parsed.data && typeof parsed.data === "object" ? parsed.data : {};
+          } catch {
+            label = "[decryption failed]";
+          }
+        }
+        vaultItems.push({
+          id: it.id,
+          category: it.category,
+          label,
+          data,
+          storagePath: it.storage_path,
+          updatedAt: it.updated_at ?? it.created_at,
+        });
+      }
+
+      for (const f of rawFarewell ?? []) {
+        let title = "";
+        const ct = byteaToBytes(f.ciphertext);
+        if (ct.length > 0) {
+          try {
+            const pt = await decryptBytes(dbKey, ct);
+            const meta = JSON.parse(new TextDecoder().decode(pt)) as { title?: string };
+            title = typeof meta.title === "string" ? meta.title : "";
+          } catch {
+            title = "[decryption failed]";
+          }
+        }
+        farewell.push({
+          id: f.id,
+          title,
+          durationSeconds: f.duration_seconds,
+          storagePath: f.storage_path,
+          status: f.vault_farewell_status,
+          createdAt: f.created_at,
+        });
+      }
+    } finally {
+      zero(dbKey);
+      zero(dek);
+    }
+  }
 
   // Audit list view.
   const ua = req.headers.get("user-agent") || null;
@@ -101,9 +193,9 @@ export async function GET(req: Request) {
     action: "list_items",
     ip, user_agent: ua,
     metadata: {
-      vault_items: items?.length || 0,
+      vault_items: vaultItems.length,
       documents: docs?.length || 0,
-      farewell: farewell?.length || 0,
+      farewell: farewell.length,
     },
   });
 
@@ -117,32 +209,15 @@ export async function GET(req: Request) {
 
   const res = NextResponse.json({
     ok: true,
-    vaultItems: (items || []).map(i => ({
-      id: i.id,
-      category: i.category,
-      ciphertext: maybeB64(i.ciphertext),
-      nonce: maybeB64(i.nonce),
-      encVersion: i.enc_version,
-      storagePath: i.storage_path,
-      updatedAt: i.updated_at,
-    })),
+    vaultItems,
     documents: (docs || []).map(d => ({
       id: d.id,
-      filename: d.filename,
-      mimeType: d.mime_type,
-      sizeBytes: d.size_bytes,
+      documentType: d.document_type,
+      status: d.status,
       storagePath: d.storage_path,
-      ciphertext: maybeB64(d.ciphertext),
-      nonce: maybeB64(d.nonce),
-      encVersion: d.enc_version,
       createdAt: d.created_at,
     })),
-    farewell: (farewell || []).map(f => ({
-      id: f.id, title: f.title, durationSeconds: f.duration_seconds,
-      storagePath: f.storage_path, status: f.vault_farewell_status, createdAt: f.created_at,
-      storageHeader: maybeB64(f.storage_header),
-      encVersion: f.enc_version,
-    })),
+    farewell,
     sessionExpiresAt: new Date(fresh.expiresAt).toISOString(),
   });
   res.cookies.set(SESSION_COOKIE, fresh.value, {

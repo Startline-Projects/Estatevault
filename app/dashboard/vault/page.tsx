@@ -1,11 +1,11 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import SubscriptionBanner from "@/components/dashboard/SubscriptionBanner";
 import { listItems, createItem, deleteItem, type VaultCategory } from "@/lib/repos/vaultRepo";
 import { downloadDocument } from "@/lib/repos/documentRepo";
+import { listFarewellMessages } from "@/lib/repos/videoRepo";
 
 interface VaultItem {
   id: string;
@@ -99,6 +99,7 @@ export default function VaultPage() {
   const [confirmPin, setConfirmPin] = useState("");
   const [pinError, setPinError] = useState("");
   const [items, setItems] = useState<VaultItem[]>([]);
+  const [farewellCount, setFarewellCount] = useState(0);
   const [selectedCategory, setSelectedCategory] = useState("");
   const [addForm, setAddForm] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
@@ -214,7 +215,9 @@ export default function VaultPage() {
   const loadItems = useCallback(async () => {
     try {
       const list = await listItems();
-      setItems(list.map((i) => ({
+      // Vault shows only user-uploaded items, never EstateVault-generated docs (order_id present).
+      const uploadedOnly = list.filter((i) => !(i.data as Record<string, unknown>)?.order_id);
+      setItems(uploadedOnly.map((i) => ({
         id: i.id,
         category: i.category,
         label: i.label,
@@ -225,6 +228,12 @@ export default function VaultPage() {
       })));
     } catch (e) {
       console.error("vault list failed:", (e as Error).message);
+    }
+    try {
+      const fw = await listFarewellMessages();
+      setFarewellCount(fw.length);
+    } catch (e) {
+      console.error("farewell list failed:", (e as Error).message);
     }
   }, []);
 
@@ -724,9 +733,15 @@ export default function VaultPage() {
           <h1 className="text-2xl font-bold text-navy">My Family Vault</h1>
           <p className="mt-1 text-sm text-charcoal/60">Everything your family needs, secured and organized.</p>
         </div>
-        <Link href="/dashboard/vault/trustees" className="rounded-full border border-navy px-4 py-2 text-sm font-medium text-navy hover:bg-navy hover:text-white transition-colors">
+        <button
+          onClick={() => {
+            if (!isSubscribed) { setShowUpgradePrompt(true); return; }
+            router.push("/dashboard/vault/trustees");
+          }}
+          className="rounded-full border border-navy px-4 py-2 text-sm font-medium text-navy hover:bg-navy hover:text-white transition-colors"
+        >
           Manage Emergency Access
-        </Link>
+        </button>
       </div>
 
       {/* Subscription banner */}
@@ -800,7 +815,9 @@ export default function VaultPage() {
             if (!isSubscribed) { setShowUpgradePrompt(true); return; }
             router.push("/dashboard/vault/farewell");
           }}
-          className="relative rounded-xl p-5 text-left transition-all hover:shadow-md bg-gold/5 border border-gold/30 text-navy">
+          className={`relative rounded-xl p-5 text-left transition-all hover:shadow-md ${
+            farewellCount > 0 ? "bg-gold text-white" : "bg-gold/5 border border-gold/30 text-navy"
+          }`}>
           {!isSubscribed && (
             <div className="absolute top-2.5 right-2.5 text-charcoal/30">
               <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -810,7 +827,9 @@ export default function VaultPage() {
           )}
           <span className="text-2xl">🎥</span>
           <p className="mt-3 text-sm font-semibold">Farewell Messages</p>
-          <p className="mt-1 text-xs text-charcoal/60">{!isSubscribed ? "Vault plan required" : "Video messages for loved ones"}</p>
+          <p className={`mt-1 text-xs ${farewellCount > 0 ? "text-white/60" : "text-charcoal/60"}`}>
+            {!isSubscribed ? "Vault plan required" : farewellCount > 0 ? `${farewellCount} message${farewellCount !== 1 ? "s" : ""}` : "Video messages for loved ones"}
+          </p>
         </button>
       </div>
     </div>

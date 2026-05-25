@@ -61,7 +61,7 @@ export async function GET() {
 
       // Generate signed URL for certificate
       const { data: certUrl } = await admin.storage
-        .from("farewell-videos")
+        .from("death-certificates")
         .createSignedUrl(req.certificate_storage_path, 3600);
 
       return {
