@@ -1,28 +1,16 @@
 import { NextResponse } from "next/server";
 import { stripe } from "@/lib/stripe";
-import { createClient } from "@supabase/supabase-js";
 import { Resend } from "resend";
-
-/* ------------------------------------------------------------------ */
-/*  Supabase admin client (bypasses RLS)                              */
-/* ------------------------------------------------------------------ */
-
-function getSupabaseAdmin() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-  if (!url || !serviceKey) {
-    throw new Error("Missing Supabase environment variables");
-  }
-
-  return createClient(url, serviceKey);
-}
+import { withRoute } from "@/lib/api/route";
+import { createAdminClient } from "@/lib/api/auth";
+import * as profileRepo from "@/lib/repos/server/profileRepo";
+import * as partnerRepo from "@/lib/repos/server/partnerRepo";
 
 /* ------------------------------------------------------------------ */
 /*  POST /api/checkout/attorney/verify                                */
 /* ------------------------------------------------------------------ */
 
-export async function POST(request: Request) {
+export const POST = withRoute(async (request: Request) => {
   try {
     const body = await request.json();
     const sessionId = body.session_id;
@@ -74,7 +62,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const supabase = getSupabaseAdmin();
+    const supabase = createAdminClient();
 
     // 2. Create Supabase auth user
     const { data: authData, error: authError } = await supabase.auth.admin.createUser({
@@ -103,7 +91,7 @@ export async function POST(request: Request) {
 
     // 3. Create profile
     if (userId) {
-      await supabase.from("profiles").upsert({
+      await profileRepo.upsert(supabase, {
         id: userId,
         first_name: firstName,
         last_name: lastName,
@@ -113,7 +101,11 @@ export async function POST(request: Request) {
       });
 
       // 4. Create partner record
-      await supabase.from("partners").upsert({
+      // NOTE: known C-8 money bug — `user_id` should be `profile_id`, and
+      // `custom_review_fee`/`one_time_fee_amount` are written in dollars into
+      // cents columns. Left as-is in Phase 2; will be fixed with a
+      // characterization test in a follow-up.
+      await partnerRepo.upsert(supabase, {
         user_id: userId,
         company_name: firmName || `${firstName} ${lastName} Law`,
         professional_type: "attorney",
@@ -221,4 +213,4 @@ export async function POST(request: Request) {
       { status: 500 }
     );
   }
-}
+});

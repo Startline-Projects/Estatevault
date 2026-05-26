@@ -25,6 +25,15 @@ export function findIdAndSubByProfile(admin: Admin, profileId: string) {
     .single();
 }
 
+// Variant that returns null instead of erroring when the row is missing.
+export function findIdAndSubByProfileMaybe(admin: Admin, profileId: string) {
+  return admin
+    .from("clients")
+    .select("id, vault_subscription_status")
+    .eq("profile_id", profileId)
+    .maybeSingle();
+}
+
 // Resolve a client (id + subscription + partner) from its owning auth profile.
 export function findWithPartnerByProfile(admin: Admin, profileId: string) {
   return admin
@@ -64,4 +73,19 @@ export function getKeyMaterialById(admin: Admin, clientId: string) {
     .select("id, wrapped_dek, profile_id")
     .eq("id", clientId)
     .single();
+}
+
+// Insert a new client row (checkout flows that bootstrap an account).
+export function create(admin: Admin, row: Record<string, unknown>) {
+  return admin.from("clients").insert(row).select("id").single();
+}
+
+// Variant returning the subscription status alongside the id.
+export function createReturningWithSub(admin: Admin, row: Record<string, unknown>) {
+  return admin.from("clients").insert(row).select("id, vault_subscription_status").single();
+}
+
+// Link an existing client row to a profile after the auth user is created.
+export function setProfileId(admin: Admin, clientId: string, profileId: string) {
+  return admin.from("clients").update({ profile_id: profileId }).eq("id", clientId);
 }

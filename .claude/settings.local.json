@@ -73,7 +73,15 @@
       "Bash(echo \"EXIT: $?\")",
       "Bash(nslookup api.resend.com)",
       "Bash(ping -c 1 -t 2 1.1.1.1)",
-      "Bash(supabase status *)"
+      "Bash(supabase status *)",
+      "Bash(echo \"=== tsc exit: $? ===\")",
+      "Bash(npm test *)",
+      "Bash(node -e \"console.log\\(require\\('./package.json'\\).dependencies['@supabase/supabase-js']||'NONE'\\)\")",
+      "Bash(ls scripts/)",
+      "Bash(echo \"exit $?\")",
+      "Bash(grep -rln \"useVaultLock\\\\|getKeySession\\\\|vault:pin-expiry\" app components hooks)",
+      "Bash(sed -n '1,60p' app/dashboard/vault/farewell/page.tsx)",
+      "Bash(kill -9 79141 93987)"
     ]
   }
 }

@@ -1,13 +1,13 @@
 import { NextResponse } from "next/server";
 import { stripe } from "@/lib/stripe";
 import { createClient } from "@/lib/supabase/server";
-import { createServerClient } from "@supabase/ssr";
+import { createAdminClient } from "@/lib/api/auth";
+import { withRoute } from "@/lib/api/route";
+import * as partnerRepo from "@/lib/repos/server/partnerRepo";
+import * as profileRepo from "@/lib/repos/server/profileRepo";
+import * as clientRepo from "@/lib/repos/server/clientRepo";
 
-function createAdminClient() {
-  return createServerClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, { cookies: { getAll: () => [], setAll: () => {} } });
-}
-
-export async function POST(request: Request) {
+export const POST = withRoute(async (request: Request) => {
   try {
     const body = await request.json().catch(() => ({}));
     const partnerSlug: string | undefined = body.partner_slug;
@@ -22,11 +22,7 @@ export async function POST(request: Request) {
     let partnerStripeAccountId: string | null = null;
     let partnerRevenuePct = 0;
     if (partnerSlug) {
-      const { data: partner } = await supabase
-        .from("partners")
-        .select("id, stripe_account_id, partner_revenue_pct")
-        .eq("partner_slug", partnerSlug)
-        .single();
+      const { data: partner } = await partnerRepo.findStripeInfoBySlug(supabase, partnerSlug);
       partnerId = partner?.id ?? null;
       partnerStripeAccountId = partner?.stripe_account_id ?? null;
       partnerRevenuePct = partner?.partner_revenue_pct ?? 0;
@@ -52,11 +48,7 @@ export async function POST(request: Request) {
       customerEmail = normalizedGuestEmail;
 
       let profileId: string | null = null;
-      const { data: existingProfile } = await supabase
-        .from("profiles")
-        .select("id")
-        .eq("email", normalizedGuestEmail)
-        .maybeSingle();
+      const { data: existingProfile } = await profileRepo.findIdByEmailMaybe(supabase, normalizedGuestEmail);
 
       if (existingProfile?.id) {
         profileId = existingProfile.id;
@@ -85,7 +77,7 @@ export async function POST(request: Request) {
         }
 
         if (profileId) {
-          await supabase.from("profiles").upsert({
+          await profileRepo.upsert(supabase, {
             id: profileId,
             email: normalizedGuestEmail,
             full_name: (guestName || "").trim() || null,
@@ -95,11 +87,7 @@ export async function POST(request: Request) {
       }
 
       if (profileId) {
-        const { data: existingClient } = await supabase
-          .from("clients")
-          .select("id, vault_subscription_status")
-          .eq("profile_id", profileId)
-          .maybeSingle();
+        const { data: existingClient } = await clientRepo.findIdAndSubByProfileMaybe(supabase, profileId);
 
         if (existingClient?.vault_subscription_status === "active") {
           return NextResponse.json({ error: "Already subscribed" }, { status: 400 });
@@ -108,15 +96,11 @@ export async function POST(request: Request) {
         if (existingClient?.id) {
           clientId = existingClient.id;
         } else {
-          const { data: createdClient } = await supabase
-            .from("clients")
-            .insert({
-              profile_id: profileId,
-              partner_id: partnerId,
-              source: partnerId ? "partner" : "direct",
-            })
-            .select("id")
-            .single();
+          const { data: createdClient } = await clientRepo.create(supabase, {
+            profile_id: profileId,
+            partner_id: partnerId,
+            source: partnerId ? "partner" : "direct",
+          });
 
           clientId = createdClient?.id ?? null;
         }
@@ -125,22 +109,14 @@ export async function POST(request: Request) {
 
     if (user && !clientId) {
       // Authenticated: get or create client record
-      let { data: client } = await supabase
-        .from("clients")
-        .select("id, vault_subscription_status")
-        .eq("profile_id", user.id)
-        .single();
+      let { data: client } = await clientRepo.findIdAndSubByProfile(supabase, user.id);
 
       if (!client) {
-        const { data: newClient } = await supabase
-          .from("clients")
-          .insert({
-            profile_id: user.id,
-            partner_id: partnerId,
-            source: partnerId ? "partner" : "direct",
-          })
-          .select("id, vault_subscription_status")
-          .single();
+        const { data: newClient } = await clientRepo.createReturningWithSub(supabase, {
+          profile_id: user.id,
+          partner_id: partnerId,
+          source: partnerId ? "partner" : "direct",
+        });
         client = newClient;
       }
 
@@ -208,4 +184,4 @@ export async function POST(request: Request) {
     console.error("Vault subscription checkout error:", error);
     return NextResponse.json({ error: "Failed to create checkout" }, { status: 500 });
   }
-}
+});

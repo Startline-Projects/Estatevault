@@ -1,25 +1,22 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { stripe } from "@/lib/stripe";
-import { createServerClient } from "@supabase/ssr";
 import { calculateSplit } from "@/lib/stripe-payouts";
 import { AFFILIATE_COOKIE } from "@/lib/affiliate";
 import { checkPlanConflict } from "@/lib/orders/plan-conflict";
+import { createAdminClient } from "@/lib/api/auth";
+import { withRoute } from "@/lib/api/route";
+import * as clientRepo from "@/lib/repos/server/clientRepo";
+import * as partnerRepo from "@/lib/repos/server/partnerRepo";
+import * as orderRepo from "@/lib/repos/server/orderRepo";
+import * as quizSessionRepo from "@/lib/repos/server/quizSessionRepo";
+import * as affiliateRepo from "@/lib/repos/server/affiliateRepo";
+import * as affiliateClickRepo from "@/lib/repos/server/affiliateClickRepo";
+import * as documentRepo from "@/lib/repos/server/documentRepo";
+import * as profileRepo from "@/lib/repos/server/profileRepo";
+import * as appSettingsRepo from "@/lib/repos/server/appSettingsRepo";
 
-function createAdminClient() {
-  return createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    {
-      cookies: {
-        getAll: () => [],
-        setAll: () => {},
-      },
-    }
-  );
-}
-
-export async function POST(request: Request) {
+export const POST = withRoute(async (request: Request) => {
   try {
     const body = await request.json();
     const { userId, attorneyReview, intakeAnswers, promoCode, email: promoEmail, partnerId, customerEmail } = body;
@@ -65,7 +62,7 @@ export async function POST(request: Request) {
       }
 
       // Check if test code is active
-      const { data: setting } = await supabase.from("app_settings").select("value").eq("key", "test_promo_code").single();
+      const { data: setting } = await appSettingsRepo.getByKey(supabase, "test_promo_code");
       const testActive = (setting?.value as { active?: boolean })?.active ?? false;
       if (!testActive) {
         return NextResponse.json({ error: "This code is not valid" }, { status: 400 });
@@ -86,18 +83,14 @@ export async function POST(request: Request) {
       let testAffiliateCut = 0;
       const testAffCookie = cookies().get(AFFILIATE_COOKIE)?.value;
       if (testAffCookie) {
-        const { data: affRow } = await supabase
-          .from("affiliates")
-          .select("id, status")
-          .eq("id", testAffCookie)
-          .maybeSingle();
+        const { data: affRow } = await affiliateRepo.findStatusById(supabase, testAffCookie);
         if (affRow && affRow.status === "active") {
           testAffiliateId = affRow.id;
           testAffiliateCut = calculateSplit("will", "standard", { affiliate: true }).affiliateCut;
         }
       }
 
-      const { data: order, error: orderErr } = await supabase.from("orders").insert({
+      const { data: order, error: orderErr } = await orderRepo.insert(supabase, {
         product_type: "will",
         status: "generating",
         amount_total: 0,
@@ -109,7 +102,7 @@ export async function POST(request: Request) {
         acknowledgment_signed: true,
         acknowledgment_signed_at: new Date().toISOString(),
         intake_data: intakeAnswers,
-      }).select("id").single();
+      });
 
       if (orderErr || !order) {
         console.error("Test order creation error:", orderErr);
@@ -118,36 +111,26 @@ export async function POST(request: Request) {
 
       // Mark the affiliate click as converted
       if (testAffiliateId) {
-        const { data: latestClick } = await supabase
-          .from("affiliate_clicks")
-          .select("id")
-          .eq("affiliate_id", testAffiliateId)
-          .eq("converted", false)
-          .order("created_at", { ascending: false })
-          .limit(1)
-          .maybeSingle();
+        const { data: latestClick } = await affiliateClickRepo.findLatestUnconverted(supabase, testAffiliateId);
         if (latestClick) {
-          await supabase
-            .from("affiliate_clicks")
-            .update({ converted: true, order_id: order.id })
-            .eq("id", latestClick.id);
+          await affiliateClickRepo.markConverted(supabase, latestClick.id, order.id);
         }
       }
 
       // Save intake for document generation, link to order via quiz_session_id
-      const { data: quizSession } = await supabase.from("quiz_sessions").insert({
+      const { data: quizSession } = await quizSessionRepo.insertReturningId(supabase, {
         answers: intakeAnswers,
         recommendation: "will",
         completed: true,
-      }).select("id").single();
+      });
 
       if (quizSession) {
-        await supabase.from("orders").update({ quiz_session_id: quizSession.id }).eq("id", order.id);
+        await orderRepo.update(supabase, order.id, { quiz_session_id: quizSession.id });
       }
 
       // Create document records
       const docTypes = ["will", "poa", "healthcare_directive"];
-      await supabase.from("documents").insert(docTypes.map((dt) => ({
+      await documentRepo.insertMany(supabase, docTypes.map((dt) => ({
         order_id: order.id, document_type: dt, status: "pending", template_version: "1.0",
       })));
 
@@ -167,20 +150,12 @@ export async function POST(request: Request) {
 
     if (userId) {
       // Logged-in user, find or create their client record
-      const { data: existingClient } = await supabase
-        .from("clients")
-        .select("id")
-        .eq("profile_id", userId)
-        .single();
+      const { data: existingClient } = await clientRepo.getIdByProfile(supabase, userId);
 
       if (existingClient) {
         clientId = existingClient.id;
       } else {
-        const { data: newClient, error: clientError } = await supabase
-          .from("clients")
-          .insert({ profile_id: userId, source: partnerId ? "partner" : "direct", state: "Michigan", partner_id: partnerId || null })
-          .select("id")
-          .single();
+        const { data: newClient, error: clientError } = await clientRepo.create(supabase, { profile_id: userId, source: partnerId ? "partner" : "direct", state: "Michigan", partner_id: partnerId || null });
 
         if (clientError || !newClient) {
           console.error("Client creation error:", clientError);
@@ -193,11 +168,7 @@ export async function POST(request: Request) {
       }
     } else {
       // Anonymous user, create client record without profile_id
-      const { data: newClient, error: clientError } = await supabase
-        .from("clients")
-        .insert({ source: partnerId ? "partner" : "direct", state: "Michigan", partner_id: partnerId || null })
-        .select("id")
-        .single();
+      const { data: newClient, error: clientError } = await clientRepo.create(supabase, { source: partnerId ? "partner" : "direct", state: "Michigan", partner_id: partnerId || null });
 
       if (clientError || !newClient) {
         console.error("Anonymous client creation error:", clientError);
@@ -220,11 +191,7 @@ export async function POST(request: Request) {
     let affiliateId: string | null = null;
     let affiliateCut = 0;
     if (partnerId) {
-      const { data: partnerData } = await supabase
-        .from("partners")
-        .select("tier")
-        .eq("id", partnerId)
-        .single();
+      const { data: partnerData } = await partnerRepo.getTier(supabase, partnerId);
       const tier = (partnerData?.tier || "standard") as "standard" | "enterprise";
       const split = calculateSplit("will", tier);
       evCut = split.evCut;
@@ -233,11 +200,7 @@ export async function POST(request: Request) {
       // Affiliate attribution (only when no partner)
       const affCookie = cookies().get(AFFILIATE_COOKIE)?.value;
       if (affCookie) {
-        const { data: affRow } = await supabase
-          .from("affiliates")
-          .select("id, status, stripe_onboarding_complete")
-          .eq("id", affCookie)
-          .maybeSingle();
+        const { data: affRow } = await affiliateRepo.findPayoutStateById(supabase, affCookie);
         if (affRow && affRow.status === "active") {
           const split = calculateSplit("will", "standard", { affiliate: true });
           evCut = split.evCut;
@@ -248,26 +211,22 @@ export async function POST(request: Request) {
     }
 
     // Create order
-    const { data: order, error: orderError } = await supabase
-      .from("orders")
-      .insert({
-        client_id: clientId,
-        product_type: "will",
-        status: "pending",
-        amount_total: totalAmount,
-        ev_cut: evCut,
-        partner_cut: partnerCut,
-        partner_id: partnerId || null,
-        affiliate_id: affiliateId,
-        affiliate_cut: affiliateCut,
-        attorney_review_requested: attorneyReview,
-        attorney_cut: attorneyAmount,
-        acknowledgment_signed: true,
-        acknowledgment_signed_at: new Date().toISOString(),
-        intake_data: intakeAnswers,
-      })
-      .select("id")
-      .single();
+    const { data: order, error: orderError } = await orderRepo.insert(supabase, {
+      client_id: clientId,
+      product_type: "will",
+      status: "pending",
+      amount_total: totalAmount,
+      ev_cut: evCut,
+      partner_cut: partnerCut,
+      partner_id: partnerId || null,
+      affiliate_id: affiliateId,
+      affiliate_cut: affiliateCut,
+      attorney_review_requested: attorneyReview,
+      attorney_cut: attorneyAmount,
+      acknowledgment_signed: true,
+      acknowledgment_signed_at: new Date().toISOString(),
+      intake_data: intakeAnswers,
+    });
 
     if (orderError || !order) {
       return NextResponse.json(
@@ -277,15 +236,15 @@ export async function POST(request: Request) {
     }
 
     // Save intake answers and link quiz_session_id to order
-    const { data: quizSession } = await supabase.from("quiz_sessions").insert({
+    const { data: quizSession } = await quizSessionRepo.insertReturningId(supabase, {
       client_id: clientId,
       answers: intakeAnswers,
       recommendation: "will",
       completed: true,
-    }).select("id").single();
+    });
 
     if (quizSession) {
-      await supabase.from("orders").update({ quiz_session_id: quizSession.id }).eq("id", order.id);
+      await orderRepo.update(supabase, order.id, { quiz_session_id: quizSession.id });
     }
 
     // ── PROMO CODE: Free Will ──────────────────────────────
@@ -296,11 +255,11 @@ export async function POST(request: Request) {
       }
 
       // Update order to free + generating
-      await supabase.from("orders").update({
+      await orderRepo.update(supabase, order.id, {
         amount_total: 0, ev_cut: 0, partner_cut: 0, attorney_cut: 0,
         status: "generating",
         attorney_review_requested: false,
-      }).eq("id", order.id);
+      });
 
       // Create user account with temp password
       let profileId = userId;
@@ -308,7 +267,7 @@ export async function POST(request: Request) {
       const tempPassword = generateTempPassword();
 
       if (!profileId) {
-        const { data: existingUser } = await supabase.from("profiles").select("id").eq("email", emailAddr).single();
+        const { data: existingUser } = await profileRepo.findIdByEmail(supabase, emailAddr);
         if (existingUser) {
           profileId = existingUser.id;
           // Update password for existing user so temp password works
@@ -322,7 +281,7 @@ export async function POST(request: Request) {
           if (existingAuthUser) {
             profileId = existingAuthUser.id;
             await supabase.auth.admin.updateUserById(existingAuthUser.id, { password: tempPassword });
-            await supabase.from("profiles").upsert({
+            await profileRepo.upsert(supabase, {
               id: existingAuthUser.id, email: emailAddr,
               full_name: fullName,
               user_type: "client",
@@ -337,7 +296,7 @@ export async function POST(request: Request) {
             console.log("createUser result:", { user: newUser?.user?.id, error: createErr?.message });
             if (newUser?.user) {
               profileId = newUser.user.id;
-              await supabase.from("profiles").upsert({
+              await profileRepo.upsert(supabase, {
                 id: newUser.user.id, email: emailAddr,
                 full_name: fullName,
                 user_type: "client",
@@ -348,7 +307,7 @@ export async function POST(request: Request) {
           }
         }
         if (profileId) {
-          await supabase.from("clients").update({ profile_id: profileId }).eq("id", clientId);
+          await clientRepo.setProfileId(supabase, clientId, profileId);
         }
       }
 
@@ -357,7 +316,7 @@ export async function POST(request: Request) {
 
       // Create document records
       const docTypes = ["will", "poa", "healthcare_directive"];
-      await supabase.from("documents").insert(docTypes.map((dt) => ({
+      await documentRepo.insertMany(supabase, docTypes.map((dt) => ({
         order_id: order.id, document_type: dt, status: "pending", template_version: "1.0",
       })));
 
@@ -435,27 +394,14 @@ export async function POST(request: Request) {
 
     // Mark latest unconverted click as converted
     if (affiliateId) {
-      const { data: latestClick } = await supabase
-        .from("affiliate_clicks")
-        .select("id")
-        .eq("affiliate_id", affiliateId)
-        .eq("converted", false)
-        .order("created_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
+      const { data: latestClick } = await affiliateClickRepo.findLatestUnconverted(supabase, affiliateId);
       if (latestClick) {
-        await supabase
-          .from("affiliate_clicks")
-          .update({ converted: true, order_id: order.id })
-          .eq("id", latestClick.id);
+        await affiliateClickRepo.markConverted(supabase, latestClick.id, order.id);
       }
     }
 
     // Update order with Stripe session ID
-    await supabase
-      .from("orders")
-      .update({ stripe_session_id: session.id })
-      .eq("id", order.id);
+    await orderRepo.update(supabase, order.id, { stripe_session_id: session.id });
 
     // Audit log
     await supabase.from("audit_log").insert({
@@ -474,4 +420,4 @@ export async function POST(request: Request) {
       { status: 500 }
     );
   }
-}
+});

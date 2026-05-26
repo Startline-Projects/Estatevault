@@ -1,13 +1,11 @@
 import { NextResponse } from "next/server";
 import { stripe } from "@/lib/stripe";
 import { createClient } from "@/lib/supabase/server";
-import { createServerClient } from "@supabase/ssr";
+import { createAdminClient } from "@/lib/api/auth";
+import { withRoute } from "@/lib/api/route";
+import * as partnerRepo from "@/lib/repos/server/partnerRepo";
 
-function createAdminClient() {
-  return createServerClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, { cookies: { getAll: () => [], setAll: () => {} } });
-}
-
-export async function POST(request: Request) {
+export const POST = withRoute(async (request: Request) => {
   try {
     const { partnerId, tier } = await request.json();
     if (!partnerId || !tier) return NextResponse.json({ error: "Missing fields" }, { status: 400 });
@@ -35,11 +33,11 @@ export async function POST(request: Request) {
 
     // Update tier immediately
     const admin = createAdminClient();
-    await admin.from("partners").update({ tier, stripe_session_id: session.id }).eq("id", partnerId);
+    await partnerRepo.update(admin, partnerId, { tier, stripe_session_id: session.id });
 
     return NextResponse.json({ url: session.url });
   } catch (error) {
     console.error("Partner checkout error:", error);
     return NextResponse.json({ error: "Failed to create checkout" }, { status: 500 });
   }
-}
+});

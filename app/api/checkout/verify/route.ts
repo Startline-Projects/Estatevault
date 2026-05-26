@@ -1,16 +1,10 @@
 import { NextResponse } from "next/server";
 import { stripe } from "@/lib/stripe";
-import { createServerClient } from "@supabase/ssr";
+import { createAdminClient } from "@/lib/api/auth";
+import { withRoute } from "@/lib/api/route";
+import * as profileRepo from "@/lib/repos/server/profileRepo";
 
-function createAdminClient() {
-  return createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    { cookies: { getAll: () => [], setAll: () => {} } }
-  );
-}
-
-export async function GET(request: Request) {
+export const GET = withRoute(async (request: Request) => {
   const { searchParams } = new URL(request.url);
   const sessionId = searchParams.get("session_id");
 
@@ -53,11 +47,7 @@ export async function GET(request: Request) {
 
       // Resolve userId, retry up to 3x in case webhook is still processing
       for (let attempt = 0; attempt < 3; attempt++) {
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("id, full_name")
-          .eq("email", email)
-          .single();
+        const { data: profile } = await profileRepo.findIdAndNameByEmail(supabase, email);
         if (profile) {
           userId = profile.id;
           // If name is already on profile (returning client), prefer that
@@ -91,4 +81,4 @@ export async function GET(request: Request) {
       { status: 500 }
     );
   }
-}
+});

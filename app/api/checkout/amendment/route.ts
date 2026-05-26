@@ -1,14 +1,15 @@
 import { NextResponse } from "next/server";
 import { stripe } from "@/lib/stripe";
 import { createClient } from "@/lib/supabase/server";
-import { createServerClient } from "@supabase/ssr";
 import { calculateSplit } from "@/lib/stripe-payouts";
+import { createAdminClient } from "@/lib/api/auth";
+import { withRoute } from "@/lib/api/route";
+import * as clientRepo from "@/lib/repos/server/clientRepo";
+import * as partnerRepo from "@/lib/repos/server/partnerRepo";
+import * as orderRepo from "@/lib/repos/server/orderRepo";
+import * as quizSessionRepo from "@/lib/repos/server/quizSessionRepo";
 
-function createAdminClient() {
-  return createServerClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, { cookies: { getAll: () => [], setAll: () => {} } });
-}
-
-export async function POST(request: Request) {
+export const POST = withRoute(async (request: Request) => {
   try {
     const { userId, changeType, description } = await request.json();
     if (!userId) return NextResponse.json({ error: "Missing userId" }, { status: 400 });
@@ -18,22 +19,14 @@ export async function POST(request: Request) {
     if (!user || user.id !== userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const supabase = createAdminClient();
-    const { data: client } = await supabase
-      .from("clients")
-      .select("id, vault_subscription_status, partner_id")
-      .eq("profile_id", userId)
-      .single();
+    const { data: client } = await clientRepo.findWithPartnerByProfile(supabase, userId);
     if (!client) return NextResponse.json({ error: "No client record" }, { status: 400 });
 
     // Look up partner tier if this client came through a partner
     let partnerId: string | null = client.partner_id || null;
     let partnerTier: "standard" | "enterprise" = "standard";
     if (partnerId) {
-      const { data: partner } = await supabase
-        .from("partners")
-        .select("tier")
-        .eq("id", partnerId)
-        .single();
+      const { data: partner } = await partnerRepo.getTier(supabase, partnerId);
       if (partner?.tier) partnerTier = partner.tier as "standard" | "enterprise";
     }
 
@@ -41,7 +34,7 @@ export async function POST(request: Request) {
 
     if (isSubscriber) {
       // Free amendment for active subscribers, bypass Stripe
-      const { data: order, error: orderError } = await supabase.from("orders").insert({
+      const { data: order, error: orderError } = await orderRepo.insert(supabase, {
         client_id: client.id,
         product_type: "amendment",
         status: "generating",
@@ -50,11 +43,11 @@ export async function POST(request: Request) {
         amendment_type: "subscription_included",
         acknowledgment_signed: true,
         acknowledgment_signed_at: new Date().toISOString(),
-      }).select("id").single();
+      });
 
       if (orderError || !order) return NextResponse.json({ error: "Failed to create order" }, { status: 500 });
 
-      await supabase.from("quiz_sessions").insert({
+      await quizSessionRepo.insert(supabase, {
         client_id: client.id,
         answers: { changeType, description },
         recommendation: "will",
@@ -78,7 +71,7 @@ export async function POST(request: Request) {
       ? calculateSplit("amendment", partnerTier)
       : { evCut: 5000, partnerCut: 0 };
 
-    const { data: order, error: orderError } = await supabase.from("orders").insert({
+    const { data: order, error: orderError } = await orderRepo.insert(supabase, {
       client_id: client.id,
       product_type: "amendment",
       status: "pending",
@@ -89,11 +82,11 @@ export async function POST(request: Request) {
       amendment_type: "paid",
       acknowledgment_signed: true,
       acknowledgment_signed_at: new Date().toISOString(),
-    }).select("id").single();
+    });
 
     if (orderError || !order) return NextResponse.json({ error: "Failed to create order" }, { status: 500 });
 
-    await supabase.from("quiz_sessions").insert({ client_id: client.id, answers: { changeType, description }, recommendation: "will", completed: true });
+    await quizSessionRepo.insert(supabase, { client_id: client.id, answers: { changeType, description }, recommendation: "will", completed: true });
 
     const origin = request.headers.get("origin") || "https://www.estatevault.us";
     const session = await stripe.checkout.sessions.create({
@@ -104,10 +97,10 @@ export async function POST(request: Request) {
       metadata: { order_id: order.id, client_id: client.id, product_type: "amendment", attorney_review: "false", partner_id: partnerId || "" },
     });
 
-    await supabase.from("orders").update({ stripe_session_id: session.id }).eq("id", order.id);
+    await orderRepo.update(supabase, order.id, { stripe_session_id: session.id });
     return NextResponse.json({ url: session.url });
   } catch (error) {
     console.error("Amendment checkout error:", error);
     return NextResponse.json({ error: "Failed to create checkout" }, { status: 500 });
   }
-}
+});

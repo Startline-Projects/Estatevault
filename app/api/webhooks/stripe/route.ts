@@ -5,7 +5,7 @@ import { headers } from "next/headers";
 import Stripe from "stripe";
 import { stripe } from "@/lib/stripe";
 import { createServerClient } from "@supabase/ssr";
-import { buildAssetChecklist, sendWelcomeEmail } from "@/lib/email";
+import { sendWelcomeEmail } from "@/lib/email";
 import { calculateSplit, transferToPartner, transferToAffiliate } from "@/lib/stripe-payouts";
 
 function createAdminClient() {
@@ -737,62 +737,6 @@ export async function POST(request: Request) {
       console.log("Document generation job queued for order:", orderId);
     } catch (queueError) {
       console.error("Failed to queue document generation:", queueError);
-    }
-
-    // ── 5. Pre-populate vault with estate documents entry ──────
-    if (clientId) {
-      const pkgRow = {
-        client_id: clientId,
-        category: "estate_document",
-        label: productType === "trust" ? "Trust Package" : "Will Package",
-        data: {
-          order_id: orderId,
-          product_type: productType,
-          documents: documentTypes,
-          status: attorneyReview ? "under_review" : "generating",
-          note: "Documents will be available for download once generated.",
-        },
-      };
-      const r = await supabase.from("vault_items").insert({ ...pkgRow, auto_generated: true });
-      if (r.error) {
-        // Fallback for envs missing 20260518_vault_auto_generated.sql
-        await supabase.from("vault_items").insert(pkgRow);
-      }
-    }
-
-    // ── 6. Save asset checklist to client record (trust only) ──
-    if (productType === "trust" && clientId) {
-      // Retrieve intake answers to get asset types
-      const { data: quizSession } = await supabase
-        .from("quiz_sessions")
-        .select("answers")
-        .eq("client_id", clientId)
-        .eq("recommendation", "trust")
-        .order("created_at", { ascending: false })
-        .limit(1)
-        .single();
-
-      if (quizSession?.answers) {
-        const answers = quizSession.answers as Record<string, unknown>;
-        const assetTypes = answers.assetTypes as string[] | undefined;
-
-        if (assetTypes && assetTypes.length > 0) {
-          const checklistRow = {
-            client_id: clientId,
-            category: "estate_document",
-            label: "Asset Funding Checklist",
-            data: {
-              order_id: orderId,
-              assets: buildAssetChecklist(assetTypes),
-              status: "action_required",
-            },
-          };
-          const r = await supabase.from("vault_items").insert({ ...checklistRow, auto_generated: true });
-          if (r.error) {
-            await supabase.from("vault_items").insert(checklistRow);
-          }
-        }
-      }
     }
 
     // ── 7. Email removed, client sets password on success page ──

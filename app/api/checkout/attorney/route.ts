@@ -1,20 +1,15 @@
 import { NextResponse } from "next/server";
 import { stripe } from "@/lib/stripe";
-import { createServerClient } from "@supabase/ssr";
-
-function createAdminClient() {
-  return createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    { cookies: { getAll: () => [], setAll: () => {} } }
-  );
-}
+import { createAdminClient } from "@/lib/api/auth";
+import { withRoute } from "@/lib/api/route";
+import * as profileRepo from "@/lib/repos/server/profileRepo";
+import * as partnerRepo from "@/lib/repos/server/partnerRepo";
 
 const VALID_PROMO_CODES: Record<string, boolean> = {
   TPFP: true,
 };
 
-export async function POST(request: Request) {
+export const POST = withRoute(async (request: Request) => {
   try {
     const body = await request.json();
 
@@ -67,7 +62,7 @@ export async function POST(request: Request) {
       }
 
       // Create profile
-      await supabase.from("profiles").upsert({
+      await profileRepo.upsert(supabase, {
         id: newUser.user.id,
         email,
         full_name: name,
@@ -81,7 +76,7 @@ export async function POST(request: Request) {
         .replace(/[^a-z0-9]+/g, "-")
         .replace(/^-|-$/g, "");
 
-      await supabase.from("partners").insert({
+      await partnerRepo.insert(supabase, {
         profile_id: newUser.user.id,
         company_name: firm_name || name,
         tier: tier === "professional" ? "enterprise" : "standard",
@@ -182,4 +177,4 @@ export async function POST(request: Request) {
       { status: 500 }
     );
   }
-}
+});

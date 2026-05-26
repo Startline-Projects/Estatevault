@@ -402,22 +402,7 @@ export async function GET(request: Request) {
       }
     }
 
-    // Auto-populate vault
     const docTypes = job.document_types;
-    for (const dt of docTypes) {
-      const row = {
-        client_id: job.client_id,
-        category: "estate_document",
-        label: `${dt.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())}, ${new Date().toLocaleDateString()}`,
-        data: { document_type: dt, order_id: job.order_id, generated_date: new Date().toISOString(), is_auto_generated: true },
-      };
-      const r = await supabase.from("vault_items").upsert({ ...row, auto_generated: true }, { onConflict: "id" });
-      if (r.error) {
-        // Fallback for envs missing 20260518_vault_auto_generated.sql
-        await supabase.from("vault_items").upsert(row, { onConflict: "id" });
-      }
-    }
-
     await supabase.from("audit_log").insert({ action: "documents.generation_complete", resource_type: "order", resource_id: job.order_id, metadata: { job_id: jobId, documents: docTypes } });
 
     return NextResponse.json({ message: "Job processed", job_id: jobId });
