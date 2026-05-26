@@ -165,6 +165,7 @@
 <div class="layout">
   <nav class="toc">
     <h4>Contents</h4>
+    <a href="#first5"><span class="dot" style="background:var(--good)"></span>🚀 First 5 minutes</a>
     <a href="#tldr"><span class="dot" style="background:var(--gold)"></span>1. TL;DR</a>
     <a href="#status"><span class="dot" style="background:var(--navy)"></span>2. Status by group</a>
     <a href="#uncommitted"><span class="dot" style="background:var(--warn)"></span>3. Uncommitted work</a>
@@ -178,6 +179,57 @@
   </nav>
 
   <main>
+
+    <!-- ============ FIRST 5 MIN ============ -->
+    <h2 class="section" id="first5">🚀 First 5 minutes — read this if you're new to the refactor</h2>
+    <div class="card" style="border-left:5px solid var(--good);">
+      <h3>The refactor in one paragraph</h3>
+      <p>The app has ~119 backend "rooms" (API routes). Most are copy-pasted plumbing — each room hand-rolls its own door (auth), rulebook (input validation), and direct access to the database. We're sweeping them onto one shared layer: a wrapper (<code>withRoute</code>) that catches errors cleanly, a server "records department" (<code>lib/repos/server/*</code>) that's the only thing allowed to touch each database table, and a rulebook (<code>lib/validation/schemas.ts</code> Zod) at the front door so bad input is rejected before it does anything. Vault and checkout are already done — they're your copy templates.</p>
+
+      <h3>What's done as of last commit (<code>0d108df</code>)</h3>
+      <ul class="tight">
+        <li><strong>Vault group</strong> (14 routes): fully shipped — kernel, server repos, Zod schemas, tests. Reference example: <code>app/api/vault/items/route.ts</code>.</li>
+        <li><strong>Checkout group</strong> (9 routes): fully shipped — same pattern + a real money bug (C-8) found and fixed with a characterization test.</li>
+      </ul>
+
+      <h3>What's NOT done</h3>
+      <p>Every other group: webhooks, documents, partner, sales, attorney, crypto, admin, trustee, auth, cron (~96 routes total).</p>
+
+      <h3>Your first task (recommended)</h3>
+      <p>Take the <strong><code>cron</code> group</strong> — 4 small routes in <code>app/api/cron/*</code>. Money-free. Isolated tables. Folds in an audit fix (H-3, fail-closed cron secrets). Smallest possible introduction to the pattern.</p>
+
+      <h3>5-minute setup</h3>
+<pre><code>git pull origin Amir-Dev          # latest is 0d108df
+npm install                       # if anything new
+npx tsc --noEmit                  # expect clean
+npm test                          # expect 117 tests green
+npm run dev                       # confirm app runs</code></pre>
+      <p style="font-size:14px;">If anything's red, ping the other dev before changing anything.</p>
+
+      <h3>The pattern, in 4 lines (copy from <code>app/api/vault/items/route.ts</code>)</h3>
+<pre><code>export const POST = withRoute(async (req: NextRequest) =&gt; {
+  const auth = await requireAuth(["client"], req);
+  if ("error" in auth) return auth.error;
+  const parsed = mySchema.safeParse(await req.json());
+  if (!parsed.success) return fail("invalid input", 400, { details: parsed.error.flatten() });
+  const data = await myRepo.doTheThing(auth.admin, parsed.data);
+  return ok(data);
+});</code></pre>
+      <p style="font-size:14px;">That's it. Auth → validate → repo → reply. Errors caught by <code>withRoute</code>. No <code>try/catch</code> boilerplate, no raw <code>.from("table")</code>, no <code>any</code>-typed bodies.</p>
+
+      <h3>Five rules that keep us from colliding</h3>
+      <ol class="tight">
+        <li><strong>One owner per repo file.</strong> If <code>xRepo.ts</code> exists, import it — don't recreate. New repo? You own it. The other dev imports.</li>
+        <li><strong>Schemas append-only.</strong> Add new Zod schemas at the <strong>bottom</strong> of <code>lib/validation/schemas.ts</code>. Never reorder.</li>
+        <li><strong>Never edit a price, split, or hard-stop value.</strong> They're business law (see <code>CLAUDE.md</code>). Relocate, never change.</li>
+        <li><strong>Verify gate green after every step.</strong> <code>npx tsc --noEmit &amp;&amp; npm run lint &amp;&amp; npm test</code>. Red = stop.</li>
+        <li><strong>Update this file's §2 + §3 when you wrap a group</strong> so the next person sees current state.</li>
+      </ol>
+
+      <div class="note" style="margin-top:14px;"><span class="lab">Heads up on overlaps:</span> The other dev is (likely) on <strong>webhooks</strong> next. Stay off <code>webhooks</code>, <code>documents</code>, <code>partner</code>, <code>sales</code>, <code>attorney</code> for now — they all reuse the checkout repos. Safe picks for parallel work: <code>cron</code>, then <code>auth</code>, then <code>trustee</code>, then <code>admin</code>. Sync before tackling the money-overlap groups together.</div>
+
+      <div class="plain" style="margin-top:12px;"><span class="lab">When in doubt</span> read sections <a href="#next">§4 (next steps)</a> → <a href="#reference">§6 (reference pattern)</a> → <a href="#collision">§8 (collision rules)</a>.</div>
+    </div>
 
     <!-- ============ TLDR ============ -->
     <h2 class="section" id="tldr">1. TL;DR — where we are right now</h2>

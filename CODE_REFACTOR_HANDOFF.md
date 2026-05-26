@@ -2,6 +2,56 @@
 
 _Living status doc. Open this first if you're picking up the refactor mid-stream. For the **why** + full architecture, read [`CODE_REFACTOR_PLAN.md`](./CODE_REFACTOR_PLAN.md). For known bugs, see [`CODE_AUDIT.md`](./CODE_AUDIT.md)._
 
+---
+
+## 🚀 First 5 minutes (read this if you're new to the refactor)
+
+**The refactor in one paragraph.** The app has ~119 backend "rooms" (API routes). Most are copy-pasted plumbing — each room hand-rolls its own door (auth), rulebook (input validation), and direct access to the database. We're sweeping them onto one shared layer: a wrapper (`withRoute`) that catches errors cleanly, a server "records department" (`lib/repos/server/*`) that's the only thing allowed to touch each database table, and a rulebook (`lib/validation/schemas.ts` Zod) at the front door so bad input is rejected before it does anything. Vault and checkout are already done — they're your copy templates.
+
+**What's done as of last commit (`0d108df`).**
+- **Vault group** (14 routes): fully shipped — kernel, server repos, Zod schemas, tests. Reference example: `app/api/vault/items/route.ts`.
+- **Checkout group** (9 routes): fully shipped — same pattern + a real money bug (C-8) found and fixed with a characterization test.
+
+**What's NOT done.** Every other group: webhooks, documents, partner, sales, attorney, crypto, admin, trustee, auth, cron (~96 routes total).
+
+**Your first task** (recommended): take the **`cron` group** — 4 small routes in `app/api/cron/*`. Money-free. Isolated tables. Folds in an audit fix (H-3, fail-closed cron secrets). Smallest possible introduction to the pattern.
+
+**5-minute setup**
+```bash
+git pull origin Amir-Dev          # latest is 0d108df
+npm install                       # if anything new
+npx tsc --noEmit                  # expect clean
+npm test                          # expect 117 tests green
+npm run dev                       # confirm app runs
+```
+If anything's red, ping the other dev before changing anything.
+
+**The pattern, in 4 lines** (copy from `app/api/vault/items/route.ts`):
+```ts
+export const POST = withRoute(async (req: NextRequest) => {
+  const auth = await requireAuth(["client"], req);
+  if ("error" in auth) return auth.error;
+  const parsed = mySchema.safeParse(await req.json());
+  if (!parsed.success) return fail("invalid input", 400, { details: parsed.error.flatten() });
+  const data = await myRepo.doTheThing(auth.admin, parsed.data);
+  return ok(data);
+});
+```
+That's it. Auth → validate → repo → reply. Errors caught by `withRoute`. No `try/catch` boilerplate, no raw `.from("table")`, no `any`-typed bodies.
+
+**Five rules that keep us from colliding**
+1. **One owner per repo file.** If `xRepo.ts` exists, import it — don't recreate. New repo? You own it. The other dev imports.
+2. **Schemas append-only.** Add new Zod schemas at the **bottom** of `lib/validation/schemas.ts`. Never reorder.
+3. **Never edit a price, split, or hard-stop value.** They're business law (see `CLAUDE.md`). Relocate, never change.
+4. **Verify gate green after every step.** `npx tsc --noEmit && npm run lint && npm test`. Red = stop.
+5. **Update this file's §2 + §3 when you wrap a group** so the next person sees current state.
+
+**Heads up on overlaps.** I'm (likely) on **webhooks** next. Stay off `webhooks`, `documents`, `partner`, `sales`, `attorney` for now — they all reuse the checkout repos. Safe picks for parallel work: `cron`, then `auth`, then `trustee`, then `admin`. We sync before tackling the money-overlap groups together.
+
+**When in doubt** read sections §4 (next steps) → §6 (reference pattern) → §8 (collision rules).
+
+---
+
 **Last updated:** 2026-05-26
 **Current branch:** `Amir-Dev`
 **Last committed:** `01ec972` (pre-existing feature changes), preceded by `90e75d0` (vault refactor).
