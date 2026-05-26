@@ -15,18 +15,19 @@ import * as affiliateClickRepo from "@/lib/repos/server/affiliateClickRepo";
 import * as documentRepo from "@/lib/repos/server/documentRepo";
 import * as profileRepo from "@/lib/repos/server/profileRepo";
 import * as appSettingsRepo from "@/lib/repos/server/appSettingsRepo";
+import { willCheckoutSchema } from "@/lib/validation/schemas";
 
 export const POST = withRoute(async (request: Request) => {
   try {
     const body = await request.json();
-    const { userId, attorneyReview, intakeAnswers, promoCode, email: promoEmail, partnerId, customerEmail } = body;
-
-    if (!intakeAnswers) {
+    const parsed = willCheckoutSchema.safeParse(body);
+    if (!parsed.success) {
       return NextResponse.json(
-        { error: "Missing intake answers" },
+        { error: "Missing intake answers", details: parsed.error.flatten() },
         { status: 400 }
       );
     }
+    const { userId, attorneyReview, intakeAnswers, promoCode, email: promoEmail, partnerId, customerEmail } = parsed.data;
 
     const conflictEmail: string | undefined =
       (typeof customerEmail === "string" && customerEmail) ||

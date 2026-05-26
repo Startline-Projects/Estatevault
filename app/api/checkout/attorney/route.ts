@@ -4,6 +4,7 @@ import { createAdminClient } from "@/lib/api/auth";
 import { withRoute } from "@/lib/api/route";
 import * as profileRepo from "@/lib/repos/server/profileRepo";
 import * as partnerRepo from "@/lib/repos/server/partnerRepo";
+import { attorneyCheckoutSchema } from "@/lib/validation/schemas";
 
 const VALID_PROMO_CODES: Record<string, boolean> = {
   TPFP: true,
@@ -12,7 +13,13 @@ const VALID_PROMO_CODES: Record<string, boolean> = {
 export const POST = withRoute(async (request: Request) => {
   try {
     const body = await request.json();
-
+    const parsed = attorneyCheckoutSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: "Missing required fields.", details: parsed.error.flatten() },
+        { status: 400 }
+      );
+    }
     const {
       tier,
       email,
@@ -27,14 +34,7 @@ export const POST = withRoute(async (request: Request) => {
       phone,
       password,
       promo_code,
-    } = body;
-
-    if (!email || !name || !bar_number || !tier) {
-      return NextResponse.json(
-        { error: "Missing required fields." },
-        { status: 400 }
-      );
-    }
+    } = parsed.data;
 
     const isPromoFree = promo_code && VALID_PROMO_CODES[promo_code.toUpperCase()];
 

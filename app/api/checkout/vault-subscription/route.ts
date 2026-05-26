@@ -6,13 +6,18 @@ import { withRoute } from "@/lib/api/route";
 import * as partnerRepo from "@/lib/repos/server/partnerRepo";
 import * as profileRepo from "@/lib/repos/server/profileRepo";
 import * as clientRepo from "@/lib/repos/server/clientRepo";
+import { vaultSubscriptionCheckoutSchema } from "@/lib/validation/schemas";
 
 export const POST = withRoute(async (request: Request) => {
   try {
-    const body = await request.json().catch(() => ({}));
-    const partnerSlug: string | undefined = body.partner_slug;
-    const guestEmail: string | undefined = body.email;
-    const guestName: string | undefined = body.full_name;
+    const raw = await request.json().catch(() => ({}));
+    const parsed = vaultSubscriptionCheckoutSchema.safeParse(raw);
+    if (!parsed.success) {
+      return NextResponse.json({ error: "invalid input", details: parsed.error.flatten() }, { status: 400 });
+    }
+    const partnerSlug = parsed.data.partner_slug;
+    const guestEmail = parsed.data.email;
+    const guestName = parsed.data.full_name;
 
     const supabase = createAdminClient();
     const origin = request.headers.get("origin") || "https://www.estatevault.us";

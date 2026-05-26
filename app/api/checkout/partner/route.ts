@@ -4,11 +4,16 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/api/auth";
 import { withRoute } from "@/lib/api/route";
 import * as partnerRepo from "@/lib/repos/server/partnerRepo";
+import { partnerCheckoutSchema } from "@/lib/validation/schemas";
 
 export const POST = withRoute(async (request: Request) => {
   try {
-    const { partnerId, tier } = await request.json();
-    if (!partnerId || !tier) return NextResponse.json({ error: "Missing fields" }, { status: 400 });
+    const body = await request.json();
+    const parsed = partnerCheckoutSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json({ error: "Missing fields", details: parsed.error.flatten() }, { status: 400 });
+    }
+    const { partnerId, tier } = parsed.data;
 
     const authClient = createClient();
     const { data: { user } } = await authClient.auth.getUser();

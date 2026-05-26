@@ -5,6 +5,7 @@ _Living status doc. Open this first if you're picking up the refactor mid-stream
 **Last updated:** 2026-05-26
 **Current branch:** `Amir-Dev`
 **Last committed:** `01ec972` (pre-existing feature changes), preceded by `90e75d0` (vault refactor).
+**Open work (uncommitted):** checkout Phases 0–3 ✅ · C-8 + profile sibling ✅ · checkout-schemas tests ✅. **Ready to commit as one atomic checkout PR.**
 
 ---
 
@@ -12,7 +13,7 @@ _Living status doc. Open this first if you're picking up the refactor mid-stream
 
 The refactor is **partially done**. The **vault** route group is fully converted (Phases 1→2→3) and committed. The **checkout** route group has Phases 0, 1, and 2 done **but not committed** — the changes are sitting in the working tree, deliberately staged for a later commit after Phase 3 + the C-8 fix. **All other groups** are untouched.
 
-A real production bug — **C-8** — was found while testing checkout: the paid-attorney signup writes 4 columns that don't exist on `partners`, plus 2 money values in the wrong unit. Confirmed by manual reproduction (auth user created, profile + partner NOT created, customer paid). **Not fixed yet** — needs a characterization test first.
+A real production bug — **C-8** — was found while testing checkout (paid-attorney signup wrote 4 phantom columns + 2 money values in the wrong unit). **Fixed**, along with its **profile sibling bug** (route was writing `first_name`/`last_name`; the `profiles` table only has `full_name`). Covered by `tests/unit/attorney-verify-c8.test.ts` (13 tests). Both upsert paths now check their error and fail fast — no more silent success.
 
 ---
 
@@ -86,21 +87,14 @@ Money lines preserved byte-for-byte. C-8 bug in attorney/verify
 intentionally left for a tested fix (see CODE_REFACTOR_HANDOFF.md §5).
 ```
 
-### 4.2 — Fix C-8 (paid-attorney signup data bug) — **HIGHEST PRIORITY**
-Read §5 below for the full picture. Do **all** of:
-1. Write `tests/unit/attorney-verify-c8.test.ts` — a characterization test that captures the current broken behavior (writes `user_id`, `300` in cents, etc.).
-2. Verify the test fails as expected on the bug.
-3. Apply the fix (see §5).
-4. Update the test to assert the **correct** behavior — both ends provably changed.
-5. Add an error check on the upsert so it can't fail silently again.
+### 4.2 — Fix C-8 (paid-attorney signup data bug) — ✅ DONE
+- `tests/unit/attorney-verify-c8.test.ts` written, run against the broken route (11 bug-assertions pass) → fix applied → assertions flipped to expected behavior → all green (12 tests).
+- Route writes `profile_id` (was `user_id`), `tier` normalized (`"professional"→"enterprise"`), `custom_review_fee` × 100 (cents), `one_time_fee_amount` = `session.amount_total` (raw cents), `practice_areas` (array, was singular), dropped `years_in_practice` + `stripe_session_id`, partner upsert error now checked.
+- **Sibling bug still open:** `profiles` upsert writes `first_name`/`last_name` which may not exist (see §4.3). Tracked as a `[sibling, unfixed]` test in the same file.
+- **Same `user_id` mistake also lives in** `app/api/sales/create-partner/route.ts:117` — fix when the sales group lands.
 
-### 4.3 — Investigate why the `profiles` upsert also fails
-Manual repro showed auth user created but no `profiles` row. The route writes `first_name` / `last_name`; the `profiles` table may only have `full_name`. Run:
-```sql
-SELECT column_name FROM information_schema.columns
-WHERE table_name = 'profiles' ORDER BY ordinal_position;
-```
-If `first_name`/`last_name` don't exist, fix `app/api/checkout/attorney/verify/route.ts` to write the columns that do (likely a single `full_name`).
+### 4.3 — Profile sibling bug — ✅ DONE
+`profiles` table only has `full_name` (no `first_name`/`last_name`). Route now writes `full_name: \`${firstName} ${lastName}\`.trim()` and checks the upsert error. Covered by 2 tests in `attorney-verify-c8.test.ts`.
 
 ### 4.4 — Finish checkout Phase 3 (Zod)
 Add these schemas to `lib/validation/schemas.ts` (append at the end — see §8 collision rules):

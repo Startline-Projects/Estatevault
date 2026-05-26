@@ -15,15 +15,16 @@ import * as affiliateClickRepo from "@/lib/repos/server/affiliateClickRepo";
 import * as documentRepo from "@/lib/repos/server/documentRepo";
 import * as profileRepo from "@/lib/repos/server/profileRepo";
 import * as appSettingsRepo from "@/lib/repos/server/appSettingsRepo";
+import { trustCheckoutSchema } from "@/lib/validation/schemas";
 
 export const POST = withRoute(async (request: Request) => {
   try {
     const body = await request.json();
-    const { userId, attorneyReview, intakeAnswers, complexityFlag, complexityReasons, declinedAttorneyReview, promoCode, email: promoEmail, partnerId, customerEmail, confirmOverride } = body;
-
-    if (!intakeAnswers) {
-      return NextResponse.json({ error: "Missing intake answers" }, { status: 400 });
+    const parsed = trustCheckoutSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json({ error: "Missing intake answers", details: parsed.error.flatten() }, { status: 400 });
     }
+    const { userId, attorneyReview, intakeAnswers, complexityFlag, complexityReasons, declinedAttorneyReview, promoCode, email: promoEmail, partnerId, customerEmail, confirmOverride } = parsed.data;
 
     const conflictEmail: string | undefined =
       (typeof customerEmail === "string" && customerEmail) ||

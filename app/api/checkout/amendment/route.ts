@@ -8,11 +8,16 @@ import * as clientRepo from "@/lib/repos/server/clientRepo";
 import * as partnerRepo from "@/lib/repos/server/partnerRepo";
 import * as orderRepo from "@/lib/repos/server/orderRepo";
 import * as quizSessionRepo from "@/lib/repos/server/quizSessionRepo";
+import { amendmentCheckoutSchema } from "@/lib/validation/schemas";
 
 export const POST = withRoute(async (request: Request) => {
   try {
-    const { userId, changeType, description } = await request.json();
-    if (!userId) return NextResponse.json({ error: "Missing userId" }, { status: 400 });
+    const body = await request.json();
+    const parsed = amendmentCheckoutSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json({ error: "invalid input", details: parsed.error.flatten() }, { status: 400 });
+    }
+    const { userId, changeType, description } = parsed.data;
 
     const authClient = createClient();
     const { data: { user } } = await authClient.auth.getUser();

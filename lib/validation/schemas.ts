@@ -251,6 +251,102 @@ export const vaultDownloadUrlSchema = z.object({
   path: z.string().min(1),
 });
 
+// ---- Checkout (Phase 3) ----
+// Body shapes for the checkout group routes. Permissive on existing optional
+// fields — Phase 3 rejects malformed input (bad emails, missing required
+// fields) without changing how valid requests behave.
+
+// Common shape for will/trust intake. `.passthrough()` keeps any extra fields
+// the form sends; only the three the route actually consumes as strings are
+// typed. The whole object is stored on the order row as JSON anyway.
+const intakeAnswersSchema = z
+  .object({
+    email: z.string().optional(),
+    firstName: z.string().optional(),
+    lastName: z.string().optional(),
+  })
+  .passthrough();
+
+// POST /api/checkout/will
+export const willCheckoutSchema = z.object({
+  userId: z.string().optional(),
+  attorneyReview: z.boolean().optional().default(false),
+  intakeAnswers: intakeAnswersSchema,
+  promoCode: z.string().max(64).optional(),
+  email: z.string().email().optional(),
+  partnerId: z.string().optional(),
+  customerEmail: z.string().email().optional(),
+});
+
+// POST /api/checkout/trust — adds trust-specific fields
+export const trustCheckoutSchema = z.object({
+  userId: z.string().optional(),
+  attorneyReview: z.boolean().optional().default(false),
+  intakeAnswers: intakeAnswersSchema,
+  complexityFlag: z.boolean().optional(),
+  complexityReasons: z.array(z.string()).optional(),
+  declinedAttorneyReview: z.boolean().optional(),
+  promoCode: z.string().max(64).optional(),
+  email: z.string().email().optional(),
+  partnerId: z.string().optional(),
+  customerEmail: z.string().email().optional(),
+  confirmOverride: z.boolean().optional(),
+});
+
+// POST /api/checkout/amendment
+export const amendmentCheckoutSchema = z.object({
+  userId: z.string().min(1, "userId is required"),
+  changeType: z.string().min(1).max(200),
+  description: z.string().min(1).max(4000),
+});
+
+// POST /api/checkout/vault-subscription — partner/guest vault signup
+export const vaultSubscriptionCheckoutSchema = z.object({
+  partner_slug: z.string().max(200).optional(),
+  email: z.string().email().optional(),
+  full_name: z.string().max(200).optional(),
+});
+
+// POST /api/checkout/partner — partner one-time platform fee
+export const partnerCheckoutSchema = z.object({
+  partnerId: z.string().min(1),
+  tier: z.enum(["basic", "standard", "enterprise"]),
+});
+
+// POST /api/checkout/attorney — paid or promo attorney signup
+export const attorneyCheckoutSchema = z.object({
+  tier: z.string().min(1),
+  email: z.string().email(),
+  name: z.string().min(1).max(200),
+  first_name: z.string().max(100).optional(),
+  last_name: z.string().max(100).optional(),
+  firm_name: z.string().max(200).optional(),
+  bar_number: z.string().min(1).max(100),
+  review_fee: z.coerce.number().nonnegative().optional(),
+  practice_area: z.string().max(200).optional(),
+  years_in_practice: z.union([z.string(), z.number()]).optional(),
+  phone: z.string().max(50).optional(),
+  password: z.string().min(8).optional(),
+  promo_code: z.string().max(64).optional(),
+});
+
+// POST /api/checkout/attorney/verify — finalize paid attorney signup
+export const attorneyVerifySchema = z.object({
+  session_id: z.string().min(1),
+  password: z.string().optional(),
+});
+
+// GET /api/checkout/verify?session_id=… — generic post-payment verification
+export const checkoutVerifyQuerySchema = z.object({
+  session_id: z.string().min(1),
+});
+
+// POST /api/checkout/check-conflict — plan-conflict probe
+export const checkConflictSchema = z.object({
+  email: z.string().email(),
+  productType: z.enum(["will", "trust"]),
+});
+
 export type WillIntake = z.infer<typeof willIntakeSchema>;
 export type TrustIntake = z.infer<typeof trustIntakeSchema>;
 export type QuizAnswers = z.infer<typeof quizAnswersSchema>;
@@ -259,3 +355,8 @@ export type VaultItemInput = z.infer<typeof vaultItemSchema>;
 export type TrusteeCreateInput = z.infer<typeof trusteeCreateSchema>;
 export type FarewellCreateInput = z.infer<typeof farewellCreateSchema>;
 export type FarewellUpdateInput = z.infer<typeof farewellUpdateSchema>;
+export type WillCheckoutInput = z.infer<typeof willCheckoutSchema>;
+export type TrustCheckoutInput = z.infer<typeof trustCheckoutSchema>;
+export type AmendmentCheckoutInput = z.infer<typeof amendmentCheckoutSchema>;
+export type PartnerCheckoutInput = z.infer<typeof partnerCheckoutSchema>;
+export type AttorneyCheckoutInput = z.infer<typeof attorneyCheckoutSchema>;

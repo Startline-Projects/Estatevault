@@ -151,8 +151,8 @@
       <span>Branch: <code>Amir-Dev</code></span>
       <span>Last commits: <code>01ec972</code> · <code>90e75d0</code></span>
       <span>Vault ✅</span>
-      <span>Checkout 🔶 (uncommitted)</span>
-      <span>C-8 open</span>
+      <span>Checkout ✅ (P0–P3 uncommitted, ready to commit)</span>
+      <span>C-8 + profile sibling fixed ✅</span>
     </div>
     <div class="links">
       📄 <a href="./CODE_REFACTOR_PLAN.html">Plan (architecture)</a>
@@ -183,7 +183,7 @@
     <h2 class="section" id="tldr">1. TL;DR — where we are right now</h2>
     <div class="card">
       <p class="lead" style="color:var(--charcoal);font-size:16px;">The refactor is <strong>partially done</strong>. The <strong>vault</strong> group is fully converted (Phases 1→2→3) and <strong>committed</strong>. The <strong>checkout</strong> group has Phases 0, 1, and 2 done <strong>but not committed</strong> — sitting in the working tree, staged for a later commit. <strong>All other groups</strong> untouched.</p>
-      <div class="danger" style="margin-top:6px;"><span class="lab">Open critical bug — C-8:</span> Paid-attorney signup writes 4 columns that don't exist on <code>partners</code> + 2 wrong money units. Confirmed live (auth user created, profile + partner missing, customer paid). <strong>Not fixed yet</strong> — needs a characterization test first. Full picture in <a href="#c8">§5</a>.</div>
+      <div class="ok-box" style="margin-top:6px;"><span class="lab">C-8 + profile sibling fixed ✅</span> Paid-attorney signup now writes the correct columns + cents values, and the route also writes <code>full_name</code> on profiles instead of the non-existent <code>first_name</code>/<code>last_name</code>. Both upsert paths check their error and fail fast. Covered by <code>tests/unit/attorney-verify-c8.test.ts</code> (13 tests).</div>
       <div class="plain"><span class="lab">In plain words</span> Vault is done and shipped. Checkout's refactor is finished except Zod — but the files aren't committed yet. While testing checkout we found a real production bug that has to be fixed with a test before anything else.</div>
     </div>
 
@@ -245,24 +245,19 @@ Money lines preserved byte-for-byte. C-8 bug intentionally left for a
 tested fix (see CODE_REFACTOR_HANDOFF.md §5).</code></pre>
     </div>
 
-    <div class="card" style="border-left:5px solid var(--bad);">
-      <h3>4.2 — Fix C-8 (paid-attorney signup data bug) — HIGHEST PRIORITY</h3>
-      <p>See <a href="#c8">§5</a> for the full picture. Do <strong>all</strong> of:</p>
-      <ol class="tight">
-        <li>Write <code>tests/unit/attorney-verify-c8.test.ts</code> — characterization test that captures the current broken behavior.</li>
-        <li>Verify the test fails as expected.</li>
-        <li>Apply the fix (§5).</li>
-        <li>Flip the test assertions to the correct behavior — proves the fix changed exactly what was intended.</li>
-        <li>Add an error check on the upsert so it can't fail silently again.</li>
-      </ol>
+    <div class="card" style="border-left:5px solid var(--good);">
+      <h3>4.2 — Fix C-8 — ✅ DONE</h3>
+      <ul class="tight">
+        <li><code>tests/unit/attorney-verify-c8.test.ts</code> written against broken route (all bug assertions passed) → fix applied → assertions flipped to expected behavior → all 12 tests green.</li>
+        <li>Route now writes <code>profile_id</code> (was <code>user_id</code>), <code>tier</code> normalized to <code>standard|enterprise</code>, <code>custom_review_fee</code> × 100 (cents), <code>one_time_fee_amount</code> = raw cents, <code>practice_areas</code> as array, dropped non-existent <code>years_in_practice</code> + <code>stripe_session_id</code>, partner upsert error checked + fails fast.</li>
+        <li><strong>Sibling bug still open:</strong> <code>profiles</code> upsert writes <code>first_name</code>/<code>last_name</code> which may not exist — tracked as <code>[sibling, unfixed]</code> test in the same file. See §4.3.</li>
+        <li>The same <code>user_id</code> mistake exists in <code>app/api/sales/create-partner/route.ts:117</code> — fix during the sales group.</li>
+      </ul>
     </div>
 
-    <div class="card">
-      <h3>4.3 — Investigate why <code>profiles</code> upsert also fails</h3>
-      <p>Manual repro showed auth user created but <strong>no</strong> <code>profiles</code> row. The route writes <code>first_name</code> / <code>last_name</code> — those columns may not exist (likely <code>full_name</code> only).</p>
-<pre><code>SELECT column_name FROM information_schema.columns
-WHERE table_name = 'profiles' ORDER BY ordinal_position;</code></pre>
-      <p>If the names mismatch, fix <code>attorney/verify/route.ts</code> to write what does exist.</p>
+    <div class="card" style="border-left:5px solid var(--good);">
+      <h3>4.3 — Profile sibling bug — ✅ DONE</h3>
+      <p><code>profiles</code> table only has <code>full_name</code>. Route now writes <code>full_name: `${firstName} ${lastName}`.trim()</code> and checks the upsert error. Covered by 2 tests in <code>attorney-verify-c8.test.ts</code>.</p>
     </div>
 
     <div class="card">

@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
-import { checkPlanConflict, type ProductType } from "@/lib/orders/plan-conflict";
+import { checkPlanConflict } from "@/lib/orders/plan-conflict";
 import { apiRateLimit } from "@/lib/rate-limit";
 import { createAdminClient } from "@/lib/api/auth";
 import { withRoute } from "@/lib/api/route";
+import { checkConflictSchema } from "@/lib/validation/schemas";
 
 export const POST = withRoute(async (request: Request) => {
   try {
@@ -16,21 +17,11 @@ export const POST = withRoute(async (request: Request) => {
     }
 
     const body = await request.json();
-    const { email, productType } = body as {
-      email?: string;
-      productType?: ProductType;
-    };
-
-    if (!email || typeof email !== "string") {
-      return NextResponse.json({ error: "Email required" }, { status: 400 });
+    const parsed = checkConflictSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json({ error: "invalid input", details: parsed.error.flatten() }, { status: 400 });
     }
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      return NextResponse.json({ error: "Invalid email" }, { status: 400 });
-    }
-    if (productType !== "will" && productType !== "trust") {
-      return NextResponse.json({ error: "Invalid productType" }, { status: 400 });
-    }
+    const { email, productType } = parsed.data;
 
     const supabase = createAdminClient();
     const result = await checkPlanConflict(supabase, email, productType);

@@ -5,6 +5,7 @@ import { withRoute } from "@/lib/api/route";
 import { createAdminClient } from "@/lib/api/auth";
 import * as profileRepo from "@/lib/repos/server/profileRepo";
 import * as partnerRepo from "@/lib/repos/server/partnerRepo";
+import { attorneyVerifySchema } from "@/lib/validation/schemas";
 
 /* ------------------------------------------------------------------ */
 /*  POST /api/checkout/attorney/verify                                */
@@ -13,15 +14,12 @@ import * as partnerRepo from "@/lib/repos/server/partnerRepo";
 export const POST = withRoute(async (request: Request) => {
   try {
     const body = await request.json();
-    const sessionId = body.session_id;
-    const clientPassword = body.password || "";
-
-    if (!sessionId) {
-      return NextResponse.json(
-        { error: "Missing session_id" },
-        { status: 400 }
-      );
+    const parsed = attorneyVerifySchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json({ error: "Missing session_id" }, { status: 400 });
     }
+    const sessionId = parsed.data.session_id;
+    const clientPassword = parsed.data.password || "";
 
     // 1. Verify Stripe session
     const session = await stripe.checkout.sessions.retrieve(sessionId);
@@ -49,7 +47,6 @@ export const POST = withRoute(async (request: Request) => {
     const reviewFee = parseInt(meta.review_fee || "300", 10);
     const firmName = meta.firm_name || "";
     const practiceArea = meta.practice_area || "";
-    const yearsInPractice = meta.years_in_practice || "";
     const firstName = meta.first_name || "";
     const lastName = meta.last_name || "";
     const phone = meta.phone || "";
@@ -91,34 +88,49 @@ export const POST = withRoute(async (request: Request) => {
 
     // 3. Create profile
     if (userId) {
-      await profileRepo.upsert(supabase, {
+      const fullName = `${firstName} ${lastName}`.trim();
+      const { error: profileErr } = await profileRepo.upsert(supabase, {
         id: userId,
-        first_name: firstName,
-        last_name: lastName,
+        full_name: fullName,
         email,
         phone: phone || null,
         user_type: "partner",
       });
+      if (profileErr) {
+        console.error("[attorney/verify] profiles upsert failed", profileErr);
+        return NextResponse.json(
+          { error: "Failed to create profile." },
+          { status: 500 }
+        );
+      }
 
-      // 4. Create partner record
-      // NOTE: known C-8 money bug — `user_id` should be `profile_id`, and
-      // `custom_review_fee`/`one_time_fee_amount` are written in dollars into
-      // cents columns. Left as-is in Phase 2; will be fixed with a
-      // characterization test in a follow-up.
-      await partnerRepo.upsert(supabase, {
-        user_id: userId,
+      // 4. Create partner record (C-8 fix — see tests/unit/attorney-verify-c8.test.ts).
+      //   - profile_id was wrongly named `user_id`
+      //   - tier `"professional"` violated the DB CHECK; normalize to standard|enterprise
+      //   - custom_review_fee + one_time_fee_amount are integer-cents columns
+      //   - practice_areas is text[]; route used `practice_area` (no such column)
+      //   - years_in_practice + stripe_session_id are not columns on `partners`
+      //   - upsert error must not be swallowed
+      const normalizedTier = tier === "professional" ? "enterprise" : "standard";
+      const { error: partnerErr } = await partnerRepo.upsert(supabase, {
+        profile_id: userId,
         company_name: firmName || `${firstName} ${lastName} Law`,
         professional_type: "attorney",
-        tier,
+        tier: normalizedTier,
         status: "pending_verification",
-        custom_review_fee: reviewFee,
+        custom_review_fee: reviewFee * 100,
         bar_number: barNumber,
-        practice_area: practiceArea,
-        years_in_practice: yearsInPractice,
+        practice_areas: practiceArea ? [practiceArea] : [],
         one_time_fee_paid: true,
-        one_time_fee_amount: amount,
-        stripe_session_id: session.id,
+        one_time_fee_amount: session.amount_total ?? 0,
       });
+      if (partnerErr) {
+        console.error("[attorney/verify] partners upsert failed", partnerErr);
+        return NextResponse.json(
+          { error: "Failed to create partner record." },
+          { status: 500 }
+        );
+      }
     }
 
     // 5. Send welcome email via Resend (non-blocking)

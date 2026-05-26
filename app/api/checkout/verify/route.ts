@@ -3,17 +3,17 @@ import { stripe } from "@/lib/stripe";
 import { createAdminClient } from "@/lib/api/auth";
 import { withRoute } from "@/lib/api/route";
 import * as profileRepo from "@/lib/repos/server/profileRepo";
+import { checkoutVerifyQuerySchema } from "@/lib/validation/schemas";
 
 export const GET = withRoute(async (request: Request) => {
   const { searchParams } = new URL(request.url);
-  const sessionId = searchParams.get("session_id");
-
-  if (!sessionId) {
-    return NextResponse.json(
-      { error: "Missing session_id" },
-      { status: 400 }
-    );
+  const parsed = checkoutVerifyQuerySchema.safeParse({
+    session_id: searchParams.get("session_id"),
+  });
+  if (!parsed.success) {
+    return NextResponse.json({ error: "Missing session_id" }, { status: 400 });
   }
+  const sessionId = parsed.data.session_id;
 
   try {
     const session = await stripe.checkout.sessions.retrieve(sessionId);
