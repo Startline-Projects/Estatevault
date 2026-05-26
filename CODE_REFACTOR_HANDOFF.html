@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EstateVault Refactor — Handoff &amp; Status</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --navy:#1C3557;
+    --navy-soft:#27406b;
+    --gold:#C9A84C;
+    --gold-soft:#e7d49a;
+    --charcoal:#2D2D2D;
+    --white:#FFFFFF;
+    --bg:#f4f6f9;
+    --line:#e3e8f0;
+    --good:#1f8a5b;
+    --warn:#c98a1e;
+    --bad:#c0392b;
+    --muted:#5f6b7c;
+    --crit:#c0392b;
+    --high:#d35400;
+    --med:#c98a1e;
+    --low:#3a7ca5;
+    --b0:#6c5ce7;
+  }
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    margin:0;
+    font-family:'Inter',system-ui,sans-serif;
+    background:var(--bg);
+    color:var(--charcoal);
+    line-height:1.65;
+    font-size:16px;
+  }
+  a{color:var(--navy);text-decoration:none;}
+  a:hover{text-decoration:underline;}
+  code{
+    font-family:'JetBrains Mono',ui-monospace,monospace;
+    font-size:.85em;
+    background:#eef1f6;
+    color:#324; padding:1px 6px;border-radius:5px;
+    border:1px solid #e0e5ee;
+    word-break:break-word;
+  }
+  pre{
+    background:#11203a;color:#dbe4f1;border:1px solid #20355a;border-radius:10px;
+    padding:14px 16px;overflow-x:auto;font-family:'JetBrains Mono',monospace;
+    font-size:12.5px;line-height:1.55;margin:8px 0 0;
+  }
+  pre code{background:transparent;color:inherit;border:none;padding:0;}
+
+  /* ---------- Hero ---------- */
+  header.hero{
+    background:linear-gradient(135deg,var(--navy) 0%,#13243d 100%);
+    color:var(--white);
+    padding:42px 0 46px;
+    border-bottom:4px solid var(--gold);
+  }
+  .hero .tag{
+    display:inline-block;letter-spacing:.18em;text-transform:uppercase;
+    font-size:12px;font-weight:600;color:var(--gold-soft);margin-bottom:14px;
+  }
+  .hero h1{margin:0;font-size:34px;font-weight:800;line-height:1.12;}
+  .hero p.sub{margin:14px 0 0;font-size:17px;color:#cdd6e4;max-width:780px;line-height:1.6;}
+  .hero .meta{margin-top:22px;display:flex;flex-wrap:wrap;gap:10px;}
+  .hero .meta span{
+    background:rgba(255,255,255,.08);border:1px solid rgba(201,168,76,.35);
+    padding:6px 14px;border-radius:999px;font-size:13px;color:#e7ecf4;
+  }
+  .hero .links{margin-top:14px;font-size:13px;color:#e7ecf4;}
+  .hero .links a{color:var(--gold-soft);text-decoration:underline;margin-right:14px;}
+
+  /* ---------- Layout ---------- */
+  .layout{display:flex;gap:34px;max-width:1280px;margin:0 auto;padding:32px 24px 80px;}
+  main{flex:1;min-width:0;}
+  nav.toc{
+    width:248px;flex-shrink:0;position:sticky;top:24px;align-self:flex-start;
+    max-height:calc(100vh - 48px);overflow-y:auto;
+    background:var(--white);border:1px solid var(--line);border-radius:14px;padding:18px 16px;
+    font-size:14px;
+  }
+  nav.toc h4{margin:0 0 10px;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);}
+  nav.toc a{display:block;padding:5px 8px;border-radius:7px;color:var(--charcoal);}
+  nav.toc a:hover{background:var(--bg);text-decoration:none;}
+  nav.toc a .dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:7px;vertical-align:middle;}
+
+  /* ---------- Cards / sections ---------- */
+  .card{background:var(--white);border:1px solid var(--line);border-radius:16px;padding:24px 28px;margin-bottom:20px;box-shadow:0 1px 2px rgba(20,40,70,.04);}
+  h2.section{font-size:13px;letter-spacing:.16em;text-transform:uppercase;color:var(--navy);margin:34px 0 14px;display:flex;align-items:center;gap:10px;}
+  h2.section::after{content:"";flex:1;height:1px;background:var(--line);}
+  .card h3{font-size:15.5px;color:var(--navy);margin:18px 0 6px;}
+  .card h3:first-child{margin-top:0;}
+  .lead{font-size:15.5px;color:var(--muted);margin:0 0 14px;max-width:840px;}
+
+  /* ---------- Table ---------- */
+  table{width:100%;border-collapse:collapse;margin:6px 0 2px;font-size:14px;}
+  thead th{text-align:left;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:700;padding:9px 12px;border-bottom:2px solid var(--line);}
+  tbody td{padding:10px 12px;border-bottom:1px solid var(--line);vertical-align:top;}
+  tbody tr:last-child td{border-bottom:none;}
+  tbody tr:hover{background:#fafbfd;}
+  td.k{font-weight:700;color:var(--navy);}
+  .ok{color:var(--good);font-weight:700;}
+  .todo{color:var(--muted);font-weight:600;}
+  .pend{color:var(--warn);font-weight:700;}
+
+  ul.tight{margin:6px 0;padding-left:20px;}
+  ul.tight li{margin:7px 0;font-size:14.5px;}
+  ol.tight{margin:6px 0;padding-left:22px;}
+  ol.tight li{margin:9px 0;font-size:14.5px;}
+
+  .note{background:#fffaf0;border:1px solid var(--gold-soft);border-radius:11px;padding:14px 18px;font-size:14.5px;}
+  .note .lab{color:var(--warn);font-weight:700;}
+  .danger{background:#fbf3f2;border:1px solid #f0dcd9;border-left:4px solid var(--bad);border-radius:10px;padding:14px 18px;font-size:14.5px;}
+  .danger .lab{color:var(--bad);font-weight:700;}
+  .ok-box{background:#f3f8f4;border:1px solid #d8ebdd;border-left:4px solid var(--good);border-radius:10px;padding:12px 16px;font-size:14px;}
+  .ok-box .lab{color:var(--good);font-weight:700;}
+
+  /* Plain-English callout */
+  .plain{background:#eef5ff;border:1px solid #cfe0f5;border-left:4px solid var(--low);border-radius:10px;padding:12px 15px 12px 44px;position:relative;font-size:14px;margin:10px 0 0;color:#2a3a4d;}
+  .plain::before{content:"💡";position:absolute;left:13px;top:11px;font-size:16px;}
+  .plain .lab{display:block;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--low);font-weight:700;margin-bottom:3px;}
+
+  /* Checklist */
+  ul.check{list-style:none;padding-left:0;margin:6px 0;}
+  ul.check li{padding-left:26px;position:relative;margin:8px 0;font-size:14.5px;}
+  ul.check li::before{content:"☐";position:absolute;left:4px;top:0;color:var(--navy);font-size:16px;}
+
+  footer{text-align:center;color:var(--muted);font-size:13px;padding:30px 24px 50px;}
+
+  @media(max-width:880px){
+    nav.toc{display:none;}
+    .layout{padding:22px 14px 60px;}
+    .card{padding:20px 18px;}
+    table{font-size:13px;} tbody td{padding:9px 8px;}
+  }
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div style="max-width:1280px;margin:0 auto;padding:0 24px;">
+    <span class="tag">Refactor handoff · 2026-05-26</span>
+    <h1>Handoff &amp; Current Status</h1>
+    <p class="sub">Open this first if you're picking up the refactor mid-stream. For the full architecture + phase definitions, read the main plan; for known bugs see the audit.</p>
+    <div class="meta">
+      <span>Branch: <code>Amir-Dev</code></span>
+      <span>Last commits: <code>01ec972</code> · <code>90e75d0</code></span>
+      <span>Vault ✅</span>
+      <span>Checkout 🔶 (uncommitted)</span>
+      <span>C-8 open</span>
+    </div>
+    <div class="links">
+      📄 <a href="./CODE_REFACTOR_PLAN.html">Plan (architecture)</a>
+      📄 <a href="./CODE_AUDIT.html">Audit (bugs)</a>
+      📄 <a href="./CODE_REFACTOR_HANDOFF.md">This doc (markdown)</a>
+    </div>
+  </div>
+</header>
+
+<div class="layout">
+  <nav class="toc">
+    <h4>Contents</h4>
+    <a href="#tldr"><span class="dot" style="background:var(--gold)"></span>1. TL;DR</a>
+    <a href="#status"><span class="dot" style="background:var(--navy)"></span>2. Status by group</a>
+    <a href="#uncommitted"><span class="dot" style="background:var(--warn)"></span>3. Uncommitted work</a>
+    <a href="#next"><span class="dot" style="background:var(--good)"></span>4. Next steps</a>
+    <a href="#c8"><span class="dot" style="background:var(--crit)"></span>5. C-8 bug</a>
+    <a href="#reference"><span class="dot" style="background:var(--low)"></span>6. Reference pattern</a>
+    <a href="#catalog"><span class="dot" style="background:var(--muted)"></span>7. Catalog</a>
+    <a href="#collision"><span class="dot" style="background:var(--bad)"></span>8. Collision rules</a>
+    <a href="#test"><span class="dot" style="background:var(--good)"></span>9. Test commands</a>
+    <a href="#checklist"><span class="dot" style="background:var(--gold)"></span>10. Checklist</a>
+  </nav>
+
+  <main>
+
+    <!-- ============ TLDR ============ -->
+    <h2 class="section" id="tldr">1. TL;DR — where we are right now</h2>
+    <div class="card">
+      <p class="lead" style="color:var(--charcoal);font-size:16px;">The refactor is <strong>partially done</strong>. The <strong>vault</strong> group is fully converted (Phases 1→2→3) and <strong>committed</strong>. The <strong>checkout</strong> group has Phases 0, 1, and 2 done <strong>but not committed</strong> — sitting in the working tree, staged for a later commit. <strong>All other groups</strong> untouched.</p>
+      <div class="danger" style="margin-top:6px;"><span class="lab">Open critical bug — C-8:</span> Paid-attorney signup writes 4 columns that don't exist on <code>partners</code> + 2 wrong money units. Confirmed live (auth user created, profile + partner missing, customer paid). <strong>Not fixed yet</strong> — needs a characterization test first. Full picture in <a href="#c8">§5</a>.</div>
+      <div class="plain"><span class="lab">In plain words</span> Vault is done and shipped. Checkout's refactor is finished except Zod — but the files aren't committed yet. While testing checkout we found a real production bug that has to be fixed with a test before anything else.</div>
+    </div>
+
+    <!-- ============ STATUS ============ -->
+    <h2 class="section" id="status">2. Status by group</h2>
+    <div class="card">
+      <table>
+        <thead><tr><th>Group</th><th>P0 tests</th><th>P1 kernel</th><th>P2 repos</th><th>P3 Zod</th><th>Notes</th></tr></thead>
+        <tbody>
+          <tr><td class="k">vault</td><td class="ok">✅</td><td class="ok">✅</td><td class="ok">✅</td><td class="ok">✅</td><td><strong>Done + committed</strong> (<code>90e75d0</code>). Reference pattern.</td></tr>
+          <tr><td class="k">checkout</td><td class="ok">✅</td><td class="ok">✅</td><td class="ok">✅</td><td class="pend">🔶</td><td><strong>Uncommitted in working tree.</strong> C-8 also open.</td></tr>
+          <tr><td class="k">webhooks, documents, partner, sales, attorney, crypto, admin, trustee, auth, cron, …</td><td class="todo">⬜</td><td class="todo">⬜</td><td class="todo">⬜</td><td class="todo">⬜</td><td>Not started.</td></tr>
+        </tbody>
+      </table>
+      <p style="font-size:13.5px;color:var(--muted);margin-top:14px;">~119 total route handlers · vault 14 · checkout 9 · remaining ~96.</p>
+    </div>
+
+    <!-- ============ UNCOMMITTED ============ -->
+    <h2 class="section" id="uncommitted">3. Uncommitted work in the working tree</h2>
+    <div class="card">
+      <p class="lead">All checkout-phase work. Verify gate is <strong>green</strong> with these present (<code>tsc + lint + test</code>, 94 tests).</p>
+      <h3>New (checkout-specific)</h3>
+      <ul class="tight">
+        <li><code>lib/orders/pricing.ts</code> — pricing SSOT</li>
+        <li><code>tests/unit/pricing.test.ts</code> — pins every money value + the <code>calculateSplit</code> invariant</li>
+        <li><code>lib/repos/server/orderRepo.ts</code>, <code>partnerRepo.ts</code>, <code>quizSessionRepo.ts</code>, <code>affiliateRepo.ts</code>, <code>affiliateClickRepo.ts</code>, <code>documentRepo.ts</code>, <code>profileRepo.ts</code>, <code>appSettingsRepo.ts</code></li>
+      </ul>
+      <h3>Modified — all 9 checkout routes</h3>
+      <ul class="tight">
+        <li><code>app/api/checkout/{will,trust,amendment,vault-subscription,partner,attorney,attorney/verify,verify,check-conflict}/route.ts</code></li>
+      </ul>
+      <h3>Shared file with vault commit (extra checkout exports)</h3>
+      <ul class="tight">
+        <li><code>lib/repos/server/clientRepo.ts</code> — added <code>findWithPartnerByProfile</code>, <code>findIdAndSubByProfileMaybe</code>, <code>create</code>, <code>createReturningWithSub</code>, <code>setProfileId</code>. Safe; vault doesn't use them.</li>
+      </ul>
+    </div>
+
+    <!-- ============ NEXT ============ -->
+    <h2 class="section" id="next">4. Immediate next steps (in order)</h2>
+
+    <div class="card">
+      <h3>4.1 — Commit the checkout work in progress</h3>
+      <p>Before anything else, <strong>commit and push</strong> the §3 files so a teammate can pull and continue without recreating them.</p>
+<pre><code>refactor(checkout): Phases 0-2 — pricing SSOT, withRoute kernel, server repos
+
+Phase 0: lib/orders/pricing.ts + pricing.test.ts pin every price + the
+calculateSplit invariant. No routes wired yet (Phase 5).
+
+Phase 1: all 9 checkout routes wrapped in withRoute; 8 inline
+createAdminClient copies removed; attorney/verify dropped its
+@supabase/supabase-js outlier for the shared SSR admin client.
+
+Phase 2: new server repos for orders/partners/quizSessions/affiliates/
+affiliateClicks/documents/profiles/appSettings; clientRepo extended;
+every business-table .from() in checkout moved behind a repo. Only
+audit_log inserts remain inline.
+
+Money lines preserved byte-for-byte. C-8 bug intentionally left for a
+tested fix (see CODE_REFACTOR_HANDOFF.md §5).</code></pre>
+    </div>
+
+    <div class="card" style="border-left:5px solid var(--bad);">
+      <h3>4.2 — Fix C-8 (paid-attorney signup data bug) — HIGHEST PRIORITY</h3>
+      <p>See <a href="#c8">§5</a> for the full picture. Do <strong>all</strong> of:</p>
+      <ol class="tight">
+        <li>Write <code>tests/unit/attorney-verify-c8.test.ts</code> — characterization test that captures the current broken behavior.</li>
+        <li>Verify the test fails as expected.</li>
+        <li>Apply the fix (§5).</li>
+        <li>Flip the test assertions to the correct behavior — proves the fix changed exactly what was intended.</li>
+        <li>Add an error check on the upsert so it can't fail silently again.</li>
+      </ol>
+    </div>
+
+    <div class="card">
+      <h3>4.3 — Investigate why <code>profiles</code> upsert also fails</h3>
+      <p>Manual repro showed auth user created but <strong>no</strong> <code>profiles</code> row. The route writes <code>first_name</code> / <code>last_name</code> — those columns may not exist (likely <code>full_name</code> only).</p>
+<pre><code>SELECT column_name FROM information_schema.columns
+WHERE table_name = 'profiles' ORDER BY ordinal_position;</code></pre>
+      <p>If the names mismatch, fix <code>attorney/verify/route.ts</code> to write what does exist.</p>
+    </div>
+
+    <div class="card">
+      <h3>4.4 — Finish checkout Phase 3 (Zod)</h3>
+      <p>Append to <code>lib/validation/schemas.ts</code>:</p>
+      <ul class="tight">
+        <li><code>willCheckoutSchema</code>, <code>trustCheckoutSchema</code>, <code>amendmentCheckoutSchema</code></li>
+        <li><code>vaultSubscriptionSchema</code>, <code>partnerCheckoutSchema</code></li>
+        <li><code>attorneyCheckoutSchema</code>, <code>attorneyVerifySchema</code></li>
+        <li><code>verifyQuerySchema</code>, <code>checkConflictSchema</code></li>
+      </ul>
+      <p>Wire each route to <code>safeParse</code> at the top. Reference: vault <code>items</code> route. Add unit tests next to <code>vault-schemas.test.ts</code>.</p>
+    </div>
+
+    <div class="card">
+      <h3>4.5 — Then commit checkout as fully refactored, pick next group</h3>
+      <p>Suggested order (money-critical first): <strong>webhooks</strong> (folds in audit C-1 idempotency) → documents → partner / sales → attorney, crypto, admin, trustee, auth, cron. Each group: P1 → P2 → P3.</p>
+    </div>
+
+    <!-- ============ C-8 ============ -->
+    <h2 class="section" id="c8">5. C-8 — open critical bug</h2>
+    <div class="card" style="border-left:5px solid var(--bad);">
+      <h3>Symptom</h3>
+      <p><code>POST /api/checkout/attorney/verify</code> on paid attorney signup:</p>
+      <ul class="tight">
+        <li>Stripe charges the customer ✅</li>
+        <li><code>auth.users</code> row created ✅</li>
+        <li><code>profiles</code> row created ❌ (fails silently — see §4.3)</li>
+        <li><code>partners</code> row created ❌ (the C-8 upsert itself)</li>
+        <li>HTTP response: 500 / "something went wrong" (user sees error after paying)</li>
+      </ul>
+      <p>Confirmed live with Stripe test card on 2026-05-26.</p>
+
+      <h3>Root cause — 4 phantom columns + 2 wrong units + bad tier value</h3>
+      <table>
+        <thead><tr><th>Field written</th><th>Reality on <code>partners</code></th><th>Fix</th></tr></thead>
+        <tbody>
+          <tr><td><code>user_id</code></td><td>no such column — use <code>profile_id</code></td><td>rename</td></tr>
+          <tr><td><code>stripe_session_id</code></td><td>no such column</td><td>drop (data lives on Stripe)</td></tr>
+          <tr><td><code>practice_area</code> (singular)</td><td>only <code>practice_areas</code> (array)</td><td>rename + wrap in <code>[]</code></td></tr>
+          <tr><td><code>years_in_practice</code></td><td>no such column</td><td>drop</td></tr>
+          <tr><td><code>custom_review_fee</code> (cents)</td><td>route writes dollars (<code>300</code>)</td><td>× 100</td></tr>
+          <tr><td><code>one_time_fee_amount</code> (cents)</td><td>route writes dollars</td><td>keep raw cents</td></tr>
+          <tr><td><code>tier: meta.tier</code> may be <code>"professional"</code></td><td>CHECK <code>('standard','enterprise')</code></td><td>normalize (audit H-7)</td></tr>
+        </tbody>
+      </table>
+
+      <h3>Suggested fix (after the test)</h3>
+<pre><code>const normalizedTier = tier === "professional" ? "enterprise" : "standard";
+
+const { error: partnerErr } = await partnerRepo.upsert(supabase, {
+  profile_id: userId,                          // was user_id
+  company_name: firmName || `${firstName} ${lastName} Law`,
+  professional_type: "attorney",
+  tier: normalizedTier,                        // satisfies CHECK
+  status: "pending_verification",
+  custom_review_fee: reviewFee * 100,          // dollars → cents
+  bar_number: barNumber,
+  practice_areas: practiceArea ? [practiceArea] : [],  // singular → array
+  one_time_fee_paid: true,
+  one_time_fee_amount: session.amount_total,   // already cents
+  // years_in_practice + stripe_session_id dropped — no column exists
+});
+if (partnerErr) {
+  console.error("[attorney/verify] partners upsert failed", partnerErr);
+  return NextResponse.json({ error: "Failed to create partner record." }, { status: 500 });
+}</code></pre>
+      <p>Same <code>user_id</code> → <code>profile_id</code> mistake appears in <code>app/api/sales/create-partner/route.ts:117</code> — fix together.</p>
+
+      <div class="ok-box" style="margin-top:14px;"><span class="lab">Backfill needed?</span> No. SQL on 2026-05-26 confirmed: no orphaned profiles, no missing partners. The bug has been latent — no broken data to repair.</div>
+      <div class="plain" style="margin-top:12px;"><span class="lab">In plain words</span> The paid attorney signup tries to file the record under columns the database doesn't have. Supabase rejects the whole thing, the route returns success anyway, the customer paid for nothing. No bad data yet because nobody's hit it in production — we found it in test. Write the test, then fix.</div>
+    </div>
+
+    <!-- ============ REFERENCE ============ -->
+    <h2 class="section" id="reference">6. Reference pattern (copy from vault)</h2>
+    <div class="card">
+      <p class="lead">Every route follows this shape:</p>
+<pre><code>auth (requireAuth / requireClientUser)
+  → validate (Zod safeParse)
+  → service / domain logic in route
+  → ask repo
+  → ok() / fail()</code></pre>
+      <p style="margin-top:12px;">Wrapped in <code>withRoute(...)</code> so any throw becomes a generic <code>{ error: "internal error" }</code> 500 + a logged <code>[route METHOD path]</code> line.</p>
+      <p><strong>Best example to copy:</strong> <code>app/api/vault/items/route.ts</code> (full CRUD on the kernel + repos + Zod).</p>
+    </div>
+
+    <!-- ============ CATALOG ============ -->
+    <h2 class="section" id="catalog">7. What exists today (catalog)</h2>
+    <div class="card">
+      <h3>Shared kernel (committed)</h3>
+      <ul class="tight">
+        <li><code>lib/api/route.ts</code> — <code>withRoute(handler)</code></li>
+        <li><code>lib/api/response.ts</code> — <code>ok(data)</code>, <code>fail(message, status, extra?)</code></li>
+        <li><code>lib/api/auth.ts</code> — <code>requireAuth</code>, <code>createAdminClient</code>, <code>UserType</code></li>
+        <li><code>lib/api/crypto.ts</code> — <code>requireClientUser</code> (typed) for vault-style routes</li>
+      </ul>
+
+      <h3>Server repos (<code>lib/repos/server/</code>)</h3>
+      <ul class="tight">
+        <li><strong>Committed:</strong> <code>vaultItemRepo</code>, <code>trusteeRepo</code>, <code>farewellRepo</code>, <code>clientRepo</code> (base set)</li>
+        <li><strong>Uncommitted</strong> (checkout): <code>orderRepo</code>, <code>partnerRepo</code>, <code>quizSessionRepo</code>, <code>affiliateRepo</code>, <code>affiliateClickRepo</code>, <code>documentRepo</code>, <code>profileRepo</code>, <code>appSettingsRepo</code>, + extra <code>clientRepo</code> exports</li>
+      </ul>
+
+      <h3>Validation (<code>lib/validation/schemas.ts</code>)</h3>
+      <ul class="tight">
+        <li><strong>Vault</strong>: <code>vaultItemSchema</code>, <code>vaultItemSearchSchema</code>, <code>trusteeCreateSchema</code>, <code>trusteeConfirmSchema</code>, <code>farewellCreateSchema</code>, <code>farewellUpdateSchema</code>, <code>vaultUploadUrlSchema</code>, <code>vaultDownloadUrlSchema</code></li>
+        <li><strong>Existing</strong>: <code>willIntakeSchema</code>, <code>trustIntakeSchema</code>, <code>quizAnswersSchema</code>, <code>affiliateSignupSchema</code></li>
+        <li><strong>Checkout</strong>: TODO (§4.4)</li>
+      </ul>
+
+      <h3>Pricing</h3>
+      <p><code>lib/orders/pricing.ts</code> (uncommitted) — <code>PRICES</code>, <code>EV_DEFAULT_CUT</code>, <code>PARTNER_PLATFORM_FEE</code>, <code>DEFAULT_ATTORNEY_REVIEW_FEE</code>, <code>PROMO_CODES</code>. <strong>Not yet wired</strong> to any route (Phase 5).</p>
+
+      <h3>Tests</h3>
+      <ul class="tight">
+        <li><code>tests/unit/api-kernel.test.ts</code> — kernel</li>
+        <li><code>tests/unit/vault-schemas.test.ts</code> — vault Zod</li>
+        <li><code>tests/unit/pricing.test.ts</code> (uncommitted) — pricing SSOT + invariant</li>
+        <li><code>tests/unit/calculate-split.test.ts</code>, <code>stripe-webhooks.test.ts</code>, <code>sanity.test.ts</code> — pre-existing</li>
+        <li><code>tests/e2e/*</code> — Playwright (needs live test DB)</li>
+      </ul>
+
+      <h3>Docs</h3>
+      <ul class="tight">
+        <li><a href="./CODE_REFACTOR_PLAN.html">CODE_REFACTOR_PLAN.html</a> / <code>.md</code> — full architecture + phases</li>
+        <li><a href="./CODE_AUDIT.html">CODE_AUDIT.html</a> / <code>.md</code> — bug audit (C-1…C-8, H-1…H-12, M, L)</li>
+        <li>This file + <code>CODE_REFACTOR_HANDOFF.md</code></li>
+      </ul>
+    </div>
+
+    <!-- ============ COLLISION ============ -->
+    <h2 class="section" id="collision">8. Collision rules</h2>
+    <div class="card" style="border-left:5px solid var(--bad);">
+      <ul class="tight" style="margin:0;">
+        <li><strong>One owner per repo file.</strong> Whoever creates <code>xRepo.ts</code> owns it. Others import — never recreate.</li>
+        <li><strong>Schemas append-only.</strong> Add new schemas at the <strong>end</strong> of <code>lib/validation/schemas.ts</code>. Don't reorder existing ones.</li>
+        <li><strong>Never edit a money value during refactor.</strong> Prices, splits, hard-stops are <code>CLAUDE.md</code> law. Relocate, don't change.</li>
+        <li><strong>Branch off <code>Amir-Dev</code> after the checkout commit lands.</strong> Otherwise the new dev won't see the uncommitted repos.</li>
+        <li><strong>Don't touch checkout files</strong> while the current owner is still on it.</li>
+        <li><strong>Verify gate green</strong> (<code>tsc + lint + test</code>) <strong>after every step.</strong> Red gate = bug you're shipping.</li>
+      </ul>
+    </div>
+
+    <!-- ============ TEST ============ -->
+    <h2 class="section" id="test">9. Test commands cheat sheet</h2>
+    <div class="card">
+<pre><code># Fast — re-run anytime (no secrets needed)
+npx tsc --noEmit            # type errors across project — must be clean
+npm run lint                # eslint on changed code
+npm test                    # vitest run (currently 94 tests)
+
+# E2E — needs live test DB (.env.test + seeded)
+npm run test:db:reset &amp;&amp; npm run test:db:seed
+npm run test:e2e -- &lt;spec-name-glob&gt;
+
+# Generate Supabase DB types (Phase 6 prerequisite)
+supabase login &amp;&amp; supabase link --project-ref &lt;ref&gt;
+npm run db:types</code></pre>
+      <p style="margin-top:14px;font-size:14px;">Key e2e specs after touching:</p>
+      <ul class="tight" style="margin:4px 0 0;">
+        <li><strong>vault</strong>: <code>client-dashboard-crud</code>, <code>e2ee-smoke</code>, <code>farewell-flows</code>, <code>trustee-unlock</code>, <code>crypto-rotate</code></li>
+        <li><strong>checkout / webhooks</strong>: <code>stripe-webhooks</code>, <code>vault-subscription</code>, <code>role-access</code>, <code>api-auth-guards</code></li>
+      </ul>
+      <p style="font-size:13.5px;color:var(--muted);margin-top:10px;">Manual repro for C-8: see §5 — signup at <code>/partners/attorneys/signup?tier=standard</code>, pay with test card <code>4242 4242 4242 4242</code>, inspect DB.</p>
+    </div>
+
+    <!-- ============ CHECKLIST ============ -->
+    <h2 class="section" id="checklist">10. When you sit down to continue</h2>
+    <div class="card">
+      <ul class="check">
+        <li>Pull latest on <code>Amir-Dev</code>. Confirm <code>90e75d0</code> and <code>01ec972</code> are present.</li>
+        <li>Run the gate — should be green. If not, something drifted; fix before continuing.</li>
+        <li>Read §4 — next steps. Skim §5 if touching anything money.</li>
+        <li>If continuing checkout: commit §3 first (see §4.1).</li>
+        <li>If picking a new group: see §4.5 for order, follow §6's reference pattern, obey §8's collision rules.</li>
+        <li>After your work: <strong>update this file</strong> (§2 status, §3 uncommitted, what was done) so the next person has the same clean handoff.</li>
+      </ul>
+    </div>
+
+  </main>
+</div>
+
+<footer>
+  EstateVault Refactor Handoff · 2026-05-26 · source of truth for "where are we?" — keep it current.
+</footer>
+
+</body>
+</html>

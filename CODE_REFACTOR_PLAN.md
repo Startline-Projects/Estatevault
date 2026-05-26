@@ -1,5 +1,7 @@
 # EstateVault — Structured Refactor Plan (Architecture & Scalability)
 
+> 📌 **Picking up mid-stream?** Open [`CODE_REFACTOR_HANDOFF.md`](./CODE_REFACTOR_HANDOFF.md) first — that's the live status (what's committed, what's uncommitted, where to continue, open bugs). This plan covers the **architecture and phases**; the handoff covers **where we are right now**.
+
 _Generated 2026-05-25 from a direct full-codebase analysis (API route layer, `lib/`, data layer, migrations, frontend, config). This plan is **not** derived from `CODE_AUDIT.md`; the audit is a separate bug list. This document is about **structure**: stop re-defining the same plumbing in every route/component, establish clear layers, and make the codebase scalable. No files were modified._
 
 ---
