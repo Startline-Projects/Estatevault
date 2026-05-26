@@ -52,18 +52,27 @@ That's it. Auth → validate → repo → reply. Errors caught by `withRoute`. N
 
 ---
 
-**Last updated:** 2026-05-26
+**Last updated:** 2026-05-27
 **Current branch:** `Amir-Dev`
-**Last committed:** `01ec972` (pre-existing feature changes), preceded by `90e75d0` (vault refactor).
-**Open work (uncommitted):** checkout Phases 0–3 ✅ · C-8 + profile sibling ✅ · checkout-schemas tests ✅. **Ready to commit as one atomic checkout PR.**
+**Last commits (newest first):**
+- `6853ffe` docs(handoff): plain-English "First 5 minutes" partner onboarding
+- `0d108df` feat(checkout): Phase 3 Zod at boundary + C-8 attorney-verify fix
+- `6d89b8a` docs: handoff doc + refactor plan
+- `51fdca1` refactor(checkout): kernel + server repos + pricing module
+- `01ec972` feat(vault): trustee file access, death-certificate bucket, farewell verify
+- `90e75d0` refactor(vault): API kernel + server repos + Zod
+
+**Open work (uncommitted):** none. Working tree is clean.
 
 ---
 
 ## 1. TL;DR — where we are right now
 
-The refactor is **partially done**. The **vault** route group is fully converted (Phases 1→2→3) and committed. The **checkout** route group has Phases 0, 1, and 2 done **but not committed** — the changes are sitting in the working tree, deliberately staged for a later commit after Phase 3 + the C-8 fix. **All other groups** are untouched.
+Two groups are **fully shipped on `Amir-Dev`**: **vault** (Phases 1→3) and **checkout** (Phases 0→3, plus the C-8 attorney-verify data bug fix and its profile sibling). Working tree clean.
 
-A real production bug — **C-8** — was found while testing checkout (paid-attorney signup wrote 4 phantom columns + 2 money values in the wrong unit). **Fixed**, along with its **profile sibling bug** (route was writing `first_name`/`last_name`; the `profiles` table only has `full_name`). Covered by `tests/unit/attorney-verify-c8.test.ts` (13 tests). Both upsert paths now check their error and fail fast — no more silent success.
+What's left: every other group (~96 routes) — webhooks, documents, partner, sales, attorney, crypto, admin, trustee, auth, cron. Each follows the same Phase 1→2→3 sweep, copying vault or checkout as the reference.
+
+A real production bug — **C-8** — was caught while testing checkout (paid-attorney signup wrote 4 phantom columns + 2 money values in the wrong unit). Fixed with a characterization test (`tests/unit/attorney-verify-c8.test.ts`, 13 tests). The profile sibling bug (route was writing `first_name`/`last_name`; `profiles` only has `full_name`) was fixed in the same pass. Both upsert paths now check their error and fail fast — no more silent success.
 
 ---
 
@@ -71,102 +80,66 @@ A real production bug — **C-8** — was found while testing checkout (paid-att
 
 | Group | Phase 0 (tests) | Phase 1 (kernel) | Phase 2 (repos) | Phase 3 (Zod) | Notes |
 |---|---|---|---|---|---|
-| **vault** | ✅ | ✅ | ✅ | ✅ | **Done + committed** (`90e75d0`). Reference pattern. |
-| **checkout** | ✅ | ✅ | ✅ | ⬜ | **Uncommitted in working tree.** C-8 bug also open. |
-| webhooks, documents, partner, sales, attorney, crypto, admin, trustee, auth, cron, others | ⬜ | ⬜ | ⬜ | ⬜ | Not started. |
+| **vault** | ✅ | ✅ | ✅ | ✅ | Shipped (`90e75d0`). Reference pattern. |
+| **checkout** | ✅ | ✅ | ✅ | ✅ | Shipped (`51fdca1` + `0d108df`). C-8 + profile sibling fixed. |
+| **webhooks** | ⬜ | ⬜ | ⬜ | ⬜ | Not started. Money-critical — folds in audit C-1 (idempotency), H-1, H-5, H-6. |
+| **documents** | ⬜ | ⬜ | ⬜ | ⬜ | Not started. Folds in C-4, C-5. |
+| **partner / sales** | ⬜ | ⬜ | ⬜ | ⬜ | Not started. Folds in C-6, C-7, and the same `user_id`→`profile_id` bug at `sales/create-partner/route.ts:117`. |
+| **attorney** | ⬜ | ⬜ | ⬜ | ⬜ | Not started. |
+| **crypto** | ⬜ | ⬜ | ⬜ | ⬜ | Not started. Folds in C-2, C-3 (DEK AAD + atomic provisioning). |
+| **admin / trustee / auth / cron** | ⬜ | ⬜ | ⬜ | ⬜ | Not started. Cron is safest first pick (folds in H-3 fail-closed). |
 
 Group counts (route handlers): ~119 total · vault 14 · checkout 9 · remaining ~96.
 
 ---
 
-## 3. Uncommitted work in the working tree (checkout)
+## 3. Uncommitted work in the working tree
 
-These files are modified or new and **not yet committed**. Do not lose them.
+**None.** Last verified gate: `npx tsc --noEmit && npm run lint && npm test` — clean (117 tests pass).
 
-**New (checkout-specific):**
-- `lib/orders/pricing.ts` — pricing SSOT (constants + promo codes)
-- `tests/unit/pricing.test.ts` — pins every money value + the calculateSplit invariant
-- `lib/repos/server/orderRepo.ts`
-- `lib/repos/server/partnerRepo.ts`
-- `lib/repos/server/quizSessionRepo.ts`
-- `lib/repos/server/affiliateRepo.ts`
-- `lib/repos/server/affiliateClickRepo.ts`
-- `lib/repos/server/documentRepo.ts`
-- `lib/repos/server/profileRepo.ts`
-- `lib/repos/server/appSettingsRepo.ts`
-
-**Modified (all 9 checkout routes):**
-- `app/api/checkout/will/route.ts`
-- `app/api/checkout/trust/route.ts`
-- `app/api/checkout/amendment/route.ts`
-- `app/api/checkout/vault-subscription/route.ts`
-- `app/api/checkout/partner/route.ts`
-- `app/api/checkout/attorney/route.ts`
-- `app/api/checkout/attorney/verify/route.ts`
-- `app/api/checkout/verify/route.ts`
-- `app/api/checkout/check-conflict/route.ts`
-
-**Also modified (shared file with vault commit — checkout-related additions):**
-- `lib/repos/server/clientRepo.ts` — extra exports `findWithPartnerByProfile`, `findIdAndSubByProfileMaybe`, `create`, `createReturningWithSub`, `setProfileId`. Safe; vault routes don't use them.
-
-**Verify gate is green** with all of the above present: `npx tsc --noEmit && npm run lint && npm test` (94 tests pass as of handoff date).
+When you start a group, this section is where you list what's in-flight so the other dev can see it. Update before you push.
 
 ---
 
 ## 4. Immediate next steps (do in this order)
 
-### 4.1 — Commit the checkout work in progress
-Before doing anything else, **commit and push** the checkout files above so a teammate can pull and continue without recreating them. Suggested commit message:
+### Done in earlier rounds — kept for history
+- 4.1 — Commit checkout WIP — ✅ shipped in `51fdca1`.
+- 4.2 — Fix C-8 (paid-attorney signup data bug) — ✅ shipped in `0d108df`. Partners upsert now writes `profile_id`, normalized tier, money in cents, `practice_areas` (array), dropped non-existent columns, error checked.
+- 4.3 — Profile sibling bug (`profiles` only has `full_name`) — ✅ shipped in `0d108df`.
+- 4.4 — Checkout Phase 3 (Zod) — ✅ shipped in `0d108df`. 9 schemas, every route `safeParse`s body/query at the top.
 
-```
-refactor(checkout): Phases 0-2 — pricing SSOT, withRoute kernel, server repos
+### 4.5 — Pick the next group (current)
+Both vault and checkout are reference patterns now. Pick a group and run Phase 1→2→3 on it. **Coordinate so two devs aren't on overlapping groups.**
 
-Phase 0: lib/orders/pricing.ts + pricing.test.ts pin every price + the
-calculateSplit invariant. No routes wired yet (Phase 5).
+Suggested split (money/risk first):
 
-Phase 1: all 9 checkout routes wrapped in withRoute; 8 inline
-createAdminClient copies removed; attorney/verify dropped its
-@supabase/supabase-js outlier for the shared SSR admin client.
+| Owner | Next group | Why |
+|---|---|---|
+| Lead dev | **`webhooks`** | Highest money risk. Folds in C-1 (Stripe idempotency), H-1 (amendment branch), H-5 (affiliate payout idempotency), H-6 (partner tier elevation). |
+| Second dev (if any) | **`cron`** | Safest parallel pick. 4 small routes. No money. Isolated tables. Folds in H-3 (fail-closed cron secrets). |
 
-Phase 2: new server repos for orders/partners/quizSessions/affiliates/
-affiliateClicks/documents/profiles/appSettings; clientRepo extended;
-every business-table .from() in checkout moved behind a repo. Only
-audit_log inserts remain inline (cross-cutting, same policy as vault).
+After those land, sequence the rest: documents → partner / sales (still need joint planning — share repos with checkout) → attorney → crypto → admin → trustee → auth.
 
-Money lines preserved byte-for-byte. C-8 bug in attorney/verify
-intentionally left for a tested fix (see CODE_REFACTOR_HANDOFF.md §5).
-```
-
-### 4.2 — Fix C-8 (paid-attorney signup data bug) — ✅ DONE
-- `tests/unit/attorney-verify-c8.test.ts` written, run against the broken route (11 bug-assertions pass) → fix applied → assertions flipped to expected behavior → all green (12 tests).
-- Route writes `profile_id` (was `user_id`), `tier` normalized (`"professional"→"enterprise"`), `custom_review_fee` × 100 (cents), `one_time_fee_amount` = `session.amount_total` (raw cents), `practice_areas` (array, was singular), dropped `years_in_practice` + `stripe_session_id`, partner upsert error now checked.
-- **Sibling bug still open:** `profiles` upsert writes `first_name`/`last_name` which may not exist (see §4.3). Tracked as a `[sibling, unfixed]` test in the same file.
-- **Same `user_id` mistake also lives in** `app/api/sales/create-partner/route.ts:117` — fix when the sales group lands.
-
-### 4.3 — Profile sibling bug — ✅ DONE
-`profiles` table only has `full_name` (no `first_name`/`last_name`). Route now writes `full_name: \`${firstName} ${lastName}\`.trim()` and checks the upsert error. Covered by 2 tests in `attorney-verify-c8.test.ts`.
-
-### 4.4 — Finish checkout Phase 3 (Zod)
-Add these schemas to `lib/validation/schemas.ts` (append at the end — see §8 collision rules):
-- `willCheckoutSchema`, `trustCheckoutSchema`, `amendmentCheckoutSchema`,
-- `vaultSubscriptionSchema`, `partnerCheckoutSchema`,
-- `attorneyCheckoutSchema`, `attorneyVerifySchema`,
-- `verifyQuerySchema`, `checkConflictSchema`.
-
-Wire each route to `safeParse` its body/query at the top of the handler (vault `items` route is the reference). Add unit tests next to `vault-schemas.test.ts`.
-
-### 4.5 — Then commit checkout as fully refactored, and pick the next group
-Suggested next groups, money-critical first:
-1. **webhooks** (Stripe) — folds in audit C-1 (idempotency)
-2. **documents**
-3. **partner / sales**
-4. attorney, crypto, admin, trustee, auth, cron
+### 4.6 — Carry the audit fixes along with the group sweep
+| Audit ID | Lands during |
+|---|---|
+| C-1 webhook idempotency | webhooks |
+| C-2 / C-3 DEK fixes | crypto |
+| C-4 / C-5 public cron-like routes | documents |
+| C-6 / C-7 role gating | partner / sales |
+| **C-8 attorney-verify** | **done (`0d108df`)** |
+| H-3 cron fail-closed | cron |
+| H-4 OTP atomic counter | trustee |
+| H-5 affiliate payout idempotency | webhooks |
 
 Each group goes through the same Phase 1 → 2 → 3.
 
 ---
 
-## 5. C-8 — the open critical bug
+## 5. C-8 — fixed (historical record)
+
+> Closed by `0d108df`. Kept for reference — useful when fixing the same `user_id` → `profile_id` mistake in `app/api/sales/create-partner/route.ts:117` during the sales group.
 
 ### Symptom
 Paid attorney signup (`POST /api/checkout/attorney/verify`):
@@ -251,24 +224,28 @@ Wrapped in `withRoute(...)` so any throw becomes a generic `{ error: "internal e
 - `lib/api/auth.ts` — `requireAuth`, `createAdminClient`, `UserType`
 - `lib/api/crypto.ts` — `requireClientUser` (typed) for vault-style routes
 
-### Server repos (`lib/repos/server/`)
-- Committed: `vaultItemRepo`, `trusteeRepo`, `farewellRepo`, `clientRepo` (base set)
-- Uncommitted (checkout): `orderRepo`, `partnerRepo`, `quizSessionRepo`, `affiliateRepo`, `affiliateClickRepo`, `documentRepo`, `profileRepo`, `appSettingsRepo`, plus the extra `clientRepo` exports
+### Server repos (`lib/repos/server/`, all committed)
+- Vault: `vaultItemRepo`, `trusteeRepo`, `farewellRepo`
+- Checkout: `orderRepo`, `partnerRepo`, `quizSessionRepo`, `affiliateRepo`, `affiliateClickRepo`, `documentRepo`, `profileRepo`, `appSettingsRepo`
+- Shared: `clientRepo` (used by vault, checkout, and most future groups)
 
 ### Validation (`lib/validation/schemas.ts`)
 - Vault: `vaultItemSchema`, `vaultItemSearchSchema`, `trusteeCreateSchema`, `trusteeConfirmSchema`, `farewellCreateSchema`, `farewellUpdateSchema`, `vaultUploadUrlSchema`, `vaultDownloadUrlSchema`
-- Existing: `willIntakeSchema`, `trustIntakeSchema`, `quizAnswersSchema`, `affiliateSignupSchema`
-- Checkout schemas: **TODO** (see §4.4)
+- Checkout: `willCheckoutSchema`, `trustCheckoutSchema`, `amendmentCheckoutSchema`, `vaultSubscriptionCheckoutSchema`, `partnerCheckoutSchema`, `attorneyCheckoutSchema`, `attorneyVerifySchema`, `checkoutVerifyQuerySchema`, `checkConflictSchema` (+ shared `intakeAnswersSchema`)
+- Pre-existing: `willIntakeSchema`, `trustIntakeSchema`, `quizAnswersSchema`, `affiliateSignupSchema`
 
 ### Pricing
-- `lib/orders/pricing.ts` (uncommitted) — `PRICES`, `EV_DEFAULT_CUT`, `PARTNER_PLATFORM_FEE`, `DEFAULT_ATTORNEY_REVIEW_FEE`, `PROMO_CODES`. **Not yet wired** to any route (Phase 5).
+- `lib/orders/pricing.ts` — `PRICES`, `EV_DEFAULT_CUT`, `PARTNER_PLATFORM_FEE`, `DEFAULT_ATTORNEY_REVIEW_FEE`, `PROMO_CODES`. **SSOT exists; routes still use inlined values.** Phase 5 of the whole-app sweep wires them.
 
 ### Tests
 - `tests/unit/api-kernel.test.ts` — kernel
 - `tests/unit/vault-schemas.test.ts` — vault Zod
-- `tests/unit/pricing.test.ts` (uncommitted) — pricing SSOT + invariant
+- `tests/unit/pricing.test.ts` — pricing SSOT + calculateSplit invariant
+- `tests/unit/checkout-schemas.test.ts` — checkout Zod
+- `tests/unit/attorney-verify-c8.test.ts` — C-8 + profile sibling characterization → fix verification
 - `tests/unit/calculate-split.test.ts`, `stripe-webhooks.test.ts`, `sanity.test.ts` — pre-existing
 - `tests/e2e/*` — Playwright suite (needs live test DB)
+- Total: **117 unit tests pass** as of `6853ffe`.
 
 ### Docs
 - [`CODE_REFACTOR_PLAN.md`](./CODE_REFACTOR_PLAN.md) — full architecture + phase definitions
