@@ -31,10 +31,21 @@ export async function POST(request: Request) {
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
     console.error("Webhook signature verification failed:", message);
-    return NextResponse.json({ error: `Webhook Error: ${message}` }, { status: 400 });
+    return NextResponse.json({ error: "Webhook signature verification failed" }, { status: 400 });
   }
 
   const supabase = createAdminClient();
+
+  // ── IDEMPOTENCY GUARD ──────────────────────────────────────
+  const { data: inserted } = await supabase
+    .from("stripe_webhook_events")
+    .insert({ event_id: event.id, event_type: event.type })
+    .select("event_id")
+    .maybeSingle();
+
+  if (!inserted) {
+    return NextResponse.json({ received: true, duplicate: true });
+  }
 
   // ── VAULT SUBSCRIPTION EVENTS ───────────────────────────────
   if (event.type === "invoice.payment_succeeded") {
@@ -153,10 +164,9 @@ export async function POST(request: Request) {
           if (existingProfile) {
             profileId = existingProfile.id;
           } else {
-            const { data: authUsers } = await supabase.auth.admin.listUsers();
-            const existingAuth = authUsers?.users?.find((u) => u.email === guestEmail);
-            if (existingAuth) {
-              profileId = existingAuth.id;
+            const { data: authMatch } = await supabase.rpc("find_auth_user_by_email", { lookup_email: guestEmail }).maybeSingle();
+            if (authMatch) {
+              profileId = authMatch.id;
               await supabase.from("profiles").upsert({
                 id: profileId, email: guestEmail, full_name: guestName, user_type: "client",
               });
@@ -340,18 +350,16 @@ export async function POST(request: Request) {
         }
       } else {
         // Check if auth user exists but no profile (signup happened before DB)
-        const { data: authUsers } = await supabase.auth.admin.listUsers();
-        const existingAuthUser = authUsers?.users?.find((u) => u.email === customerEmail);
+        const { data: authMatch } = await supabase.rpc("find_auth_user_by_email", { lookup_email: customerEmail }).maybeSingle();
 
-        if (existingAuthUser) {
-          // Create missing profile with name
+        if (authMatch) {
           await supabase.from("profiles").insert({
-            id: existingAuthUser.id,
+            id: authMatch.id,
             email: customerEmail,
             full_name: clientFullName || null,
             user_type: "client",
           });
-          profileId = existingAuthUser.id;
+          profileId = authMatch.id;
         } else {
           // Auto-create auth account
           const { data: newUser, error: createError } = await supabase.auth.admin.createUser({

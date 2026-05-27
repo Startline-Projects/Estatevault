@@ -19,7 +19,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
     const { data: profile } = await supabase.from("profiles").select("user_type").eq("id", user.id).single();
-    if (!profile || !["admin", "sales"].includes(profile.user_type)) {
+    if (!profile || !["admin", "sales_rep"].includes(profile.user_type)) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 

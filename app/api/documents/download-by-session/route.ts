@@ -43,9 +43,9 @@ export async function GET(request: Request) {
     }
 
     if (!authorized && orderId && orderId === doc.order_id) {
-      // Promo/test flow has no Stripe session
-      const { data: order } = await admin.from("orders").select("id, status").eq("id", orderId).single();
-      if (order) authorized = true;
+      // Only allow order_id fallback for test/promo orders (no Stripe session)
+      const { data: order } = await admin.from("orders").select("id, order_type, promo_code").eq("id", orderId).single();
+      if (order && (order.order_type === "test" || order.promo_code)) authorized = true;
     }
 
     if (!authorized) return NextResponse.json({ error: "Access denied" }, { status: 403 });
@@ -55,6 +55,7 @@ export async function GET(request: Request) {
 
     return NextResponse.json({ url });
   } catch (e) {
-    return NextResponse.json({ error: (e as Error).message }, { status: 500 });
+    console.error("download-by-session error:", e);
+    return NextResponse.json({ error: "Download failed" }, { status: 500 });
   }
 }

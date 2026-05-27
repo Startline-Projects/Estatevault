@@ -1,9 +1,10 @@
-import { NextResponse } from "next/server";
+import { NextResponse, type NextRequest } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { claude, CLAUDE_MODEL } from "@/lib/claude";
 import { uploadDocument } from "@/lib/documents/storage";
 import { sendDocumentEmail, sendAttorneyReviewPendingEmail, buildAssetChecklist } from "@/lib/email";
 import { wantsNotification } from "@/lib/notifications/prefs";
+import { requireAuth } from "@/lib/api/auth";
 
 function createAdminClient() {
   return createServerClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, { cookies: { getAll: () => [], setAll: () => {} } });
@@ -36,7 +37,10 @@ async function getTemplate(docType: string) {
   }
 }
 
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
+  const auth = await requireAuth(["admin"], request);
+  if ("error" in auth) return auth.error;
+
   const log: string[] = [];
   try {
     const { searchParams } = new URL(request.url);

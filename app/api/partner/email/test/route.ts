@@ -1,12 +1,14 @@
 import { NextResponse } from "next/server";
 import { Resend } from "resend";
-import { requireAuth, rateLimit } from "@/lib/api/auth";
+import { requireAuth } from "@/lib/api/auth";
+import { apiRateLimit } from "@/lib/rate-limit";
 
 export async function POST() {
   const auth = await requireAuth(["partner"]);
   if ("error" in auth) return auth.error;
 
-  if (!rateLimit(`test-email:${auth.profile.id}`, 5, 60_000)) {
+  const { success: rlOk } = await apiRateLimit.limit(`test-email:${auth.profile.id}`);
+  if (!rlOk) {
     return NextResponse.json({ error: "rate limited" }, { status: 429 });
   }
 

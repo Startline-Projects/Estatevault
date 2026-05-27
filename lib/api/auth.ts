@@ -88,15 +88,3 @@ export async function assertOrderAccess(
   return { error: NextResponse.json({ error: "forbidden" }, { status: 403 }) };
 }
 
-const rateBuckets = new Map<string, { count: number; reset: number }>();
-export function rateLimit(key: string, max: number, windowMs: number): boolean {
-  const now = Date.now();
-  const b = rateBuckets.get(key);
-  if (!b || b.reset < now) {
-    rateBuckets.set(key, { count: 1, reset: now + windowMs });
-    return true;
-  }
-  if (b.count >= max) return false;
-  b.count++;
-  return true;
-}

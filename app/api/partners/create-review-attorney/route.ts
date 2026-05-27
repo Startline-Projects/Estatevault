@@ -36,17 +36,18 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Partner not found" }, { status: 404 });
     }
 
-    // Check if a profile already exists for this email
-    const { data: existingUsers } = await supabase.auth.admin.listUsers();
-    const existingUser = existingUsers?.users?.find(
-      (u) => u.email?.toLowerCase() === attorneyEmail.toLowerCase()
-    );
+    // Check if a user already exists for this email
+    const { data: existingProfile } = await supabase.from("profiles").select("id").eq("email", attorneyEmail.toLowerCase()).maybeSingle();
+    const { data: authMatch } = !existingProfile
+      ? await supabase.rpc("find_auth_user_by_email", { lookup_email: attorneyEmail.toLowerCase() }).maybeSingle()
+      : { data: null };
+    const existingUserId = existingProfile?.id || authMatch?.id;
 
     let profileId: string;
 
-    if (existingUser) {
+    if (existingUserId) {
       // User already exists, update their profile
-      profileId = existingUser.id;
+      profileId = existingUserId;
       await supabase
         .from("profiles")
         .update({

@@ -276,12 +276,11 @@ export const POST = withRoute(async (request: Request) => {
         } else {
           const fullName = `${intakeAnswers.firstName || ""} ${intakeAnswers.lastName || ""}`.trim();
           // Check if auth user exists even without a profile (orphaned from previous attempt)
-          const { data: authUsers } = await supabase.auth.admin.listUsers();
-          const existingAuthUser = authUsers?.users?.find((u) => u.email === emailAddr);
+          const { data: authMatch } = await supabase.rpc("find_auth_user_by_email", { lookup_email: emailAddr }).maybeSingle();
 
-          if (existingAuthUser) {
-            profileId = existingAuthUser.id;
-            await supabase.auth.admin.updateUserById(existingAuthUser.id, { password: tempPassword });
+          if (authMatch) {
+            profileId = authMatch.id;
+            await supabase.auth.admin.updateUserById(authMatch.id, { password: tempPassword });
             await profileRepo.upsert(supabase, {
               id: existingAuthUser.id, email: emailAddr,
               full_name: fullName,

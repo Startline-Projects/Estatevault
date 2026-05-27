@@ -37,10 +37,12 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "A partner with this business URL already exists." }, { status: 409 });
   }
 
-  // Generate temp password
+  // Generate temp password using crypto-safe randomness
+  const { randomBytes } = await import("crypto");
   const chars = "ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!@#";
+  const bytes = randomBytes(12);
   let tempPassword = "";
-  for (let i = 0; i < 12; i++) tempPassword += chars[Math.floor(Math.random() * chars.length)];
+  for (let i = 0; i < 12; i++) tempPassword += chars[bytes[i] % chars.length];
 
   // Check if auth user already exists with this email
   const { data: existingProfile } = await admin.from("profiles").select("id, user_type").eq("email", email).single();
@@ -157,5 +159,5 @@ export async function POST(request: Request) {
     console.error("Partner welcome email failed:", emailErr);
   }
 
-  return NextResponse.json({ partnerId: partner.id, email, tempPassword, slug });
+  return NextResponse.json({ partnerId: partner.id, email, slug });
 }

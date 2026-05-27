@@ -58,13 +58,10 @@ export const POST = withRoute(async (request: Request) => {
       if (existingProfile?.id) {
         profileId = existingProfile.id;
       } else {
-        const { data: authUsers } = await supabase.auth.admin.listUsers();
-        const existingAuthUser = authUsers?.users?.find(
-          (u) => u.email?.toLowerCase() === normalizedGuestEmail
-        );
+        const { data: authMatch } = await supabase.rpc("find_auth_user_by_email", { lookup_email: normalizedGuestEmail }).maybeSingle();
 
-        if (existingAuthUser) {
-          profileId = existingAuthUser.id;
+        if (authMatch) {
+          profileId = authMatch.id;
         } else {
           const { data: createdUser, error: createUserErr } = await supabase.auth.admin.createUser({
             email: normalizedGuestEmail,

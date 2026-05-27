@@ -61,19 +61,27 @@ export async function updateSession(request: NextRequest) {
       { cookies: { getAll: () => [], setAll: () => {} } }
     );
 
+    // Sanitize hostname — strip any chars that could break PostgREST filter syntax
+    const safeHostname = hostname.replace(/[^a-zA-Z0-9.\-]/g, "");
+    if (!safeHostname || safeHostname !== hostname) {
+      return NextResponse.next({ request: { headers: request.headers } });
+    }
+
     // Extract subdomain prefix if hostname ends with .estatevault.us
     // vault_subdomain stores prefix only (e.g. "acme"), not full domain
-    const vaultSubdomainPrefix = hostname.endsWith(".estatevault.us")
-      ? hostname.replace(/\.estatevault\.us$/, "")
+    const vaultSubdomainPrefix = safeHostname.endsWith(".estatevault.us")
+      ? safeHostname.replace(/\.estatevault\.us$/, "")
       : null;
+
+    const safeVaultPrefix = vaultSubdomainPrefix?.replace(/[^a-zA-Z0-9\-]/g, "") || null;
 
     const { data: partner } = await adminSupabase
       .from("partners")
       .select("partner_slug, tier, vault_subdomain")
       .or(
-        vaultSubdomainPrefix
-          ? `subdomain.eq."${hostname}",custom_domain.eq."${hostname}",vault_subdomain.eq."${vaultSubdomainPrefix}"`
-          : `subdomain.eq."${hostname}",custom_domain.eq."${hostname}"`
+        safeVaultPrefix
+          ? `subdomain.eq.${safeHostname},custom_domain.eq.${safeHostname},vault_subdomain.eq.${safeVaultPrefix}`
+          : `subdomain.eq.${safeHostname},custom_domain.eq.${safeHostname}`
       )
       .eq("status", "active")
       .single();
@@ -85,8 +93,8 @@ export async function updateSession(request: NextRequest) {
       // Basic-tier vault subdomain → rewrite root to /{slug}/vault
       const isVaultSubdomain =
         partner.tier === "basic" &&
-        vaultSubdomainPrefix &&
-        partner.vault_subdomain === vaultSubdomainPrefix;
+        safeVaultPrefix &&
+        partner.vault_subdomain === safeVaultPrefix;
 
       if (originalPath === "/" || originalPath === "") {
         url.pathname = isVaultSubdomain
@@ -98,7 +106,7 @@ export async function updateSession(request: NextRequest) {
 
       const rewriteResponse = NextResponse.rewrite(url);
       rewriteResponse.headers.set("x-partner-slug", partner.partner_slug);
-      rewriteResponse.headers.set("x-partner-hostname", hostname);
+      rewriteResponse.headers.set("x-partner-hostname", safeHostname);
       rewriteResponse.headers.set("x-is-vault-subdomain", isVaultSubdomain ? "1" : "0");
       return rewriteResponse;
     }

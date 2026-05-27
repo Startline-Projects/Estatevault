@@ -1,91 +1,61 @@
 export const dynamic = "force-dynamic";
 
 import { NextResponse } from "next/server";
-import { createServerClient } from "@supabase/ssr";
-
-function createAdminClient() {
-  return createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    { cookies: { getAll: () => [], setAll: () => {} } }
-  );
-}
-
-// Rate limit: 5 attempts per email per 60 seconds
-const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
-
-function checkRateLimit(email: string): boolean {
-  const now = Date.now();
-  const entry = rateLimitMap.get(email);
-  if (!entry || now > entry.resetAt) {
-    rateLimitMap.set(email, { count: 1, resetAt: now + 60_000 });
-    return true;
-  }
-  if (entry.count >= 5) return false;
-  entry.count++;
-  return true;
-}
+import { createAdminClient } from "@/lib/api/auth";
+import { consumeVerifiedToken } from "@/lib/auth/emailVerification";
+import { authRateLimit } from "@/lib/rate-limit";
 
 export async function POST(request: Request) {
   try {
-    const { userId, email, password, fullName } = await request.json();
+    const { email, password, fullName, verifiedToken } = await request.json();
+    const normalizedEmail = String(email || "").trim().toLowerCase();
 
-    if (!email || !password) {
+    if (!normalizedEmail || !password) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
     if (password.length < 8) {
       return NextResponse.json({ error: "Password must be at least 8 characters" }, { status: 400 });
     }
-    if (!checkRateLimit(email)) {
-      return NextResponse.json({ error: "Too many attempts. Please wait a minute and try again." }, { status: 429 });
+
+    const { success } = await authRateLimit.limit(normalizedEmail);
+    if (!success) {
+      return NextResponse.json({ error: "Too many attempts. Please wait and try again." }, { status: 429 });
+    }
+
+    if (!verifiedToken || !consumeVerifiedToken(normalizedEmail, verifiedToken)) {
+      return NextResponse.json({ error: "Please verify your email first." }, { status: 403 });
     }
 
     const supabase = createAdminClient();
 
-    // Step 1: resolve userId, try provided ID first, then look up by email
-    let resolvedUserId: string = userId || "";
+    // Resolve user by email from profiles — never trust caller-supplied userId
+    let resolvedUserId = "";
 
-    if (!resolvedUserId) {
-      // Webhook may still be processing, retry up to 4x with 2s gaps (8s total)
-      for (let attempt = 0; attempt < 4; attempt++) {
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("id")
-          .eq("email", email)
-          .single();
-        if (profile) {
-          resolvedUserId = profile.id;
-          break;
-        }
-        if (attempt < 3) {
-          await new Promise((resolve) => setTimeout(resolve, 2000));
-        }
+    // Webhook may still be processing; retry up to 4x with 2s gaps
+    for (let attempt = 0; attempt < 4; attempt++) {
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("id")
+        .eq("email", normalizedEmail)
+        .single();
+      if (profile) {
+        resolvedUserId = profile.id;
+        break;
+      }
+      if (attempt < 3) {
+        await new Promise((resolve) => setTimeout(resolve, 2000));
       }
     }
 
-    // Step 2: if profile still not found, check if auth user exists without a profile
-    if (!resolvedUserId) {
-      const { data: authUsers } = await supabase.auth.admin.listUsers();
-      const existingAuthUser = authUsers?.users?.find(
-        (u) => u.email?.toLowerCase() === email.toLowerCase()
-      );
-      if (existingAuthUser) {
-        resolvedUserId = existingAuthUser.id;
-        // Create the missing profile
-        await supabase.from("profiles").upsert({
-          id: resolvedUserId,
-          email,
-          full_name: fullName?.trim() || null,
-          user_type: "client",
-        });
-      }
-    }
+    // If profile still not found, try creating the user.
+    // If email already exists in auth.users (orphaned), createUser will fail —
+    // we catch that and attempt password update via the error path below.
 
-    // Step 3: if still not found, create the auth user + profile from scratch
+    // If still not found, create the auth user + profile from scratch
     // This handles the case where the Stripe webhook completely failed
     if (!resolvedUserId) {
       const { data: newUser, error: createErr } = await supabase.auth.admin.createUser({
-        email,
+        email: normalizedEmail,
         password,
         email_confirm: true,
         user_metadata: { user_type: "client", full_name: fullName?.trim() || "" },
@@ -100,13 +70,12 @@ export async function POST(request: Request) {
       resolvedUserId = newUser.user.id;
       await supabase.from("profiles").upsert({
         id: resolvedUserId,
-        email,
+        email: normalizedEmail,
         full_name: fullName?.trim() || null,
         user_type: "client",
       });
 
-      // Also link to the client record for this order (look up by email via orders/clients)
-      // Find the most recent order whose client has no profile_id and matches this email
+      // Link to the most recent unlinked client record for this email
       const { data: recentOrder } = await supabase
         .from("orders")
         .select("client_id")
@@ -129,7 +98,6 @@ export async function POST(request: Request) {
         }
       }
 
-      // Password already set during createUser, just sign audit and return
       await supabase.from("audit_log").insert({
         actor_id: resolvedUserId,
         action: "account.created_at_password_set",
@@ -140,21 +108,20 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: true });
     }
 
-    // Step 4: user exists, set their password
+    // User exists — set their password
     const { data: authUserData, error: getUserErr } = await supabase.auth.admin.getUserById(resolvedUserId);
     if (getUserErr || !authUserData?.user) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
-    if (authUserData.user.email?.toLowerCase() !== email.toLowerCase()) {
+    if (authUserData.user.email?.toLowerCase() !== normalizedEmail) {
       return NextResponse.json({ error: "Email mismatch" }, { status: 403 });
     }
 
     const { error: updateErr } = await supabase.auth.admin.updateUserById(resolvedUserId, { password });
     if (updateErr) {
-      return NextResponse.json({ error: updateErr.message }, { status: 500 });
+      return NextResponse.json({ error: "Failed to set password" }, { status: 500 });
     }
 
-    // Save full_name to profile
     if (fullName && typeof fullName === "string" && fullName.trim()) {
       await supabase.from("profiles").update({ full_name: fullName.trim() }).eq("id", resolvedUserId);
     }

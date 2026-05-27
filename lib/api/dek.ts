@@ -36,6 +36,7 @@ export async function getKek(admin?: Admin): Promise<Uint8Array> {
 }
 
 // Return the raw per-user DEK, provisioning + persisting one on first use.
+// Uses conditional UPDATE to prevent TOCTOU race: only writes if wrapped_dek IS NULL.
 export async function getOrCreateUserDek(
   admin: Admin,
   client: { id: string; wrapped_dek?: unknown },
@@ -49,12 +50,31 @@ export async function getOrCreateUserDek(
 
   const dek = await generateMasterKey();
   const wrapped = await wrapKey(dek, kek);
-  const { error } = await admin
+
+  // Conditional write: only succeeds if no other request wrote first
+  const { data: updated } = await admin
     .from("clients")
     .update({ wrapped_dek: bytesToBytea(wrapped.bytes), dek_setup_at: new Date().toISOString() })
-    .eq("id", client.id);
-  if (error) throw new Error(`failed to persist DEK: ${error.message}`);
-  return dek;
+    .eq("id", client.id)
+    .is("wrapped_dek", null)
+    .select("wrapped_dek")
+    .maybeSingle();
+
+  if (updated?.wrapped_dek) {
+    // We won the race — return our DEK
+    return dek;
+  }
+
+  // Another request wrote first — re-read and unwrap the winner's DEK
+  const { data: freshClient, error: readErr } = await admin
+    .from("clients")
+    .select("wrapped_dek")
+    .eq("id", client.id)
+    .single();
+  if (readErr || !freshClient?.wrapped_dek) {
+    throw new Error("DEK write race: unable to read winning DEK");
+  }
+  return unwrapKey(byteaToBytes(freshClient.wrapped_dek), kek);
 }
 
 // Test/rotation helper — clears the cached KEK.

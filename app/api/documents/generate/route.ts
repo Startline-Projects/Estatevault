@@ -3,7 +3,8 @@ export const dynamic = "force-dynamic";
 import { NextResponse } from "next/server";
 import { addJob, type DocumentJob } from "@/lib/queue/document-queue";
 import { randomUUID } from "crypto";
-import { requireAuth, assertOrderAccess, rateLimit } from "@/lib/api/auth";
+import { requireAuth, assertOrderAccess } from "@/lib/api/auth";
+import { apiRateLimit } from "@/lib/rate-limit";
 
 export async function POST(request: Request) {
   try {
@@ -19,7 +20,8 @@ export async function POST(request: Request) {
     const access = await assertOrderAccess(admin, order_id, profile);
     if ("error" in access) return access.error;
 
-    if (!rateLimit(`gen:${profile.id}:${order_id}`, 3, 10 * 60_000)) {
+    const { success: rlOk } = await apiRateLimit.limit(`gen:${profile.id}:${order_id}`);
+    if (!rlOk) {
       return NextResponse.json({ error: "rate limit exceeded" }, { status: 429 });
     }
 

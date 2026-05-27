@@ -6,6 +6,7 @@ import { getOrCreateUserDek } from "@/lib/api/dek";
 import { deriveSubKey, INFO, zero } from "@/lib/crypto/keyManager";
 import { bytesToBytea } from "@/lib/api/crypto";
 import { blindIndex, normalize } from "@/lib/crypto/blindIndex";
+import { authRateLimit } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
 
@@ -18,6 +19,12 @@ const RESEND_COOLDOWN_MS = 60 * 1000;
 // No auth required, trustee is not a Supabase user.
 export async function POST(request: Request) {
   try {
+    const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+    const { success } = await authRateLimit.limit(`farewell-access:${ip}`);
+    if (!success) {
+      return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+    }
+
     const { clientId, trusteeEmail } = await request.json();
 
     if (!clientId || !trusteeEmail) {

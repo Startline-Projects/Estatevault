@@ -6,6 +6,7 @@ import { deriveSubKey, INFO, zero } from "@/lib/crypto/keyManager";
 import { decryptBytes } from "@/lib/crypto/aead";
 import { byteaToBytes, bytesToBytea } from "@/lib/api/crypto";
 import { blindIndex, normalize } from "@/lib/crypto/blindIndex";
+import { apiRateLimit } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
 
@@ -13,6 +14,12 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 
 export async function POST(request: Request) {
   try {
+    const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+    const { success } = await apiRateLimit.limit(`farewell-verify:${ip}`);
+    if (!success) {
+      return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+    }
+
     const formData = await request.formData();
     const clientId = formData.get("clientId") as string;
     const trusteeEmail = ((formData.get("trusteeEmail") as string) || "").trim().toLowerCase();

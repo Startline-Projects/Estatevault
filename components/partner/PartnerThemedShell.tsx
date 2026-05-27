@@ -93,8 +93,10 @@ export default function PartnerThemedShell({ children, showHeader = true }: Shel
 
   const themed = useMemo(() => {
     if (!branding) return null;
-    const theme = buildPartnerTheme(branding.accentColor, branding.themePresetId);
-    const hero = buildHeroRecipe(branding.accentColor, branding.heroRecipeId, {
+    // Sanitize accent color — must be valid hex to prevent CSS injection
+    const safeAccent = /^#[0-9a-fA-F]{6}$/.test(branding.accentColor) ? branding.accentColor : "#C9A84C";
+    const theme = buildPartnerTheme(safeAccent, branding.themePresetId);
+    const hero = buildHeroRecipe(safeAccent, branding.heroRecipeId, {
       highlightDark: branding.highlightDark,
       ctaText: branding.ctaTextOverride,
     });

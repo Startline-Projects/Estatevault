@@ -118,6 +118,5 @@ export async function POST(request: Request) {
     success: true,
     userId: newUser.user.id,
     email,
-    tempPassword,
   });
 }

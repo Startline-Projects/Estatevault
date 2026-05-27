@@ -1,47 +1,36 @@
-import { NextResponse } from "next/server";
-import { createServerClient } from "@supabase/ssr";
+import { type NextRequest } from "next/server";
+import { requireAuth, assertOrderAccess } from "@/lib/api/auth";
+import { ok, fail } from "@/lib/api/response";
+import { withRoute } from "@/lib/api/route";
 
-function createAdminClient() {
-  return createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    { cookies: { getAll: () => [], setAll: () => {} } }
-  );
-}
+export const GET = withRoute(async (req: NextRequest) => {
+  const auth = await requireAuth(undefined, req);
+  if ("error" in auth) return auth.error;
 
-// Public endpoint, returns document status for an order
-export async function GET(request: Request) {
-  try {
-    const { searchParams } = new URL(request.url);
-    const orderId = searchParams.get("order_id");
+  const orderId = new URL(req.url).searchParams.get("order_id");
+  if (!orderId) return fail("Missing order_id", 400);
 
-    if (!orderId) {
-      return NextResponse.json({ error: "Missing order_id" }, { status: 400 });
-    }
+  const access = await assertOrderAccess(auth.admin, orderId, auth.profile);
+  if ("error" in access) return access.error;
 
-    const supabase = createAdminClient();
+  const { data: docs } = await auth.admin
+    .from("documents")
+    .select("id, document_type, status, storage_path")
+    .eq("order_id", orderId);
 
-    const { data: docs } = await supabase
-      .from("documents")
-      .select("id, document_type, status, storage_path")
-      .eq("order_id", orderId);
-
-    if (!docs || docs.length === 0) {
-      return NextResponse.json({ ready: false, documents: [] });
-    }
-
-    const allReady = docs.every((d) => d.status === "generated" || d.status === "delivered");
-
-    return NextResponse.json({
-      ready: allReady,
-      documents: docs.map((d) => ({
-        id: d.id,
-        document_type: d.document_type,
-        status: d.status,
-        has_file: !!d.storage_path,
-      })),
-    });
-  } catch {
-    return NextResponse.json({ ready: false, documents: [] });
+  if (!docs || docs.length === 0) {
+    return ok({ ready: false, documents: [] });
   }
-}
+
+  const allReady = docs.every((d: { status: string }) => d.status === "generated" || d.status === "delivered");
+
+  return ok({
+    ready: allReady,
+    documents: docs.map((d: { id: string; document_type: string; status: string; storage_path: string | null }) => ({
+      id: d.id,
+      document_type: d.document_type,
+      status: d.status,
+      has_file: !!d.storage_path,
+    })),
+  });
+});
