@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { professionalRequestAccessSchema } from "@/lib/validation/schemas";
 import { createClient } from "@supabase/supabase-js";
 import { Resend } from "resend";
 
@@ -24,7 +25,8 @@ function getSupabaseAdmin() {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-
+    const parsed = professionalRequestAccessSchema.safeParse(body);
+    if (!parsed.success) return NextResponse.json({ error: "invalid payload" }, { status: 400 });
     const {
       firstName,
       lastName,
@@ -37,15 +39,7 @@ export async function POST(request: Request) {
       bar_number,
       practice_areas,
       desired_review_fee,
-    } = body;
-
-    // Basic validation
-    if (!firstName || !lastName || !email || !professionalType) {
-      return NextResponse.json(
-        { error: "First name, last name, email, and professional type are required." },
-        { status: 400 }
-      );
-    }
+    } = parsed.data;
 
     // Save to Supabase
     const supabase = getSupabaseAdmin();

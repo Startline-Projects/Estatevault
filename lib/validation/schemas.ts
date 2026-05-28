@@ -1,180 +1,5 @@
 import { z } from "zod";
 
-export const willIntakeSchema = z.object({
-  // Personal information
-  full_name: z.string().min(1, "Full name is required"),
-  date_of_birth: z.string().min(1, "Date of birth is required"),
-  state_of_residence: z.string().min(1, "State of residence is required"),
-  marital_status: z.enum(["single", "married", "divorced", "widowed"]),
-  spouse_name: z.string().optional(),
-
-  // Children
-  has_children: z.boolean(),
-  children: z
-    .array(
-      z.object({
-        name: z.string().min(1, "Child name is required"),
-        date_of_birth: z.string().min(1, "Child date of birth is required"),
-        is_minor: z.boolean(),
-        has_special_needs: z.boolean().optional(),
-      })
-    )
-    .optional(),
-
-  // Executor
-  executor_name: z.string().min(1, "Executor name is required"),
-  executor_relationship: z.string().min(1, "Executor relationship is required"),
-  alternate_executor_name: z.string().optional(),
-  alternate_executor_relationship: z.string().optional(),
-
-  // Beneficiaries
-  beneficiaries: z
-    .array(
-      z.object({
-        name: z.string().min(1, "Beneficiary name is required"),
-        relationship: z.string().min(1, "Relationship is required"),
-        percentage: z.number().min(0).max(100),
-        contingent: z.boolean().optional(),
-      })
-    )
-    .min(1, "At least one beneficiary is required"),
-
-  // Guardian for minor children
-  guardian_name: z.string().optional(),
-  guardian_relationship: z.string().optional(),
-  alternate_guardian_name: z.string().optional(),
-
-  // Specific bequests
-  specific_bequests: z
-    .array(
-      z.object({
-        item: z.string().min(1, "Item description is required"),
-        recipient: z.string().min(1, "Recipient is required"),
-      })
-    )
-    .optional(),
-
-  // Digital assets
-  include_digital_assets: z.boolean().optional(),
-  digital_asset_instructions: z.string().optional(),
-
-  // Final wishes
-  funeral_preferences: z.string().optional(),
-  additional_instructions: z.string().optional(),
-
-  // Acknowledgment
-  acknowledgment_signed: z.boolean().refine((val) => val === true, {
-    message: "You must sign the acknowledgment before proceeding",
-  }),
-});
-
-export const trustIntakeSchema = z.object({
-  // Trust type
-  trust_type: z.enum(["revocable", "irrevocable"]),
-
-  // Grantor information
-  grantor_name: z.string().min(1, "Grantor name is required"),
-  grantor_date_of_birth: z.string().min(1, "Date of birth is required"),
-  grantor_state: z.string().min(1, "State of residence is required"),
-  grantor_marital_status: z.enum(["single", "married", "divorced", "widowed"]),
-  co_grantor_name: z.string().optional(),
-
-  // Trustee
-  trustee_name: z.string().min(1, "Trustee name is required"),
-  trustee_relationship: z.string().min(1, "Trustee relationship is required"),
-  successor_trustee_name: z.string().min(1, "Successor trustee is required"),
-  successor_trustee_relationship: z.string().optional(),
-
-  // Beneficiaries
-  beneficiaries: z
-    .array(
-      z.object({
-        name: z.string().min(1, "Beneficiary name is required"),
-        relationship: z.string().min(1, "Relationship is required"),
-        percentage: z.number().min(0).max(100),
-        distribution_age: z.number().optional(),
-        distribution_schedule: z
-          .enum(["immediate", "staggered", "discretionary"])
-          .optional(),
-      })
-    )
-    .min(1, "At least one beneficiary is required"),
-
-  // Assets to be funded into trust
-  assets: z
-    .array(
-      z.object({
-        type: z.enum([
-          "real_estate",
-          "bank_account",
-          "investment",
-          "business",
-          "life_insurance",
-          "personal_property",
-          "other",
-        ]),
-        description: z.string().min(1, "Asset description is required"),
-        estimated_value: z.number().optional(),
-      })
-    )
-    .optional(),
-
-  // Special provisions
-  has_special_needs_beneficiary: z.boolean(),
-  special_needs_details: z.string().optional(),
-  spendthrift_clause: z.boolean().optional(),
-  no_contest_clause: z.boolean().optional(),
-
-  // Distribution instructions
-  distribution_instructions: z.string().optional(),
-
-  // Additional
-  additional_provisions: z.string().optional(),
-
-  // Acknowledgment
-  acknowledgment_signed: z.boolean().refine((val) => val === true, {
-    message: "You must sign the acknowledgment before proceeding",
-  }),
-});
-
-export const quizAnswersSchema = z.object({
-  // Personal situation
-  age_range: z.enum(["18-30", "31-45", "46-60", "61+"]).optional(),
-  marital_status: z
-    .enum(["single", "married", "divorced", "widowed"])
-    .optional(),
-  has_children: z.boolean().optional(),
-  has_minor_children: z.boolean().optional(),
-  has_special_needs_dependent: z.boolean().optional(),
-
-  // Assets
-  owns_real_estate: z.boolean().optional(),
-  has_business: z.boolean().optional(),
-  estimated_estate_value: z
-    .enum(["under_100k", "100k_500k", "500k_1m", "1m_5m", "over_5m"])
-    .optional(),
-  has_life_insurance: z.boolean().optional(),
-  has_retirement_accounts: z.boolean().optional(),
-
-  // Planning goals
-  primary_concern: z
-    .enum([
-      "protect_family",
-      "minimize_taxes",
-      "avoid_probate",
-      "protect_assets",
-      "charitable_giving",
-      "business_succession",
-    ])
-    .optional(),
-  wants_trust: z.boolean().optional(),
-  wants_attorney_review: z.boolean().optional(),
-  has_existing_plan: z.boolean().optional(),
-
-  // State
-  state_of_residence: z.string().optional(),
-});
-
 export const affiliateSignupSchema = z.object({
   fullName: z.string().min(1, "Full name is required"),
   email: z.string().email("Valid email is required"),
@@ -347,9 +172,6 @@ export const checkConflictSchema = z.object({
   productType: z.enum(["will", "trust"]),
 });
 
-export type WillIntake = z.infer<typeof willIntakeSchema>;
-export type TrustIntake = z.infer<typeof trustIntakeSchema>;
-export type QuizAnswers = z.infer<typeof quizAnswersSchema>;
 export type AffiliateSignup = z.infer<typeof affiliateSignupSchema>;
 export type VaultItemInput = z.infer<typeof vaultItemSchema>;
 export type TrusteeCreateInput = z.infer<typeof trusteeCreateSchema>;
@@ -360,3 +182,291 @@ export type TrustCheckoutInput = z.infer<typeof trustCheckoutSchema>;
 export type AmendmentCheckoutInput = z.infer<typeof amendmentCheckoutSchema>;
 export type PartnerCheckoutInput = z.infer<typeof partnerCheckoutSchema>;
 export type AttorneyCheckoutInput = z.infer<typeof attorneyCheckoutSchema>;
+
+// ---- Auth ----
+
+export const authCheckEmailSchema = z.object({
+  email: z.string().email(),
+});
+
+export const authCheckVerificationSchema = z.object({
+  email: z.string().email(),
+  sessionId: z.string().min(1),
+});
+
+export const authHandoffSchema = z.object({
+  access_token: z.string().min(1),
+  refresh_token: z.string().min(1),
+  target: z.enum(["client", "partner", "admin", "sales"]),
+  redirect_path: z.string().startsWith("/"),
+});
+
+export const authHandoffConsumeSchema = z.object({
+  token: z.string().min(1),
+});
+
+export const authRecoverySchema = z.object({
+  email: z.string().email(),
+});
+
+export const authResendVerificationSchema = z.object({
+  email: z.string().email(),
+});
+
+export const authSendVerifyCodeSchema = z.object({
+  email: z.string().email(),
+  partnerSlug: z.string().optional(),
+  partnerId: z.string().optional(),
+});
+
+export const authSendVerifyLinkSchema = z.object({
+  email: z.string().email(),
+  sessionId: z.string().min(16),
+  partnerSlug: z.string().optional(),
+  partnerId: z.string().optional(),
+});
+
+export const authSetPasswordSchema = z.object({
+  email: z.string().email(),
+  password: z.string().min(8),
+  fullName: z.string().optional(),
+  verifiedToken: z.string().min(1),
+});
+
+export const authSignupSchema = z.object({
+  email: z.string().email(),
+  password: z.string().min(8),
+  fullName: z.string().optional(),
+  verifiedToken: z.string().min(1),
+  partnerSlug: z.string().optional(),
+});
+
+export const authVerifyCodeSchema = z.object({
+  email: z.string().email(),
+  code: z.string().min(1),
+});
+
+// ---- Farewell / Trustee ----
+
+export const farewellAccessSchema = z.object({
+  clientId: z.string().min(1),
+  trusteeEmail: z.string().email(),
+});
+
+export const farewellOwnerVetoSchema = z.object({
+  token: z.string().min(1),
+});
+
+export const trusteeUnlockOtpSchema = z.object({
+  token: z.string().min(1),
+});
+
+export const trusteeUnlockVerifySchema = z.object({
+  token: z.string().min(1),
+  code: z.string().regex(/^\d{6}$/),
+});
+
+// ---- Attorney ----
+
+export const attorneyApproveSchema = z.object({
+  reviewId: z.string().min(1),
+});
+
+export const attorneyNotifyClientSchema = z.object({
+  reviewId: z.string().min(1),
+});
+
+// ---- Admin ----
+
+export const adminFarewellVerificationSchema = z.object({
+  requestId: z.string().min(1),
+  action: z.enum(["approve", "reject"]),
+  notes: z.string().optional(),
+});
+
+export const adminTestPromoSchema = z.object({
+  active: z.boolean(),
+});
+
+// ---- Partner ----
+
+export const partnerAddDomainSchema = z.object({
+  businessUrl: z.string().min(1),
+  domainType: z.string().optional(),
+});
+
+export const partnerClientsCreateSchema = z.object({
+  firstName: z.string().min(1),
+  lastName: z.string().optional(),
+  email: z.string().email(),
+  partnerId: z.string().min(1),
+  action: z.string().optional(),
+});
+
+export const partnerClientsUpdateSchema = z.object({
+  clientId: z.string().min(1),
+  partnerId: z.string().min(1),
+  note: z.string().min(1),
+});
+
+export const partnerEmailSetupSchema = z.object({
+  sender_name: z.string().min(1),
+  sender_email: z.string().email(),
+});
+
+export const partnerVaultClientCheckoutSchema = z.object({
+  clientEmail: z.string().email(),
+  clientName: z.string().min(1),
+  tempPassword: z.string().min(1),
+  pin: z.string().regex(/^\d{4}$/),
+});
+
+export const partnerVaultSubdomainSchema = z.object({
+  partnerId: z.string().min(1),
+  subdomain: z.string().regex(/^[a-z0-9][a-z0-9-]{1,50}[a-z0-9]$/),
+});
+
+export const createReviewAttorneySchema = z.object({
+  partnerId: z.string().min(1),
+  attorneyEmail: z.string().email(),
+  attorneyName: z.string().optional(),
+  barNumber: z.string().optional(),
+});
+
+// ---- Sales ----
+
+export const salesAffiliateStatusSchema = z.object({
+  status: z.enum(["active", "suspended"]),
+});
+
+export const salesCreatePartnerSchema = z.object({
+  companyName: z.string().min(1),
+  ownerName: z.string().min(1),
+  email: z.string().email(),
+  businessUrl: z.string().optional(),
+  phone: z.string().optional(),
+  state: z.string().optional(),
+  professionalType: z.string().optional(),
+  tier: z.enum(["basic", "standard", "enterprise"]).optional(),
+  source: z.string().optional(),
+  notes: z.string().optional(),
+  promoCode: z.string().max(64).optional(),
+  partnerRevenuePct: z.number().min(0).max(100).optional(),
+});
+
+export const salesCreateRepSchema = z.object({
+  fullName: z.string().min(1),
+  email: z.string().email(),
+  commissionRate: z.number().min(0).max(100),
+});
+
+export const salesPartnerNotesSchema = z.object({
+  partnerId: z.string().min(1),
+  note: z.string().min(1),
+});
+
+export const salesRepsUpdateSchema = z.object({
+  repId: z.string().min(1),
+  commissionRate: z.number().min(0).max(100),
+});
+
+export const salesSendWelcomeEmailSchema = z.object({
+  email: z.string().email(),
+  tempPassword: z.string().min(1),
+  ownerName: z.string().optional(),
+  companyName: z.string().optional(),
+});
+
+// ---- Documents ----
+
+export const documentGenerateSchema = z.object({
+  order_id: z.string().min(1),
+});
+
+// ---- Other ----
+
+export const contactSchema = z.object({
+  name: z.string().min(1).max(200),
+  email: z.string().email(),
+  message: z.string().min(1).max(5000),
+});
+
+export const emailPartnerActivatedSchema = z.object({
+  email: z.string().email(),
+  name: z.string().optional(),
+});
+
+export const professionalRequestAccessSchema = z.object({
+  firstName: z.string().min(1),
+  lastName: z.string().min(1),
+  email: z.string().email(),
+  professionalType: z.string().min(1),
+  phone: z.string().optional(),
+  companyName: z.string().optional(),
+  clientCount: z.union([z.string(), z.number()]).optional(),
+  referralSource: z.string().optional(),
+  bar_number: z.string().optional(),
+  practice_areas: z.union([z.string(), z.array(z.string())]).optional(),
+  desired_review_fee: z.number().optional(),
+});
+
+export const quizPersonalizeSchema = z.object({
+  quiz_answers: z.record(z.string(), z.unknown()),
+  recommendation: z.enum(["will", "trust"]),
+});
+
+export const farewellUploadCompleteSchema = z.object({
+  messageId: z.string().min(1),
+  storagePath: z.string().min(1),
+  fileSize: z.number().nonnegative().max(524288000).optional(),
+  duration: z.number().nonnegative().max(1800).optional(),
+});
+
+export const vaultPinSchema = z.object({
+  action: z.enum(["check", "create", "verify", "change"]),
+  pin: z.string().regex(/^\d{6}$/).optional(),
+  newPin: z.string().regex(/^\d{6}$/).optional(),
+});
+
+export const stripeConnectOnboardSchema = z.object({
+  returnPath: z.string().startsWith("/").optional(),
+});
+
+// ---- Inline schema consolidation (from crypto/share/backfill routes) ----
+
+export const pubkeyQuerySchema = z
+  .object({
+    email: z.string().email().optional(),
+    userId: z.string().uuid().optional(),
+  })
+  .refine((v) => !!(v.email || v.userId), {
+    message: "email or userId required",
+  });
+
+export const shareCreateSchema = z.object({
+  itemId: z.string().uuid(),
+  recipientUserId: z.string().uuid(),
+  wrappedDek: z.string().min(1),
+  senderPubkey: z.string().min(1),
+  encVersion: z.number().int().optional(),
+});
+
+export const backfillRowSchema = z.object({
+  id: z.string().uuid(),
+  ciphertext: z.string().min(1),
+  nonce: z.string().min(1),
+  encVersion: z.number().int().optional(),
+  labelBlind: z.string().optional(),
+  emailBlind: z.string().optional(),
+  recipientBlind: z.string().optional(),
+});
+
+export const backfillEncryptSchema = z.object({
+  table: z.enum(["vault_items", "vault_trustees", "farewell_messages"]),
+  rows: z.array(backfillRowSchema).min(1).max(100),
+});
+
+export const backfillFetchQuerySchema = z.object({
+  table: z.enum(["vault_items", "vault_trustees", "farewell_messages"]),
+  limit: z.coerce.number().int().min(1).max(100).default(50),
+});

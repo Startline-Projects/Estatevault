@@ -718,4 +718,169 @@ All 9 route groups + checkout dedup done. Every route on kernel pattern (withRou
 - **H-10:** Checkout dedup — 2026-05-28
 - **Skipped:** `auth/verify-link` (returns HTML, not JSON)
 
-### Next: Phase 3 — Validation at Every Boundary (M-06)
+---
+
+---
+
+# Phase 3 — Validation at Every Boundary: What Has Been Fixed
+
+> **Date:** 2026-05-28
+> **Branch:** Yahia-Dev
+> **Status:** Complete. Gate GREEN (193/193 tests, TSC clean, lint warnings-only).
+
+---
+
+## Step 3.1 — Full Route Audit
+
+Audited all 79 API routes with POST/PUT/PATCH handlers:
+- 16 routes already validated via `@/lib/validation/schemas`
+- 4 routes validated via `@/lib/api/crypto` schemas
+- 4 routes had inline `z.object()` (flagged for consolidation)
+- **55 routes had no Zod validation**
+- 12 of those 55 take no body (empty POST) — no schema needed
+- 4 use FormData (not JSON) — validation added to JSON fields where applicable
+
+## Step 3.2 — Schema Creation (40+ new schemas)
+
+Added 40+ new Zod schemas to `lib/validation/schemas.ts`, organized by domain:
+
+| Domain | Schemas Added |
+|--------|--------------|
+| **Auth** (11) | authCheckEmailSchema, authCheckVerificationSchema, authHandoffSchema, authHandoffConsumeSchema, authRecoverySchema, authResendVerificationSchema, authSendVerifyCodeSchema, authSendVerifyLinkSchema, authSetPasswordSchema, authSignupSchema, authVerifyCodeSchema |
+| **Farewell/Trustee** (4) | farewellAccessSchema, farewellOwnerVetoSchema, trusteeUnlockOtpSchema, trusteeUnlockVerifySchema |
+| **Attorney** (2) | attorneyApproveSchema, attorneyNotifyClientSchema |
+| **Admin** (2) | adminFarewellVerificationSchema, adminTestPromoSchema |
+| **Partner** (7) | partnerAddDomainSchema, partnerClientsCreateSchema, partnerClientsUpdateSchema, partnerEmailSetupSchema, partnerVaultClientCheckoutSchema, partnerVaultSubdomainSchema, createReviewAttorneySchema |
+| **Sales** (6) | salesAffiliateStatusSchema, salesCreatePartnerSchema, salesCreateRepSchema, salesPartnerNotesSchema, salesRepsUpdateSchema, salesSendWelcomeEmailSchema |
+| **Documents** (1) | documentGenerateSchema |
+| **Other** (7) | contactSchema, emailPartnerActivatedSchema, professionalRequestAccessSchema, quizPersonalizeSchema, farewellUploadCompleteSchema, vaultPinSchema, stripeConnectOnboardSchema |
+| **Consolidated inline** (5) | pubkeyQuerySchema, shareCreateSchema, backfillRowSchema, backfillEncryptSchema, backfillFetchQuerySchema |
+
+Total schemas in `lib/validation/schemas.ts`: **63**
+
+## Step 3.3 — Wired safeParse into 43 Routes
+
+Every route with a JSON body now has `safeParse` at handler top with `fail("invalid payload", 400)` on failure. Pattern:
+
+```ts
+const body = await request.json();
+const parsed = schemaName.safeParse(body);
+if (!parsed.success) return fail("invalid payload", 400);
+const { field1, field2 } = parsed.data;
+```
+
+### Auth routes (11 files):
+| Route | Schema |
+|-------|--------|
+| `auth/check-email` | `authCheckEmailSchema` |
+| `auth/check-verification` | `authCheckVerificationSchema` |
+| `auth/handoff` | `authHandoffSchema` |
+| `auth/handoff/consume` | `authHandoffConsumeSchema` |
+| `auth/recovery` | `authRecoverySchema` |
+| `auth/resend-verification` | `authResendVerificationSchema` |
+| `auth/send-verify-code` | `authSendVerifyCodeSchema` |
+| `auth/send-verify-link` | `authSendVerifyLinkSchema` |
+| `auth/set-password` | `authSetPasswordSchema` |
+| `auth/signup` | `authSignupSchema` |
+| `auth/verify-code` | `authVerifyCodeSchema` |
+
+### Farewell/Trustee/Attorney routes (6 files):
+| Route | Schema |
+|-------|--------|
+| `farewell/access` | `farewellAccessSchema` |
+| `farewell/owner-veto` (POST) | `farewellOwnerVetoSchema` |
+| `trustee/unlock-otp` | `trusteeUnlockOtpSchema` |
+| `trustee/unlock-verify` | `trusteeUnlockVerifySchema` |
+| `attorney/approve` | `attorneyApproveSchema` |
+| `attorney/notify-client` | `attorneyNotifyClientSchema` |
+
+### Admin/Partner routes (8 files):
+| Route | Schema |
+|-------|--------|
+| `admin/farewell-verification` (POST) | `adminFarewellVerificationSchema` |
+| `admin/test-promo` (POST) | `adminTestPromoSchema` |
+| `partner/add-domain` | `partnerAddDomainSchema` |
+| `partner/clients` (POST) | `partnerClientsCreateSchema` |
+| `partner/clients` (PUT) | `partnerClientsUpdateSchema` |
+| `partner/email/setup` | `partnerEmailSetupSchema` |
+| `partner/vault-client-checkout` | `partnerVaultClientCheckoutSchema` |
+| `partner/vault-subdomain` (POST) | `partnerVaultSubdomainSchema` |
+| `partners/create-review-attorney` | `createReviewAttorneySchema` |
+
+### Sales/Docs/Other routes (14 files):
+| Route | Schema |
+|-------|--------|
+| `sales/affiliates/[id]/status` | `salesAffiliateStatusSchema` |
+| `sales/create-partner` | `salesCreatePartnerSchema` |
+| `sales/create-rep` | `salesCreateRepSchema` |
+| `sales/partner-notes` (POST) | `salesPartnerNotesSchema` |
+| `sales/reps` (PATCH) | `salesRepsUpdateSchema` |
+| `sales/send-welcome-email` | `salesSendWelcomeEmailSchema` |
+| `documents/generate` | `documentGenerateSchema` |
+| `contact` | `contactSchema` |
+| `email/partner-activated` | `emailPartnerActivatedSchema` |
+| `professionals/request-access` | `professionalRequestAccessSchema` |
+| `quiz/personalize` | `quizPersonalizeSchema` |
+| `vault/farewell/upload-complete` | `farewellUploadCompleteSchema` |
+| `vault/pin` | `vaultPinSchema` |
+| `stripe/connect/onboard` | `stripeConnectOnboardSchema` |
+
+## Step 3.4 — Inline Schema Consolidation (4 files)
+
+Moved inline `z.object()` schemas from route files into `lib/validation/schemas.ts`:
+
+| Route | Inline removed | Centralized as |
+|-------|---------------|----------------|
+| `crypto/pubkey` | `QuerySchema` | `pubkeyQuerySchema` |
+| `share` | `CreateSchema` | `shareCreateSchema` |
+| `vault/backfill/encrypt` | `RowSchema` + `Schema` | `backfillEncryptSchema` (embeds `backfillRowSchema`) |
+| `vault/backfill/fetch` | `Schema` | `backfillFetchQuerySchema` |
+
+Removed `import { z }` from each file since Zod is no longer used directly.
+
+## Step 3.5 — Duplicate Type Reconciliation
+
+Removed 3 dead schemas + 3 dead type exports from `lib/validation/schemas.ts`:
+- `willIntakeSchema` — snake_case fields, never matched actual form data (camelCase in `lib/will-types.ts`)
+- `trustIntakeSchema` — same issue vs `lib/trust-types.ts`
+- `quizAnswersSchema` — same issue vs `lib/quiz-types.ts`
+- `type WillIntake`, `type TrustIntake`, `type QuizAnswers` — never imported anywhere
+
+Source of truth for intake types remains the domain files (`will-types.ts`, `trust-types.ts`, `quiz-types.ts`).
+
+## Routes Intentionally Not Validated
+
+| Route | Reason |
+|-------|--------|
+| `auth/welcome` | No body — reads identity from session |
+| `documents/send-email` | No body — reads identity from session |
+| `client/mark-executed` | No body — reads identity from session |
+| `subscription/cancel` | No body |
+| `subscription/sync` | No body |
+| `affiliate/onboarding` | No body |
+| `partner/email/reset` | No body |
+| `partner/email/test` | No body |
+| `partner/email/verify` | No body |
+| `partner/stripe-connect` | No body |
+| `sales/affiliates/[id]/payout` | No body — uses route param |
+| `trustee/logout` | No body |
+| `auth/verify-link` | Returns HTML, not JSON |
+| `webhooks/stripe` | Validated by Stripe signature, not Zod |
+| `csp-report` | External format (CSP reports) |
+| `farewell/verify` | FormData with file upload |
+| `attorney/upload-reviewed` | FormData with file upload |
+| `admin/marketing/materials` POST | FormData with file upload |
+
+---
+
+## Verify Gate Results
+
+```
+npx tsc --noEmit  → clean (0 errors)
+npm run lint      → warnings only (pre-existing <img>, useEffect deps)
+npm test          → 19 files, 193 tests, all passing
+```
+
+---
+
+### Next: Phase 4 — Reliability & Scalability

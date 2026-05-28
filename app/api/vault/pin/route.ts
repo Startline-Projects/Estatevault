@@ -3,6 +3,7 @@ import bcrypt from "bcryptjs";
 import { requireAuth } from "@/lib/api/auth";
 import { withRoute } from "@/lib/api/route";
 import { ok, fail } from "@/lib/api/response";
+import { vaultPinSchema } from "@/lib/validation/schemas";
 
 export const runtime = "nodejs";
 
@@ -13,7 +14,10 @@ export const POST = withRoute(async (request: NextRequest) => {
   if ("error" in auth) return auth.error;
   const { user, admin } = auth;
 
-  const { action, pin, newPin } = await request.json();
+  const body = await request.json();
+  const parsed = vaultPinSchema.safeParse(body);
+  if (!parsed.success) return fail("invalid payload", 400);
+  const { action, pin, newPin } = parsed.data;
 
   if (action === "check") {
     const { data: profile } = await admin.from("profiles").select("vault_pin_hash").eq("id", user.id).single();

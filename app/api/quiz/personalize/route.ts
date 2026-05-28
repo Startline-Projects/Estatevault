@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { quizPersonalizeSchema } from "@/lib/validation/schemas";
 import { claude, CLAUDE_MODEL } from "@/lib/claude";
 
 const WILL_FALLBACK = {
@@ -21,7 +22,10 @@ const TRUST_FALLBACK = {
 
 export async function POST(request: Request) {
   try {
-    const { quiz_answers, recommendation } = await request.json();
+    const body = await request.json();
+    const parsed = quizPersonalizeSchema.safeParse(body);
+    if (!parsed.success) return NextResponse.json(WILL_FALLBACK);
+    const { quiz_answers, recommendation } = parsed.data;
 
     if (!process.env.ANTHROPIC_API_KEY || process.env.ANTHROPIC_API_KEY === "placeholder") {
       return NextResponse.json(recommendation === "will" ? WILL_FALLBACK : TRUST_FALLBACK);

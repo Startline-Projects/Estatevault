@@ -1,21 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/api/auth";
 import { b64decode, b64encode, validateEnvelope } from "@/lib/api/crypto";
 import { apiRateLimit } from "@/lib/rate-limit";
+import { shareCreateSchema } from "@/lib/validation/schemas";
 
 export const runtime = "nodejs";
-
-// --- Schemas ---
-
-const CreateSchema = z.object({
-  itemId: z.string().uuid(),
-  recipientUserId: z.string().uuid(),
-  wrappedDek: z.string().min(1),       // crypto_box_seal output, base64
-  senderPubkey: z.string().min(1),     // owner X25519 pub at share time, base64
-  encVersion: z.number().int().optional(),
-});
 
 // --- Helpers ---
 
@@ -99,7 +89,7 @@ export async function POST(req: NextRequest) {
 
   let body: unknown;
   try { body = await req.json(); } catch { return NextResponse.json({ error: "bad json" }, { status: 400 }); }
-  const parsed = CreateSchema.safeParse(body);
+  const parsed = shareCreateSchema.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json({ error: "invalid payload", details: parsed.error.flatten() }, { status: 400 });
   }

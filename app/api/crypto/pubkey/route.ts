@@ -1,16 +1,11 @@
 import { NextRequest } from "next/server";
-import { z } from "zod";
 import { requireAuth } from "@/lib/api/auth";
 import { withRoute } from "@/lib/api/route";
 import { ok, fail } from "@/lib/api/response";
 import { b64encode, byteaToBytes, checkRate, limiters, logAudit } from "@/lib/api/crypto";
+import { pubkeyQuerySchema } from "@/lib/validation/schemas";
 
 export const runtime = "nodejs";
-
-const QuerySchema = z.object({
-  email: z.string().email().optional(),
-  userId: z.string().uuid().optional(),
-}).refine(v => !!(v.email || v.userId), { message: "email or userId required" });
 
 export const GET = withRoute(async (req: NextRequest) => {
   const auth = await requireAuth();
@@ -21,7 +16,7 @@ export const GET = withRoute(async (req: NextRequest) => {
   if (rl) return rl;
 
   const { searchParams } = new URL(req.url);
-  const parsed = QuerySchema.safeParse(Object.fromEntries(searchParams));
+  const parsed = pubkeyQuerySchema.safeParse(Object.fromEntries(searchParams));
   if (!parsed.success) return fail("invalid query", 400);
 
   let recipientUserId = parsed.data.userId;

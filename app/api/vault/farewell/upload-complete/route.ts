@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/api/auth";
 import { withRoute } from "@/lib/api/route";
 import { ok, fail } from "@/lib/api/response";
+import { farewellUploadCompleteSchema } from "@/lib/validation/schemas";
 import * as farewellRepo from "@/lib/repos/server/farewellRepo";
 import * as clientRepo from "@/lib/repos/server/clientRepo";
 
@@ -15,10 +16,10 @@ export const POST = withRoute(async (request: NextRequest) => {
   const { data: client } = await clientRepo.getIdByProfile(admin, user.id);
   if (!client) return fail("No client record", 400);
 
-  const { messageId, storagePath, fileSize, duration } = await request.json();
-  if (!messageId || !storagePath) {
-    return fail("Missing required fields", 400);
-  }
+  const body = await request.json();
+  const parsed = farewellUploadCompleteSchema.safeParse(body);
+  if (!parsed.success) return fail("invalid payload", 400);
+  const { messageId, storagePath, fileSize, duration } = parsed.data;
 
   // Verify ownership
   const { data: message } = await farewellRepo.getIdForOwner(admin, messageId, client.id);
@@ -27,12 +28,6 @@ export const POST = withRoute(async (request: NextRequest) => {
 
   // Validate limits
   const fileSizeMb = (fileSize || 0) / (1024 * 1024);
-  if (fileSizeMb > 500) {
-    return fail("File exceeds 500MB limit", 400);
-  }
-  if (duration && duration > 1800) {
-    return fail("Video exceeds 30-minute limit", 400);
-  }
 
   await farewellRepo.updateForOwner(admin, messageId, client.id, {
     storage_path: storagePath,

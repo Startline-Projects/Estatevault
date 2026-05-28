@@ -1,6 +1,7 @@
 import { type NextRequest } from "next/server";
 import { requireAuth } from "@/lib/api/auth";
 import { ok, fail } from "@/lib/api/response";
+import { partnerClientsCreateSchema, partnerClientsUpdateSchema } from "@/lib/validation/schemas";
 import { withRoute } from "@/lib/api/route";
 
 async function verifyPartnerOwnership(
@@ -22,8 +23,9 @@ export const POST = withRoute(async (req: NextRequest) => {
   if ("error" in auth) return auth.error;
 
   const body = await req.json();
-  const { firstName, lastName, email, partnerId, action } = body;
-  if (!firstName || !email || !partnerId) return fail("Missing fields", 400);
+  const parsed = partnerClientsCreateSchema.safeParse(body);
+  if (!parsed.success) return fail("invalid payload", 400);
+  const { firstName, lastName, email, partnerId, action } = parsed.data;
 
   const ownsPartner = await verifyPartnerOwnership(auth.admin, auth.profile.id, partnerId);
   if (!ownsPartner) return fail("forbidden", 403);
@@ -75,8 +77,10 @@ export const PUT = withRoute(async (req: NextRequest) => {
   const auth = await requireAuth(["partner"], req);
   if ("error" in auth) return auth.error;
 
-  const { clientId, partnerId, note } = await req.json();
-  if (!clientId || !partnerId || !note) return fail("Missing fields", 400);
+  const body = await req.json();
+  const parsedPut = partnerClientsUpdateSchema.safeParse(body);
+  if (!parsedPut.success) return fail("invalid payload", 400);
+  const { clientId, partnerId, note } = parsedPut.data;
 
   const ownsPartner = await verifyPartnerOwnership(auth.admin, auth.profile.id, partnerId);
   if (!ownsPartner) return fail("forbidden", 403);

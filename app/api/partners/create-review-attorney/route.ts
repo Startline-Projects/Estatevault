@@ -2,14 +2,17 @@ import { NextRequest } from "next/server";
 import { requireAuth } from "@/lib/api/auth";
 import { withRoute } from "@/lib/api/route";
 import { ok, fail } from "@/lib/api/response";
+import { createReviewAttorneySchema } from "@/lib/validation/schemas";
 import * as profileRepo from "@/lib/repos/server/profileRepo";
 
 export const POST = withRoute(async (req: NextRequest) => {
   const auth = await requireAuth(["partner"]);
   if ("error" in auth) return auth.error;
 
-  const { partnerId, attorneyName, attorneyEmail, barNumber } = await req.json();
-  if (!partnerId || !attorneyEmail) return fail("Missing required fields", 400);
+  const body = await req.json();
+  const parsed = createReviewAttorneySchema.safeParse(body);
+  if (!parsed.success) return fail("invalid payload", 400);
+  const { partnerId, attorneyName, attorneyEmail, barNumber } = parsed.data;
 
   const { data: partner } = await auth.admin
     .from("partners")

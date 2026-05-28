@@ -10,6 +10,7 @@ import { blindIndex, normalize } from "@/lib/crypto/blindIndex";
 import { authRateLimit } from "@/lib/rate-limit";
 import { getResend } from "@/lib/email";
 import * as fvRepo from "@/lib/repos/server/farewellVerificationRepo";
+import { farewellAccessSchema } from "@/lib/validation/schemas";
 
 export const runtime = "nodejs";
 
@@ -21,8 +22,10 @@ export const POST = withRoute(async (req: NextRequest) => {
   const { success } = await authRateLimit.limit(`farewell-access:${ip}`);
   if (!success) return fail("Too many requests", 429);
 
-  const { clientId, trusteeEmail } = await req.json();
-  if (!clientId || !trusteeEmail) return fail("Missing clientId or trusteeEmail", 400);
+  const body = await req.json();
+  const parsed = farewellAccessSchema.safeParse(body);
+  if (!parsed.success) return fail("invalid payload", 400);
+  const { clientId, trusteeEmail } = parsed.data;
 
   const admin = createAdminClient();
 

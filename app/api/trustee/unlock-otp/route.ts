@@ -10,15 +10,16 @@ import {
 } from "@/lib/security/trusteeToken";
 import { sendTrusteeOtpEmail } from "@/lib/email";
 import * as fvRepo from "@/lib/repos/server/farewellVerificationRepo";
+import { trusteeUnlockOtpSchema } from "@/lib/validation/schemas";
 
 export const runtime = "nodejs";
 const OTP_TTL_SECONDS = 10 * 60;
 
 export const POST = withRoute(async (req: NextRequest) => {
-  let body: { token?: string };
-  try { body = await req.json(); } catch { return fail("bad json", 400); }
-  const token = body.token;
-  if (!token) return fail("missing token", 400);
+  const rawBody = await req.json().catch(() => null);
+  const parsed = trusteeUnlockOtpSchema.safeParse(rawBody);
+  if (!parsed.success) return fail("invalid payload", 400);
+  const { token } = parsed.data;
 
   const v = verifyTrusteeToken(token);
   if (!v.ok) return fail(v.error, 400);

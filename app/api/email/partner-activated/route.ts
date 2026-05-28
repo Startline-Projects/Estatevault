@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { emailPartnerActivatedSchema } from "@/lib/validation/schemas";
 import { createServerClient } from "@supabase/ssr";
 import { partnerUrl } from "@/lib/hosts";
 import { cookies } from "next/headers";
@@ -26,11 +27,10 @@ export async function POST(request: Request) {
     const { Resend } = await import("resend");
     const resend = new Resend(process.env.RESEND_API_KEY);
 
-    const { email, name } = await request.json();
-
-    if (!email) {
-      return NextResponse.json({ error: "Email is required" }, { status: 400 });
-    }
+    const body = await request.json();
+    const parsed = emailPartnerActivatedSchema.safeParse(body);
+    if (!parsed.success) return NextResponse.json({ error: "invalid payload" }, { status: 400 });
+    const { email, name } = parsed.data;
 
     const displayName = name || "Partner";
 

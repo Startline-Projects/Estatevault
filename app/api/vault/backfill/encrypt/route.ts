@@ -1,5 +1,4 @@
 import { NextRequest } from "next/server";
-import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/api/auth";
 import { b64decode, bytesToBytea, validateEnvelope } from "@/lib/api/crypto";
@@ -10,24 +9,9 @@ import * as clientRepo from "@/lib/repos/server/clientRepo";
 import * as vaultItemRepo from "@/lib/repos/server/vaultItemRepo";
 import * as trusteeRepo from "@/lib/repos/server/trusteeRepo";
 import * as farewellRepo from "@/lib/repos/server/farewellRepo";
+import { backfillEncryptSchema } from "@/lib/validation/schemas";
 
 export const runtime = "nodejs";
-
-const RowSchema = z.object({
-  id: z.string().uuid(),
-  ciphertext: z.string().min(1),
-  nonce: z.string().min(1),
-  encVersion: z.number().int().optional(),
-  // Optional blinds depending on table.
-  labelBlind: z.string().optional(),
-  emailBlind: z.string().optional(),
-  recipientBlind: z.string().optional(),
-});
-
-const Schema = z.object({
-  table: z.enum(["vault_items", "vault_trustees", "farewell_messages"]),
-  rows: z.array(RowSchema).min(1).max(100),
-});
 
 const MAX_CT = 1_048_576;
 
@@ -47,7 +31,7 @@ export const POST = withRoute(async (req: NextRequest) => {
 
   let body: unknown;
   try { body = await req.json(); } catch { return fail("bad json", 400); }
-  const parsed = Schema.safeParse(body);
+  const parsed = backfillEncryptSchema.safeParse(body);
   if (!parsed.success) return fail("invalid payload", 400, { details: parsed.error.flatten() });
 
   const admin = createAdminClient();

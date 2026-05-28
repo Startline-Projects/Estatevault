@@ -2,11 +2,15 @@ import { NextRequest } from "next/server";
 import { createAdminClient } from "@/lib/api/auth";
 import { withRoute } from "@/lib/api/route";
 import { ok, fail } from "@/lib/api/response";
+import { authCheckEmailSchema } from "@/lib/validation/schemas";
 
 export const dynamic = "force-dynamic";
 
 export const POST = withRoute(async (req: NextRequest) => {
-  const { email } = await req.json();
+  const body = await req.json();
+  const parsed = authCheckEmailSchema.safeParse(body);
+  if (!parsed.success) return fail("invalid payload", 400);
+  const { email } = parsed.data;
   const normalizedEmail = String(email || "").trim().toLowerCase();
 
   if (!normalizedEmail) return fail("Email is required.", 400);

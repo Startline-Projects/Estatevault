@@ -1,13 +1,16 @@
 import { NextRequest } from "next/server";
 import { withRoute } from "@/lib/api/route";
 import { ok, fail } from "@/lib/api/response";
+import { authHandoffConsumeSchema } from "@/lib/validation/schemas";
 import { decryptHandoff } from "@/lib/handoff";
 
 export const dynamic = "force-dynamic";
 
 export const POST = withRoute(async (req: NextRequest) => {
-  const { token } = await req.json();
-  if (!token || typeof token !== "string") return fail("Missing token", 400);
+  const body = await req.json();
+  const parsed = authHandoffConsumeSchema.safeParse(body);
+  if (!parsed.success) return fail("invalid payload", 400);
+  const { token } = parsed.data;
 
   try {
     const payload = decryptHandoff(token);

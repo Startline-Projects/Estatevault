@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { createAdminClient, requireAuth } from "@/lib/api/auth";
 import { withRoute } from "@/lib/api/route";
 import { ok, fail } from "@/lib/api/response";
+import { adminTestPromoSchema } from "@/lib/validation/schemas";
 import * as appSettingsRepo from "@/lib/repos/server/appSettingsRepo";
 import * as auditLogRepo from "@/lib/repos/server/auditLogRepo";
 
@@ -22,7 +23,10 @@ export const POST = withRoute(async (req: NextRequest) => {
   const auth = await requireAuth(["admin"]);
   if ("error" in auth) return auth.error;
 
-  const { active } = await req.json();
+  const body = await req.json();
+  const parsed = adminTestPromoSchema.safeParse(body);
+  if (!parsed.success) return fail("invalid payload", 400);
+  const { active } = parsed.data;
 
   const { error: upsertErr } = await appSettingsRepo.upsertByKey(
     auth.admin,

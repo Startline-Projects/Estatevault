@@ -9,16 +9,16 @@ import {
 } from "@/lib/security/trusteeToken";
 import { issueSession, SESSION_COOKIE, SESSION_TTL_SECONDS } from "@/lib/security/trusteeSession";
 import * as fvRepo from "@/lib/repos/server/farewellVerificationRepo";
+import { trusteeUnlockVerifySchema } from "@/lib/validation/schemas";
 
 export const runtime = "nodejs";
 const MAX_OTP_ATTEMPTS = 5;
 
 export const POST = withRoute(async (req: NextRequest) => {
-  let body: { token?: string; code?: string };
-  try { body = await req.json(); } catch { return fail("bad json", 400); }
-  const token = body.token, code = (body.code || "").trim();
-  if (!token || !code) return fail("missing token or code", 400);
-  if (!/^\d{6}$/.test(code)) return fail("bad code format", 400);
+  const rawBody = await req.json().catch(() => null);
+  const parsed = trusteeUnlockVerifySchema.safeParse(rawBody);
+  if (!parsed.success) return fail("invalid payload", 400);
+  const { token, code } = parsed.data;
 
   const v = verifyTrusteeToken(token);
   if (!v.ok) return fail(v.error, 400);

@@ -6,6 +6,7 @@ import { ok, fail } from "@/lib/api/response";
 import { verifyVetoToken } from "@/lib/security/vetoToken";
 import { sendVetoAccessCancelledEmail } from "@/lib/email";
 import * as auditLogRepo from "@/lib/repos/server/auditLogRepo";
+import { farewellOwnerVetoSchema } from "@/lib/validation/schemas";
 
 export const runtime = "nodejs";
 
@@ -37,10 +38,10 @@ export const GET = withRoute(async (req: NextRequest) => {
 });
 
 export const POST = withRoute(async (req: NextRequest) => {
-  let body: { token?: string };
-  try { body = await req.json(); } catch { return fail("bad json", 400); }
-  const token = body.token;
-  if (!token) return fail("missing token", 400);
+  const rawBody = await req.json().catch(() => null);
+  const parsed = farewellOwnerVetoSchema.safeParse(rawBody);
+  if (!parsed.success) return fail("invalid payload", 400);
+  const { token } = parsed.data;
 
   const v = verifyVetoToken(token);
   if (!v.ok) return fail(v.error, 400);

@@ -1,12 +1,16 @@
 import { NextRequest } from "next/server";
 import { withRoute } from "@/lib/api/route";
 import { ok, fail } from "@/lib/api/response";
+import { authVerifyCodeSchema } from "@/lib/validation/schemas";
 import { verifyCode } from "@/lib/auth/emailVerification";
 
 export const dynamic = "force-dynamic";
 
 export const POST = withRoute(async (req: NextRequest) => {
-  const { email, code } = await req.json();
+  const body = await req.json();
+  const parsed = authVerifyCodeSchema.safeParse(body);
+  if (!parsed.success) return fail("invalid payload", 400);
+  const { email, code } = parsed.data;
   const normalizedEmail = String(email || "").trim().toLowerCase();
   const normalizedCode = String(code || "").trim();
 

@@ -1,7 +1,8 @@
 import { NextRequest } from "next/server";
 import { createAdminClient } from "@/lib/api/auth";
 import { withRoute } from "@/lib/api/route";
-import { ok } from "@/lib/api/response";
+import { ok, fail } from "@/lib/api/response";
+import { authRecoverySchema } from "@/lib/validation/schemas";
 import { resolveSenderForEmail, renderEmailHeader, renderEmailFooter, getResend, type EmailBrand } from "@/lib/email";
 
 export const dynamic = "force-dynamic";
@@ -36,7 +37,10 @@ function buildEmailHtml(resetLink: string, brand: EmailBrand): string {
 }
 
 export const POST = withRoute(async (req: NextRequest) => {
-  const { email } = await req.json();
+  const body = await req.json();
+  const parsed = authRecoverySchema.safeParse(body);
+  if (!parsed.success) return fail("invalid payload", 400);
+  const { email } = parsed.data;
   const normalizedEmail = String(email || "").trim().toLowerCase();
 
   if (!normalizedEmail) return ok({ success: true });

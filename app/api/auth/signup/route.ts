@@ -2,11 +2,15 @@ import { NextRequest } from "next/server";
 import { createAdminClient } from "@/lib/api/auth";
 import { withRoute } from "@/lib/api/route";
 import { ok, fail } from "@/lib/api/response";
+import { authSignupSchema } from "@/lib/validation/schemas";
 import { consumeVerifiedToken } from "@/lib/auth/emailVerification";
 import { sendWelcomeEmail } from "@/lib/email";
 
 export const POST = withRoute(async (req: NextRequest) => {
-  const { email, password, fullName, verifiedToken, partnerSlug } = await req.json();
+  const body = await req.json();
+  const parsed = authSignupSchema.safeParse(body);
+  if (!parsed.success) return fail("invalid payload", 400);
+  const { email, password, fullName, verifiedToken, partnerSlug } = parsed.data;
   const normalizedEmail = String(email || "").trim().toLowerCase();
 
   if (!normalizedEmail || !password) return fail("Email and password are required.", 400);

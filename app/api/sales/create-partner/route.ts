@@ -4,6 +4,7 @@ import { randomBytes } from "crypto";
 import { requireAuth } from "@/lib/api/auth";
 import { withRoute } from "@/lib/api/route";
 import { ok, fail } from "@/lib/api/response";
+import { salesCreatePartnerSchema } from "@/lib/validation/schemas";
 import { partnerUrl, normalizeBusinessDomain } from "@/lib/hosts";
 import * as partnerRepo from "@/lib/repos/server/partnerRepo";
 import * as profileRepo from "@/lib/repos/server/profileRepo";
@@ -14,9 +15,9 @@ export const POST = withRoute(async (req: NextRequest) => {
   if ("error" in auth) return auth.error;
 
   const body = await req.json();
-  const { companyName, ownerName, email, businessUrl, phone, state, professionalType, tier, source, notes, promoCode, partnerRevenuePct } = body;
-
-  if (!companyName || !ownerName || !email) return fail("Missing required fields", 400);
+  const parsed = salesCreatePartnerSchema.safeParse(body);
+  if (!parsed.success) return fail("invalid payload", 400);
+  const { companyName, ownerName, email, businessUrl, phone, state, professionalType, tier, source, notes, promoCode, partnerRevenuePct } = parsed.data;
 
   const cleanBusinessUrl = businessUrl ? normalizeBusinessDomain(businessUrl) : "";
   const urlForSlug = cleanBusinessUrl || companyName;

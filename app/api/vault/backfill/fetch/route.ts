@@ -1,5 +1,4 @@
 import { NextRequest } from "next/server";
-import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/api/auth";
 import { apiRateLimit } from "@/lib/rate-limit";
@@ -9,13 +8,9 @@ import * as clientRepo from "@/lib/repos/server/clientRepo";
 import * as vaultItemRepo from "@/lib/repos/server/vaultItemRepo";
 import * as trusteeRepo from "@/lib/repos/server/trusteeRepo";
 import * as farewellRepo from "@/lib/repos/server/farewellRepo";
+import { backfillFetchQuerySchema } from "@/lib/validation/schemas";
 
 export const runtime = "nodejs";
-
-const Schema = z.object({
-  table: z.enum(["vault_items", "vault_trustees", "farewell_messages"]),
-  limit: z.coerce.number().int().min(1).max(100).default(50),
-});
 
 export const GET = withRoute(async (req: NextRequest) => {
   const supabase = createClient();
@@ -26,7 +21,7 @@ export const GET = withRoute(async (req: NextRequest) => {
   if (!rl.success) return fail("rate limited", 429);
 
   const url = new URL(req.url);
-  const parsed = Schema.safeParse({
+  const parsed = backfillFetchQuerySchema.safeParse({
     table: url.searchParams.get("table"),
     limit: url.searchParams.get("limit") ?? undefined,
   });

@@ -3,6 +3,7 @@ import { Resend } from "resend";
 import { requireAuth } from "@/lib/api/auth";
 import { withRoute } from "@/lib/api/route";
 import { ok, fail } from "@/lib/api/response";
+import { salesSendWelcomeEmailSchema } from "@/lib/validation/schemas";
 import { partnerUrl } from "@/lib/hosts";
 
 export const dynamic = "force-dynamic";
@@ -11,8 +12,10 @@ export const POST = withRoute(async (req: NextRequest) => {
   const auth = await requireAuth(["sales_rep", "admin"]);
   if ("error" in auth) return auth.error;
 
-  const { email, tempPassword, ownerName, companyName } = await req.json();
-  if (!email || !tempPassword) return fail("Missing email or tempPassword", 400);
+  const body = await req.json();
+  const parsed = salesSendWelcomeEmailSchema.safeParse(body);
+  if (!parsed.success) return fail("invalid payload", 400);
+  const { email, tempPassword, ownerName, companyName } = parsed.data;
 
   const resend = new Resend(process.env.RESEND_API_KEY!);
   const sent = await resend.emails.send({

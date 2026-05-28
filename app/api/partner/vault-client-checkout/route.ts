@@ -3,6 +3,7 @@ import bcrypt from "bcryptjs";
 import { requireAuth } from "@/lib/api/auth";
 import { withRoute } from "@/lib/api/route";
 import { ok, fail } from "@/lib/api/response";
+import { partnerVaultClientCheckoutSchema } from "@/lib/validation/schemas";
 import { stripe } from "@/lib/stripe";
 import * as partnerRepo from "@/lib/repos/server/partnerRepo";
 import * as profileRepo from "@/lib/repos/server/profileRepo";
@@ -11,9 +12,10 @@ export const POST = withRoute(async (req: NextRequest) => {
   const auth = await requireAuth(["partner"]);
   if ("error" in auth) return auth.error;
 
-  const { clientEmail, clientName, tempPassword, pin } = await req.json();
-  if (!clientEmail || !clientName || !tempPassword || !pin) return fail("Missing required fields.", 400);
-  if (!/^\d{4}$/.test(pin)) return fail("PIN must be 4 digits.", 400);
+  const body = await req.json();
+  const parsed = partnerVaultClientCheckoutSchema.safeParse(body);
+  if (!parsed.success) return fail("invalid payload", 400);
+  const { clientEmail, clientName, tempPassword, pin } = parsed.data;
 
   const normalizedEmail = clientEmail.trim().toLowerCase();
 

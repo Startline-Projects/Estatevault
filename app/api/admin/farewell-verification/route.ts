@@ -3,6 +3,7 @@ import { createHash } from "crypto";
 import { requireAuth } from "@/lib/api/auth";
 import { withRoute } from "@/lib/api/route";
 import { ok, fail } from "@/lib/api/response";
+import { adminFarewellVerificationSchema } from "@/lib/validation/schemas";
 import { issueVetoToken } from "@/lib/security/vetoToken";
 import { issueTrusteeToken } from "@/lib/security/trusteeToken";
 import * as fvRepo from "@/lib/repos/server/farewellVerificationRepo";
@@ -46,8 +47,10 @@ export const POST = withRoute(async (request: NextRequest) => {
   const auth = await requireAuth(["admin"]);
   if ("error" in auth) return auth.error;
 
-  const { requestId, action, notes } = await request.json();
-  if (!requestId || !action) return fail("Missing requestId or action", 400);
+  const body = await request.json();
+  const parsed = adminFarewellVerificationSchema.safeParse(body);
+  if (!parsed.success) return fail("invalid payload", 400);
+  const { requestId, action, notes } = parsed.data;
 
   const { data: verReq } = await fvRepo.getByIdWithStatus(auth.admin, requestId);
   if (!verReq) return fail("Request not found", 404);

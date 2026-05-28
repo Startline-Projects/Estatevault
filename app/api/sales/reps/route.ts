@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { requireAuth } from "@/lib/api/auth";
 import { withRoute } from "@/lib/api/route";
 import { ok, fail } from "@/lib/api/response";
+import { salesRepsUpdateSchema } from "@/lib/validation/schemas";
 import * as profileRepo from "@/lib/repos/server/profileRepo";
 import * as partnerRepo from "@/lib/repos/server/partnerRepo";
 import * as auditLogRepo from "@/lib/repos/server/auditLogRepo";
@@ -34,21 +35,18 @@ export const PATCH = withRoute(async (req: NextRequest) => {
   const auth = await requireAuth(["admin"]);
   if ("error" in auth) return auth.error;
 
-  const { repId, commissionRate } = await req.json();
-  if (!repId || commissionRate === undefined) return fail("Missing repId or commissionRate", 400);
+  const body = await req.json();
+  const parsed = salesRepsUpdateSchema.safeParse(body);
+  if (!parsed.success) return fail("invalid payload", 400);
+  const { repId, commissionRate } = parsed.data;
 
-  const parsed = parseFloat(commissionRate);
-  if (isNaN(parsed) || parsed < 0 || parsed > 100) {
-    return fail("Commission rate must be between 0 and 100", 400);
-  }
-
-  await profileRepo.updateCommissionRate(auth.admin, repId, parsed / 100);
+  await profileRepo.updateCommissionRate(auth.admin, repId, commissionRate / 100);
   await auditLogRepo.insertEntry(auth.admin, {
     actor_id: auth.user.id,
     action: "sales_rep.commission_updated",
     resource_type: "profile",
     resource_id: repId,
-    metadata: { commission_rate: parsed / 100 },
+    metadata: { commission_rate: commissionRate / 100 },
   });
 
   return ok({ success: true });

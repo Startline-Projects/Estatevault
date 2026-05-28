@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { requireAuth, createAdminClient } from "@/lib/api/auth";
 import { withRoute } from "@/lib/api/route";
 import { ok, fail } from "@/lib/api/response";
+import { partnerVaultSubdomainSchema } from "@/lib/validation/schemas";
 import * as partnerRepo from "@/lib/repos/server/partnerRepo";
 import * as auditLogRepo from "@/lib/repos/server/auditLogRepo";
 
@@ -44,9 +45,10 @@ export const POST = withRoute(async (req: NextRequest) => {
   const auth = await requireAuth(["partner"]);
   if ("error" in auth) return auth.error;
 
-  const { partnerId, subdomain } = await req.json();
-  if (!partnerId || !subdomain) return fail("Missing partnerId or subdomain", 400);
-  if (!SUBDOMAIN_REGEX.test(subdomain)) return fail("Invalid subdomain format", 400);
+  const body = await req.json();
+  const parsed = partnerVaultSubdomainSchema.safeParse(body);
+  if (!parsed.success) return fail("invalid payload", 400);
+  const { partnerId, subdomain } = parsed.data;
 
   const { data: partner } = await partnerRepo.getDomainInfoByProfileId(auth.admin, auth.profile.id);
   if (!partner || partner.id !== partnerId) return fail("Not authorized", 403);

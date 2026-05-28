@@ -5,6 +5,7 @@ import { addJob, type DocumentJob } from "@/lib/queue/document-queue";
 import { randomUUID } from "crypto";
 import { withRoute } from "@/lib/api/route";
 import { ok, fail } from "@/lib/api/response";
+import { documentGenerateSchema } from "@/lib/validation/schemas";
 import { requireAuth, assertOrderAccess } from "@/lib/api/auth";
 import { apiRateLimit } from "@/lib/rate-limit";
 import * as quizSessionRepo from "@/lib/repos/server/quizSessionRepo";
@@ -16,10 +17,10 @@ export const POST = withRoute(async (request: NextRequest) => {
   if ("error" in auth) return auth.error;
   const { admin, profile } = auth;
 
-  const { order_id } = await request.json();
-  if (!order_id || typeof order_id !== "string") {
-    return fail("Missing order_id", 400);
-  }
+  const body = await request.json();
+  const parsed = documentGenerateSchema.safeParse(body);
+  if (!parsed.success) return fail("invalid payload", 400);
+  const { order_id } = parsed.data;
 
   const access = await assertOrderAccess(admin, order_id, profile);
   if ("error" in access) return access.error;

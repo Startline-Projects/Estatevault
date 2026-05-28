@@ -6,13 +6,20 @@ import { sendDocumentEmail } from "@/lib/email";
 import { wantsNotification } from "@/lib/notifications/prefs";
 import * as attorneyReviewRepo from "@/lib/repos/server/attorneyReviewRepo";
 import * as auditLogRepo from "@/lib/repos/server/auditLogRepo";
+import { attorneyApproveSchema } from "@/lib/validation/schemas";
 
 export const POST = withRoute(async (req: NextRequest) => {
   const auth = await requireAuth(["review_attorney", "admin"]);
   if ("error" in auth) return auth.error;
 
-  const { reviewId, decision, notes } = await req.json();
-  if (!reviewId || !decision) return fail("Missing reviewId or decision", 400);
+  const rawBody = await req.json();
+  const parsedApprove = attorneyApproveSchema.safeParse(rawBody);
+  if (!parsedApprove.success) return fail("invalid payload", 400);
+  const { reviewId } = parsedApprove.data;
+  const rawBodyTyped = rawBody as Record<string, unknown>;
+  const decision = typeof rawBodyTyped.decision === "string" ? rawBodyTyped.decision : undefined;
+  const notes = typeof rawBodyTyped.notes === "string" ? rawBodyTyped.notes : undefined;
+  if (!decision) return fail("Missing reviewId or decision", 400);
 
   const validDecisions = ["approved", "approved_with_notes", "flagged"];
   if (!validDecisions.includes(decision)) return fail("Invalid decision", 400);

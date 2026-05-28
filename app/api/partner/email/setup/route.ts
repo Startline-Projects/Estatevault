@@ -3,14 +3,17 @@ import { Resend } from "resend";
 import { requireAuth } from "@/lib/api/auth";
 import { withRoute } from "@/lib/api/route";
 import { ok, fail } from "@/lib/api/response";
+import { partnerEmailSetupSchema } from "@/lib/validation/schemas";
 import * as partnerRepo from "@/lib/repos/server/partnerRepo";
 
 export const POST = withRoute(async (req: NextRequest) => {
   const auth = await requireAuth(["partner"]);
   if ("error" in auth) return auth.error;
 
-  const { sender_name, sender_email } = await req.json();
-  if (!sender_name || !sender_email) return fail("missing fields", 400);
+  const body = await req.json();
+  const parsed = partnerEmailSetupSchema.safeParse(body);
+  if (!parsed.success) return fail("invalid payload", 400);
+  const { sender_name, sender_email } = parsed.data;
 
   const domain = String(sender_email).split("@")[1]?.toLowerCase().trim();
   if (!domain || !domain.includes(".")) return fail("invalid email", 400);

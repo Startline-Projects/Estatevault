@@ -4,13 +4,16 @@ import { withRoute } from "@/lib/api/route";
 import { ok, fail } from "@/lib/api/response";
 import { sendApprovalEmail } from "@/lib/email";
 import * as attorneyReviewRepo from "@/lib/repos/server/attorneyReviewRepo";
+import { attorneyNotifyClientSchema } from "@/lib/validation/schemas";
 
 export const POST = withRoute(async (req: NextRequest) => {
   const auth = await requireAuth(["review_attorney", "admin"]);
   if ("error" in auth) return auth.error;
 
-  const { reviewId } = await req.json();
-  if (!reviewId) return fail("Missing reviewId", 400);
+  const rawBody = await req.json();
+  const parsedNotify = attorneyNotifyClientSchema.safeParse(rawBody);
+  if (!parsedNotify.success) return fail("invalid payload", 400);
+  const { reviewId } = parsedNotify.data;
 
   const { data: review } = await attorneyReviewRepo.getReviewWithOrder(auth.admin, reviewId);
   if (!review) return fail("Review not found", 404);

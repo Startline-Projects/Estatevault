@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { requireAuth } from "@/lib/api/auth";
 import { withRoute } from "@/lib/api/route";
 import { ok, fail } from "@/lib/api/response";
+import { partnerAddDomainSchema } from "@/lib/validation/schemas";
 import { normalizeBusinessDomain } from "@/lib/hosts";
 import * as partnerRepo from "@/lib/repos/server/partnerRepo";
 import * as auditLogRepo from "@/lib/repos/server/auditLogRepo";
@@ -45,8 +46,10 @@ export const POST = withRoute(async (req: NextRequest) => {
   const { data: partner } = await partnerRepo.getDomainInfoByProfileId(auth.admin, auth.profile.id);
   if (!partner) return fail("No partner record", 400);
 
-  const { businessUrl, domainType } = await req.json();
-  if (!businessUrl) return fail("Missing businessUrl", 400);
+  const body = await req.json();
+  const parsed = partnerAddDomainSchema.safeParse(body);
+  if (!parsed.success) return fail("invalid payload", 400);
+  const { businessUrl, domainType } = parsed.data;
 
   if (domainType === "custom_domain" && partner.tier !== "enterprise") {
     return fail("Custom domain requires Enterprise plan", 403);

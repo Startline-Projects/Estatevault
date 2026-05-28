@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { withRoute } from "@/lib/api/route";
 import { ok, fail } from "@/lib/api/response";
+import { authSendVerifyCodeSchema } from "@/lib/validation/schemas";
 import { generateCode, storeCode } from "@/lib/auth/emailVerification";
 import { resolveSenderForEmail, getResend } from "@/lib/email";
 import { authRateLimit } from "@/lib/rate-limit";
@@ -39,7 +40,10 @@ function buildEmailHtml(code: string): string {
 }
 
 export const POST = withRoute(async (req: NextRequest) => {
-  const { email, partnerSlug, partnerId } = await req.json();
+  const body = await req.json();
+  const parsed = authSendVerifyCodeSchema.safeParse(body);
+  if (!parsed.success) return fail("invalid payload", 400);
+  const { email, partnerSlug, partnerId } = parsed.data;
   const normalizedEmail = String(email || "").trim().toLowerCase();
 
   if (!normalizedEmail) return fail("Email is required.", 400);

@@ -4,12 +4,16 @@ import { NextRequest } from "next/server";
 import { createAdminClient } from "@/lib/api/auth";
 import { withRoute } from "@/lib/api/route";
 import { ok, fail } from "@/lib/api/response";
+import { authSetPasswordSchema } from "@/lib/validation/schemas";
 import { consumeVerifiedToken } from "@/lib/auth/emailVerification";
 import { authRateLimit } from "@/lib/rate-limit";
 import * as auditLogRepo from "@/lib/repos/server/auditLogRepo";
 
 export const POST = withRoute(async (req: NextRequest) => {
-  const { email, password, fullName, verifiedToken } = await req.json();
+  const body = await req.json();
+  const parsed = authSetPasswordSchema.safeParse(body);
+  if (!parsed.success) return fail("invalid payload", 400);
+  const { email, password, fullName, verifiedToken } = parsed.data;
   const normalizedEmail = String(email || "").trim().toLowerCase();
 
   if (!normalizedEmail || !password) return fail("Missing required fields", 400);

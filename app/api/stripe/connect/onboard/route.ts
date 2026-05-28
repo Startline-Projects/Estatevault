@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { stripeConnectOnboardSchema } from "@/lib/validation/schemas";
 import { stripe } from "@/lib/stripe";
 import { createClient } from "@/lib/supabase/server";
 import { createServerClient } from "@supabase/ssr";
@@ -17,8 +18,9 @@ export async function POST(request: Request) {
   if (!partner) return NextResponse.json({ error: "Partner not found" }, { status: 404 });
 
   const origin = request.headers.get("origin") || "https://www.estatevault.us";
-  const body = await request.json().catch(() => ({}));
-  const returnPath: string = body.returnPath || "/pro/settings";
+  const rawBody = await request.json().catch(() => ({}));
+  const bodyParsed = stripeConnectOnboardSchema.safeParse(rawBody);
+  const returnPath: string = bodyParsed.success ? (bodyParsed.data.returnPath ?? "/pro/settings") : "/pro/settings";
 
   let accountId = partner.stripe_account_id;
 

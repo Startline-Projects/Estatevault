@@ -3,6 +3,7 @@ import { Resend } from "resend";
 import { requireAuth } from "@/lib/api/auth";
 import { withRoute } from "@/lib/api/route";
 import { ok, fail } from "@/lib/api/response";
+import { salesCreateRepSchema } from "@/lib/validation/schemas";
 import { generateTempPassword } from "@/lib/utils/generate-password";
 import * as profileRepo from "@/lib/repos/server/profileRepo";
 import * as auditLogRepo from "@/lib/repos/server/auditLogRepo";
@@ -11,14 +12,11 @@ export const POST = withRoute(async (req: NextRequest) => {
   const auth = await requireAuth(["admin"]);
   if ("error" in auth) return auth.error;
 
-  const { fullName, email, commissionRate } = await req.json();
-  if (!fullName || !email) return fail("Full name and email are required", 400);
-
-  const parsedRate = parseFloat(commissionRate);
-  if (isNaN(parsedRate) || parsedRate < 0 || parsedRate > 100) {
-    return fail("Commission rate must be between 0 and 100", 400);
-  }
-  const rateDecimal = parsedRate / 100;
+  const body = await req.json();
+  const parsed = salesCreateRepSchema.safeParse(body);
+  if (!parsed.success) return fail("invalid payload", 400);
+  const { fullName, email, commissionRate } = parsed.data;
+  const rateDecimal = commissionRate / 100;
 
   const tempPassword = generateTempPassword();
 

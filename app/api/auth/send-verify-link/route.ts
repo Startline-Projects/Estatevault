@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { withRoute } from "@/lib/api/route";
 import { ok, fail } from "@/lib/api/response";
+import { authSendVerifyLinkSchema } from "@/lib/validation/schemas";
 import { generateUrlToken, storeLink } from "@/lib/auth/emailVerification";
 import { resolveSenderForEmail, renderEmailHeader, renderEmailFooter, getResend, type EmailBrand } from "@/lib/email";
 import { authRateLimit } from "@/lib/rate-limit";
@@ -37,7 +38,10 @@ function buildEmailHtml(verifyLink: string, brand: EmailBrand): string {
 }
 
 export const POST = withRoute(async (req: NextRequest) => {
-  const { email, sessionId, partnerSlug, partnerId } = await req.json();
+  const body = await req.json();
+  const parsed = authSendVerifyLinkSchema.safeParse(body);
+  if (!parsed.success) return fail("invalid payload", 400);
+  const { email, sessionId, partnerSlug, partnerId } = parsed.data;
   const normalizedEmail = String(email || "").trim().toLowerCase();
   const session = String(sessionId || "").trim();
 
