@@ -38,6 +38,9 @@
     },
     "app/api/documents/process-now/route.ts": {
       "maxDuration": 300
+    },
+    "app/api/webhooks/stripe/route.ts": {
+      "maxDuration": 300
     }
   }
 }

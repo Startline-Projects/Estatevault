@@ -10,10 +10,7 @@ import { INFO } from "@/lib/crypto/keyManager";
 type Table = "vault_items" | "vault_trustees" | "farewell_messages";
 const BATCH = 50;
 
-function b64(b: Uint8Array): string {
-  let s = ""; for (let i = 0; i < b.length; i++) s += String.fromCharCode(b[i]);
-  return btoa(s);
-}
+import { b64encode as b64 } from "@/lib/crypto/encoding";
 
 export type BackfillStatus = {
   bootstrapped: boolean;

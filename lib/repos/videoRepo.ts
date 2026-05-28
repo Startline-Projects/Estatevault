@@ -17,11 +17,7 @@ const VERSION = 1;
 const NONCE_LEN = 24;
 const AD_PREFIX = new TextEncoder().encode("ev:file:chunk:v1");
 
-function fromB64(s: string): Uint8Array<ArrayBuffer> {
-  const bin = atob(s); const out = new Uint8Array(bin.length);
-  for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
-  return out;
-}
+import { b64decode as fromB64 } from "@/lib/crypto/encoding";
 
 async function getFileKey(): Promise<Uint8Array> {
   const res = await fetch("/api/vault/file-key");

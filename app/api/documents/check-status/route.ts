@@ -1,9 +1,9 @@
-import { type NextRequest } from "next/server";
+import { type NextRequest, type NextResponse } from "next/server";
 import { requireAuth, assertOrderAccess } from "@/lib/api/auth";
 import { ok, fail } from "@/lib/api/response";
 import { withRoute } from "@/lib/api/route";
 
-export const GET = withRoute(async (req: NextRequest) => {
+export const GET = withRoute(async (req: NextRequest): Promise<NextResponse> => {
   const auth = await requireAuth(undefined, req);
   if ("error" in auth) return auth.error;
 

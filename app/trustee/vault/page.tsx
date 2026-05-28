@@ -8,12 +8,7 @@ import { decryptFarewellCipher } from "@/lib/repos/videoRepo";
 // File/video bytes stay encrypted in Storage; the trustee fetches the owner's
 // FILES sub-key once and decrypts blobs locally (mirrors the owner repos).
 
-function fromB64(s: string): Uint8Array {
-  const bin = atob(s);
-  const out = new Uint8Array(bin.length);
-  for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
-  return out;
-}
+import { b64decode as fromB64 } from "@/lib/crypto/encoding";
 
 interface ServerVaultItem {
   id: string;

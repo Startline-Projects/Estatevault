@@ -228,11 +228,155 @@ Run these against Supabase before deploying:
 
 ---
 
-## Next: Phase 1 — Foundation Hardening
+---
 
-Per PRODUCTION_PLAN.md, Phase 1 covers:
-- 1.1: Fail-fast on missing secrets (H-06)
-- 1.2: Unify Stripe client (H-07)
-- 1.3: Deployment config fixes (M-12, M-13)
-- 1.4: Characterization tests for critical paths (H-11)
-- 1.5: Shared kernel consolidation (L-06)
+# Phase 1 — Foundation Hardening: What Has Been Fixed
+
+> **Date:** 2026-05-28
+> **Branch:** Yahia-Dev
+> **Status:** All Phase 1 steps complete. Verify gate GREEN (193/193 tests, TSC clean, lint warnings-only).
+
+---
+
+## Pre-Phase 1 — Phase 0 Leftover Fixes
+
+Before starting Phase 1, fixed gate blockers from Phase 0:
+
+### RPC Type Safety
+- **7 call sites** of `find_auth_user_by_email` RPC had untyped `{}` return.
+- **Fix:** Added `.returns<{ id: string; email: string }[]>()` chain to all RPC calls.
+- **Files:** `checkout/will`, `checkout/trust`, `checkout/vault-subscription`, `partners/create-review-attorney`, `webhooks/stripe` (×2).
+
+### Variable Name Bug
+- `checkout/trust/route.ts:272` and `checkout/will/route.ts:285` referenced `existingAuthUser` (renamed variable from Phase 0).
+- **Fix:** Changed to `authMatch.id` (correct variable name).
+
+### assertOrderAccess Return Type
+- `check-status/route.ts` handler returned `NextResponse | undefined` — `withRoute` rejects undefined.
+- **Fix:** Added explicit `OrderAccessOk | OrderAccessErr` discriminated union type to `assertOrderAccess()` in `lib/api/auth.ts`.
+
+### Stripe Module-Level Init
+- `lib/stripe-payouts.ts` created `new Stripe(...)` at module level → test import crash.
+- **Fix:** Lazy-initialized Stripe client (temporary; superseded by Phase 1.2 unification).
+
+---
+
+## Step 1.1 — Fail-Fast on Missing Secrets (H-06)
+
+### H-06: Hardcoded fallback secrets — silent fail in prod
+- **Files:**
+  - `lib/stripe.ts` — removed `|| "sk_test_placeholder"`. Lazy-init via Proxy: Stripe client created on first property access, not at import time.
+  - `lib/claude.ts` — removed `|| "placeholder"`. Same lazy Proxy pattern.
+  - `lib/email.ts` — removed `|| "re_placeholder"`. Lazy `getResend()` function.
+- **New file:** `instrumentation.ts` — calls `validateEnv()` at Next.js startup. Production throws on missing env vars; dev console.errors.
+
+---
+
+## Step 1.2 — Unify Stripe Client (H-07)
+
+### H-07: Two Stripe clients with different API versions
+- **File:** `lib/stripe-payouts.ts`
+  - Deleted standalone `new Stripe(...)` with `apiVersion: '2024-12-18.acacia' as any`.
+  - Now imports `{ stripe }` from `./stripe` — shares the single lazy-init client.
+  - API version unified to `2026-03-25.dahlia` (matches installed Stripe types).
+  - Removed `as any` cast.
+- **Single Stripe client:** `lib/stripe.ts` is the canonical source. All 15 route files + stripe-payouts import from it.
+
+---
+
+## Step 1.3 — Deployment Config Fixes (M-12, M-13)
+
+### M-12: `images.remotePatterns: '**'` defeats image optimization allowlist
+- **File:** `next.config.mjs`
+- **Fix:** Removed catch-all `hostname: '**'` pattern. Only `*.supabase.co` storage paths allowed.
+
+### M-13: Webhook handler missing `maxDuration` in vercel.json
+- **File:** `vercel.json`
+- **Fix:** Added `"app/api/webhooks/stripe/route.ts": { "maxDuration": 300 }`.
+
+---
+
+## Step 1.4 — Characterization Tests (H-11)
+
+### H-11: 8 test files for 120 API routes — critical paths untested
+- **Tests added:** 76 new tests across 6 new test files.
+- **Total:** 117 → 193 tests (19 test files, all passing).
+
+| Test File | Tests | Covers |
+|-----------|-------|--------|
+| `encoding.test.ts` | 16 | b64 roundtrip, byteaToBytes edge cases, bytesToBytea |
+| `email-helpers.test.ts` | 13 | renderEmailHeader/Footer, buildAssetChecklist, brand variants |
+| `env-validation.test.ts` | 5 | validateEnv prod/dev behavior, missing var reporting |
+| `security-guards.test.ts` | 18 | Cron fail-closed, hostname sanitize, role constants, hex color, crypto.randomBytes |
+| `stripe-idempotency.test.ts` | 4 | Webhook dedup pattern, error masking, API version |
+| `auth-patterns.test.ts` | 20 | Token gate, requireAuth roles, assertOrderAccess ownership, DEK race |
+
+---
+
+## Step 1.5 — Shared Kernel Consolidation (L-06)
+
+### L-06: b64/bytea helpers duplicated 7 times
+- **New file:** `lib/crypto/encoding.ts` — canonical `b64encode`, `b64decode`, `byteaToBytes`, `bytesToBytea`.
+- **7 files updated** (removed local duplicates, import from shared module):
+  - `lib/api/crypto.ts` — re-exports from encoding.ts
+  - `lib/crypto/keySession.ts` — `import { b64encode as bytesToB64, ... }`
+  - `lib/repos/cryptoRepo.ts` — `import { b64encode as b64, ... }`
+  - `lib/repos/shareRepo.ts` — replaced `b64`, `fromB64`, `decodeBytea` with shared imports
+  - `lib/repos/backfillRepo.ts` — replaced `b64`
+  - `lib/repos/videoRepo.ts` — replaced `fromB64`
+  - `app/trustee/vault/page.tsx` — replaced `fromB64`
+
+---
+
+## Files Modified (Phase 1 complete list)
+
+| File | Changes |
+|------|---------|
+| `lib/stripe.ts` | Lazy-init Proxy, removed placeholder |
+| `lib/claude.ts` | Lazy-init Proxy, removed placeholder |
+| `lib/email.ts` | Lazy getResend(), removed placeholder |
+| `lib/stripe-payouts.ts` | Import shared Stripe, removed standalone client + `as any` |
+| `lib/api/auth.ts` | Explicit OrderAccessOk/OrderAccessErr types |
+| `lib/crypto/encoding.ts` | **NEW** — consolidated encoding helpers |
+| `lib/api/crypto.ts` | Re-export from encoding.ts |
+| `lib/crypto/keySession.ts` | Import from encoding.ts |
+| `lib/repos/cryptoRepo.ts` | Import from encoding.ts |
+| `lib/repos/shareRepo.ts` | Import from encoding.ts |
+| `lib/repos/backfillRepo.ts` | Import from encoding.ts |
+| `lib/repos/videoRepo.ts` | Import from encoding.ts |
+| `app/trustee/vault/page.tsx` | Import from encoding.ts |
+| `app/api/documents/check-status/route.ts` | Explicit return type |
+| `app/api/checkout/trust/route.ts` | RPC typed + variable name fix |
+| `app/api/checkout/will/route.ts` | RPC typed + variable name fix |
+| `app/api/checkout/vault-subscription/route.ts` | RPC typed |
+| `app/api/partners/create-review-attorney/route.ts` | RPC typed |
+| `app/api/webhooks/stripe/route.ts` | RPC typed (×2) |
+| `next.config.mjs` | Removed `hostname: '**'` wildcard |
+| `vercel.json` | Added webhook maxDuration |
+| `instrumentation.ts` | **NEW** — env validation at startup |
+
+## New Test Files
+
+| File | Purpose |
+|------|---------|
+| `tests/unit/encoding.test.ts` | Binary encoding roundtrips + edge cases |
+| `tests/unit/email-helpers.test.ts` | Email template rendering |
+| `tests/unit/env-validation.test.ts` | Startup env validation |
+| `tests/unit/security-guards.test.ts` | Cron auth, hostname sanitize, role checks |
+| `tests/unit/stripe-idempotency.test.ts` | Webhook dedup + error masking |
+| `tests/unit/auth-patterns.test.ts` | Auth guards, ownership, DEK race |
+
+---
+
+## Next: Phase 2 — Structural Refactor (Server Repos + Thin Routes)
+
+Per PRODUCTION_PLAN.md, Phase 2 migrates ~96 remaining routes onto kernel pattern. Groups in order:
+1. cron (4 routes)
+2. webhooks (~6 routes)
+3. documents (~12 routes)
+4. partner / sales (~20 routes)
+5. attorney (~8 routes)
+6. crypto (~6 routes)
+7. admin (~10 routes)
+8. trustee (~10 routes)
+9. auth (~10 routes)

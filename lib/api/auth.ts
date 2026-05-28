@@ -60,11 +60,14 @@ export async function requireAuth(allowed?: UserType[], req?: NextRequest): Prom
   };
 }
 
+type OrderAccessOk = { order: { id: string; client_id: string | null; partner_id: string | null; attorney_id: string | null } };
+type OrderAccessErr = { error: NextResponse };
+
 export async function assertOrderAccess(
   admin: ReturnType<typeof createAdminClient>,
   orderId: string,
   profile: { id: string; user_type: UserType }
-) {
+): Promise<OrderAccessOk | OrderAccessErr> {
   const { data: order } = await admin
     .from("orders")
     .select("id, client_id, partner_id, attorney_id")

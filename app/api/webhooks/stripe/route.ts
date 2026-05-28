@@ -164,7 +164,7 @@ export async function POST(request: Request) {
           if (existingProfile) {
             profileId = existingProfile.id;
           } else {
-            const { data: authMatch } = await supabase.rpc("find_auth_user_by_email", { lookup_email: guestEmail }).maybeSingle();
+            const { data: authMatch } = await supabase.rpc("find_auth_user_by_email", { lookup_email: guestEmail }).returns<{ id: string; email: string }[]>().maybeSingle();
             if (authMatch) {
               profileId = authMatch.id;
               await supabase.from("profiles").upsert({
@@ -350,7 +350,7 @@ export async function POST(request: Request) {
         }
       } else {
         // Check if auth user exists but no profile (signup happened before DB)
-        const { data: authMatch } = await supabase.rpc("find_auth_user_by_email", { lookup_email: customerEmail }).maybeSingle();
+        const { data: authMatch } = await supabase.rpc("find_auth_user_by_email", { lookup_email: customerEmail }).returns<{ id: string; email: string }[]>().maybeSingle();
 
         if (authMatch) {
           await supabase.from("profiles").insert({

@@ -1,7 +1,13 @@
 import { Resend } from "resend";
 import { createServerClient } from "@supabase/ssr";
 
-const resend = new Resend(process.env.RESEND_API_KEY || "re_placeholder");
+let _resend: Resend | null = null;
+function getResend(): Resend {
+  if (!_resend) {
+    _resend = new Resend(process.env.RESEND_API_KEY!);
+  }
+  return _resend;
+}
 
 const DEFAULT_FROM = "EstateVault <info@estatevault.us>";
 const ESTATEVAULT_LOGO_URL =
@@ -271,7 +277,7 @@ export async function sendWelcomeEmail({
   }
 
   try {
-    await resend.emails.send({
+    await getResend().emails.send({
       from: sender.from,
       replyTo: sender.replyTo,
       to,
@@ -316,7 +322,7 @@ export async function sendAttorneyReviewPendingEmail({
   const packageName = productType === "will" ? "Will Package" : "Trust Package";
   const sender = await getPartnerFrom(partnerId);
   try {
-    await resend.emails.send({
+    await getResend().emails.send({
       from: sender.from,
       replyTo: sender.replyTo,
       to,
@@ -351,7 +357,7 @@ export async function sendApprovalEmail({ to, productType, dashboardUrl, partner
   const packageName = productType === "will" ? "Will Package" : "Trust Package";
   const sender = await getPartnerFrom(partnerId);
   try {
-    await resend.emails.send({
+    await getResend().emails.send({
       from: sender.from,
       replyTo: sender.replyTo,
       to,
@@ -388,7 +394,7 @@ export async function sendDocumentEmail(params: SendDocumentEmailParams & { part
     const packageName = params.productType === "will" ? "Will Package" : "Trust Package";
     const sender = await getPartnerFrom(params.partnerId);
 
-    const { error } = await resend.emails.send({
+    const { error } = await getResend().emails.send({
       from: sender.from,
       replyTo: sender.replyTo,
       to: params.to,
@@ -445,7 +451,7 @@ export async function sendAnnualReviewEmail({
     ? `It's been about a year since your estate plan was created on <strong>${createdOn}</strong>.`
     : `It's been about a year since your estate plan was created.`;
   try {
-    await resend.emails.send({
+    await getResend().emails.send({
       from: sender.from,
       replyTo: sender.replyTo,
       to,
@@ -501,7 +507,7 @@ export async function sendLifeEventCheckInEmail({
     ? `Since your plan was created on <strong>${createdOn}</strong>, life may have moved on. `
     : "";
   try {
-    await resend.emails.send({
+    await getResend().emails.send({
       from: sender.from,
       replyTo: sender.replyTo,
       to,

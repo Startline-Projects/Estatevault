@@ -10,41 +10,7 @@ import {
 
 // ---- Helpers ----
 
-export function b64encode(b: Uint8Array): string {
-  return Buffer.from(b).toString("base64");
-}
-
-// Supabase returns bytea as a `\xHEX` string. Normalize to Uint8Array.
-export function byteaToBytes(v: unknown): Uint8Array {
-  if (v == null) return new Uint8Array();
-  if (v instanceof Uint8Array) return v;
-  if (Buffer.isBuffer(v)) return new Uint8Array(v);
-  if (Array.isArray(v)) return new Uint8Array(v as number[]);
-  if (typeof v === "string") {
-    if (v.startsWith("\\x") || v.startsWith("\\X")) {
-      return new Uint8Array(Buffer.from(v.slice(2), "hex"));
-    }
-    // Fall back: assume base64.
-    return new Uint8Array(Buffer.from(v, "base64"));
-  }
-  if (typeof v === "object" && v !== null && "type" in (v as object) && (v as { type?: string }).type === "Buffer") {
-    return new Uint8Array(((v as unknown) as { data: number[] }).data);
-  }
-  throw new Error("unrecognized bytea value");
-}
-
-export function b64decode(s: string): Uint8Array {
-  return new Uint8Array(Buffer.from(s, "base64"));
-}
-
-// Encode Uint8Array as PostgreSQL bytea hex literal (`\x...`).
-// Supabase JS sends JSON; passing a Uint8Array stringifies to `{"0":..,"1":..}`
-// which PostgREST cannot parse as bytea. Always pass binary as `\x<hex>` text.
-export function bytesToBytea(b: Uint8Array): string {
-  let hex = "";
-  for (let i = 0; i < b.length; i++) hex += b[i].toString(16).padStart(2, "0");
-  return "\\x" + hex;
-}
+export { b64encode, b64decode, byteaToBytes, bytesToBytea } from "@/lib/crypto/encoding";
 
 // EV01 envelope sanity check (does NOT verify auth tag — server has no key).
 const MAGIC = [0x45, 0x56, 0x30, 0x31];

@@ -1,17 +1,14 @@
-import Stripe from 'stripe'
-
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: '2024-12-18.acacia' as any })
+import { stripe } from './stripe'
 
 export function calculateSplit(
   productType: string,
   partnerTier: 'standard' | 'enterprise',
   opts?: { affiliate?: boolean }
 ): { evCut: number; partnerCut: number; affiliateCut: number } {
-  // Affiliate path (no partner involved): direct main-site sale referred by affiliate
   if (opts?.affiliate) {
     const affiliateSplits: Record<string, { ev: number; affiliate: number }> = {
-      will: { ev: 30000, affiliate: 10000 },   // $300 EV / $100 affiliate
-      trust: { ev: 40000, affiliate: 20000 },  // $400 EV / $200 affiliate
+      will: { ev: 30000, affiliate: 10000 },
+      trust: { ev: 40000, affiliate: 20000 },
       amendment: { ev: 5000, affiliate: 0 },
       attorney_review: { ev: 0, affiliate: 0 },
     }
@@ -79,8 +76,6 @@ export async function transferToAffiliate(
   return transfer
 }
 
-// Batch payout: one transfer covering multiple attributed orders at once.
-// Used by the admin affiliate dashboard "Pay Out" action.
 export async function transferToAffiliateBatch(
   affiliateStripeAccountId: string,
   amount: number,

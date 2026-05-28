@@ -8,29 +8,11 @@ import { getCryptoWorker } from "@/lib/crypto/worker/client";
 import { INFO } from "@/lib/crypto/keyManager";
 import { getRecipientPubkey } from "./cryptoRepo";
 
-function b64(b: Uint8Array): string {
-  let s = ""; for (let i = 0; i < b.length; i++) s += String.fromCharCode(b[i]);
-  return btoa(s);
-}
-function fromB64(s: string): Uint8Array {
-  const bin = atob(s); const out = new Uint8Array(bin.length);
-  for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
-  return out;
-}
+import { b64encode as b64, b64decode as fromB64, byteaToBytes } from "@/lib/crypto/encoding";
 
-function decodeBytea(raw: string | Uint8Array | null | undefined): Uint8Array | null {
+function decodeBytea(raw: unknown): Uint8Array | null {
   if (raw == null) return null;
-  if (raw instanceof Uint8Array) return raw;
-  if (typeof raw === "string") {
-    if (raw.startsWith("\\x")) {
-      const hex = raw.slice(2);
-      const out = new Uint8Array(hex.length / 2);
-      for (let i = 0; i < out.length; i++) out[i] = parseInt(hex.substr(i * 2, 2), 16);
-      return out;
-    }
-    return fromB64(raw);
-  }
-  return null;
+  return byteaToBytes(raw);
 }
 
 // --- Owner side ---

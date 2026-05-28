@@ -39,7 +39,7 @@ export async function POST(request: Request) {
     // Check if a user already exists for this email
     const { data: existingProfile } = await supabase.from("profiles").select("id").eq("email", attorneyEmail.toLowerCase()).maybeSingle();
     const { data: authMatch } = !existingProfile
-      ? await supabase.rpc("find_auth_user_by_email", { lookup_email: attorneyEmail.toLowerCase() }).maybeSingle()
+      ? await supabase.rpc("find_auth_user_by_email", { lookup_email: attorneyEmail.toLowerCase() }).returns<{ id: string; email: string }[]>().maybeSingle()
       : { data: null };
     const existingUserId = existingProfile?.id || authMatch?.id;
 

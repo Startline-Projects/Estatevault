@@ -10,17 +10,7 @@ const HIDDEN_GRACE_MS = 5 * 60 * 1000; // 5 min hidden → lock
 const ACTIVITY_EVENTS = ["mousemove", "keydown", "pointerdown", "scroll", "touchstart"];
 const SESSION_MK_KEY = "vault:session-mk";
 
-function bytesToB64(u: Uint8Array): string {
-  let s = "";
-  for (let i = 0; i < u.length; i++) s += String.fromCharCode(u[i]);
-  return typeof btoa === "function" ? btoa(s) : Buffer.from(u).toString("base64");
-}
-function b64ToBytes(s: string): Uint8Array {
-  const bin = typeof atob === "function" ? atob(s) : Buffer.from(s, "base64").toString("binary");
-  const out = new Uint8Array(bin.length);
-  for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
-  return out;
-}
+import { b64encode as bytesToB64, b64decode as b64ToBytes } from "./encoding";
 
 type Listener = (s: LockState) => void;
 

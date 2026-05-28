@@ -5,18 +5,7 @@
 
 import type { KdfParams } from "@/lib/crypto/kdf";
 
-function b64(b: Uint8Array): string {
-  let s = "";
-  for (let i = 0; i < b.length; i++) s += String.fromCharCode(b[i]);
-  return btoa(s);
-}
-
-function fromB64(s: string): Uint8Array {
-  const bin = atob(s);
-  const out = new Uint8Array(bin.length);
-  for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
-  return out;
-}
+import { b64encode as b64, b64decode as fromB64 } from "@/lib/crypto/encoding";
 
 export type BootstrapPayload = {
   salt: Uint8Array;

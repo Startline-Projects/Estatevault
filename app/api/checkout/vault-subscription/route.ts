@@ -58,7 +58,7 @@ export const POST = withRoute(async (request: Request) => {
       if (existingProfile?.id) {
         profileId = existingProfile.id;
       } else {
-        const { data: authMatch } = await supabase.rpc("find_auth_user_by_email", { lookup_email: normalizedGuestEmail }).maybeSingle();
+        const { data: authMatch } = await supabase.rpc("find_auth_user_by_email", { lookup_email: normalizedGuestEmail }).returns<{ id: string; email: string }[]>().maybeSingle();
 
         if (authMatch) {
           profileId = authMatch.id;
