@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import Image from "next/image";
 import { usePartnerBranding } from "@/components/partner/PartnerThemedShell";
 
 interface ProcessingScreenProps {
@@ -21,8 +22,7 @@ export default function ProcessingScreen({ onComplete }: ProcessingScreenProps) 
       <div className="animate-pulse">
         <div className="flex h-24 w-24 items-center justify-center rounded-2xl overflow-hidden" style={{ background: `${accentVar}33` }}>
           {branding?.logoUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={branding.logoUrl} alt={branding.companyName} className="h-16 w-16 object-contain" />
+            <Image src={branding.logoUrl} alt={branding.companyName} width={64} height={64} className="h-16 w-16 object-contain" />
           ) : (
             <svg className="h-12 w-12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" style={{ color: accentVar }}>
               <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />

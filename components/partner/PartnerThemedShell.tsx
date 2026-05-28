@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import PartnerLoadingScreen from "./PartnerLoadingScreen";
 import {
@@ -162,9 +163,11 @@ export default function PartnerThemedShell({ children, showHeader = true }: Shel
           <div className="mx-auto max-w-7xl flex items-center justify-between px-6 py-3">
             <Link href={`/${branding.id ? `?partner=${branding.id}` : ""}`} className="flex items-center gap-3">
               {branding.logoUrl ? (
-                <img
+                <Image
                   src={branding.logoUrl}
                   alt={branding.companyName}
+                  width={120}
+                  height={40}
                   className="h-10 w-auto object-contain"
                 />
               ) : (

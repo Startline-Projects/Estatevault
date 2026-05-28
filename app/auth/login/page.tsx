@@ -221,7 +221,7 @@ function LoginForm() {
       <h1 className="text-xl font-bold text-navy">Sign In</h1>
 
       {error && (
-        <div className="mt-4 rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
+        <div id="login-error" role="alert" className="mt-4 rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
           {error}
         </div>
       )}
@@ -237,6 +237,8 @@ function LoginForm() {
             required
             value={email}
             onChange={(e) => setEmail(e.target.value)}
+            aria-invalid={!!error}
+            aria-describedby={error ? "login-error" : undefined}
             className="min-h-[44px] w-full rounded-xl border-2 border-gray-200 px-4 py-3 text-sm text-charcoal focus:border-gold focus:outline-none focus:ring-1 focus:ring-gold/30"
             placeholder="you@example.com"
           />

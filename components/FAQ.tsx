@@ -30,12 +30,15 @@ const faqs = [
   },
 ];
 
-function AccordionItem({ q, a, isOpen, onToggle }: { q: string; a: string; isOpen: boolean; onToggle: () => void }) {
+function AccordionItem({ q, a, isOpen, onToggle, index }: { q: string; a: string; isOpen: boolean; onToggle: () => void; index: number }) {
+  const contentId = `faq-content-${index}`;
   return (
     <div className={`border border-transparent rounded-xl transition-all duration-300 ${isOpen ? "bg-navy-50/50 border-navy-100" : "hover:bg-gray-50"}`}>
       <button
         onClick={onToggle}
         className="flex w-full items-center justify-between px-6 py-5 text-left"
+        aria-expanded={isOpen}
+        aria-controls={contentId}
       >
         <span className={`text-base font-medium transition-colors duration-200 ${isOpen ? "text-navy" : "text-charcoal/80"}`}>
           {q}
@@ -45,12 +48,14 @@ function AccordionItem({ q, a, isOpen, onToggle }: { q: string; a: string; isOpe
             isOpen ? "bg-navy text-white rotate-180" : "bg-gray-100 text-charcoal/40"
           }`}
         >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24" aria-hidden="true">
             <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
           </svg>
         </span>
       </button>
       <div
+        id={contentId}
+        role="region"
         className="accordion-content"
         style={{ maxHeight: isOpen ? "200px" : "0px", opacity: isOpen ? 1 : 0 }}
       >
@@ -86,6 +91,7 @@ export default function FAQ() {
               key={faq.q}
               q={faq.q}
               a={faq.a}
+              index={index}
               isOpen={openIndex === index}
               onToggle={() => setOpenIndex(openIndex === index ? null : index)}
             />

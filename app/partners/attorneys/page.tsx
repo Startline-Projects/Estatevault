@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import Image from 'next/image';
 import Link from 'next/link';
 import styles from './attorneys.module.css';
 
@@ -226,7 +227,7 @@ export default function AttorneyPartnerPage() {
       <header className={`${styles.navWrap} ${scrolled ? styles.scrolled : ''}`}>
         <div className={styles.nav}>
           <Link href="#top" className={styles.brand} onClick={() => setMobileMenuOpen(false)}>
-            <img src="/logo.svg" alt="EstateVault" className={styles.brandLogo} />
+            <Image src="/logo.svg" alt="EstateVault" width={32} height={32} className={styles.brandLogo} />
             <span className={styles.brandName}>EstateVault</span>
           </Link>
           <nav className={styles.navLinks}>
@@ -1192,7 +1193,7 @@ export default function AttorneyPartnerPage() {
           <div className={styles.footTop}>
             <div className={styles.footBrand}>
               <Link href="#top" className={styles.brand}>
-                <img src="/logo.svg" alt="EstateVault" className={styles.brandLogo} />
+                <Image src="/logo.svg" alt="EstateVault" width={32} height={32} className={styles.brandLogo} />
                 <span className={styles.brandName}>EstateVault</span>
               </Link>
               <p>

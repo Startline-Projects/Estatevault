@@ -217,7 +217,7 @@ export default function PartnerPageClient({ branding }: { branding: PartnerBrand
           <a href="#" className="flex items-center gap-3 group">
             {logoUrl ? (
               <span className="flex items-center gap-2 text-xl font-bold [color:var(--lt)] tracking-tight">
-                <img src={logoUrl} alt={companyName} className="h-8 w-auto object-contain" />
+                <Image src={logoUrl} alt={companyName} width={96} height={32} className="h-8 w-auto object-contain" />
                 <span className="mx-1 font-normal text-charcoal/50">/</span>
                 <span className="text-charcoal/80">Legacy</span>
               </span>
@@ -676,7 +676,7 @@ export default function PartnerPageClient({ branding }: { branding: PartnerBrand
                 <div className="flex flex-col gap-4">
                   {logoUrl ? (
                     <span className="flex items-center gap-2 text-lg font-bold" style={{ color: theme.heroText }}>
-                      <img src={logoUrl} alt={companyName} className="h-8 w-auto object-contain" />
+                      <Image src={logoUrl} alt={companyName} width={96} height={32} className="h-8 w-auto object-contain" />
                       <span className="mx-1 font-normal" style={{ color: c(0.40) }}>/</span>
                       <span style={{ color: c(0.80) }}>Legacy</span>
                     </span>

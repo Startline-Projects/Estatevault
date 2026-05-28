@@ -11,6 +11,14 @@ export default function ContactPage() {
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [touched, setTouched] = useState<Record<string, boolean>>({});
+
+  const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  const fieldErrors = {
+    name: touched.name && !name.trim() ? "Name is required." : "",
+    email: touched.email && !email.trim() ? "Email is required." : touched.email && !emailValid ? "Enter a valid email address." : "",
+    message: touched.message && !message.trim() ? "Message is required." : touched.message && message.trim().length < 10 ? "Please write at least 10 characters." : "",
+  };
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -82,11 +90,16 @@ export default function ContactPage() {
                   id="name"
                   type="text"
                   required
+                  maxLength={100}
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  className="w-full rounded-lg border border-gray-300 px-4 py-3 text-charcoal placeholder:text-gray-400 focus:border-gold focus:outline-none focus:ring-1 focus:ring-gold/30"
+                  onBlur={() => setTouched((t) => ({ ...t, name: true }))}
+                  aria-invalid={!!fieldErrors.name}
+                  aria-describedby={fieldErrors.name ? "name-error" : undefined}
+                  className={`w-full rounded-lg border px-4 py-3 text-charcoal placeholder:text-gray-400 focus:outline-none focus:ring-1 focus:ring-gold/30 ${fieldErrors.name ? "border-red-400 focus:border-red-400" : "border-gray-300 focus:border-gold"}`}
                   placeholder="Your name"
                 />
+                {fieldErrors.name && <p id="name-error" role="alert" className="mt-1 text-xs text-red-600">{fieldErrors.name}</p>}
               </div>
 
               <div>
@@ -102,9 +115,13 @@ export default function ContactPage() {
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="w-full rounded-lg border border-gray-300 px-4 py-3 text-charcoal placeholder:text-gray-400 focus:border-gold focus:outline-none focus:ring-1 focus:ring-gold/30"
+                  onBlur={() => setTouched((t) => ({ ...t, email: true }))}
+                  aria-invalid={!!fieldErrors.email}
+                  aria-describedby={fieldErrors.email ? "email-error" : undefined}
+                  className={`w-full rounded-lg border px-4 py-3 text-charcoal placeholder:text-gray-400 focus:outline-none focus:ring-1 focus:ring-gold/30 ${fieldErrors.email ? "border-red-400 focus:border-red-400" : "border-gray-300 focus:border-gold"}`}
                   placeholder="you@example.com"
                 />
+                {fieldErrors.email && <p id="email-error" role="alert" className="mt-1 text-xs text-red-600">{fieldErrors.email}</p>}
               </div>
 
               <div>
@@ -118,15 +135,20 @@ export default function ContactPage() {
                   id="message"
                   required
                   rows={5}
+                  maxLength={2000}
                   value={message}
                   onChange={(e) => setMessage(e.target.value)}
-                  className="w-full rounded-lg border border-gray-300 px-4 py-3 text-charcoal placeholder:text-gray-400 focus:border-gold focus:outline-none focus:ring-1 focus:ring-gold/30 resize-vertical"
+                  onBlur={() => setTouched((t) => ({ ...t, message: true }))}
+                  aria-invalid={!!fieldErrors.message}
+                  aria-describedby={fieldErrors.message ? "message-error" : undefined}
+                  className={`w-full rounded-lg border px-4 py-3 text-charcoal placeholder:text-gray-400 focus:outline-none focus:ring-1 focus:ring-gold/30 resize-vertical ${fieldErrors.message ? "border-red-400 focus:border-red-400" : "border-gray-300 focus:border-gold"}`}
                   placeholder="How can we help you?"
                 />
+                {fieldErrors.message && <p id="message-error" role="alert" className="mt-1 text-xs text-red-600">{fieldErrors.message}</p>}
               </div>
 
               {error && (
-                <p className="text-sm text-red-600">{error}</p>
+                <p id="contact-error" role="alert" className="text-sm text-red-600">{error}</p>
               )}
               <button
                 type="submit"

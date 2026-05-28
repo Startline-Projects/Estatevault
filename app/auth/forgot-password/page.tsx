@@ -9,8 +9,11 @@ export default function ForgotPasswordPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
+  const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (!emailValid) { setError("Please enter a valid email address."); return; }
     setError("");
     setLoading(true);
 
@@ -69,7 +72,7 @@ export default function ForgotPasswordPage() {
               </p>
 
               {error && (
-                <div className="mt-4 rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
+                <div role="alert" className="mt-4 rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
                   {error}
                 </div>
               )}

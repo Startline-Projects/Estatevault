@@ -38,6 +38,10 @@ function SignUpForm() {
   const emailLooksValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
   const emailIsVerified = verifyStage === "verified" && verifiedEmail === email.trim().toLowerCase();
 
+  const hasMinLength = password.length >= 8;
+  const hasNumber = /\d/.test(password);
+  const passwordsMatch = password === confirmPassword && confirmPassword.length > 0;
+
   // Reset verification if user changes email after verifying
   useEffect(() => {
     if (verifyStage !== "idle" && email.trim().toLowerCase() !== verifiedEmail) {
@@ -282,7 +286,7 @@ function SignUpForm() {
           </p>
 
           {error && (
-            <div className="mt-4 rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
+            <div role="alert" className="mt-4 rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
               {error}
             </div>
           )}
@@ -296,6 +300,7 @@ function SignUpForm() {
                 id="fullName"
                 type="text"
                 required
+                maxLength={100}
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
                 className={inputClass}
@@ -335,7 +340,7 @@ function SignUpForm() {
               </div>
 
               {verifyError && (
-                <p className="mt-2 text-xs text-red-600">{verifyError}</p>
+                <p role="alert" className="mt-2 text-xs text-red-600">{verifyError}</p>
               )}
 
               {existingAccount && (
@@ -405,9 +410,20 @@ function SignUpForm() {
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
+                aria-describedby="password-reqs"
                 className={inputClass}
                 placeholder="Min. 8 characters"
               />
+              {password.length > 0 && (
+                <div id="password-reqs" className="mt-2 space-y-1">
+                  <p className={`text-xs ${hasMinLength ? "text-green-600" : "text-charcoal/40"}`}>
+                    {hasMinLength ? "✓" : "○"} At least 8 characters
+                  </p>
+                  <p className={`text-xs ${hasNumber ? "text-green-600" : "text-charcoal/40"}`}>
+                    {hasNumber ? "✓" : "○"} At least one number
+                  </p>
+                </div>
+              )}
             </div>
 
             <div>
@@ -420,9 +436,16 @@ function SignUpForm() {
                 required
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
+                aria-invalid={confirmPassword.length > 0 && !passwordsMatch}
+                aria-describedby={confirmPassword.length > 0 ? "confirm-msg" : undefined}
                 className={inputClass}
                 placeholder="Re-enter your password"
               />
+              {confirmPassword.length > 0 && (
+                <p id="confirm-msg" className={`mt-1 text-xs ${passwordsMatch ? "text-green-600" : "text-red-500"}`}>
+                  {passwordsMatch ? "✓ Passwords match" : "Passwords do not match"}
+                </p>
+              )}
             </div>
 
             {!emailIsVerified && (

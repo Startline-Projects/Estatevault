@@ -113,7 +113,7 @@ export default function ResetPasswordPage() {
           )}
 
           {error && (
-            <div className="mt-4 rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
+            <div role="alert" className="mt-4 rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
               {error}
             </div>
           )}
@@ -131,6 +131,8 @@ export default function ResetPasswordPage() {
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
+                  aria-invalid={password.length > 0 && (!hasMinLength || !hasNumber)}
+                  aria-describedby="pw-reqs"
                   placeholder="Min 8 characters, 1 number"
                   className="min-h-[44px] w-full rounded-xl border-2 border-gray-200 px-4 py-3 pr-16 text-sm text-charcoal focus:border-gold focus:outline-none focus:ring-1 focus:ring-gold/30"
                 />
@@ -143,12 +145,12 @@ export default function ResetPasswordPage() {
                 </button>
               </div>
               {password.length > 0 && (
-                <div className="mt-2 space-y-1">
+                <div id="pw-reqs" className="mt-2 space-y-1">
                   <p className={`text-xs ${hasMinLength ? "text-green-600" : "text-charcoal/40"}`}>
                     {hasMinLength ? "✓" : "○"} At least 8 characters
                   </p>
                   <p className={`text-xs ${hasNumber ? "text-green-600" : "text-charcoal/40"}`}>
-                    {hasNumber ? "&#10003;" : "&#9675;"} At least one number
+                    {hasNumber ? "✓" : "○"} At least one number
                   </p>
                 </div>
               )}
@@ -166,6 +168,8 @@ export default function ResetPasswordPage() {
                   required
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
+                  aria-invalid={confirmPassword.length > 0 && !passwordsMatch}
+                  aria-describedby={confirmPassword.length > 0 ? "confirm-msg" : undefined}
                   placeholder="Confirm your password"
                   className="min-h-[44px] w-full rounded-xl border-2 border-gray-200 px-4 py-3 pr-16 text-sm text-charcoal focus:border-gold focus:outline-none focus:ring-1 focus:ring-gold/30"
                 />
@@ -177,11 +181,10 @@ export default function ResetPasswordPage() {
                   {showConfirm ? "Hide" : "Show"}
                 </button>
               </div>
-              {confirmPassword.length > 0 && !passwordsMatch && (
-                <p className="mt-1 text-xs text-red-500">Passwords do not match</p>
-              )}
-              {passwordsMatch && (
-                <p className="mt-1 text-xs text-green-600">&#10003; Passwords match</p>
+              {confirmPassword.length > 0 && (
+                <p id="confirm-msg" className={`mt-1 text-xs ${passwordsMatch ? "text-green-600" : "text-red-500"}`}>
+                  {passwordsMatch ? "✓ Passwords match" : "Passwords do not match"}
+                </p>
               )}
             </div>
 

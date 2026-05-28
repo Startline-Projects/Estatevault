@@ -1,5 +1,11 @@
+import type { Metadata } from "next";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+
+export const metadata: Metadata = {
+  title: "Terms of Service | EstateVault",
+  description: "Terms and conditions for using the EstateVault estate planning platform.",
+};
 
 export default function TermsPage() {
   return (

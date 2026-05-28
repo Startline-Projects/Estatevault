@@ -156,10 +156,10 @@ export default function SettingsPage() {
         {hasPin && (
           <Section id="pin" title="Vault PIN" openSection={openSection} setOpenSection={setOpenSection}>
             <div className="space-y-3">
-              {pinMsg && <p className={`text-sm ${pinMsg.includes("success") ? "text-green-600" : "text-red-600"}`}>{pinMsg}</p>}
-              <input type="password" maxLength={4} inputMode="numeric" value={currentPin} onChange={(e) => setCurrentPin(e.target.value.replace(/\D/g, ""))} placeholder="Current PIN" className="w-full min-h-[44px] rounded-xl border-2 border-gray-200 px-4 py-3 text-sm focus:border-gold focus:outline-none" />
-              <input type="password" maxLength={4} inputMode="numeric" value={newPin} onChange={(e) => setNewPin(e.target.value.replace(/\D/g, ""))} placeholder="New PIN" className="w-full min-h-[44px] rounded-xl border-2 border-gray-200 px-4 py-3 text-sm focus:border-gold focus:outline-none" />
-              <input type="password" maxLength={4} inputMode="numeric" value={confirmNewPin} onChange={(e) => setConfirmNewPin(e.target.value.replace(/\D/g, ""))} placeholder="Confirm new PIN" className="w-full min-h-[44px] rounded-xl border-2 border-gray-200 px-4 py-3 text-sm focus:border-gold focus:outline-none" />
+              {pinMsg && <p id="pin-change-msg" role="alert" className={`text-sm ${pinMsg.includes("success") ? "text-green-600" : "text-red-600"}`}>{pinMsg}</p>}
+              <input type="password" maxLength={4} inputMode="numeric" value={currentPin} onChange={(e) => setCurrentPin(e.target.value.replace(/\D/g, ""))} placeholder="Current PIN" aria-label="Current PIN" aria-invalid={!!pinMsg && !pinMsg.includes("success")} aria-describedby={pinMsg ? "pin-change-msg" : undefined} className="w-full min-h-[44px] rounded-xl border-2 border-gray-200 px-4 py-3 text-sm focus:border-gold focus:outline-none" />
+              <input type="password" maxLength={4} inputMode="numeric" value={newPin} onChange={(e) => setNewPin(e.target.value.replace(/\D/g, ""))} placeholder="New PIN" aria-label="New PIN" className="w-full min-h-[44px] rounded-xl border-2 border-gray-200 px-4 py-3 text-sm focus:border-gold focus:outline-none" />
+              <input type="password" maxLength={4} inputMode="numeric" value={confirmNewPin} onChange={(e) => setConfirmNewPin(e.target.value.replace(/\D/g, ""))} placeholder="Confirm new PIN" aria-label="Confirm new PIN" className="w-full min-h-[44px] rounded-xl border-2 border-gray-200 px-4 py-3 text-sm focus:border-gold focus:outline-none" />
               <button onClick={changePin} className="rounded-full bg-gold px-6 py-2 text-sm font-semibold text-white hover:bg-gold/90">Change PIN</button>
             </div>
           </Section>

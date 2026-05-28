@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useTransition } from "react";
 import { flushSync } from "react-dom";
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
@@ -177,7 +178,7 @@ export default function ProShell({ companyName, userName, tier, logoUrl, onboard
       <div className="px-5 pt-6 pb-4">
         <div className="flex items-center gap-3">
           {logoUrl ? (
-            <img src={logoUrl} alt={companyName} className="h-9 max-w-full rounded object-contain" />
+            <Image src={logoUrl} alt={companyName} width={120} height={36} className="h-9 max-w-full rounded object-contain" />
           ) : (
             <>
               <div className="h-9 w-9 rounded-lg flex items-center justify-center text-xs font-bold" style={theme.logoBoxStyle}>{initials}</div>
@@ -222,7 +223,7 @@ export default function ProShell({ companyName, userName, tier, logoUrl, onboard
       {/* Mobile header */}
       <header style={sidebarBgStyle} className={`md:hidden fixed top-0 left-0 right-0 z-40 px-4 py-3 flex items-center justify-between ${sidebarBgClass}`}>
         <button onClick={() => setDrawerOpen(true)} className={`text-xl ${theme.mobileBtnTxt}`}>☰</button>
-        {logoUrl ? <img src={logoUrl} alt={companyName} className="h-7 object-contain" /> : <span className={`text-sm font-bold ${txt}`}>{companyName}</span>}
+        {logoUrl ? <Image src={logoUrl} alt={companyName} width={100} height={28} className="h-7 object-contain" /> : <span className={`text-sm font-bold ${txt}`}>{companyName}</span>}
         <div className="w-6" />
       </header>
 

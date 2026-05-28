@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import type { ComplexityResult } from "@/lib/trust-types";
@@ -12,7 +13,7 @@ import { PRICES, formatPrice } from "@/lib/orders/pricing";
 function BrandedWordmark({ className = "" }: { className?: string }) {
   const branding = usePartnerBranding();
   if (branding?.logoUrl) {
-    return <img src={branding.logoUrl} alt={branding.companyName} className={`h-10 w-auto object-contain ${className}`} />;
+    return <Image src={branding.logoUrl} alt={branding.companyName} width={120} height={40} className={`h-10 w-auto object-contain ${className}`} />;
   }
   return <span className={className}>{branding?.companyName || "EstateVault"}</span>;
 }

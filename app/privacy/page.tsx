@@ -1,5 +1,11 @@
+import type { Metadata } from "next";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+
+export const metadata: Metadata = {
+  title: "Privacy Policy | EstateVault",
+  description: "How EstateVault protects your personal information and estate planning data.",
+};
 
 export default function PrivacyPage() {
   return (

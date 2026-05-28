@@ -21,6 +21,7 @@ export default function AmendmentPage() {
   const [description, setDescription] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [touched, setTouched] = useState<Record<string, boolean>>({});
   const [userId, setUserId] = useState("");
   const [isSubscriber, setIsSubscriber] = useState(false);
 
@@ -78,18 +79,37 @@ export default function AmendmentPage() {
       <div className="rounded-xl bg-white border border-gray-200 p-6">
         <div>
           <label className="block text-sm font-medium text-navy mb-2">What would you like to change?</label>
-          <select value={changeType} onChange={(e) => setChangeType(e.target.value)} className="w-full min-h-[44px] rounded-xl border-2 border-gray-200 px-4 py-3 text-sm focus:border-gold focus:outline-none">
+          <select
+            value={changeType}
+            onChange={(e) => setChangeType(e.target.value)}
+            onBlur={() => setTouched((t) => ({ ...t, changeType: true }))}
+            aria-invalid={touched.changeType && !changeType}
+            aria-describedby={touched.changeType && !changeType ? "type-error" : undefined}
+            className={`w-full min-h-[44px] rounded-xl border-2 px-4 py-3 text-sm focus:outline-none ${touched.changeType && !changeType ? "border-red-400 focus:border-red-400" : "border-gray-200 focus:border-gold"}`}
+          >
             <option value="">Select a change type</option>
             {CHANGE_OPTIONS.map((opt) => <option key={opt} value={opt}>{opt}</option>)}
           </select>
+          {touched.changeType && !changeType && <p id="type-error" role="alert" className="mt-1 text-xs text-red-600">Please select a change type.</p>}
         </div>
 
         <div className="mt-5">
           <label className="block text-sm font-medium text-navy mb-2">Describe what you&apos;d like to change</label>
-          <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={5} placeholder="Please describe the changes you need..." className="w-full rounded-xl border-2 border-gray-200 px-4 py-3 text-sm focus:border-gold focus:outline-none resize-none" />
+          <textarea
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            onBlur={() => setTouched((t) => ({ ...t, description: true }))}
+            rows={5}
+            maxLength={2000}
+            placeholder="Please describe the changes you need..."
+            aria-invalid={touched.description && !description.trim()}
+            aria-describedby={touched.description && !description.trim() ? "desc-error" : undefined}
+            className={`w-full rounded-xl border-2 px-4 py-3 text-sm focus:outline-none resize-none ${touched.description && !description.trim() ? "border-red-400 focus:border-red-400" : "border-gray-200 focus:border-gold"}`}
+          />
+          {touched.description && !description.trim() && <p id="desc-error" role="alert" className="mt-1 text-xs text-red-600">Please describe the changes you need.</p>}
         </div>
 
-        {error && <p className="mt-4 text-sm text-red-600">{error}</p>}
+        {error && <p role="alert" className="mt-4 text-sm text-red-600">{error}</p>}
 
         <button onClick={handleSubmit} disabled={loading || !changeType || !description.trim()} className="mt-6 w-full min-h-[44px] rounded-full bg-gold py-3 text-sm font-semibold text-white hover:bg-gold/90 disabled:opacity-50 disabled:cursor-not-allowed">
           {loading

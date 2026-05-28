@@ -1181,4 +1181,177 @@ npm test          → 19 files, 193 tests, all passing
 
 ---
 
-### Next: Phase 6 — Frontend Production Quality
+---
+
+# Phase 6 — Frontend Production Quality
+
+> **Date:** 2026-05-28
+> **Branch:** Yahia-Dev
+> **Status:** All Phase 6 steps complete. Verify gate green.
+
+---
+
+## Step 6.1 — Server Component Conversion (SKIPPED)
+
+Audited all 89 components — only 3 candidates for server conversion, all with low ROI. Skipped by user decision.
+
+---
+
+## Step 6.2 — Decompose Vault God Component (F-03)
+
+**Problem:** `app/dashboard/vault/page.tsx` was 838 lines — single monolith with PIN, grid, forms, modals.
+
+**Fix:** Extracted into 7 focused modules:
+- `components/vault/vault-constants.ts` — shared types (VaultItem, Screen, CATEGORIES, CATEGORY_FIELDS)
+- `components/vault/VaultPinScreen.tsx` — PIN create/enter/check (140 lines)
+- `components/vault/VaultItemDetailModal.tsx` — item detail modal with focus trap (161 lines)
+- `components/vault/VaultUploadForm.tsx` — upload document form (215 lines)
+- `components/vault/VaultAddItemForm.tsx` — add item form with validation (161 lines)
+- `components/vault/VaultCategoryView.tsx` — category item list (203 lines)
+- `components/vault/VaultMainGrid.tsx` — main grid + farewell + upgrade modal (173 lines)
+
+Parent page reduced to 231 lines. All state stays in parent, children receive props. Pixel-identical output.
+
+---
+
+## Step 6.3 — Loading States (F-04)
+
+Added `loading.tsx` with branded spinner to 5 route segments:
+- `app/dashboard/loading.tsx` — "Loading dashboard..."
+- `app/pro/loading.tsx` — "Loading partner portal..."
+- `app/sales/loading.tsx` — "Loading sales portal..."
+- `app/attorney/loading.tsx` — "Loading attorney portal..."
+- `app/auth/loading.tsx` — "Loading..."
+
+---
+
+## Step 6.4 — Error Boundaries (F-05)
+
+Added `error.tsx` with retry + navigation to 5 route segments:
+- `app/dashboard/error.tsx` — retry + "Back to Dashboard"
+- `app/pro/error.tsx` — retry + "Back to Dashboard"
+- `app/sales/error.tsx` — retry + "Back to Dashboard"
+- `app/attorney/error.tsx` — retry + "Back to Portal"
+- `app/quiz/error.tsx` — retry + "Restart Quiz"
+
+---
+
+## Step 6.5 — Accessibility (F-06)
+
+### Accordion (FAQ.tsx)
+- `aria-expanded` on toggle button
+- `aria-controls` linking button → content panel
+- `role="region"` on content
+- `aria-hidden="true"` on chevron SVG
+
+### Vault Modal (VaultItemDetailModal.tsx)
+- `role="dialog"`, `aria-modal="true"`, `aria-labelledby`
+- Focus trap (Tab cycles within dialog)
+- Escape key closes modal
+- Auto-focus on mount
+
+### Vault Forms
+- `aria-invalid` + `aria-describedby` on PIN inputs, label inputs, email fields
+- `role="alert"` on error messages
+
+### Decorative SVGs
+- `aria-hidden="true"` on all decorative SVGs in Hero, FinalCTA, ErrorBoundary, app error
+
+### Auth Forms
+- Login: `aria-invalid` + `aria-describedby` on email, `role="alert"` on error
+- Contact: `role="alert"` on error
+- Settings: `role="alert"` on PIN message, `aria-label` on PIN inputs
+
+---
+
+## Step 6.6 — SEO: Sitemap, Robots, Metadata (F-09)
+
+### sitemap.ts
+8 public URLs: /, /quiz, /will, /trust, /professionals, /contact, /privacy, /terms
+
+### robots.ts
+Disallow: /dashboard/, /pro/, /sales/, /attorney/, /api/, /auth/, /trustee/, /farewell/
+
+### Per-page metadata via layout.tsx
+- `app/quiz/layout.tsx` — "Estate Planning Quiz | EstateVault"
+- `app/will/layout.tsx` — "Create Your Will | EstateVault"
+- `app/trust/layout.tsx` — "Create Your Trust | EstateVault"
+- `app/contact/layout.tsx` — "Contact Us | EstateVault"
+- `app/professionals/layout.tsx` — "For Professionals | EstateVault"
+- `app/privacy/page.tsx` — exported metadata directly (server component)
+- `app/terms/page.tsx` — exported metadata directly (server component)
+
+---
+
+## Step 6.7 — Performance (F-07, F-08)
+
+### ScrollReveal → CSS-only (F-07)
+- Removed JS-based `<ScrollReveal>` wrapper from `app/page.tsx`
+- Added `.scroll-reveal` class in `globals.css` using `animation-timeline: view()` inside `@supports`
+- Progressive enhancement: browsers without support show content immediately (`opacity: 1`)
+- Landing page now fully server-rendered (no client component for scroll animation)
+
+### Raw `<img>` → `next/image` (F-08)
+Replaced all raw `<img>` tags in React components with `next/image`:
+- `components/pro/ProShell.tsx` — 2 partner logos (sidebar + mobile header)
+- `app/[partner-slug]/PartnerPageClient.tsx` — 2 partner logos (header + footer)
+- `app/will/checkout/page.tsx` — BrandedWordmark logo
+- `app/trust/checkout/page.tsx` — BrandedWordmark logo
+- `components/quiz/ProcessingScreen.tsx` — processing screen logo
+- `app/pro/marketing/page.tsx` — marketing hub partner logo
+- `app/sales/marketing-materials/page.tsx` — material thumbnail (fill mode)
+- `app/partners/attorneys/page.tsx` — 2 static /logo.svg (nav + footer)
+- `app/khan-lawgroup/page.tsx` — static /logo.svg
+- `components/partner/PartnerThemedShell.tsx` — partner header logo
+
+Remaining `<img>` tags (intentionally kept):
+- `components/intake/AcknowledgmentCard.tsx` — commented out, not rendered
+- `lib/email.ts` — HTML email string, not a React component
+
+---
+
+## Step 6.8 — Frontend Validation on Input Fields
+
+### Contact Form (`app/contact/page.tsx`)
+- Touched state tracking per field (name, email, message)
+- Name: required, maxLength=100, red border + inline error on blur
+- Email: required, regex format check, red border + inline error on blur
+- Message: required, min 10 chars, maxLength=2000, red border + inline error on blur
+- All errors: `aria-invalid`, `aria-describedby`, `role="alert"`
+
+### Signup Form (`app/auth/signup/page.tsx`)
+- Real-time password strength indicators (8+ chars, contains number)
+- Confirm password match indicator with `aria-invalid` + `aria-describedby`
+- `role="alert"` on error div and verify error
+- `maxLength=100` on full name
+
+### Forgot Password (`app/auth/forgot-password/page.tsx`)
+- Client-side email format validation before submit
+- `role="alert"` on error div
+
+### Amendment Form (`app/dashboard/amendment/page.tsx`)
+- Touched state tracking per field
+- Change type: required select, red border + inline error on blur
+- Description: required, maxLength=2000, red border + inline error on blur
+- All errors: `aria-invalid`, `aria-describedby`, `role="alert"`
+
+### Reset Password (`app/auth/reset-password/page.tsx`)
+- `aria-invalid` on password field when incomplete
+- `aria-describedby` linking to requirements checklist
+- `aria-invalid` on confirm field when mismatch
+- `aria-describedby` linking to match status
+- `role="alert"` on error div
+
+---
+
+## Verify Gate
+
+```
+npx tsc --noEmit  → clean (0 errors)
+npm run lint      → warnings only (pre-existing useEffect deps)
+npm test          → 19 files, 193 tests, all passing
+```
+
+---
+
+### Next: Phase 7 — Testing & Documentation

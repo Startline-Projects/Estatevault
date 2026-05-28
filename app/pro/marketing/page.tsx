@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { substituteTokens, type PartnerData } from "@/lib/marketing/substitute";
@@ -263,7 +264,7 @@ export default function MarketingPage() {
           <div className="flex items-center gap-4">
             {partner?.logoUrl && (
               <div className="h-14 w-14 rounded-2xl bg-white/15 backdrop-blur-sm ring-1 ring-white/25 flex items-center justify-center overflow-hidden">
-                <img src={partner.logoUrl} alt={partner.companyName} className="h-10 w-10 object-contain" />
+                <Image src={partner.logoUrl} alt={partner.companyName} width={40} height={40} className="h-10 w-10 object-contain" />
               </div>
             )}
             <div>

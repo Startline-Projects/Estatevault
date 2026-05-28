@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import Image from "next/image";
 import { MARKETING_CATEGORIES, SOCIAL_PLATFORMS, categoryLabel, categoryColor, ALLOWED_MIME, MAX_FILE_BYTES } from "@/lib/marketing/categories";
 
 type Material = {
@@ -180,7 +181,7 @@ export default function AdminMarketingMaterialsPage() {
                 <td className="px-4 py-3">
                   <a href={m.url} target="_blank" rel="noopener noreferrer" className="block h-12 w-12 rounded-lg overflow-hidden bg-gray-50 border border-gray-200 relative hover:ring-2 hover:ring-navy/30 transition-all">
                     {m.mime_type?.startsWith("image/")
-                      ? <img src={m.url} alt={m.title} className="absolute inset-0 w-full h-full object-cover" />
+                      ? <Image src={m.url} alt={m.title} fill className="object-cover" />
                       : <iframe src={`${m.url}#toolbar=0&navpanes=0&view=FitH`} className="absolute inset-0 w-full h-full pointer-events-none" title={m.title} />}
                   </a>
                 </td>

@@ -8,7 +8,6 @@ import SocialProof from "@/components/SocialProof";
 import FAQ from "@/components/FAQ";
 import FinalCTA from "@/components/FinalCTA";
 import Footer from "@/components/Footer";
-import ScrollReveal from "@/components/ScrollReveal";
 
 export default function Home() {
   return (
@@ -17,24 +16,24 @@ export default function Home() {
       <main>
         <Hero />
         <TrustBar />
-        <ScrollReveal>
+        <div className="scroll-reveal">
           <HowItWorks />
-        </ScrollReveal>
-        <ScrollReveal>
+        </div>
+        <div className="scroll-reveal">
           <PackageCards />
-        </ScrollReveal>
-        <ScrollReveal>
+        </div>
+        <div className="scroll-reveal">
           <VaultSection />
-        </ScrollReveal>
-        <ScrollReveal>
+        </div>
+        <div className="scroll-reveal">
           <SocialProof />
-        </ScrollReveal>
-        <ScrollReveal>
+        </div>
+        <div className="scroll-reveal">
           <FAQ />
-        </ScrollReveal>
-        <ScrollReveal>
+        </div>
+        <div className="scroll-reveal">
           <FinalCTA />
-        </ScrollReveal>
+        </div>
       </main>
       <Footer />
     </>
