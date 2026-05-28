@@ -8,7 +8,7 @@ import { decryptBytes } from "@/lib/crypto/aead";
 import { byteaToBytes, bytesToBytea } from "@/lib/api/crypto";
 import { blindIndex, normalize } from "@/lib/crypto/blindIndex";
 import { apiRateLimit } from "@/lib/rate-limit";
-import { getResend } from "@/lib/email";
+import { sendEmail } from "@/lib/email";
 import * as auditLogRepo from "@/lib/repos/server/auditLogRepo";
 
 export const runtime = "nodejs";
@@ -146,14 +146,13 @@ export const POST = withRoute(async (req: NextRequest) => {
     .eq("vault_farewell_status", "locked");
 
   try {
-    const resend = getResend();
-    await resend.emails.send({
+    await sendEmail({
       from: "EstateVault <info@estatevault.us>",
       to: "info@estatevault.us",
       subject: `Farewell Verification Request, ${trustee.trustee_name}`,
       html: `<p>A death certificate has been submitted for verification.</p><p>Trustee: ${trustee.trustee_name} (${trusteeEmail})</p><p>Client ID: ${clientId}</p><p>Please review in the admin portal.</p>`,
     });
-    await resend.emails.send({
+    await sendEmail({
       from: "EstateVault <info@estatevault.us>",
       to: trusteeEmail,
       subject: "Your verification request has been received",

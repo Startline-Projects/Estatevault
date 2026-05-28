@@ -3,7 +3,7 @@ import { withRoute } from "@/lib/api/route";
 import { ok, fail } from "@/lib/api/response";
 import { authSendVerifyCodeSchema } from "@/lib/validation/schemas";
 import { generateCode, storeCode } from "@/lib/auth/emailVerification";
-import { resolveSenderForEmail, getResend } from "@/lib/email";
+import { resolveSenderForEmail, sendEmail } from "@/lib/email";
 import { authRateLimit } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
@@ -60,16 +60,15 @@ export const POST = withRoute(async (req: NextRequest) => {
     partnerSlug: partnerSlug || null,
   });
 
-  const { error: sendErr } = await getResend().emails.send({
-    from: sender.from,
-    replyTo: sender.replyTo,
-    to: normalizedEmail,
-    subject: `Your EstateVault code: ${code}`,
-    html: buildEmailHtml(code),
-  });
-
-  if (sendErr) {
-    console.error("send-verify-code Resend error:", sendErr);
+  try {
+    await sendEmail({
+      from: sender.from,
+      replyTo: sender.replyTo,
+      to: normalizedEmail,
+      subject: `Your EstateVault code: ${code}`,
+      html: buildEmailHtml(code),
+    });
+  } catch {
     return fail("Failed to send email.", 500);
   }
 

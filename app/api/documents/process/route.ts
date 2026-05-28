@@ -11,6 +11,7 @@ import { sendDocumentEmail, sendAttorneyReviewPendingEmail, buildAssetChecklist 
 import { wantsNotification } from "@/lib/notifications/prefs";
 import { getTemplate } from "@/lib/documents/templates/resolve";
 import * as auditLogRepo from "@/lib/repos/server/auditLogRepo";
+import * as documentRepo from "@/lib/repos/server/documentRepo";
 
 type SupabaseAdmin = ReturnType<typeof createAdminClient>;
 
@@ -158,13 +159,13 @@ export const GET = withRoute(async (request: NextRequest) => {
       }
     }
 
+    let failedCount = 0;
     for (const docType of documentTypes) {
       try {
-        console.log("Generating document:", docType);
+        await documentRepo.updateStatusByType(supabase, order.id, docType, "generating");
+
         const template = await getTemplate(docType);
         const userPrompt = template.buildPrompt(intake);
-
-        // Trust documents are longer and need more tokens
         const maxTokens = docType === "trust" ? 16000 : 8000;
 
         const response = await claude.messages.create({
@@ -175,7 +176,6 @@ export const GET = withRoute(async (request: NextRequest) => {
         });
 
         const documentText = response.content[0].type === "text" ? response.content[0].text : "";
-        console.log("Document generated:", docType, "length:", documentText.length, "stop_reason:", response.stop_reason);
 
         const clientFullName = String(intake.firstName || "") + " " + String(intake.lastName || "");
         const { generatePDF } = await import("@/lib/documents/generate-pdf");
@@ -186,7 +186,6 @@ export const GET = withRoute(async (request: NextRequest) => {
           partnerLogoUrl
         );
 
-        // Editable DOCX for attorney review (non-fatal if it fails).
         let docxBuffer: Buffer | undefined;
         if (order.attorney_review_requested) {
           try {
@@ -199,20 +198,26 @@ export const GET = withRoute(async (request: NextRequest) => {
 
         const storageClientId = isTestOrder ? "test" : order.client_id;
         await uploadDocument(storageClientId, order.id, docType, pdfBuffer, docxBuffer);
-        console.log("Document uploaded:", docType, "test:", isTestOrder);
+        await documentRepo.updateStatusByType(supabase, order.id, docType, "generated");
       } catch (docError) {
         console.error(`Error generating ${docType}:`, docError);
+        await documentRepo.updateStatusByType(supabase, order.id, docType, "failed", {
+          error_message: docError instanceof Error ? docError.message : "Unknown error",
+        });
+        failedCount++;
       }
     }
 
-    // Update order status
-    if (order.attorney_review_requested) {
-      await supabase.from("orders").update({ status: "review" }).eq("id", order.id);
-      await supabase.from("documents").update({ status: "review" }).eq("order_id", order.id);
-    } else {
-      await supabase.from("orders").update({ status: "delivered" }).eq("id", order.id);
-      await supabase.from("documents").update({ status: "delivered", delivered_at: new Date().toISOString() }).eq("order_id", order.id);
+    if (failedCount > 0) {
+      console.error(`Order ${order.id}: ${failedCount}/${documentTypes.length} documents failed`);
+      return ok({ message: "Partial failure", order_id: order.id, failed: failedCount });
     }
+
+    const finalStatus = order.attorney_review_requested ? "review" : "delivered";
+    await supabase.from("orders").update({ status: finalStatus }).eq("id", order.id);
+    const docPatch: Record<string, unknown> = { status: finalStatus };
+    if (!order.attorney_review_requested) docPatch.delivered_at = new Date().toISOString();
+    await supabase.from("documents").update(docPatch).eq("order_id", order.id).eq("status", "generated");
 
     // Notify client via email (delivered → docs ready; review → attorney pending notice)
     if (!isTestOrder) {
@@ -272,22 +277,23 @@ export const GET = withRoute(async (request: NextRequest) => {
     }
   }
 
+  let jobFailedCount = 0;
   for (const docType of job.document_types) {
     try {
-      // Rate limit check
       if (ratelimit) {
         const { success } = await ratelimit.limit("document_generation");
         if (!success) {
-          // Re-queue with delay
           await updateJob(jobId, { status: "queued", error: "Rate limited, re-queued" });
           return ok({ message: "Rate limited, re-queued" });
         }
       }
 
+      await documentRepo.updateStatusByType(supabase, job.order_id, docType, "generating");
+
       const template = await getTemplate(docType);
       const userPrompt = template.buildPrompt(intake);
-
       const maxTokens = docType === "trust" ? 16000 : 8000;
+
       const response = await claude.messages.create({
         model: CLAUDE_MODEL,
         max_tokens: maxTokens,
@@ -297,7 +303,6 @@ export const GET = withRoute(async (request: NextRequest) => {
 
       const documentText = response.content[0].type === "text" ? response.content[0].text : "";
 
-      // Generate PDF
       const jobClientFullName = String(intake.firstName || "") + " " + String(intake.lastName || "");
       const { generatePDF } = await import("@/lib/documents/generate-pdf");
       const pdfBuffer = await generatePDF(
@@ -306,7 +311,6 @@ export const GET = withRoute(async (request: NextRequest) => {
         jobPartnerName, undefined, undefined, jobPartnerLogoUrl
       );
 
-      // Editable DOCX for attorney review (non-fatal if it fails).
       let jobDocxBuffer: Buffer | undefined;
       if (jobReviewRequested) {
         try {
@@ -317,8 +321,8 @@ export const GET = withRoute(async (request: NextRequest) => {
         }
       }
 
-      // Upload to storage
       await uploadDocument(job.client_id, job.order_id, docType, pdfBuffer, jobDocxBuffer);
+      await documentRepo.updateStatusByType(supabase, job.order_id, docType, "generated");
 
       await auditLogRepo.insertEntry(supabase, {
         action: "document.generated",
@@ -327,10 +331,13 @@ export const GET = withRoute(async (request: NextRequest) => {
       });
     } catch (docError) {
       console.error(`Error generating ${docType}:`, docError);
+      await documentRepo.updateStatusByType(supabase, job.order_id, docType, "failed", {
+        error_message: docError instanceof Error ? docError.message : "Unknown error",
+      });
+      jobFailedCount++;
     }
   }
 
-  // E2EE Phase 12b: purge plaintext quiz answers once PDFs generated.
   if (job.order_id) {
     const { data: jobOrder } = await supabase
       .from("orders")
@@ -344,19 +351,18 @@ export const GET = withRoute(async (request: NextRequest) => {
     }
   }
 
-  // Mark job complete
+  if (jobFailedCount > 0) {
+    await updateJob(jobId, { status: "failed", completed_at: new Date().toISOString(), error: `${jobFailedCount} docs failed` });
+    return ok({ message: "Partial failure", job_id: jobId, failed: jobFailedCount });
+  }
+
   await updateJob(jobId, { status: "complete", completed_at: new Date().toISOString() });
 
-  // Update order status
-  if (job.attorney_review) {
-    await supabase.from("orders").update({ status: "review" }).eq("id", job.order_id);
-    await supabase.from("documents").update({ status: "review" }).eq("order_id", job.order_id);
-  } else {
-    await supabase.from("orders").update({ status: "delivered" }).eq("id", job.order_id);
-
-    // Update document statuses to delivered
-    await supabase.from("documents").update({ status: "delivered", delivered_at: new Date().toISOString() }).eq("order_id", job.order_id);
-  }
+  const finalJobStatus = job.attorney_review ? "review" : "delivered";
+  await supabase.from("orders").update({ status: finalJobStatus }).eq("id", job.order_id);
+  const jobDocPatch: Record<string, unknown> = { status: finalJobStatus };
+  if (!job.attorney_review) jobDocPatch.delivered_at = new Date().toISOString();
+  await supabase.from("documents").update(jobDocPatch).eq("order_id", job.order_id).eq("status", "generated");
 
   // Notify client via email
   {

@@ -10,6 +10,27 @@ export function getResend(): Resend {
 }
 
 const DEFAULT_FROM = "EstateVault <info@estatevault.us>";
+
+const RETRY_DELAYS = [200, 600];
+
+export async function sendEmail(params: Parameters<Resend["emails"]["send"]>[0]): Promise<void> {
+  const resend = getResend();
+  let lastErr: unknown;
+  for (let attempt = 0; attempt <= RETRY_DELAYS.length; attempt++) {
+    try {
+      const { error } = await resend.emails.send(params);
+      if (!error) return;
+      lastErr = error;
+    } catch (e) {
+      lastErr = e;
+    }
+    if (attempt < RETRY_DELAYS.length) {
+      await new Promise((r) => setTimeout(r, RETRY_DELAYS[attempt]));
+    }
+  }
+  console.error("[email] permanent failure after retries:", { to: params.to, subject: params.subject }, lastErr);
+  throw lastErr;
+}
 const ESTATEVAULT_LOGO_URL =
   process.env.NEXT_PUBLIC_ESTATEVAULT_EMAIL_LOGO ||
   `${process.env.NEXT_PUBLIC_SITE_URL || "https://www.estatevault.us"}/logo.png`;
@@ -277,7 +298,7 @@ export async function sendWelcomeEmail({
   }
 
   try {
-    await getResend().emails.send({
+    await sendEmail({
       from: sender.from,
       replyTo: sender.replyTo,
       to,
@@ -322,7 +343,7 @@ export async function sendAttorneyReviewPendingEmail({
   const packageName = productType === "will" ? "Will Package" : "Trust Package";
   const sender = await getPartnerFrom(partnerId);
   try {
-    await getResend().emails.send({
+    await sendEmail({
       from: sender.from,
       replyTo: sender.replyTo,
       to,
@@ -357,7 +378,7 @@ export async function sendApprovalEmail({ to, productType, dashboardUrl, partner
   const packageName = productType === "will" ? "Will Package" : "Trust Package";
   const sender = await getPartnerFrom(partnerId);
   try {
-    await getResend().emails.send({
+    await sendEmail({
       from: sender.from,
       replyTo: sender.replyTo,
       to,
@@ -394,17 +415,13 @@ export async function sendDocumentEmail(params: SendDocumentEmailParams & { part
     const packageName = params.productType === "will" ? "Will Package" : "Trust Package";
     const sender = await getPartnerFrom(params.partnerId);
 
-    const { error } = await getResend().emails.send({
+    await sendEmail({
       from: sender.from,
       replyTo: sender.replyTo,
       to: params.to,
       subject: `Your ${packageName} is ready`,
       html: buildEmailHtml(params, sender.brand),
     });
-
-    if (error) {
-      console.error("Email delivery failed, documents are still saved in Supabase:", error);
-    }
   } catch (emailError) {
     console.error("Email delivery failed, documents are still saved in Supabase:", emailError);
     // Do NOT re-throw, generation succeeded, client can download from their account
@@ -451,7 +468,7 @@ export async function sendAnnualReviewEmail({
     ? `It's been about a year since your estate plan was created on <strong>${createdOn}</strong>.`
     : `It's been about a year since your estate plan was created.`;
   try {
-    await getResend().emails.send({
+    await sendEmail({
       from: sender.from,
       replyTo: sender.replyTo,
       to,
@@ -496,7 +513,7 @@ export async function sendDunningEmail({
   fullName?: string | null;
 }) {
   try {
-    await getResend().emails.send({
+    await sendEmail({
       from: DEFAULT_FROM,
       to,
       subject: "Action Required, Vault Subscription Payment Failed",
@@ -545,7 +562,7 @@ export async function sendTrusteeUnlockEmail({
   expiresAt: Date;
 }) {
   try {
-    await getResend().emails.send({
+    await sendEmail({
       from: DEFAULT_FROM,
       to,
       subject: "Vault Access Approved — Open Within 7 Days",
@@ -591,7 +608,7 @@ export async function sendVetoReminderEmail({
   clientName?: string | null;
 }) {
   try {
-    await getResend().emails.send({
+    await sendEmail({
       from: DEFAULT_FROM,
       to,
       subject: "REMINDER: Vault access pending — cancel if you're alive",
@@ -642,7 +659,7 @@ export async function sendLifeEventCheckInEmail({
     ? `Since your plan was created on <strong>${createdOn}</strong>, life may have moved on. `
     : "";
   try {
-    await getResend().emails.send({
+    await sendEmail({
       from: sender.from,
       replyTo: sender.replyTo,
       to,
@@ -691,7 +708,7 @@ export async function sendOwnerVetoEmail({
   vetoUrl: string;
   expiresAt: string;
 }) {
-  await getResend().emails.send({
+  await sendEmail({
     from: "EstateVault <info@estatevault.us>",
     to,
     subject: "URGENT: Someone has requested access to your vault",
@@ -720,7 +737,7 @@ export async function sendFarewellUnlockEmail({
   messageTitle: string;
   accessUrl: string;
 }) {
-  await getResend().emails.send({
+  await sendEmail({
     from: "EstateVault <info@estatevault.us>",
     to,
     subject: "A message has been left for you",
@@ -735,7 +752,7 @@ export async function sendVerificationRejectedEmail({
   to: string;
   notes?: string | null;
 }) {
-  await getResend().emails.send({
+  await sendEmail({
     from: "EstateVault <info@estatevault.us>",
     to,
     subject: "Verification Update",
@@ -750,7 +767,7 @@ export async function sendTrusteeOtpEmail({
   to: string;
   code: string;
 }) {
-  await getResend().emails.send({
+  await sendEmail({
     from: "EstateVault <info@estatevault.us>",
     to,
     subject: `EstateVault verification code: ${code}`,
@@ -768,7 +785,7 @@ export async function sendVetoAccessCancelledEmail({
 }: {
   to: string;
 }) {
-  await getResend().emails.send({
+  await sendEmail({
     from: "EstateVault <info@estatevault.us>",
     to,
     subject: "Vault access request cancelled",

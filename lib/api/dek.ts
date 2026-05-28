@@ -10,11 +10,12 @@ import { createAdminClient } from "./auth";
 type Admin = ReturnType<typeof createAdminClient>;
 
 const KEK_LEN = 32;
+const KEK_TTL_MS = 5 * 60 * 1000;
 let kekCache: Uint8Array | null = null;
+let kekCachedAt = 0;
 
-// Fetch the app-wide KEK. Cached in module memory for the process lifetime.
 export async function getKek(admin?: Admin): Promise<Uint8Array> {
-  if (kekCache) return kekCache;
+  if (kekCache && Date.now() - kekCachedAt < KEK_TTL_MS) return kekCache;
 
   // Local/dev/test fallback — base64 of 32 raw bytes.
   const envKek = process.env.EV_KEK_BASE64;
@@ -22,6 +23,7 @@ export async function getKek(admin?: Admin): Promise<Uint8Array> {
     const k = new Uint8Array(Buffer.from(envKek, "base64"));
     if (k.length !== KEK_LEN) throw new Error("EV_KEK_BASE64 must decode to 32 bytes");
     kekCache = k;
+    kekCachedAt = Date.now();
     return k;
   }
 
@@ -32,6 +34,7 @@ export async function getKek(admin?: Admin): Promise<Uint8Array> {
   const kek = new Uint8Array(Buffer.from(data, "base64"));
   if (kek.length !== KEK_LEN) throw new Error("KEK must be 32 bytes");
   kekCache = kek;
+  kekCachedAt = Date.now();
   return kek;
 }
 
@@ -80,4 +83,5 @@ export async function getOrCreateUserDek(
 // Test/rotation helper — clears the cached KEK.
 export function _resetKekCache(): void {
   kekCache = null;
+  kekCachedAt = 0;
 }

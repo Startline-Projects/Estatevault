@@ -25,5 +25,7 @@ export function findDeliveredBefore(admin: Admin, cutoff: string) {
     .select("client_id, partner_id, delivered_at")
     .eq("status", "delivered")
     .not("delivered_at", "is", null)
-    .lte("delivered_at", cutoff);
+    .lte("delivered_at", cutoff)
+    .order("delivered_at", { ascending: true })
+    .limit(50);
 }

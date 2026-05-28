@@ -12,6 +12,9 @@ export const ratelimit = redis
   ? new Ratelimit({ redis, limiter: Ratelimit.slidingWindow(10, "1 m") })
   : null;
 
+const JOB_TTL_SECONDS = 24 * 60 * 60;
+const MAX_ATTEMPTS = 3;
+
 export interface DocumentJob {
   job_id: string;
   order_id: string;
@@ -45,11 +48,11 @@ function sanitizeForRedis(obj: Record<string, unknown>): Record<string, string> 
 
 export async function addJob(job: DocumentJob): Promise<void> {
   if (!redis) {
-    console.log("Queue: Redis not configured, job not queued", job.job_id);
-    return;
+    throw new Error("Redis not configured — cannot queue document job");
   }
   const sanitized = sanitizeForRedis(job as unknown as Record<string, unknown>);
   await redis.hset(`job:${job.job_id}`, sanitized);
+  await redis.expire(`job:${job.job_id}`, JOB_TTL_SECONDS);
   await redis.lpush("doc_queue", job.job_id);
 }
 
@@ -57,7 +60,6 @@ export async function getJob(jobId: string): Promise<DocumentJob | null> {
   if (!redis) return null;
   const data = await redis.hgetall(`job:${jobId}`);
   if (!data || Object.keys(data).length === 0) return null;
-  // Parse stringified fields back
   const raw = data as Record<string, string>;
   return {
     ...raw,
@@ -80,9 +82,25 @@ export async function updateJob(jobId: string, updates: Partial<DocumentJob>): P
   if (!redis) return;
   const sanitized = sanitizeForRedis(updates as unknown as Record<string, unknown>);
   await redis.hset(`job:${jobId}`, sanitized);
+  await redis.expire(`job:${jobId}`, JOB_TTL_SECONDS);
 }
 
 export async function popNextJob(): Promise<string | null> {
   if (!redis) return null;
-  return await redis.rpop("doc_queue");
+  const jobId = await redis.rpop("doc_queue") as string | null;
+  if (!jobId) return null;
+
+  const job = await getJob(jobId);
+  if (job && job.attempts >= MAX_ATTEMPTS) {
+    await redis.lpush("doc_dead_letter", jobId);
+    await updateJob(jobId, { status: "failed", error: `exceeded ${MAX_ATTEMPTS} attempts` });
+    console.error("[queue] job moved to dead-letter:", jobId);
+    return popNextJob();
+  }
+
+  return jobId;
+}
+
+export function isRedisConfigured(): boolean {
+  return redis !== null;
 }

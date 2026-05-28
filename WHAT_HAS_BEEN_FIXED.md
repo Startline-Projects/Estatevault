@@ -883,4 +883,129 @@ npm test          → 19 files, 193 tests, all passing
 
 ---
 
-### Next: Phase 4 — Reliability & Scalability
+---
+
+---
+
+# Phase 4 — Reliability & Scalability: What Has Been Fixed
+
+> **Date:** 2026-05-28
+> **Branch:** Yahia-Dev
+> **Status:** Complete. Gate GREEN (193/193 tests, TSC clean, lint warnings-only).
+
+---
+
+## Step 4.5 — KEK Cache TTL (M-11) ✅
+
+### M-11: KEK cached indefinitely — rotation requires redeploy
+- **File:** `lib/api/dek.ts`
+- **Fix:** Added `KEK_TTL_MS = 5 * 60 * 1000` (5 minutes). `getKek()` now checks `Date.now() - kekCachedAt < KEK_TTL_MS` before returning cached value. Both cache-write sites update `kekCachedAt`. `_resetKekCache()` also resets the timestamp.
+
+---
+
+## Step 4.6 — Audit Log Durability (L-05) ✅
+
+### L-05: Audit log inserts fire-and-forget with swallowed errors
+- **File:** `lib/repos/server/auditLogRepo.ts`
+- **Fix:** `insertEntry()` now `await`s the insert, and on failure retries once after 200ms. On permanent failure, logs the error with full context. All ~30 call sites automatically benefit (they all `await` the function).
+
+---
+
+## Step 4.3 — Cron Pagination + Idempotency (M-09) ✅
+
+### M-09: Cron jobs fetch ALL qualifying orders, no pagination
+- **Files:**
+  - `lib/repos/server/orderRepo.ts` — `findDeliveredBefore()` now has `.order("delivered_at", { ascending: true }).limit(50)`. FIFO processing, 50 per batch.
+  - `lib/repos/server/farewellVerificationRepo.ts` — `findActiveVetoWindows()` now has `.order("unlock_window_expires_at", { ascending: true }).limit(50)`.
+  - `findExpiredUnnotified()` already had `.limit(50)` from Phase 2.
+- **Idempotency:** All cron routes already had natural idempotency via `stamp*` functions (`last_annual_review_sent_at`, `last_life_event_checkin_sent_at`, `trustee_email_notified_at`). These prevent re-processing on the next cron run.
+- **No route changes needed** — pagination is in the repo layer, cron routes loop over whatever comes back.
+
+---
+
+## Step 4.1 — Email Retry + Failure Tracking (M-07) ✅
+
+### M-07: Email fire-and-forget — no retry, no dead-letter, silent failures
+- **File:** `lib/email.ts`
+  - Added `sendEmail()` — shared wrapper around `resend.emails.send()` with 3 attempts (200ms, 600ms exponential backoff). Checks both Resend error responses and thrown exceptions. On permanent failure: logs `{ to, subject }` with the error, then throws.
+  - All 14 internal send functions (`sendWelcomeEmail`, `sendDocumentEmail`, `sendAnnualReviewEmail`, etc.) now use `sendEmail()` instead of bare `getResend().emails.send()`.
+  - Inconsistent error handling normalized: functions that had try/catch still handle per their needs (swallow for non-critical, re-throw for critical). The retry is at the transport layer.
+
+### Route files updated (7 files):
+| Route | Change |
+|-------|--------|
+| `auth/send-verify-code` | `getResend().emails.send()` → `sendEmail()` |
+| `auth/send-verify-link` | Same |
+| `auth/resend-verification` | Same (swallows — security: no account leak) |
+| `auth/recovery` | Same (swallows — security: no account leak) |
+| `auth/welcome` | Same |
+| `farewell/access` | Same |
+| `farewell/verify` | Same (2 calls) |
+
+- **`getResend()` no longer called outside `lib/email.ts`** (except within `sendEmail` itself).
+
+---
+
+## Step 4.4 — Redis Queue Hardening (M-10) ✅
+
+### M-10: Redis queue no TTL, no dead-letter, no max-retry
+- **File:** `lib/queue/document-queue.ts`
+  - **TTL:** `job:*` keys now expire after 24 hours (`redis.expire()` in `addJob` and `updateJob`).
+  - **Max retry:** `popNextJob()` checks `attempts >= 3`. Exceeded → job moved to `doc_dead_letter` list, status set to "failed".
+  - **Dead-letter queue:** `doc_dead_letter` Redis list collects poisoned jobs.
+  - **Fail loudly:** `addJob()` now throws `"Redis not configured"` instead of silently dropping jobs. Both callers (`documents/generate` via `withRoute`, `webhooks/stripe` via try/catch) handle the throw.
+  - **`isRedisConfigured()` helper** exported for callers that need to check.
+
+---
+
+## Step 4.2 — Document Pipeline Resilience (M-08) ✅
+
+### M-08: Document pipeline no per-document status — partial failure = stuck order
+- **File:** `lib/repos/server/documentRepo.ts`
+  - Added `updateStatusByType(admin, orderId, docType, status, extra?)` — updates a single document by `order_id + document_type`.
+  - Added `countByStatus(admin, orderId, status)` — counts documents in a given status for an order.
+
+- **File:** `app/api/documents/process/route.ts`
+  - **Both paths** (Redis queue + direct fallback) now track per-document status:
+    - Before generation: document status → `"generating"`
+    - After success: document status → `"generated"`
+    - On error: document status → `"failed"` with `error_message`
+  - **Partial failure handling:** If any document fails, order stays in current status (not promoted to "delivered"). Failed count returned in response. Next cron run can retry.
+  - **Final status update** only applies to documents with `status = "generated"` (not bulk `.eq("order_id")`).
+  - **Redis path:** Failed jobs now set `status: "failed"` in the job with error details.
+
+---
+
+## Files Modified (Phase 4 complete list)
+
+| File | Changes |
+|------|---------|
+| `lib/api/dek.ts` | KEK 5-min TTL |
+| `lib/repos/server/auditLogRepo.ts` | Retry-once on failure |
+| `lib/repos/server/orderRepo.ts` | `.limit(50)` on findDeliveredBefore |
+| `lib/repos/server/farewellVerificationRepo.ts` | `.limit(50)` on findActiveVetoWindows |
+| `lib/email.ts` | `sendEmail()` retry wrapper, all 14 functions migrated |
+| `app/api/auth/send-verify-code/route.ts` | `getResend()` → `sendEmail()` |
+| `app/api/auth/send-verify-link/route.ts` | Same |
+| `app/api/auth/resend-verification/route.ts` | Same |
+| `app/api/auth/recovery/route.ts` | Same |
+| `app/api/auth/welcome/route.ts` | Same |
+| `app/api/farewell/access/route.ts` | Same |
+| `app/api/farewell/verify/route.ts` | Same |
+| `lib/queue/document-queue.ts` | TTL, max-retry, dead-letter, fail-loudly |
+| `lib/repos/server/documentRepo.ts` | updateStatusByType, countByStatus |
+| `app/api/documents/process/route.ts` | Per-document status tracking, partial failure handling |
+
+---
+
+## Verify Gate Results
+
+```
+npx tsc --noEmit  → clean (0 errors)
+npm run lint      → warnings only (pre-existing <img>)
+npm test          → 19 files, 193 tests, all passing
+```
+
+---
+
+### Next: Phase 5 — Type System + Config Hardening

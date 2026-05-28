@@ -40,7 +40,9 @@ export function findActiveVetoWindows(admin: Admin, now: string) {
     .select("id, client_id, unlock_window_expires_at")
     .eq("vault_unlock_approved", true)
     .is("owner_vetoed_at", null)
-    .gt("unlock_window_expires_at", now);
+    .gt("unlock_window_expires_at", now)
+    .order("unlock_window_expires_at", { ascending: true })
+    .limit(50);
 }
 
 // Update the owner-veto token hash (rotated each reminder send).

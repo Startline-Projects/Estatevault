@@ -3,7 +3,7 @@ import { createAdminClient } from "@/lib/api/auth";
 import { withRoute } from "@/lib/api/route";
 import { ok, fail } from "@/lib/api/response";
 import { authRecoverySchema } from "@/lib/validation/schemas";
-import { resolveSenderForEmail, renderEmailHeader, renderEmailFooter, getResend, type EmailBrand } from "@/lib/email";
+import { resolveSenderForEmail, renderEmailHeader, renderEmailFooter, sendEmail, type EmailBrand } from "@/lib/email";
 
 export const dynamic = "force-dynamic";
 
@@ -65,16 +65,16 @@ export const POST = withRoute(async (req: NextRequest) => {
 
   const sender = await resolveSenderForEmail({ email: normalizedEmail });
 
-  const { error: sendErr } = await getResend().emails.send({
-    from: sender.from,
-    replyTo: sender.replyTo,
-    to: normalizedEmail,
-    subject: `Reset your ${sender.brand.companyName} password`,
-    html: buildEmailHtml(resetLink, sender.brand),
-  });
-
-  if (sendErr) {
-    console.error("recovery Resend error:", sendErr);
+  try {
+    await sendEmail({
+      from: sender.from,
+      replyTo: sender.replyTo,
+      to: normalizedEmail,
+      subject: `Reset your ${sender.brand.companyName} password`,
+      html: buildEmailHtml(resetLink, sender.brand),
+    });
+  } catch {
+    // swallow — don't leak account existence
   }
 
   return ok({ success: true });

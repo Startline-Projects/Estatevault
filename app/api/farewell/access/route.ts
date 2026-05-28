@@ -8,7 +8,7 @@ import { deriveSubKey, INFO, zero } from "@/lib/crypto/keyManager";
 import { bytesToBytea } from "@/lib/api/crypto";
 import { blindIndex, normalize } from "@/lib/crypto/blindIndex";
 import { authRateLimit } from "@/lib/rate-limit";
-import { getResend } from "@/lib/email";
+import { sendEmail } from "@/lib/email";
 import * as fvRepo from "@/lib/repos/server/farewellVerificationRepo";
 import { farewellAccessSchema } from "@/lib/validation/schemas";
 
@@ -96,7 +96,7 @@ export const POST = withRoute(async (req: NextRequest) => {
   const unlockUrl = `${baseUrl}/trustee/unlock?token=${token}`;
 
   try {
-    await getResend().emails.send({
+    await sendEmail({
       from: "EstateVault <info@estatevault.us>",
       to: trusteeEmail,
       subject: "Your Vault Sign-In Link",

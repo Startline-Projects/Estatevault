@@ -3,7 +3,7 @@ import { withRoute } from "@/lib/api/route";
 import { ok, fail } from "@/lib/api/response";
 import { authSendVerifyLinkSchema } from "@/lib/validation/schemas";
 import { generateUrlToken, storeLink } from "@/lib/auth/emailVerification";
-import { resolveSenderForEmail, renderEmailHeader, renderEmailFooter, getResend, type EmailBrand } from "@/lib/email";
+import { resolveSenderForEmail, renderEmailHeader, renderEmailFooter, sendEmail, type EmailBrand } from "@/lib/email";
 import { authRateLimit } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
@@ -64,16 +64,15 @@ export const POST = withRoute(async (req: NextRequest) => {
     partnerSlug: partnerSlug || null,
   });
 
-  const { error: sendErr } = await getResend().emails.send({
-    from: sender.from,
-    replyTo: sender.replyTo,
-    to: normalizedEmail,
-    subject: "Confirm your email to continue",
-    html: buildEmailHtml(verifyLink, sender.brand),
-  });
-
-  if (sendErr) {
-    console.error("send-verify-link Resend error:", sendErr);
+  try {
+    await sendEmail({
+      from: sender.from,
+      replyTo: sender.replyTo,
+      to: normalizedEmail,
+      subject: "Confirm your email to continue",
+      html: buildEmailHtml(verifyLink, sender.brand),
+    });
+  } catch {
     return fail("Failed to send email.", 500);
   }
 

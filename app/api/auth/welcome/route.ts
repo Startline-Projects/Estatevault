@@ -3,7 +3,7 @@ import { createAdminClient } from "@/lib/api/auth";
 import { withRoute } from "@/lib/api/route";
 import { ok, fail } from "@/lib/api/response";
 import { createClient } from "@/lib/supabase/server";
-import { resolveSenderForEmail, getResend } from "@/lib/email";
+import { resolveSenderForEmail, sendEmail } from "@/lib/email";
 
 export const dynamic = "force-dynamic";
 
@@ -60,16 +60,15 @@ export const POST = withRoute(async (req: NextRequest) => {
 
   const sender = await resolveSenderForEmail({ email: user.email });
 
-  const { error: sendErr } = await getResend().emails.send({
-    from: sender.from,
-    replyTo: sender.replyTo,
-    to: user.email,
-    subject: "Welcome to EstateVault",
-    html: buildWelcomeHtml(fullName, dashboardUrl),
-  });
-
-  if (sendErr) {
-    console.error("welcome Resend error:", sendErr);
+  try {
+    await sendEmail({
+      from: sender.from,
+      replyTo: sender.replyTo,
+      to: user.email,
+      subject: "Welcome to EstateVault",
+      html: buildWelcomeHtml(fullName, dashboardUrl),
+    });
+  } catch {
     return fail("Email failed", 500);
   }
 

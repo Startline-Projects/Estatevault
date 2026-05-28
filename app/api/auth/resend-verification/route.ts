@@ -3,7 +3,7 @@ import { createAdminClient } from "@/lib/api/auth";
 import { withRoute } from "@/lib/api/route";
 import { ok, fail } from "@/lib/api/response";
 import { authResendVerificationSchema } from "@/lib/validation/schemas";
-import { resolveSenderForEmail, getResend } from "@/lib/email";
+import { resolveSenderForEmail, sendEmail } from "@/lib/email";
 import { authRateLimit } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
@@ -70,16 +70,16 @@ export const POST = withRoute(async (req: NextRequest) => {
 
   const sender = await resolveSenderForEmail({ email: normalizedEmail });
 
-  const { error: sendErr } = await getResend().emails.send({
-    from: sender.from,
-    replyTo: sender.replyTo,
-    to: normalizedEmail,
-    subject: "Confirm your EstateVault email",
-    html: buildVerifyEmailHtml(verifyLink),
-  });
-
-  if (sendErr) {
-    console.error("resend-verification Resend error:", sendErr);
+  try {
+    await sendEmail({
+      from: sender.from,
+      replyTo: sender.replyTo,
+      to: normalizedEmail,
+      subject: "Confirm your EstateVault email",
+      html: buildVerifyEmailHtml(verifyLink),
+    });
+  } catch {
+    // swallow — don't leak account existence
   }
 
   return ok({ success: true });
