@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { emailSetup, emailVerify, emailTest } from "@/lib/api-client/partner";
 
 type DnsRecord = { record?: string; name: string; type: string; value: string; ttl?: string | number; status?: string };
 
@@ -50,14 +51,10 @@ export default function Step5Page() {
     if (!senderName || !senderEmail) { setMsg("Enter name + email"); return; }
     setBusy(true); setMsg("");
     try {
-      const r = await fetch("/api/partner/email/setup", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ sender_name: senderName, sender_email: senderEmail }),
-      });
-      const j = await r.json();
-      if (!r.ok) { setMsg(j.error || "Setup failed"); return; }
-      setDnsRecords(Array.isArray(j.dns_records) ? j.dns_records : []);
+      const { data, error } = await emailSetup({ sender_name: senderName, sender_email: senderEmail });
+      if (error) { setMsg(error || "Setup failed"); return; }
+      const records = data?.records;
+      setDnsRecords(Array.isArray(records) ? records as DnsRecord[] : []);
       setVerified(false);
       setMsg("DNS records generated. Add them at your domain host then click Verify.");
     } finally { setBusy(false); }
@@ -66,21 +63,20 @@ export default function Step5Page() {
   async function handleVerify() {
     setBusy(true); setMsg("");
     try {
-      const r = await fetch("/api/partner/email/verify", { method: "POST" });
-      const j = await r.json();
-      if (!r.ok) { setMsg(j.error || "Verify failed"); return; }
-      setDnsRecords(Array.isArray(j.dns_records) ? j.dns_records : dnsRecords);
-      setVerified(!!j.verified);
-      setMsg(j.verified ? "Verified!" : `Status: ${j.status || "pending"} — DNS may still be propagating.`);
+      const { data, error } = await emailVerify();
+      if (error) { setMsg(error || "Verify failed"); return; }
+      const j = data as Record<string, unknown>;
+      setDnsRecords(Array.isArray(j?.dns_records) ? j.dns_records as DnsRecord[] : dnsRecords);
+      setVerified(!!j?.verified);
+      setMsg(j?.verified ? "Verified!" : `Status: ${j?.status || "pending"} — DNS may still be propagating.`);
     } finally { setBusy(false); }
   }
 
   async function handleTest() {
     setBusy(true); setMsg("");
     try {
-      const r = await fetch("/api/partner/email/test", { method: "POST" });
-      const j = await r.json();
-      setMsg(r.ok ? "Test email sent." : (j.error || "Test failed"));
+      const { error } = await emailTest();
+      setMsg(!error ? "Test email sent." : (error || "Test failed"));
     } finally { setBusy(false); }
   }
 

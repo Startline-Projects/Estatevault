@@ -1354,4 +1354,173 @@ npm test          → 19 files, 193 tests, all passing
 
 ---
 
-### Next: Phase 7 — Testing & Documentation
+---
+
+---
+
+# Phase 7 — Lock It In: What Has Been Fixed
+
+> **Date:** 2026-05-28
+> **Branch:** Yahia-Dev
+> **Status:** Complete. Gate GREEN (193/193 tests, TSC clean, lint errors-only enforcement).
+
+---
+
+## Step 7.1 — ESLint Enforcement ✅
+
+### Rules promoted to `error`:
+- **Raw `fetch("/api/...")`** in components/pages → must use `lib/api-client/` typed functions
+- **`supabase.from('vault_table')`** outside `lib/repos/` → must use repo functions (vault_items, vault_trustees, farewell_messages, item_shares, vault_pin)
+- **`console.log` of key material** (mk, dek, kek, masterKey, etc.) → banned
+- **Local `createAdminClient` declaration** in API routes → must import from `@/lib/api/auth`
+- **`Math.random()`** in API routes → must use `crypto.randomBytes()`
+
+### Files fixed to comply:
+- 10 API routes had local `createAdminClient` → replaced with shared import
+  - `affiliate/onboarding/callback`, `affiliate/signup`, `client/mark-executed`
+  - `marketing/flyer`, `marketing/materials`, `marketing/one-pager`, `marketing/script-card`
+  - `stripe/connect/onboard`, `stripe/connect/status`, `subscription/cancel`
+- 1 dashboard page had direct `vault_items` access → `eslint-disable` with justification
+
+---
+
+## Step 7.2 — CI Gate ✅
+
+### New file: `.github/workflows/ci.yml`
+- Triggers on: PR to `master` + push to `master`
+- Steps: `actions/checkout@v4` → `setup-node@v4` (Node 20, npm cache) → `npm ci` → `tsc --noEmit` → `npm run lint` → `npm test`
+- Every PR now gated by type check + lint + tests
+
+---
+
+## Step 7.3 — Doc Cleanup (L-03) ✅
+
+### `app/CLAUDE.md` — Full rewrite
+- Removed: "DB queries in `/lib/db`" → replaced with `/lib/repos/*Repo.ts`
+- Removed: "Current phase: PHASE 1" → replaced with current architecture description
+- Removed: 12-phase build order (obsolete — all phases shipped)
+- Added: Architecture overview (withRoute, requireAuth, ok/fail, repos, Zod, pricing SSOT, api-client)
+- Added: Client-side validation requirement for all forms
+
+---
+
+## Step 7.4 — Typed API Client ✅
+
+### New module: `lib/api-client/` (11 files)
+
+**Core client** (`client.ts`):
+- Generic `ApiResult<T>` type: `{ data: T } | { error: string }`
+- Authenticated: `get<T>`, `post<T>`, `put<T>`, `patch<T>`, `del<T>` — wraps `authedFetch` (auto 401 refresh)
+- Public: `publicGet<T>`, `publicPost<T>` — raw fetch for unauthenticated endpoints
+- Special: `postForm<T>` (FormData uploads), `getRaw` (binary responses like ZIP)
+- Query string builder: filters undefined params automatically
+
+**Domain modules** (10 files, 52 typed functions total):
+
+| Module | Functions | Endpoints covered |
+|--------|-----------|------------------|
+| `auth.ts` | 11 | check-email, send-verify-code, verify-code, send-verify-link, check-verification, resend-verification, welcome, handoff, handoff/consume, recovery, set-password |
+| `checkout.ts` | 9 | will, trust, check-conflict, verify, amendment, vault-subscription, partner, attorney, attorney/verify |
+| `vault.ts` | 4 | pin, download-document, farewell/signed-url, trustees |
+| `subscription.ts` | 2 | status, sync |
+| `documents.ts` | 6 | process-now, check-status, download-by-session, download-zip, regenerate-missing, send-email |
+| `partner.ts` | 13 | clients (create/update), add-domain, verify-domain, vault-subdomain (check/claim), vault-client-checkout, stripe-connect, email/setup/verify/test, branding, create-review-attorney |
+| `sales.ts` | 17 | create-partner, send-welcome-email, partner-last-login, partner-notes, reps (get/create/update), affiliate payout/status, test-promo (get/set), farewell-verification (get/action), orders-missing-docs, marketing materials/partners, partner-activated email |
+| `trustee.ts` | 6 | file-key, logout, items, download-url, unlock-otp, unlock-verify |
+| `farewell.ts` | 4 | verify (FormData), access, check-veto, execute-veto |
+| `misc.ts` | 6 | contact, request-professional-access, affiliate-signup, affiliate-onboarding, partner-marketing-materials, stripe-connect-onboard |
+
+### UI Migration — 61 files migrated, 121 raw fetch calls removed
+
+**Auth group (11 files):**
+- `auth/signup`, `auth/forgot-password`, `auth/login`, `auth/verify-email`, `auth/verify`, `auth/handoff`, `auth/vault-pin`
+- `components/auth/EmailVerifyGate`, `components/success/PasswordSetup`
+- `dashboard/settings`, `onboarding/vault-setup`
+
+**Checkout + Documents group (8 files):**
+- `will/checkout`, `trust/checkout`, `will/success`, `trust/success`
+- `dashboard/amendment`, `dashboard/vault`
+- `components/dashboard/SubscriptionBanner`, `components/dashboard/DocumentActions`
+
+**Partner/Pro group (16 files):**
+- `pro/clients`, `pro/clients/[client-id]`, `pro/settings`
+- `pro/onboarding/step-1`, `step-3`, `step-3-vault`, `step-4`, `step-4-vault`, `step-5`, `step-6`
+- `pro/vault-clients/new`, `pro/marketing`
+- `components/partner/PartnerLoadingScreen`, `PartnerThemedShell`
+- `partners/attorneys/signup`, `partners/attorneys/welcome`
+
+**Sales/Admin group (15 files):**
+- `sales/new-partner`, `pro/sales/new-partner`
+- `sales/partners/[partner-id]`, `pro/sales/partners/[partner-id]`
+- `sales/dashboard`, `pro/sales`
+- `sales/farewell-verification`, `sales/admin/regenerate-docs`, `sales/marketing-materials`
+- `components/sales/TeamManagement`, `TestControls`, `AffiliatePayoutButton`, `AffiliateStatusToggle`
+- `sales/account`, `pro/sales/account`
+
+**Trustee/Farewell/Other group (11 files):**
+- `trustee/vault`, `trustee/unlock`
+- `farewell/[clientId]`, `farewell/owner-veto`
+- `contact`, `professionals`, `partners/attorneys/review-network`
+- `affiliate-signup`, `components/AffiliateOnboardingResume`
+- `vault/trustee-confirm`, `dashboard/vault/farewell`
+
+**Result:** Zero raw `fetch("/api/...")` calls remain in `app/` or `components/`. Verified via grep.
+
+---
+
+## Verify Gate Results
+
+```
+npx tsc --noEmit  → clean (0 errors)
+npm run lint      → 0 errors (warnings: pre-existing useEffect deps, supabase.from in lib files)
+npm test          → 19 files, 193 tests, all passing
+```
+
+---
+
+## Files Created (Phase 7)
+
+| File | Purpose |
+|------|---------|
+| `lib/api-client/client.ts` | Core typed fetch client with ApiResult<T> |
+| `lib/api-client/auth.ts` | Auth endpoint typed functions |
+| `lib/api-client/checkout.ts` | Checkout endpoint typed functions |
+| `lib/api-client/vault.ts` | Vault endpoint typed functions |
+| `lib/api-client/subscription.ts` | Subscription endpoint typed functions |
+| `lib/api-client/documents.ts` | Document endpoint typed functions |
+| `lib/api-client/partner.ts` | Partner endpoint typed functions |
+| `lib/api-client/sales.ts` | Sales/admin endpoint typed functions |
+| `lib/api-client/trustee.ts` | Trustee endpoint typed functions |
+| `lib/api-client/farewell.ts` | Farewell endpoint typed functions |
+| `lib/api-client/misc.ts` | Contact, affiliate, professionals typed functions |
+| `lib/api-client/index.ts` | Re-export barrel |
+| `.github/workflows/ci.yml` | GitHub Actions CI gate |
+
+## Files Modified (Phase 7)
+
+| File | Changes |
+|------|---------|
+| `.eslintrc.json` | Promoted rules to error, added createAdminClient + Math.random bans |
+| `app/CLAUDE.md` | Full rewrite — removed stale Phase 1 + /lib/db references |
+| ~61 UI files | Raw fetch → typed API client |
+| 10 API routes | Local createAdminClient → shared import |
+| `app/dashboard/page.tsx` | eslint-disable for vault_items count |
+
+---
+
+## Production Plan Status
+
+All 7 phases complete:
+- **Phase 0:** Security lockdown ✅
+- **Phase 1:** Foundation hardening ✅
+- **Phase 2:** Structural refactor (all 9 groups + checkout dedup) ✅
+- **Phase 3:** Validation at every boundary ✅
+- **Phase 4:** Reliability & scalability ✅
+- **Phase 5:** Type system + config hardening (5.1/5.2 deferred — Supabase CLI) ✅
+- **Phase 6:** Frontend production quality ✅
+- **Phase 7:** Lock it in ✅
+
+### Remaining (deferred items requiring external tools):
+- **5.1:** Generate Supabase DB types (`supabase gen types typescript`)
+- **5.2:** Migration baseline (`00000000000000_baseline.sql`)
+- **S-11:** DEK AAD binding (requires re-wrapping existing DEKs)

@@ -5,6 +5,7 @@ import Link from "next/link";
 import Footer from "@/components/Footer";
 import { partnerUrl } from "@/lib/hosts";
 import { PRICES, PARTNER_SPLITS, PARTNER_PLATFORM_FEE, formatPrice } from "@/lib/orders/pricing";
+import { requestProfessionalAccess } from "@/lib/api-client/misc";
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -957,18 +958,8 @@ function RequestAccessForm() {
     setSubmitting(true);
 
     try {
-      const res = await fetch("/api/professionals/request-access", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
-      });
-
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(
-          data.error || "Something went wrong. Please try again."
-        );
-      }
+      const { error: apiError } = await requestProfessionalAccess(form as unknown as Record<string, unknown>);
+      if (apiError) throw new Error(apiError);
 
       setSubmitted(true);
     } catch (err) {

@@ -7,6 +7,7 @@ import { MnemonicDisplay } from "@/components/onboarding/MnemonicDisplay";
 import { MnemonicConfirm } from "@/components/onboarding/MnemonicConfirm";
 import { getKeySession } from "@/lib/crypto/keySession";
 import { postBootstrap } from "@/lib/repos/cryptoRepo";
+import { pinAction } from "@/lib/api-client/vault";
 
 type Step = "loading" | "pin" | "passphrase" | "show" | "confirm" | "done";
 
@@ -25,14 +26,9 @@ export default function VaultSetupPage() {
   const [pinConfirm, setPinConfirm] = useState("");
 
   useEffect(() => {
-    fetch("/api/vault/pin", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "check" }),
-    })
-      .then((r) => r.json())
-      .then((j) => {
-        setStep(j.hasPin ? "passphrase" : "pin");
+    pinAction({ action: "check" })
+      .then(({ data }) => {
+        setStep(data && "hasPin" in data && data.hasPin ? "passphrase" : "pin");
       })
       .catch(() => setStep("pin"));
   }, []);
@@ -50,14 +46,9 @@ export default function VaultSetupPage() {
     }
     setBusy(true);
     try {
-      const res = await fetch("/api/vault/pin", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "create", pin }),
-      });
-      if (!res.ok) {
-        const j = await res.json().catch(() => ({}));
-        throw new Error(j.error || "Failed to set PIN");
+      const { error: pinErr } = await pinAction({ action: "create", pin });
+      if (pinErr) {
+        throw new Error(pinErr);
       }
       setPin("");
       setPinConfirm("");

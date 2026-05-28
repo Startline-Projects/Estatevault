@@ -7,6 +7,7 @@ import { createClient } from "@/lib/supabase/client";
 import { clientUrl, partnerUrl, adminUrl, salesUrl, isClientHost, isPartnerHost, isAdminHost, isSalesHost } from "@/lib/hosts";
 import { createClient as createBrowserSupabase } from "@/lib/supabase/client";
 import PartnerThemedShell, { usePartnerBranding } from "@/components/partner/PartnerThemedShell";
+import { createHandoff } from "@/lib/api-client/auth";
 
 function BrandedWordmark({ className = "" }: { className?: string }) {
   const branding = usePartnerBranding();
@@ -35,21 +36,17 @@ async function navigate(
       window.location.href = fullUrl;
       return;
     }
-    const res = await fetch("/api/auth/handoff", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        access_token: session.access_token,
-        refresh_token: session.refresh_token,
-        target,
-        redirect_path: redirectPath,
-      }),
+    const { data: handoffData, error: handoffErr } = await createHandoff({
+      access_token: session.access_token,
+      refresh_token: session.refresh_token,
+      target,
+      redirect_path: redirectPath,
     });
-    if (!res.ok) {
+    if (handoffErr || !handoffData) {
       window.location.href = fullUrl;
       return;
     }
-    const { url } = await res.json();
+    const { url } = handoffData;
     // Do NOT call supabase.auth.signOut here — even scope:"local" hits the
     // /logout API and invalidates the current session_id server-side, which
     // would cause setSession on the target host to fail with

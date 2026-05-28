@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { PRICES, formatPrice } from "@/lib/orders/pricing";
+import { getStatus } from "@/lib/api-client/subscription";
+import { checkoutVaultSubscription } from "@/lib/api-client/checkout";
 
 interface SubscriptionStatus {
   status: string;
@@ -18,10 +20,12 @@ export default function SubscriptionBanner({ onStatusLoaded }: { onStatusLoaded?
   useEffect(() => {
     async function load() {
       try {
-        const res = await fetch("/api/subscription/status");
-        const data = await res.json();
-        setSub(data);
-        onStatusLoaded?.(data);
+        const { data } = await getStatus();
+        if (data) {
+          const status = data as unknown as SubscriptionStatus;
+          setSub(status);
+          onStatusLoaded?.(status);
+        }
       } catch { /* ignore */ }
       setLoading(false);
     }
@@ -31,9 +35,8 @@ export default function SubscriptionBanner({ onStatusLoaded }: { onStatusLoaded?
   async function handleSubscribe() {
     setSubscribing(true);
     try {
-      const res = await fetch("/api/checkout/vault-subscription", { method: "POST" });
-      const data = await res.json();
-      if (data.url) window.location.href = data.url;
+      const { data } = await checkoutVaultSubscription();
+      if (data?.url) window.location.href = data.url;
     } catch { /* ignore */ }
     setSubscribing(false);
   }

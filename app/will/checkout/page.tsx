@@ -8,6 +8,8 @@ import { createClient } from "@/lib/supabase/client";
 import PartnerThemedShell, { usePartnerBranding } from "@/components/partner/PartnerThemedShell";
 import EmailVerifyGate from "@/components/auth/EmailVerifyGate";
 import { PRICES, formatPrice } from "@/lib/orders/pricing";
+import { getTestPromo } from "@/lib/api-client/sales";
+import { checkConflict as checkConflictApi, checkoutWill } from "@/lib/api-client/checkout";
 
 function BrandedWordmark({ className = "" }: { className?: string }) {
   const branding = usePartnerBranding();
@@ -70,8 +72,8 @@ export default function WillCheckoutPage() {
     } else if (code === "TEST") {
       // Validate server-side, don't expose test logic in client JS
       try {
-        const res = await fetch("/api/admin/test-promo");
-        const data = await res.json();
+        const { data, error: err } = await getTestPromo();
+        if (err || !data) { setError("This code is not valid"); setPromoApplied(false); return; }
         if (data.active) {
           setPromoApplied(true); setIsTestMode(true); setAttorneyReview(false); setError("");
         } else {
@@ -99,14 +101,9 @@ export default function WillCheckoutPage() {
     try {
       const intake = sessionStorage.getItem("willIntake");
       if (!intake) { router.push("/will"); return; }
-      const res = await fetch("/api/checkout/will", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId: null, attorneyReview: false, intakeAnswers: JSON.parse(intake), promoCode }),
-      });
-      const data = await res.json();
-      if (!res.ok) { setError(data.error || "Something went wrong."); setLoading(false); return; }
-      if (data.test) {
+      const { data, error: err } = await checkoutWill({ userId: null, attorneyReview: false, intakeAnswers: JSON.parse(intake), promoCode });
+      if (err || !data) { setError(err || "Something went wrong."); setLoading(false); return; }
+      if ("orderId" in data && (data as Record<string, unknown>).test) {
         router.push(`/will/success?test=true&order_id=${data.orderId}`);
         return;
       }
@@ -121,24 +118,20 @@ export default function WillCheckoutPage() {
       const intake = sessionStorage.getItem("willIntake");
       if (!intake) { router.push("/will"); return; }
 
-      const res = await fetch("/api/checkout/will", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          userId: userId || null,
-          attorneyReview: false,
-          intakeAnswers: JSON.parse(intake),
-          promoCode,
-          email: promoEmail,
-          partnerId: partnerId || null,
-        }),
+      const { data, error: err } = await checkoutWill({
+        userId: userId || null,
+        attorneyReview: false,
+        intakeAnswers: JSON.parse(intake),
+        promoCode,
+        email: promoEmail,
+        partnerId: partnerId || null,
       });
 
-      const data = await res.json();
-      if (!res.ok) { setError(data.error || "Something went wrong."); setLoading(false); setShowAcknowledgment(false); return; }
+      if (err || !data) { setError(err || "Something went wrong."); setLoading(false); setShowAcknowledgment(false); return; }
 
-      if (data.free) {
-        router.push(`/will/success?promo=true&order_id=${data.orderId}&email=${encodeURIComponent(data.email)}&user_id=${data.userId || ""}`);
+      const result = data as Record<string, unknown>;
+      if (result.free) {
+        router.push(`/will/success?promo=true&order_id=${result.orderId}&email=${encodeURIComponent(result.email as string)}&user_id=${result.userId || ""}`);
         return;
       }
     } catch {
@@ -155,14 +148,10 @@ export default function WillCheckoutPage() {
     }
     setConflictChecking(true);
     try {
-      const res = await fetch("/api/checkout/check-conflict", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, productType: "will" }),
-      });
-      const data = await res.json();
-      if (res.ok) {
-        if (data.action === "block") { setConflictBlocked(true); setConflictMsg(data.message); }
+      const { data } = await checkConflictApi(email, "will");
+      if (data) {
+        const result = data as Record<string, unknown>;
+        if (result.action === "block") { setConflictBlocked(true); setConflictMsg(result.message as string); }
         else { setConflictBlocked(false); setConflictMsg(""); }
       }
     } catch { /* ignore network errors, server will re-check */ }
@@ -181,21 +170,16 @@ export default function WillCheckoutPage() {
       const intake = sessionStorage.getItem("willIntake");
       if (!intake) { router.push("/will"); return; }
 
-      const res = await fetch("/api/checkout/will", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          userId: userId || null,
-          attorneyReview,
-          intakeAnswers: JSON.parse(intake),
-          partnerId: partnerId || null,
-          customerEmail,
-        }),
+      const { data, error: err } = await checkoutWill({
+        userId: userId || null,
+        attorneyReview,
+        intakeAnswers: JSON.parse(intake),
+        partnerId: partnerId || null,
+        customerEmail,
       });
 
-      const data = await res.json();
-      if (!res.ok) { setError(data.error || "Something went wrong."); setLoading(false); return; }
-      window.location.href = data.url;
+      if (err || !data) { setError(err || "Something went wrong."); setLoading(false); return; }
+      if ("url" in data) window.location.href = data.url;
     } catch {
       setError("Something went wrong. Please try again.");
       setLoading(false);

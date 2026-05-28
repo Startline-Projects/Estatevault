@@ -4,6 +4,7 @@ import { useState, Suspense, useEffect } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { checkEmail, sendVerifyCode, verifyCode } from "@/lib/api-client/auth";
 
 type ExistingAccountInfo = {
   fullName: string | null;
@@ -71,21 +72,15 @@ function SignUpForm() {
 
     setVerifyLoading(true);
     try {
-      const checkRes = await fetch("/api/auth/check-email", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: normalizedEmail }),
-      });
-      const checkData = await checkRes.json().catch(() => ({}));
-
-      if (!checkRes.ok) {
-        setVerifyError(checkData.error || "Unable to check email.");
+      const { data: checkData, error: checkErr } = await checkEmail(normalizedEmail);
+      if (checkErr || !checkData) {
+        setVerifyError(checkErr || "Unable to check email.");
         return;
       }
 
       if (checkData.exists) {
         setExistingAccount({
-          fullName: checkData.fullName,
+          fullName: checkData.fullName ?? null,
           hasWill: !!checkData.hasWill,
           hasTrust: !!checkData.hasTrust,
           hasVault: !!checkData.hasVault,
@@ -93,15 +88,9 @@ function SignUpForm() {
         return;
       }
 
-      const sendRes = await fetch("/api/auth/send-verify-code", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: normalizedEmail, partnerSlug: partner || null }),
-      });
-      const sendData = await sendRes.json().catch(() => ({}));
-
-      if (!sendRes.ok) {
-        setVerifyError(sendData.error || "Unable to send code.");
+      const { error: sendErr } = await sendVerifyCode(normalizedEmail, partner || undefined);
+      if (sendErr) {
+        setVerifyError(sendErr);
         return;
       }
 
@@ -126,15 +115,9 @@ function SignUpForm() {
 
     setVerifyLoading(true);
     try {
-      const res = await fetch("/api/auth/verify-code", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: normalizedEmail, code: normalizedCode }),
-      });
-      const data = await res.json().catch(() => ({}));
-
-      if (!res.ok || !data.token) {
-        setVerifyError(data.error || "Verification failed.");
+      const { data, error: verifyErr } = await verifyCode(normalizedEmail, normalizedCode);
+      if (verifyErr || !data?.token) {
+        setVerifyError(verifyErr || "Verification failed.");
         return;
       }
 
@@ -154,14 +137,9 @@ function SignUpForm() {
     const normalizedEmail = email.trim().toLowerCase();
     setVerifyLoading(true);
     try {
-      const res = await fetch("/api/auth/send-verify-code", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: normalizedEmail, partnerSlug: partner || null }),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        setVerifyError(data.error || "Unable to resend code.");
+      const { error: sendErr } = await sendVerifyCode(normalizedEmail, partner || undefined);
+      if (sendErr) {
+        setVerifyError(sendErr);
         return;
       }
       setResendCooldown(30);

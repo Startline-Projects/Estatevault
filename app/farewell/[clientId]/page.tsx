@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { useParams } from "next/navigation";
+import { verify, access } from "@/lib/api-client/farewell";
 
 interface VideoMessage {
   id: string;
@@ -106,11 +107,10 @@ export default function FarewellTrusteePage() {
       formData.append("trusteeEmail", trusteeEmail);
       formData.append("certificate", certificate);
 
-      const res = await fetch("/api/farewell/verify", { method: "POST", body: formData });
-      const data = await res.json();
+      const { error: apiError } = await verify(formData);
 
-      if (!res.ok) {
-        setError(data.error || "Something went wrong.");
+      if (apiError) {
+        setError(apiError || "Something went wrong.");
         setSubmitting(false);
         return;
       }
@@ -131,18 +131,16 @@ export default function FarewellTrusteePage() {
     setError("");
 
     try {
-      const res = await fetch("/api/farewell/access", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ clientId, trusteeEmail: accessEmail }),
-      });
-      const data = await res.json();
+      const { data, error: apiError } = await access(clientId, accessEmail);
 
-      if (!res.ok) {
-        setError(data.error || "Unable to access messages.");
+      if (apiError) {
+        setError(apiError || "Unable to access messages.");
         setAccessing(false);
         return;
       }
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const d = data as Record<string, any>;
 
       const block = (title: string, message: string, action: null | "upload_cert" = null) => {
         setBlockTitle(title);
@@ -154,32 +152,32 @@ export default function FarewellTrusteePage() {
         } catch { /* ignore */ }
       };
 
-      if (data.state === "email_sent") {
+      if (d.state === "email_sent") {
         setPageState("email_sent");
-      } else if (data.state === "unlocked") {
+      } else if (d.state === "unlocked") {
         // Legacy path: kept as fallback in case server returns content.
-        setTrusteeName(data.trusteeName);
-        setMessages(data.messages || []);
-        setDocuments(data.documents || []);
-        setVaultCategories(data.vaultCategories || []);
-        setGrantedScope(data.scope || null);
-        setVaultUnlock(data.vaultUnlock || null);
+        setTrusteeName(d.trusteeName);
+        setMessages(d.messages || []);
+        setDocuments(d.documents || []);
+        setVaultCategories(d.vaultCategories || []);
+        setGrantedScope(d.scope || null);
+        setVaultUnlock(d.vaultUnlock || null);
         setPageState("viewing");
-      } else if (data.state === "pending_approval" || data.state === "pending") {
+      } else if (d.state === "pending_approval" || d.state === "pending") {
         setPageState("pending");
-      } else if (data.state === "trustee_not_confirmed") {
+      } else if (d.state === "trustee_not_confirmed") {
         block("Accept Trustee Role First", "You have not yet accepted the trustee role. Check your email for the confirmation link and accept the role before requesting vault access.");
-      } else if (data.state === "no_request") {
+      } else if (d.state === "no_request") {
         block(
           "Please Upload the Death Certificate First",
           "You have not uploaded a death certificate yet. Upload it and wait for admin approval before you can access any vault content.",
           "upload_cert",
         );
-      } else if (data.state === "rejected") {
+      } else if (d.state === "rejected") {
         block("Request Rejected", "Your access request was rejected. Contact support if you believe this is an error.");
-      } else if (data.state === "vetoed") {
+      } else if (d.state === "vetoed") {
         block("Access Cancelled", "The owner has cancelled this access request. No emergency access is available.");
-      } else if (data.state === "no_messages") {
+      } else if (d.state === "no_messages") {
         block("Nothing Available", "No farewell messages are available for this account.");
       } else {
         setError("Unable to access messages.");

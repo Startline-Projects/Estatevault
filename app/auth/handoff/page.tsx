@@ -4,6 +4,7 @@ import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import PartnerThemedShell from "@/components/partner/PartnerThemedShell";
+import { consumeHandoff } from "@/lib/api-client/auth";
 
 function HandoffInner() {
   const params = useSearchParams();
@@ -17,20 +18,14 @@ function HandoffInner() {
     }
     (async () => {
       try {
-        const res = await fetch("/api/auth/handoff/consume", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ token }),
-        });
-        if (!res.ok) {
-          const j = await res.json().catch(() => ({}));
-          throw new Error(j.error || "Handoff failed");
+        const { data, error: handoffErr } = await consumeHandoff(token);
+        if (handoffErr || !data) {
+          throw new Error(handoffErr || "Handoff failed");
         }
-        const { access_token, refresh_token, redirect_path } = await res.json();
         const supabase = createClient();
-        const { error: setErr } = await supabase.auth.setSession({ access_token, refresh_token });
+        const { error: setErr } = await supabase.auth.setSession({ access_token: data.access_token, refresh_token: data.refresh_token });
         if (setErr) throw setErr;
-        window.location.replace(redirect_path || "/");
+        window.location.replace(data.redirect_path || "/");
       } catch (e: any) {
         setError(e?.message || "Handoff failed");
       }

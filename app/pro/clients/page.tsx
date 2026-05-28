@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
+import { createClient as apiCreateClient } from "@/lib/api-client/partner";
 
 interface ClientRow { id: string; profile_id: string; created_at: string; profiles: { full_name: string; email: string } | null; orders: Array<{ product_type: string; status: string; partner_cut: number }> }
 
@@ -82,9 +83,8 @@ export default function ProClientsPage() {
     if (!user) return;
 
     // Create auth user for client
-    const res = await fetch("/api/partner/clients", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...form, partnerId, action: "start" }) });
-    if (res.ok) {
-      const data = await res.json();
+    const { data, error } = await apiCreateClient({ ...form, partnerId, action: "start" });
+    if (!error && data) {
       window.open(`/quiz?partner=${partnerId}&client=${data.clientId}`, "_blank");
       setShowModal(false);
       setForm({ firstName: "", lastName: "", email: "", phone: "", message: "" });
@@ -95,7 +95,7 @@ export default function ProClientsPage() {
   async function handleSendInvite() {
     if (!form.firstName || !form.email) return;
     setSending(true);
-    await fetch("/api/partner/clients", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...form, partnerId, action: "invite" }) });
+    await apiCreateClient({ ...form, partnerId, action: "invite" });
     setShowModal(false);
     setForm({ firstName: "", lastName: "", email: "", phone: "", message: "" });
     setSending(false);

@@ -7,6 +7,9 @@ import { listItems, createItem, deleteItem, type VaultCategory } from "@/lib/rep
 import { downloadDocument } from "@/lib/repos/documentRepo";
 import { listFarewellMessages } from "@/lib/repos/videoRepo";
 import { PRICES, formatPrice } from "@/lib/orders/pricing";
+import { pinAction, downloadDocument as downloadVaultDocument } from "@/lib/api-client/vault";
+import { getStatus as getSubStatus, sync as syncSub } from "@/lib/api-client/subscription";
+import { checkoutVaultSubscription } from "@/lib/api-client/checkout";
 
 import VaultPinScreen from "@/components/vault/VaultPinScreen";
 import VaultItemDetailModal from "@/components/vault/VaultItemDetailModal";
@@ -56,21 +59,21 @@ export default function VaultPage() {
     initRef.current = true;
     async function check() {
       const justSubscribed = typeof window !== "undefined" && new URLSearchParams(window.location.search).get("subscribed") === "true";
-      const [pinRes, subRes] = await Promise.all([
-        fetch("/api/vault/pin", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "check" }) }),
-        fetch("/api/subscription/status"),
+      const [pinResult, subResult] = await Promise.all([
+        pinAction({ action: "check" }),
+        getSubStatus(),
       ]);
-      const pinData = await pinRes.json();
-      let subData = await subRes.json();
-      if (justSubscribed || subData.status !== "active") {
+      const pinData = pinResult.data as Record<string, unknown> | undefined;
+      let subStatus = subResult.data?.status;
+      if (justSubscribed || subStatus !== "active") {
         try {
-          const syncRes = await fetch("/api/subscription/sync", { method: "POST" });
-          if (syncRes.ok) { const syncData = await syncRes.json(); if (syncData.status === "active") subData = { ...subData, status: "active" }; }
+          const { data: syncData } = await syncSub();
+          if (syncData?.status === "active") subStatus = "active";
         } catch { /* ignore */ }
       }
-      setIsSubscribed(subData.status === "active");
+      setIsSubscribed(subStatus === "active");
       const cachedExpiry = typeof window !== "undefined" ? Number(sessionStorage.getItem("vault:pin-expiry") || 0) : 0;
-      if (pinData.hasPin && cachedExpiry > Date.now()) {
+      if (pinData?.hasPin && cachedExpiry > Date.now()) {
         setPinExpiry(cachedExpiry);
         await loadItems();
         const savedScreen = typeof window !== "undefined" ? sessionStorage.getItem(SCREEN_STORAGE_KEY) : null;
@@ -81,7 +84,7 @@ export default function VaultPage() {
         } else { setScreen("vault"); }
       } else {
         if (typeof window !== "undefined") { sessionStorage.removeItem("vault:pin-expiry"); sessionStorage.removeItem(SCREEN_STORAGE_KEY); sessionStorage.removeItem(CATEGORY_STORAGE_KEY); }
-        setScreen(pinData.hasPin ? "pin-enter" : "pin-create");
+        setScreen(pinData?.hasPin ? "pin-enter" : "pin-create");
       }
       if (justSubscribed && typeof window !== "undefined") { const url = new URL(window.location.href); url.searchParams.delete("subscribed"); window.history.replaceState({}, "", url.toString()); }
     }
@@ -128,16 +131,16 @@ export default function VaultPage() {
   async function handleCreatePin() {
     if (pin.length !== 6 || !/^\d{6}$/.test(pin)) { setPinError("PIN must be exactly 6 digits"); return; }
     if (pin !== confirmPin) { setPinError("PINs do not match"); return; }
-    const res = await fetch("/api/vault/pin", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "create", pin }) });
-    if (!res.ok) { setPinError("Failed to create PIN"); return; }
+    const { error: err } = await pinAction({ action: "create", pin });
+    if (err) { setPinError("Failed to create PIN"); return; }
     const expiry = Date.now() + 10 * 60 * 1000; setPinExpiry(expiry);
     if (typeof window !== "undefined") sessionStorage.setItem("vault:pin-expiry", String(expiry));
     await loadItems(); setScreen("vault");
   }
 
   async function handleVerifyPin() {
-    const res = await fetch("/api/vault/pin", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "verify", pin }) });
-    if (!res.ok) { setPinError("Incorrect PIN"); setPin(""); return; }
+    const { error: err } = await pinAction({ action: "verify", pin });
+    if (err) { setPinError("Incorrect PIN"); setPin(""); return; }
     const expiry = Date.now() + 10 * 60 * 1000; setPinExpiry(expiry);
     if (typeof window !== "undefined") sessionStorage.setItem("vault:pin-expiry", String(expiry));
     await loadItems(); setScreen("vault");
@@ -176,17 +179,16 @@ export default function VaultPage() {
         const a = document.createElement("a"); a.href = url; a.download = fileName; document.body.appendChild(a); a.click(); a.remove();
         setTimeout(() => URL.revokeObjectURL(url), 60_000); return;
       }
-      const res = await fetch(`/api/vault/download-document?item_id=${item.id}`);
-      if (!res.ok) { alert("Unable to download file."); return; }
-      const { url } = await res.json(); window.open(url, "_blank");
+      const { data: dlData, error: dlErr } = await downloadVaultDocument(item.id);
+      if (dlErr || !dlData?.url) { alert("Unable to download file."); return; }
+      window.open(dlData.url, "_blank");
     } catch (e) { alert(`Download failed: ${(e as Error).message}`); } finally { setDownloadingId(null); }
   }
 
   async function handleUpgradeCheckout() {
     setShowUpgradePrompt(false);
-    const res = await fetch("/api/checkout/vault-subscription", { method: "POST" });
-    const data = await res.json();
-    if (data.url) window.location.href = data.url;
+    const { data } = await checkoutVaultSubscription();
+    if (data?.url) window.location.href = data.url;
   }
 
   // -- Render --

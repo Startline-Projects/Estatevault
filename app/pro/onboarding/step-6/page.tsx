@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { stripeConnect } from "@/lib/api-client/partner";
 
 export default function Step6Page() {
   const router = useRouter();
@@ -33,10 +34,9 @@ export default function Step6Page() {
     setConnecting(true);
     setConnectError("");
     try {
-      const res = await fetch("/api/partner/stripe-connect", { method: "POST" });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to connect Stripe");
-      if (data.url) {
+      const { data, error } = await stripeConnect();
+      if (error) throw new Error(error || "Failed to connect Stripe");
+      if (data?.url) {
         window.location.href = data.url;
       }
     } catch (err) {

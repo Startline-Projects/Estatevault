@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { getTestPromo, setTestPromo } from "@/lib/api-client/sales";
 
 export default function TestControls() {
   const [active, setActive] = useState(false);
@@ -10,9 +11,8 @@ export default function TestControls() {
   useEffect(() => {
     async function load() {
       try {
-        const res = await fetch("/api/admin/test-promo");
-        const data = await res.json();
-        setActive(data.active);
+        const { data } = await getTestPromo();
+        setActive(data?.active ?? false);
       } catch { /* ignore */ }
       setLoading(false);
     }
@@ -22,13 +22,8 @@ export default function TestControls() {
   async function handleToggle() {
     setToggling(true);
     try {
-      const res = await fetch("/api/admin/test-promo", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ active: !active }),
-      });
-      const data = await res.json();
-      if (data.success) setActive(data.active);
+      const { data } = await setTestPromo(!active);
+      if (data?.success) setActive(!active);
     } catch { /* ignore */ }
     setToggling(false);
   }

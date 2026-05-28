@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { affiliateStatus } from "@/lib/api-client/sales";
 
 export default function AffiliateStatusToggle({
   affiliateId,
@@ -23,16 +24,11 @@ export default function AffiliateStatusToggle({
 
     setBusy(true);
     try {
-      const res = await fetch(`/api/sales/affiliates/${affiliateId}/status`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: next }),
-      });
-      if (res.ok) {
-        router.refresh();
+      const { error } = await affiliateStatus(affiliateId, next);
+      if (error) {
+        alert(error);
       } else {
-        const data = await res.json().catch(() => ({}));
-        alert(data.error || "Failed to update status.");
+        router.refresh();
       }
     } catch {
       alert("Failed to update status.");

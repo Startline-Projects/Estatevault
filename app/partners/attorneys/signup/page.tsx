@@ -1,8 +1,9 @@
 'use client';
 
-import { useState, FormEvent, Suspense } from 'react';
+import { useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
+import { checkoutAttorney } from '@/lib/api-client/checkout';
 
 /* ------------------------------------------------------------------ */
 /*  Types & Constants                                                  */
@@ -150,29 +151,24 @@ function AttorneySignupContent() {
         promo_code: isPromoFree ? 'TPFP' : undefined,
       };
 
-      const res = await fetch('/api/checkout/attorney', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
+      const { data, error } = await checkoutAttorney(payload);
 
-      const data = await res.json();
-
-      if (!res.ok) {
-        throw new Error(data.error || 'Failed to create checkout session.');
+      if (error) {
+        throw new Error(error || 'Failed to create checkout session.');
       }
 
       // If promo was applied and account created directly (no Stripe)
-      if (data.redirect) {
-        window.location.href = data.redirect;
+      const result = data as Record<string, unknown>;
+      if (result.redirect) {
+        window.location.href = result.redirect as string;
         return;
       }
 
-      if (data.url) {
+      if (result.url) {
         // Store password in sessionStorage so the verify endpoint can use it
         // instead of storing it in Stripe metadata
         sessionStorage.setItem("ev_attorney_pwd", formData.password);
-        window.location.href = data.url;
+        window.location.href = result.url as string;
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Something went wrong.');

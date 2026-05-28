@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { getReps, createRep, updateRep } from "@/lib/api-client/sales";
 
 interface SalesRep {
   id: string;
@@ -27,9 +28,8 @@ export default function TeamManagement() {
 
   async function fetchReps() {
     try {
-      const res = await fetch("/api/sales/reps");
-      const data = await res.json();
-      if (data.reps) setReps(data.reps);
+      const { data } = await getReps();
+      if (data?.reps) setReps(data.reps as SalesRep[]);
     } catch {
       console.error("Failed to fetch reps");
     } finally {
@@ -48,21 +48,15 @@ export default function TeamManagement() {
     setSuccess("");
 
     try {
-      const res = await fetch("/api/sales/create-rep", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ fullName: formName, email: formEmail, commissionRate: formCommission }),
-      });
+      const { data, error: apiError } = await createRep({ fullName: formName, email: formEmail, commissionRate: Number(formCommission) });
 
-      const data = await res.json();
-
-      if (!res.ok) {
-        setError(data.error || "Failed to create sales rep.");
+      if (apiError) {
+        setError(apiError);
         setCreating(false);
         return;
       }
 
-      setSuccess(`Account created for ${formName}. Temporary password: ${data.tempPassword}`);
+      setSuccess(`Account created for ${formName}. Temporary password: ${(data as Record<string, unknown>)?.tempPassword}`);
       setFormName("");
       setFormEmail("");
       setFormCommission("5");
@@ -78,14 +72,9 @@ export default function TeamManagement() {
   async function handleSaveRate(repId: string) {
     setSavingRate(true);
     try {
-      const res = await fetch("/api/sales/reps", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ repId, commissionRate: editingRateValue }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        alert(data.error || "Failed to update commission rate.");
+      const { error: apiError } = await updateRep(repId, Number(editingRateValue));
+      if (apiError) {
+        alert(apiError);
         return;
       }
       setReps((prev) =>

@@ -9,6 +9,8 @@ import type { ComplexityResult } from "@/lib/trust-types";
 import PartnerThemedShell, { usePartnerBranding } from "@/components/partner/PartnerThemedShell";
 import EmailVerifyGate from "@/components/auth/EmailVerifyGate";
 import { PRICES, formatPrice } from "@/lib/orders/pricing";
+import { getTestPromo } from "@/lib/api-client/sales";
+import { checkConflict as checkConflictApi, checkoutTrust } from "@/lib/api-client/checkout";
 
 function BrandedWordmark({ className = "" }: { className?: string }) {
   const branding = usePartnerBranding();
@@ -78,8 +80,8 @@ export default function TrustCheckoutPage() {
       setPromoApplied(true); setIsTestMode(false); setAttorneyReview(false); setError("");
     } else if (code === "TEST") {
       try {
-        const res = await fetch("/api/admin/test-promo");
-        const data = await res.json();
+        const { data, error: err } = await getTestPromo();
+        if (err || !data) { setError("This code is not valid"); setPromoApplied(false); return; }
         if (data.active) { setPromoApplied(true); setIsTestMode(true); setAttorneyReview(false); setError(""); }
         else { setError("This code is not valid"); setPromoApplied(false); }
       } catch { setError("This code is not valid"); setPromoApplied(false); }
@@ -101,14 +103,9 @@ export default function TrustCheckoutPage() {
     try {
       const intake = sessionStorage.getItem("trustIntake");
       if (!intake) { router.push("/trust"); return; }
-      const res = await fetch("/api/checkout/trust", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId: null, attorneyReview: false, intakeAnswers: JSON.parse(intake), promoCode, complexityFlag: false, complexityReasons: [], declinedAttorneyReview: true, partnerId: partnerId || null }),
-      });
-      const data = await res.json();
-      if (!res.ok) { setError(data.error || "Something went wrong."); setLoading(false); return; }
-      if (data.test) { router.push(`/trust/success?test=true&order_id=${data.orderId}`); return; }
+      const { data, error: err } = await checkoutTrust({ userId: null, attorneyReview: false, intakeAnswers: JSON.parse(intake), promoCode, complexityFlag: false, complexityReasons: [], declinedAttorneyReview: true, partnerId: partnerId || null });
+      if (err || !data) { setError(err || "Something went wrong."); setLoading(false); return; }
+      if ("orderId" in data && (data as Record<string, unknown>).test) { router.push(`/trust/success?test=true&order_id=${data.orderId}`); return; }
     } catch { setError("Something went wrong."); setLoading(false); }
   }
 
@@ -118,20 +115,16 @@ export default function TrustCheckoutPage() {
     try {
       const intake = sessionStorage.getItem("trustIntake");
       if (!intake) { router.push("/trust"); return; }
-      const res = await fetch("/api/checkout/trust", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          userId: userId || null, attorneyReview: false,
-          intakeAnswers: JSON.parse(intake), promoCode, email: promoEmail,
-          complexityFlag: complexity.flagged, complexityReasons: complexity.reasons,
-          declinedAttorneyReview: false, partnerId: partnerId || null,
-        }),
+      const { data, error: err } = await checkoutTrust({
+        userId: userId || null, attorneyReview: false,
+        intakeAnswers: JSON.parse(intake), promoCode, email: promoEmail,
+        complexityFlag: complexity.flagged, complexityReasons: complexity.reasons,
+        declinedAttorneyReview: false, partnerId: partnerId || null,
       });
-      const data = await res.json();
-      if (!res.ok) { setError(data.error || "Something went wrong."); setLoading(false); setShowAcknowledgment(false); return; }
-      if (data.free) {
-        router.push(`/trust/success?promo=true&order_id=${data.orderId}&email=${encodeURIComponent(data.email)}&user_id=${data.userId || ""}`);
+      if (err || !data) { setError(err || "Something went wrong."); setLoading(false); setShowAcknowledgment(false); return; }
+      const result = data as Record<string, unknown>;
+      if (result.free) {
+        router.push(`/trust/success?promo=true&order_id=${result.orderId}&email=${encodeURIComponent(result.email as string)}&user_id=${result.userId || ""}`);
         return;
       }
     } catch {
@@ -148,16 +141,12 @@ export default function TrustCheckoutPage() {
     }
     setConflictChecking(true);
     try {
-      const res = await fetch("/api/checkout/check-conflict", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, productType: "trust" }),
-      });
-      const data = await res.json();
-      if (res.ok) {
-        setConflictAction(data.action);
-        setConflictMsg(data.message || "");
-        if (data.action !== "override") setOverrideAck(false);
+      const { data } = await checkConflictApi(email, "trust");
+      if (data) {
+        const result = data as Record<string, unknown>;
+        setConflictAction(result.action as "none" | "block" | "override");
+        setConflictMsg((result.message as string) || "");
+        if (result.action !== "override") setOverrideAck(false);
       }
     } catch { /* server re-checks */ }
     finally { setConflictChecking(false); }
@@ -175,21 +164,16 @@ export default function TrustCheckoutPage() {
     try {
       const intake = sessionStorage.getItem("trustIntake");
       if (!intake) { router.push("/trust"); return; }
-      const res = await fetch("/api/checkout/trust", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          userId: userId || null, attorneyReview,
-          intakeAnswers: JSON.parse(intake),
-          complexityFlag: complexity.flagged, complexityReasons: complexity.reasons,
-          declinedAttorneyReview: complexity.flagged && !attorneyReview, partnerId: partnerId || null,
-          customerEmail,
-          confirmOverride: conflictAction === "override" && overrideAck,
-        }),
+      const { data, error: err } = await checkoutTrust({
+        userId: userId || null, attorneyReview,
+        intakeAnswers: JSON.parse(intake),
+        complexityFlag: complexity.flagged, complexityReasons: complexity.reasons,
+        declinedAttorneyReview: complexity.flagged && !attorneyReview, partnerId: partnerId || null,
+        customerEmail,
+        confirmOverride: conflictAction === "override" && overrideAck,
       });
-      const data = await res.json();
-      if (!res.ok) { setError(data.error || "Something went wrong."); setLoading(false); return; }
-      window.location.href = data.url;
+      if (err || !data) { setError(err || "Something went wrong."); setLoading(false); return; }
+      if ("url" in data) window.location.href = data.url;
     } catch {
       setError("Something went wrong. Please try again.");
       setLoading(false);

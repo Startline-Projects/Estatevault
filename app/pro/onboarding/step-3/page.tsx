@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { PRICES, PARTNER_SPLITS, formatPrice } from "@/lib/orders/pricing";
+import { createReviewAttorney } from "@/lib/api-client/partner";
 
 export default function Step3Page() {
   const router = useRouter();
@@ -60,19 +61,14 @@ export default function Step3Page() {
       // If they have an in-house attorney, create a profile for that attorney
       if (hasInhouseAttorney && inhouseAttorneyEmail) {
         // Create the review attorney user via admin API
-        const res = await fetch("/api/partners/create-review-attorney", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            partnerId,
-            attorneyName: inhouseAttorneyName,
-            attorneyEmail: inhouseAttorneyEmail,
-            barNumber: inhouseAttorneyBar,
-          }),
+        const { data, error } = await createReviewAttorney({
+          partnerId,
+          attorneyName: inhouseAttorneyName,
+          attorneyEmail: inhouseAttorneyEmail,
+          barNumber: inhouseAttorneyBar,
         });
-        if (res.ok) {
-          const { profileId } = await res.json();
-          updateData.inhouse_review_attorney_id = profileId;
+        if (!error && data) {
+          updateData.inhouse_review_attorney_id = (data as unknown as { profileId: string }).profileId;
         }
       }
 

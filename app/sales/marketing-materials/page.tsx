@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import Image from "next/image";
 import { MARKETING_CATEGORIES, SOCIAL_PLATFORMS, categoryLabel, categoryColor, ALLOWED_MIME, MAX_FILE_BYTES } from "@/lib/marketing/categories";
+import { getMarketingMaterials, deleteMarketingMaterial, getMarketingPartners } from "@/lib/api-client/sales";
 
 type Material = {
   id: string;
@@ -40,17 +41,13 @@ export default function AdminMarketingMaterialsPage() {
 
   const load = useCallback(async () => {
     setLoading(true);
-    const qs = filter ? `?partnerSlug=${encodeURIComponent(filter)}` : "";
-    const res = await fetch(`/api/admin/marketing/materials${qs}`);
-    const json = await res.json();
-    setMaterials(json.materials || []);
+    const { data } = await getMarketingMaterials(filter || undefined);
+    setMaterials((data?.materials || []) as Material[]);
     setLoading(false);
   }, [filter]);
 
   useEffect(() => {
-    fetch("/api/admin/marketing/partners")
-      .then((r) => r.json())
-      .then((j) => setPartners(j.partners || []));
+    getMarketingPartners().then(({ data }) => setPartners((data?.partners || []) as Partner[]));
   }, []);
 
   useEffect(() => { load(); }, [load]);
@@ -59,8 +56,8 @@ export default function AdminMarketingMaterialsPage() {
     if (!confirm("Delete this material permanently? This cannot be undone.")) return;
     setDeletingId(id);
     try {
-      const res = await fetch(`/api/admin/marketing/materials/${id}`, { method: "DELETE" });
-      if (!res.ok) { alert("Delete failed"); return; }
+      const { error } = await deleteMarketingMaterial(id);
+      if (error) { alert("Delete failed"); return; }
       await load();
     } finally {
       setDeletingId(null);

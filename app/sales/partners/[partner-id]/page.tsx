@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { usePortalBase } from "@/lib/portal-base";
+import { partnerLastLogin, addPartnerNote } from "@/lib/api-client/sales";
 
 type TabKey = "overview" | "performance" | "activity" | "notes";
 
@@ -123,10 +124,10 @@ export default function PartnerDetailPage() {
 
     if (data) {
       // Fetch real last login from auth
-      const loginRes = await fetch(`/api/sales/partner-last-login?partnerId=${partnerId}`);
-      const loginData = loginRes.ok ? await loginRes.json() : { last_login: null };
+      const loginResult = await partnerLastLogin(partnerId);
+      const lastLogin = loginResult.data?.lastLogin ?? null;
 
-      setPartner({ ...(data as unknown as PartnerDetail), last_login: loginData.last_login });
+      setPartner({ ...(data as unknown as PartnerDetail), last_login: lastLogin });
       await Promise.all([
         loadPerformance(supabase, partnerId),
         loadActivity(supabase, partnerId),
@@ -203,12 +204,8 @@ export default function PartnerDetailPage() {
     if (!newNote.trim()) return;
     setSavingNote(true);
     try {
-      const res = await fetch("/api/sales/partner-notes", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ partnerId, content: newNote }),
-      });
-      if (res.ok) {
+      const { error: apiError } = await addPartnerNote(partnerId, newNote);
+      if (!apiError) {
         const supabase = createClient();
         await loadNotes(supabase, partnerId);
         setNewNote("");

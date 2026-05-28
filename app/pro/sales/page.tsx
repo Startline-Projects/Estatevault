@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
+import { sendPartnerActivatedEmail } from "@/lib/api-client/sales";
 
 interface LeadRow {
   id: string;
@@ -308,11 +309,7 @@ export default function SalesDashboardPage() {
     }
 
     try {
-      await fetch("/api/email/partner-activated", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, name }),
-      });
+      await sendPartnerActivatedEmail({ email, name });
     } catch {
       console.error("Activation email failed to send, but account was activated.");
     }

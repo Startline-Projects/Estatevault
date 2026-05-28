@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import SubscriptionBanner from "@/components/dashboard/SubscriptionBanner";
 import { PRICES, formatPrice } from "@/lib/orders/pricing";
+import { checkoutAmendment } from "@/lib/api-client/checkout";
 
 const CHANGE_OPTIONS = [
   "Beneficiary",
@@ -40,22 +41,18 @@ export default function AmendmentPage() {
     setError("");
 
     try {
-      const res = await fetch("/api/checkout/amendment", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId, changeType, description }),
-      });
-      const data = await res.json();
-      if (!res.ok) { setError(data.error || "Something went wrong"); setLoading(false); return; }
+      const { data, error: err } = await checkoutAmendment({ userId, changeType, description });
+      if (err || !data) { setError(err || "Something went wrong"); setLoading(false); return; }
 
+      const result = data as Record<string, unknown>;
       // Free amendment for subscribers, redirect directly
-      if (data.free) {
-        router.push(data.url || "/dashboard/documents?amended=true");
+      if (result.free) {
+        router.push((result.url as string) || "/dashboard/documents?amended=true");
         return;
       }
 
       // Paid amendment, redirect to Stripe
-      window.location.href = data.url;
+      if ("url" in data) window.location.href = (data as { url: string }).url;
     } catch {
       setError("Something went wrong. Please try again.");
       setLoading(false);

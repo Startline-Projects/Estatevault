@@ -2,6 +2,7 @@
 
 import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
+import { checkVeto, executeVeto } from "@/lib/api-client/farewell";
 
 export const dynamic = "force-dynamic";
 
@@ -31,26 +32,24 @@ function OwnerVetoInner() {
       setState({ kind: "invalid", message: "Missing token" });
       return;
     }
-    fetch(`/api/farewell/owner-veto?token=${encodeURIComponent(token)}`)
-      .then(r => r.json())
-      .then(j => {
+    checkVeto(token)
+      .then(({ data, error: apiError }) => {
+        if (apiError) { setState({ kind: "invalid", message: apiError }); return; }
+        const j = data as Record<string, unknown>;
         if (j.alreadyVetoed) setState({ kind: "alreadyVetoed" });
-        else if (j.ok) setState({ kind: "valid", expiresAt: j.expiresAt });
-        else setState({ kind: "invalid", message: j.error || "Invalid link" });
+        else if (j.ok) setState({ kind: "valid", expiresAt: j.expiresAt as string });
+        else setState({ kind: "invalid", message: "Invalid link" });
       })
       .catch(() => setState({ kind: "invalid", message: "Network error" }));
   }, [token]);
 
   async function veto() {
     setState({ kind: "vetoing" });
-    const res = await fetch("/api/farewell/owner-veto", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ token }),
-    });
-    const j = await res.json();
-    if (res.ok && j.ok) setState({ kind: "done" });
-    else setState({ kind: "invalid", message: j.error || "Failed" });
+    const { data, error: apiError } = await executeVeto(token);
+    if (apiError) { setState({ kind: "invalid", message: apiError }); return; }
+    const j = data as Record<string, unknown>;
+    if (j.ok) setState({ kind: "done" });
+    else setState({ kind: "invalid", message: "Failed" });
   }
 
   return (

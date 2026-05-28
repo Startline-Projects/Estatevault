@@ -7,6 +7,7 @@ import {
   type ThemePresetId,
   type HeroRecipeId,
 } from "@/lib/partner-pages/theme";
+import { getBranding } from "@/lib/api-client/partner";
 
 interface PartnerBranding {
   id: string;
@@ -55,9 +56,9 @@ export default function PartnerLoadingScreen({ message }: { message?: string }) 
     let cancelled = false;
     (async () => {
       try {
-        const res = await fetch(`/api/partners/branding?id=${encodeURIComponent(partnerId)}`, { cache: "no-store" });
-        if (!cancelled && res.ok) {
-          const next = await res.json();
+        const { data, error } = await getBranding({ id: partnerId });
+        if (!cancelled && !error && data) {
+          const next = data as unknown as PartnerBranding;
           setBranding(next);
           try {
             window.sessionStorage.setItem(`partner-branding-${partnerId}`, JSON.stringify(next));

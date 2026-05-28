@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { sendEmail } from "@/lib/api-client/documents";
 
 interface DocumentRecord {
   id: string;
@@ -73,11 +74,10 @@ export default function DocumentActions({ orderId, productType, orderStatus }: D
     setEmailSending(true);
     setEmailError("");
     try {
-      const res = await fetch("/api/documents/send-email", { method: "POST" });
-      const data = await res.json();
-      if (!res.ok) { setEmailError(data.error || "Failed to send"); setEmailSending(false); return; }
+      const { data, error: err } = await sendEmail();
+      if (err) { setEmailError(err || "Failed to send"); setEmailSending(false); return; }
       setEmailSent(true);
-      setSentToEmail(data.email || "");
+      setSentToEmail((data as Record<string, unknown>).email as string || "");
     } catch {
       setEmailError("Failed to send email");
     }

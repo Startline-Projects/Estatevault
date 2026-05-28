@@ -3,21 +3,42 @@
   "overrides": [
     {
       "files": ["**/*.{ts,tsx}"],
-      "excludedFiles": ["**/*.test.ts", "**/*.test.tsx", "tests/**", "scripts/**", "lib/repos/**", "app/api/**"],
+      "excludedFiles": ["**/*.test.ts", "**/*.test.tsx", "tests/**", "scripts/**", "lib/repos/**", "lib/api-client/**", "app/api/**"],
       "rules": {
         "no-restricted-syntax": [
-          "warn",
+          "error",
           {
-            "selector": "CallExpression[callee.name='fetch'][arguments.0.value=/^\\/api\\/(vault|share|crypto)/]",
-            "message": "Direct fetch to /api/(vault|share|crypto) — use lib/repos/."
+            "selector": "CallExpression[callee.name='fetch'][arguments.0.value=/^\\/api\\//]",
+            "message": "Use lib/api-client/ instead of raw fetch(\"/api/...\")."
           },
           {
-            "selector": "CallExpression[callee.property.name='from'][arguments.0.value=/^(vault_items|vault_trustees|farewell_messages|item_shares)$/]",
-            "message": "Direct supabase.from('<vault table>') outside lib/repos/ + API routes."
+            "selector": "CallExpression[callee.property.name='from'][arguments.0.value=/^(vault_items|vault_trustees|farewell_messages|item_shares|vault_pin)$/]",
+            "message": "Direct supabase.from('<vault table>') — use lib/repos/."
           },
           {
             "selector": "CallExpression[callee.object.name='console'][callee.property.name='log'] > Identifier[name=/^(mk|dek|kek|masterKey|secretKey|privKey|secX|secEd|wrappedMk)$/]",
             "message": "Banned: logging key material."
+          }
+        ]
+      }
+    },
+    {
+      "files": ["app/api/**/*.ts"],
+      "excludedFiles": ["**/*.test.ts"],
+      "rules": {
+        "no-restricted-syntax": [
+          "error",
+          {
+            "selector": "VariableDeclarator[id.name='createAdminClient'][init.type='ArrowFunctionExpression']",
+            "message": "Import createAdminClient from @/lib/api/auth — do not redeclare locally."
+          },
+          {
+            "selector": "FunctionDeclaration[id.name='createAdminClient']",
+            "message": "Import createAdminClient from @/lib/api/auth — do not redeclare locally."
+          },
+          {
+            "selector": "CallExpression[callee.object.name='Math'][callee.property.name='random']",
+            "message": "Use crypto.randomBytes() instead of Math.random() in API routes."
           }
         ]
       }

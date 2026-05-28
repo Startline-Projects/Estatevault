@@ -3,6 +3,7 @@
 import { useState, useRef } from "react";
 import Link from "next/link";
 import { PRICES, formatPrice } from "@/lib/orders/pricing";
+import { vaultClientCheckout } from "@/lib/api-client/partner";
 
 function generatePassword(length = 12) {
   const chars = "ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!@#$";
@@ -59,25 +60,20 @@ export default function NewVaultClientPage() {
       pin,
     }));
 
-    const res = await fetch("/api/partner/vault-client-checkout", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        clientName: clientName.trim(),
-        clientEmail: clientEmail.trim().toLowerCase(),
-        tempPassword,
-        pin,
-      }),
+    const { data, error } = await vaultClientCheckout({
+      clientName: clientName.trim(),
+      clientEmail: clientEmail.trim().toLowerCase(),
+      tempPassword,
+      pin,
     });
 
-    const data = await res.json();
-    if (!res.ok) {
-      setError(data.error || "Failed to process. Please try again.");
+    if (error) {
+      setError(error || "Failed to process. Please try again.");
       setLoading(false);
       return;
     }
 
-    window.location.assign(data.url);
+    window.location.assign(data!.url);
   }
 
   return (

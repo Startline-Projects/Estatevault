@@ -3,6 +3,7 @@
 import { Suspense, useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
+import { affiliateSignup } from "@/lib/api-client/misc";
 
 type Step = 1 | 2 | 3;
 
@@ -77,13 +78,8 @@ function AffiliateSignupContent() {
     setSubmitting(true);
 
     try {
-      const res = await fetch("/api/affiliate/signup", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ fullName, email, password, acceptTerms }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.detail || data.error || "Signup failed");
+      const { data, error: apiError } = await affiliateSignup({ fullName, email, password, acceptTerms });
+      if (apiError || !data) throw new Error(apiError || "Signup failed");
 
       setOnboardingUrl(data.onboardingUrl);
       setAffiliateCode(data.code);

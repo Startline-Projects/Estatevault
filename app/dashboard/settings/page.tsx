@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { recovery } from "@/lib/api-client/auth";
+import { pinAction } from "@/lib/api-client/vault";
 
 interface Profile {
   full_name: string;
@@ -64,10 +66,9 @@ export default function SettingsPage() {
 
       // Check PIN status
       try {
-        const res = await fetch("/api/vault/pin", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "check" }) });
-        if (res.ok) {
-          const d = await res.json();
-          setHasPin(!!d.selfSet);
+        const { data: pinData } = await pinAction({ action: "check" });
+        if (pinData && "selfSet" in pinData) {
+          setHasPin(!!pinData.selfSet);
         }
       } catch {}
 
@@ -100,19 +101,15 @@ export default function SettingsPage() {
   }
 
   async function changePassword() {
-    await fetch("/api/auth/recovery", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email }),
-    });
+    await recovery(email);
     alert("Password reset email sent. Check your inbox.");
   }
 
   async function changePin() {
     if (newPin.length !== 4 || !/^\d{4}$/.test(newPin)) { setPinMsg("PIN must be 4 digits"); return; }
     if (newPin !== confirmNewPin) { setPinMsg("PINs do not match"); return; }
-    const res = await fetch("/api/vault/pin", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "change", pin: currentPin, newPin }) });
-    if (!res.ok) { const d = await res.json(); setPinMsg(d.error || "Failed"); return; }
+    const { error: pinErr } = await pinAction({ action: "change", pin: currentPin, newPin });
+    if (pinErr) { setPinMsg(pinErr); return; }
     setPinMsg("PIN changed successfully"); setCurrentPin(""); setNewPin(""); setConfirmNewPin("");
   }
 

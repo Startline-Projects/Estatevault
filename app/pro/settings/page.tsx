@@ -6,6 +6,8 @@ import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
 import { normalizeBusinessDomain } from "@/lib/hosts";
 import { PRICES, PARTNER_PLATFORM_FEE, PARTNER_SPLITS, formatPrice } from "@/lib/orders/pricing";
+import { addDomain, verifyDomain as verifyDomainApi } from "@/lib/api-client/partner";
+import { stripeConnectOnboard } from "@/lib/api-client/misc";
 
 interface PartnerData {
   id: string;
@@ -120,9 +122,8 @@ export default function ProSettingsPage() {
   async function handleStripeConnect() {
     setConnectingStripe(true);
     try {
-      const res = await fetch("/api/stripe/connect/onboard", { method: "POST" });
-      const data = await res.json();
-      if (data.url) window.location.href = data.url;
+      const { data, error } = await stripeConnectOnboard();
+      if (!error && data?.url) window.location.href = data.url;
     } catch {
       setConnectingStripe(false);
     }
@@ -226,18 +227,13 @@ export default function ProSettingsPage() {
     const cleanUrl = normalizeBusinessDomain(businessUrl);
 
     try {
-      const res = await fetch("/api/partner/add-domain", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ businessUrl: cleanUrl, domainType: "subdomain" }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        setDomainError(data.error || "Failed to register domain.");
+      const { data, error } = await addDomain({ businessUrl: cleanUrl, domainType: "subdomain" });
+      if (error) {
+        setDomainError(error || "Failed to register domain.");
         setDomainSaving(false);
         return;
       }
-      setSavedSubdomain(data.domain);
+      setSavedSubdomain(data?.domain ?? "");
       setDomainVerifyStatus("idle");
       setPartner({ ...partner, business_url: cleanUrl, partner_slug: partnerSlug });
       setSaveSuccess("domain");
@@ -253,17 +249,15 @@ export default function ProSettingsPage() {
     setDomainVerifying(true);
     setDomainVerifyMessage("");
     try {
-      const res = await fetch(`/api/partner/verify-domain?domain=${savedSubdomain}`);
-      const data = await res.json();
-      if (data.verified) {
+      const { data, error } = await verifyDomainApi(savedSubdomain);
+      if (error) {
+        setDomainVerifyMessage("DNS check failed. Please try again.");
+      } else if (data?.verified) {
         setDomainVerifyStatus("verified");
         setDomainVerifyMessage("Your domain is verified and live!");
-      } else if (data.records?.length > 0) {
-        setDomainVerifyStatus("wrong");
-        setDomainVerifyMessage(data.message || "CNAME found but points to wrong destination.");
       } else {
         setDomainVerifyStatus("pending");
-        setDomainVerifyMessage(data.message || "No CNAME found yet. DNS can take up to 48 hours.");
+        setDomainVerifyMessage("No CNAME found yet. DNS can take up to 48 hours.");
       }
     } catch {
       setDomainVerifyMessage("DNS check failed. Please try again.");

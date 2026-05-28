@@ -3,6 +3,7 @@
 import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
+import { confirmTrustee } from "@/lib/api-client/vault";
 
 type State = "loading" | "success" | "already" | "error";
 
@@ -22,13 +23,10 @@ function TrusteeConfirmInner() {
   useEffect(() => {
     if (!token) { setState("error"); return; }
 
-    fetch("/api/vault/trustees", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ token }),
-    })
-      .then((r) => r.json())
-      .then((d) => {
+    confirmTrustee(token)
+      .then(({ data, error: apiError }) => {
+        if (apiError) { setState("error"); return; }
+        const d = data as Record<string, unknown>;
         if (d.alreadyConfirmed) setState("already");
         else if (d.success) setState("success");
         else setState("error");

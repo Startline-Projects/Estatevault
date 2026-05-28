@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { getFarewellVerifications, farewellVerification } from "@/lib/api-client/sales";
 
 interface VerificationRequest {
   id: string;
@@ -22,9 +23,8 @@ export default function FarewellVerificationPage() {
 
   async function fetchRequests() {
     try {
-      const res = await fetch("/api/admin/farewell-verification");
-      const data = await res.json();
-      setRequests(data.requests || []);
+      const { data, error } = await getFarewellVerifications();
+      if (!error) setRequests((data?.requests || []) as VerificationRequest[]);
     } catch { /* ignore */ }
     setLoading(false);
   }
@@ -36,14 +36,9 @@ export default function FarewellVerificationPage() {
     setMessage("");
 
     try {
-      const res = await fetch("/api/admin/farewell-verification", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ requestId, action, notes }),
-      });
-      const data = await res.json();
+      const { data, error } = await farewellVerification({ requestId, action, notes });
 
-      if (data.success) {
+      if (!error && data?.success) {
         setMessage(action === "approve" ? "Verified and unlocked successfully. Recipient has been notified." : "Request rejected. Trustee has been notified.");
         setRequests((prev) => prev.filter((r) => r.id !== requestId));
         setShowRejectModal(null);

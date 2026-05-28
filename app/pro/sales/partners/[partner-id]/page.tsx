@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { PROMO_CODES } from "@/lib/orders/pricing";
+import { addPartnerNote } from "@/lib/api-client/sales";
 
 type TabKey = "overview" | "performance" | "activity" | "notes";
 
@@ -200,12 +201,8 @@ export default function PartnerDetailPage() {
     if (!newNote.trim()) return;
     setSavingNote(true);
     try {
-      const res = await fetch("/api/sales/partner-notes", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ partnerId, content: newNote }),
-      });
-      if (res.ok) {
+      const { error: apiError } = await addPartnerNote(partnerId, newNote);
+      if (!apiError) {
         const supabase = createClient();
         await loadNotes(supabase, partnerId);
         setNewNote("");

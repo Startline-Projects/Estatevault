@@ -4,6 +4,7 @@ import { useEffect, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
+import { sendWelcome } from "@/lib/api-client/auth";
 
 function VerifyInner() {
   const router = useRouter();
@@ -42,7 +43,7 @@ function VerifyInner() {
       }
 
       try {
-        await fetch("/api/auth/welcome", { method: "POST" });
+        await sendWelcome();
       } catch (mailErr) {
         console.error("welcome email kick-off failed:", mailErr);
       }

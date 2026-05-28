@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { setPassword as apiSetPassword } from "@/lib/api-client/auth";
 
 interface PasswordSetupProps {
   email: string;
@@ -55,14 +56,9 @@ export default function PasswordSetup({ email, userId, defaultName = "" }: Passw
         // Stale or missing session — purge and use set-password flow
         await supabase.auth.signOut().catch(() => {});
         // Call set-password API, it handles userId lookup by email with retry
-        const res = await fetch("/api/auth/set-password", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ userId: userId || undefined, email, password, fullName: fullName.trim() }),
-        });
-        const data = await res.json();
-        if (!res.ok) {
-          setError(data.error || "Failed to set password. Please try again.");
+        const { error: setPwErr } = await apiSetPassword({ userId: userId || undefined, email, password, fullName: fullName.trim() });
+        if (setPwErr) {
+          setError(setPwErr);
           setLoading(false);
           return;
         }

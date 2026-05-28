@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { stripeConnectOnboard } from "@/lib/api-client/misc";
 
 export default function Step4VaultPage() {
   const router = useRouter();
@@ -41,16 +42,11 @@ export default function Step4VaultPage() {
     setConnecting(true);
     setError("");
     try {
-      const res = await fetch("/api/stripe/connect/onboard", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ returnPath: "/pro/onboarding/step-4-vault" }),
-      });
-      const data = await res.json();
-      if (data.url) {
+      const { data, error } = await stripeConnectOnboard({ returnPath: "/pro/onboarding/step-4-vault" });
+      if (!error && data?.url) {
         window.location.href = data.url;
       } else {
-        setError(data.error || "Failed to start Stripe onboarding");
+        setError(error || "Failed to start Stripe onboarding");
         setConnecting(false);
       }
     } catch (err) {

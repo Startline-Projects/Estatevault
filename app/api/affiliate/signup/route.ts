@@ -1,7 +1,6 @@
 export const dynamic = "force-dynamic";
 
 import { NextResponse } from "next/server";
-import { createServerClient } from "@supabase/ssr";
 import {
   createAffiliateConnectAccount,
   createAffiliateAccountLink,
@@ -9,14 +8,7 @@ import {
 import { generateAffiliateCode } from "@/lib/affiliate";
 import { affiliateSignupSchema } from "@/lib/validation/schemas";
 import { createClient } from "@/lib/supabase/server";
-
-function createAdminClient() {
-  return createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    { cookies: { getAll: () => [], setAll: () => {} } }
-  );
-}
+import { createAdminClient } from "@/lib/api/auth";
 
 async function generateUniqueCode(supabase: ReturnType<typeof createAdminClient>): Promise<string> {
   for (let i = 0; i < 10; i++) {

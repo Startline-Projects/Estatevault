@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 import { usePortalBase } from "@/lib/portal-base";
 import TeamManagement from "@/components/sales/TeamManagement";
 import TestControls from "@/components/sales/TestControls";
+import { sendPartnerActivatedEmail } from "@/lib/api-client/sales";
 
 interface LeadRow {
   id: string;
@@ -330,11 +331,7 @@ export default function SalesDashboardPage() {
 
     // Try to send activation email
     try {
-      await fetch("/api/email/partner-activated", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, name }),
-      });
+      await sendPartnerActivatedEmail({ email, name });
     } catch {
       // Email failure is non-blocking
       console.error("Activation email failed to send, but account was activated.");

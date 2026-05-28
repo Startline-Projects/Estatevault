@@ -58,6 +58,7 @@ export default async function DashboardHome() {
     }
     documents = docsRows;
 
+    // eslint-disable-next-line no-restricted-syntax -- simple count via user-scoped client
     const { data: v } = await supabase.from("vault_items").select("id").eq("client_id", client.id);
     vaultCount = v?.length || 0;
 

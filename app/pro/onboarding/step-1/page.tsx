@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { PRICES, PARTNER_PLATFORM_FEE, PARTNER_SPLITS, PROMO_CODES, formatPrice } from "@/lib/orders/pricing";
+import { checkoutPartner } from "@/lib/api-client/checkout";
 
 export default function Step1Page() {
   const router = useRouter();
@@ -68,14 +69,9 @@ export default function Step1Page() {
     }
 
     try {
-      const res = await fetch("/api/checkout/partner", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ partnerId, tier: selectedTier }),
-      });
-      const data = await res.json();
-      if (!res.ok) { setError(data.error || "Something went wrong"); setLoading(false); return; }
-      window.location.href = data.url;
+      const { data, error } = await checkoutPartner(partnerId, selectedTier);
+      if (error) { setError(error || "Something went wrong"); setLoading(false); return; }
+      window.location.href = data!.url;
     } catch {
       setError("Something went wrong.");
       setLoading(false);

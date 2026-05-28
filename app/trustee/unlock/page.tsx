@@ -2,6 +2,7 @@
 
 import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { sendOtp, verifyOtp } from "@/lib/api-client/trustee";
 
 type Stage = "init" | "sending" | "code" | "verifying" | "unlocked" | "error";
 
@@ -16,13 +17,8 @@ function UnlockInner() {
   async function sendCode() {
     setStage("sending");
     setError("");
-    const res = await fetch("/api/trustee/unlock-otp", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ token }),
-    });
-    const j = await res.json();
-    if (!res.ok) { setError(j.error || "Failed to send code"); setStage("error"); return; }
+    const { error: apiError } = await sendOtp(token);
+    if (apiError) { setError(apiError || "Failed to send code"); setStage("error"); return; }
     setStage("code");
   }
 
@@ -30,17 +26,13 @@ function UnlockInner() {
     if (!/^\d{6}$/.test(code)) { setError("Enter the 6-digit code"); return; }
     setStage("verifying");
     setError("");
-    const res = await fetch("/api/trustee/unlock-verify", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ token, code }),
-    });
-    const j = await res.json();
-    if (!res.ok) { setError(j.error || "Verification failed"); setStage("code"); return; }
+    const { data, error: apiError } = await verifyOtp(token, code);
+    if (apiError) { setError(apiError || "Verification failed"); setStage("code"); return; }
 
     // Option A: the server holds the keys and decrypts vault content on demand.
     // The unlock-verify response set an httpOnly trustee session cookie — just
     // record the access window and proceed to the vault.
+    const j = data as Record<string, unknown>;
     sessionStorage.setItem("trustee_unlock", JSON.stringify({
       accessExpiresAt: j.accessExpiresAt,
     }));

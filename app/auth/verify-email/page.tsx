@@ -3,6 +3,7 @@
 import { useState, Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
+import { resendVerification } from "@/lib/api-client/auth";
 
 function VerifyEmailInner() {
   const searchParams = useSearchParams();
@@ -21,14 +22,9 @@ function VerifyEmailInner() {
 
     setResending(true);
     try {
-      const res = await fetch("/api/auth/resend-verification", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: email.trim().toLowerCase() }),
-      });
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        setError(data.error || "Unable to resend right now. Try again in a minute.");
+      const { error: resendErr } = await resendVerification(email.trim().toLowerCase());
+      if (resendErr) {
+        setError(resendErr);
       } else {
         setResent(true);
       }

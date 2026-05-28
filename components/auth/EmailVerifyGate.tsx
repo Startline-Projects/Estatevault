@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { checkEmail, sendVerifyLink, checkVerification } from "@/lib/api-client/auth";
 
 type ExistingAccountInfo = {
   fullName: string | null;
@@ -86,15 +87,7 @@ export default function EmailVerifyGate({
     const poll = async () => {
       if (cancelled) return;
       try {
-        const res = await fetch("/api/auth/check-verification", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            email: normalizedEmail,
-            sessionId: sessionIdRef.current,
-          }),
-        });
-        const data = await res.json().catch(() => ({}));
+        const { data } = await checkVerification(normalizedEmail, sessionIdRef.current);
         if (cancelled) return;
         if (data?.verified && data.token) {
           setVerifiedToken(data.token);
@@ -127,22 +120,16 @@ export default function EmailVerifyGate({
 
     setStage("sending");
     try {
-      const checkRes = await fetch("/api/auth/check-email", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: normalizedEmail }),
-      });
-      const checkData = await checkRes.json().catch(() => ({}));
-
-      if (!checkRes.ok) {
-        setVerifyError(checkData.error || "Unable to check email.");
+      const { data: checkData, error: checkErr } = await checkEmail(normalizedEmail);
+      if (checkErr || !checkData) {
+        setVerifyError(checkErr || "Unable to check email.");
         setStage("idle");
         return;
       }
 
       if (checkData.exists) {
         setExistingAccount({
-          fullName: checkData.fullName,
+          fullName: checkData.fullName ?? null,
           hasWill: !!checkData.hasWill,
           hasTrust: !!checkData.hasTrust,
           hasVault: !!checkData.hasVault,
@@ -153,15 +140,14 @@ export default function EmailVerifyGate({
 
       if (!sessionIdRef.current) sessionIdRef.current = randomSessionId();
 
-      const sendRes = await fetch("/api/auth/send-verify-link", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: normalizedEmail, sessionId: sessionIdRef.current, partnerId: partnerId || null, partnerSlug: partnerSlug || null }),
-      });
-      const sendData = await sendRes.json().catch(() => ({}));
-
-      if (!sendRes.ok) {
-        setVerifyError(sendData.error || "Unable to send email.");
+      const { error: sendErr } = await sendVerifyLink(
+        normalizedEmail,
+        sessionIdRef.current,
+        partnerId || undefined,
+        partnerSlug || undefined,
+      );
+      if (sendErr) {
+        setVerifyError(sendErr);
         setStage("idle");
         return;
       }
@@ -181,14 +167,14 @@ export default function EmailVerifyGate({
     setVerifyError("");
     if (!sessionIdRef.current) sessionIdRef.current = randomSessionId();
     try {
-      const res = await fetch("/api/auth/send-verify-link", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: normalizedEmail, sessionId: sessionIdRef.current, partnerId: partnerId || null, partnerSlug: partnerSlug || null }),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        setVerifyError(data.error || "Unable to resend.");
+      const { error: sendErr } = await sendVerifyLink(
+        normalizedEmail,
+        sessionIdRef.current,
+        partnerId || undefined,
+        partnerSlug || undefined,
+      );
+      if (sendErr) {
+        setVerifyError(sendErr);
         return;
       }
       setResendCooldown(30);

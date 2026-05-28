@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { checkVaultSubdomain, claimVaultSubdomain } from "@/lib/api-client/partner";
 
 export default function Step3VaultPage() {
   const router = useRouter();
@@ -50,9 +51,9 @@ export default function Step3VaultPage() {
     setChecking(true);
     setAvailability("idle");
     try {
-      const res = await fetch(`/api/partner/vault-subdomain?subdomain=${encodeURIComponent(value)}`);
-      const data = await res.json();
-      setAvailability(data.available ? "available" : "taken");
+      const { data, error } = await checkVaultSubdomain(value);
+      if (error) { setAvailability("idle"); }
+      else { setAvailability(data?.available ? "available" : "taken"); }
     } catch {
       setAvailability("idle");
     } finally {
@@ -71,13 +72,8 @@ export default function Step3VaultPage() {
     setSaving(true);
     setError("");
     try {
-      const res = await fetch("/api/partner/vault-subdomain", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ partnerId, subdomain: subdomainInput }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to claim subdomain");
+      const { error } = await claimVaultSubdomain(partnerId, subdomainInput);
+      if (error) throw new Error(error || "Failed to claim subdomain");
       window.location.href = "/pro/onboarding/step-4-vault";
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong");

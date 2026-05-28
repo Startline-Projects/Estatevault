@@ -2,6 +2,7 @@
 
 import { useState, FormEvent } from 'react';
 import Link from 'next/link';
+import { requestProfessionalAccess } from "@/lib/api-client/misc";
 
 /* ------------------------------------------------------------------ */
 /*  Constants                                                          */
@@ -66,28 +67,21 @@ export default function ReviewNetworkPage() {
     setSubmitting(true);
 
     try {
-      const res = await fetch('/api/professionals/request-access', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          firstName: formData.firstName,
-          lastName: formData.lastName,
-          email: formData.email,
-          phone: formData.phone,
-          companyName: formData.firmName,
-          professionalType: 'review_attorney',
-          bar_number: formData.barNumber,
-          desired_review_fee: formData.desiredReviewFee,
-          practice_areas: formData.practiceAreas,
-          clientCount: formData.availableHours,
-          referralSource: 'review_network_page',
-        }),
+      const { error: apiError } = await requestProfessionalAccess({
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        email: formData.email,
+        phone: formData.phone,
+        companyName: formData.firmName,
+        professionalType: 'review_attorney',
+        bar_number: formData.barNumber,
+        desired_review_fee: formData.desiredReviewFee,
+        practice_areas: formData.practiceAreas,
+        clientCount: formData.availableHours,
+        referralSource: 'review_network_page',
       });
 
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || 'Something went wrong.');
-      }
+      if (apiError) throw new Error(apiError);
 
       setSubmitted(true);
     } catch (err) {

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { affiliateOnboarding } from "@/lib/api-client/misc";
 
 export default function AffiliateOnboardingResume() {
   const [loading, setLoading] = useState(false);
@@ -10,12 +11,11 @@ export default function AffiliateOnboardingResume() {
     setLoading(true);
     setError("");
     try {
-      const res = await fetch("/api/affiliate/onboarding", { method: "POST" });
-      const data = await res.json();
-      if (!res.ok || !data.onboardingUrl) {
-        throw new Error(data.error || "Failed to get onboarding link");
+      const { data, error: apiError } = await affiliateOnboarding();
+      if (apiError || !data?.url) {
+        throw new Error(apiError || "Failed to get onboarding link");
       }
-      window.location.href = data.onboardingUrl;
+      window.location.href = data.url;
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed");
       setLoading(false);

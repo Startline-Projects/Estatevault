@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { addDomain, verifyDomain } from "@/lib/api-client/partner";
 
 export default function Step4Page() {
   const router = useRouter();
@@ -64,20 +65,15 @@ export default function Step4Page() {
     setError("");
 
     try {
-      const res = await fetch("/api/partner/add-domain", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ businessUrl: cleanUrl, domainType: "subdomain" }),
-      });
-      const data = await res.json();
+      const { data, error } = await addDomain({ businessUrl: cleanUrl, domainType: "subdomain" });
 
-      if (!res.ok) {
-        setError(data.error || "Failed to register domain. Please try again.");
+      if (error) {
+        setError(error || "Failed to register domain. Please try again.");
         setSaving(false);
         return;
       }
 
-      setSavedDomain(data.domain);
+      setSavedDomain(data?.domain ?? "");
       setVerifyStatus("idle");
 
       // Also save business_url and slug
@@ -99,18 +95,16 @@ export default function Step4Page() {
     setVerifyMessage("");
 
     try {
-      const res = await fetch(`/api/partner/verify-domain?domain=${savedDomain}`);
-      const data = await res.json();
+      const { data, error } = await verifyDomain(savedDomain);
 
-      if (data.verified) {
+      if (error) {
+        setVerifyMessage("DNS check failed. Please try again.");
+      } else if (data?.verified) {
         setVerifyStatus("verified");
         setVerifyMessage("Your domain is verified and live!");
-      } else if (data.records?.length > 0) {
-        setVerifyStatus("wrong");
-        setVerifyMessage(data.message || "CNAME found but points to the wrong destination.");
       } else {
         setVerifyStatus("pending");
-        setVerifyMessage(data.message || "No CNAME record found yet. DNS can take up to 48 hours.");
+        setVerifyMessage("No CNAME record found yet. DNS can take up to 48 hours.");
       }
     } catch {
       setVerifyMessage("DNS check failed. Please try again.");

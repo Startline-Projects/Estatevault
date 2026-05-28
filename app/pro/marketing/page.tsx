@@ -7,6 +7,7 @@ import { createClient } from "@/lib/supabase/client";
 import { substituteTokens, type PartnerData } from "@/lib/marketing/substitute";
 import { usePartnerAccent } from "@/lib/partner-accent-context";
 import { PRICES, formatPrice } from "@/lib/orders/pricing";
+import { getPartnerMarketingMaterials } from "@/lib/api-client/misc";
 
 const TABS = ["All", "Scripts", "Email", "Social Media", "Print Materials", "Presentations"];
 
@@ -190,10 +191,10 @@ export default function MarketingPage() {
     async function loadMaterials() {
       setMaterialsLoading(true);
       try {
-        const res = await fetch("/api/marketing/materials");
-        if (!res.ok) return;
-        const json = await res.json();
-        setMaterials(json.materials || []);
+        const { data, error } = await getPartnerMarketingMaterials();
+        if (!error && data) {
+          setMaterials((data.materials || []) as typeof materials);
+        }
       } catch {} finally {
         setMaterialsLoading(false);
       }

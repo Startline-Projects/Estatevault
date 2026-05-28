@@ -9,6 +9,12 @@ import { decryptFarewellCipher } from "@/lib/repos/videoRepo";
 // FILES sub-key once and decrypts blobs locally (mirrors the owner repos).
 
 import { b64decode as fromB64 } from "@/lib/crypto/encoding";
+import {
+  getFileKey as fetchFileKey,
+  logout as apiLogout,
+  getItems,
+  getDownloadUrl,
+} from "@/lib/api-client/trustee";
 
 interface ServerVaultItem {
   id: string;
@@ -272,12 +278,11 @@ export default function TrusteeVaultPage() {
 
   // Fetch the owner's FILES sub-key once (server-managed; trustee-scoped) and
   // cache it for the session so file/video decryption doesn't re-request it.
-  async function getFileKey(): Promise<Uint8Array> {
+  async function getFileKeyBytes(): Promise<Uint8Array> {
     if (fileKeyRef.current) return fileKeyRef.current;
-    const res = await fetch("/api/trustee/vault/file-key");
-    if (!res.ok) throw new Error(`file-key failed: ${res.status}`);
-    const { key } = await res.json() as { key: string };
-    const k = fromB64(key);
+    const { data, error: apiError } = await fetchFileKey();
+    if (apiError || !data) throw new Error(apiError || "file-key failed");
+    const k = fromB64(data.key);
     fileKeyRef.current = k;
     return k;
   }
@@ -291,7 +296,7 @@ export default function TrusteeVaultPage() {
   }
 
   async function logout() {
-    try { await fetch("/api/trustee/logout", { method: "POST" }); } catch {}
+    try { await apiLogout(); } catch {}
     sessionStorage.removeItem("trustee_unlock");
     window.location.href = "/";
   }
@@ -311,12 +316,10 @@ export default function TrusteeVaultPage() {
   useEffect(() => {
     (async () => {
       try {
-        const res = await fetch("/api/trustee/vault/items");
-        if (!res.ok) {
-          const j = await res.json().catch(() => ({}));
-          throw new Error(j.error || `HTTP ${res.status}`);
-        }
-        const j = await res.json();
+        const { data: itemsData, error: apiError } = await getItems();
+        if (apiError || !itemsData) throw new Error(apiError || "Failed to load");
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const j = itemsData as Record<string, any>;
         const serverItems = (j.vaultItems || []) as ServerVaultItem[];
         const serverDocs = (j.documents || []) as ServerDoc[];
         const serverFarewell = (j.farewell || []) as ServerFarewell[];
@@ -380,9 +383,9 @@ export default function TrusteeVaultPage() {
     setBusyId(doc.id);
     try {
       const type = doc.source === "vault_item" ? "vault_item" : "document";
-      const r = await fetch(`/api/trustee/vault/download-url?type=${type}&id=${doc.id}`);
-      if (!r.ok) throw new Error("download url failed");
-      const { url } = await r.json();
+      const { data: urlData, error: urlError } = await getDownloadUrl(type, doc.id);
+      if (urlError || !urlData) throw new Error("download url failed");
+      const { url } = urlData;
       const cipherRes = await fetch(url);
       if (!cipherRes.ok) throw new Error("storage fetch failed");
 
@@ -390,7 +393,7 @@ export default function TrusteeVaultPage() {
       if (doc.source === "vault_item") {
         // Uploaded estate document — encrypted with the owner's FILES sub-key.
         const cipher = new Uint8Array(await cipherRes.arrayBuffer());
-        const fileKey = await getFileKey();
+        const fileKey = await getFileKeyBytes();
         const plain = await decryptBytes(fileKey, cipher);
         const ab = new ArrayBuffer(plain.byteLength);
         new Uint8Array(ab).set(plain);
@@ -419,15 +422,15 @@ export default function TrusteeVaultPage() {
     if (!f.storagePath) return;
     setBusyId(f.id);
     try {
-      const r = await fetch(`/api/trustee/vault/download-url?type=farewell&id=${f.id}`);
-      if (!r.ok) throw new Error("download url failed");
-      const { url } = await r.json();
+      const { data: urlData, error: urlError } = await getDownloadUrl("farewell", f.id);
+      if (urlError || !urlData) throw new Error("download url failed");
+      const { url } = urlData;
       const cipherRes = await fetch(url);
       if (!cipherRes.ok) throw new Error("storage fetch failed");
       const cipher = new Uint8Array(await cipherRes.arrayBuffer());
 
       // Same EVC1 chunked format the owner uploads (lib/repos/videoRepo).
-      const fileKey = await getFileKey();
+      const fileKey = await getFileKeyBytes();
       const blob = await decryptFarewellCipher(cipher, fileKey);
 
       if (videoUrl) URL.revokeObjectURL(videoUrl);

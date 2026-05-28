@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { createClient } from "@/lib/supabase/client";
 import { PARTNER_PLATFORM_FEE, formatPrice } from "@/lib/orders/pricing";
+import { createPartner, sendWelcomeEmail } from "@/lib/api-client/sales";
 
 const US_STATES = [
   "Alabama","Alaska","Arizona","Arkansas","California","Colorado","Connecticut",
@@ -90,26 +90,21 @@ export default function NewPartnerPage() {
     setError("");
     setSubmitting(true);
     try {
-      const res = await fetch("/api/sales/create-partner", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          companyName: form.companyName,
-          ownerName: form.ownerName,
-          email: form.email,
-          businessUrl: form.businessUrl,
-          phone: form.phone,
-          state: form.state,
-          professionalType: form.professionalType,
-          tier: form.planTier,
-          source: form.leadSource,
-          notes: form.notes,
-          promoCode: form.promoCode || undefined,
-        }),
+      const { data, error: apiError } = await createPartner({
+        companyName: form.companyName,
+        ownerName: form.ownerName,
+        email: form.email,
+        businessUrl: form.businessUrl,
+        phone: form.phone,
+        state: form.state,
+        professionalType: form.professionalType,
+        tier: form.planTier,
+        source: form.leadSource,
+        notes: form.notes,
+        promoCode: form.promoCode || undefined,
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to create partner");
-      setSuccess({ email: data.email || form.email, tempPassword: data.tempPassword || "TempPass-2024!" });
+      if (apiError) throw new Error(apiError);
+      setSuccess({ email: form.email, tempPassword: data?.tempPassword || "TempPass-2024!" });
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Something went wrong");
     } finally {
@@ -125,12 +120,12 @@ export default function NewPartnerPage() {
 
   async function handleSendWelcome() {
     try {
-      await fetch("/api/sales/send-welcome-email", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: success?.email }),
-      });
-      alert("Welcome email sent to " + success?.email);
+      const { error: apiError } = await sendWelcomeEmail({ email: success?.email });
+      if (apiError) {
+        alert("Failed to send email: " + apiError);
+      } else {
+        alert("Welcome email sent to " + success?.email);
+      }
     } catch {
       alert("Welcome email sending is not yet connected.");
     }

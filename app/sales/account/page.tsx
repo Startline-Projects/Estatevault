@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { recovery } from "@/lib/api-client/auth";
 
 export default function SalesAccountPage() {
   const [loading, setLoading] = useState(true);
@@ -60,15 +61,10 @@ export default function SalesAccountPage() {
       return;
     }
 
-    const res = await fetch("/api/auth/recovery", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email }),
-    });
+    const { error: apiError } = await recovery(email);
 
-    if (!res.ok) {
-      const data = await res.json().catch(() => ({}));
-      setError(data.error || "Failed to send reset email.");
+    if (apiError) {
+      setError(apiError);
     } else {
       setResetSent(true);
     }

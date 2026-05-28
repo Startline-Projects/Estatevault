@@ -3,6 +3,7 @@
 import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
+import { verifyAttorneyCheckout } from '@/lib/api-client/checkout';
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -53,19 +54,13 @@ function AttorneyWelcomeContent() {
         const storedPassword = sessionStorage.getItem("ev_attorney_pwd") || "";
         sessionStorage.removeItem("ev_attorney_pwd");
 
-        const res = await fetch('/api/checkout/attorney/verify', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ session_id: sessionId, password: storedPassword }),
-        });
+        const { data, error } = await verifyAttorneyCheckout(sessionId!, storedPassword);
 
-        const data = await res.json();
-
-        if (!res.ok) {
-          throw new Error(data.error || 'Verification failed.');
+        if (error) {
+          throw new Error(error || 'Verification failed.');
         }
 
-        setResult(data);
+        setResult(data as unknown as VerifyResult);
         setStatus('success');
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Something went wrong.');

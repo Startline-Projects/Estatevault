@@ -12,6 +12,7 @@ import {
   downloadFarewell,
   type FarewellMessagePlaintext,
 } from "@/lib/repos/videoRepo";
+import { farewellSignedUrl } from "@/lib/api-client/vault";
 
 type Mode = "list" | "new" | "record" | "upload";
 
@@ -84,9 +85,9 @@ export default function FarewellMessagesPage() {
         });
         setPreviewUrl(URL.createObjectURL(blob));
       } else {
-        const res = await fetch(`/api/vault/farewell/${msg.id}/signed-url`);
-        const data = await res.json();
-        if (data.signedUrl) setPreviewUrl(data.signedUrl);
+        const { data } = await farewellSignedUrl(msg.id);
+        const signedUrl = (data as Record<string, unknown> | undefined)?.signedUrl as string | undefined;
+        if (signedUrl) setPreviewUrl(signedUrl);
       }
     } catch (e) {
       setError((e as Error).message);

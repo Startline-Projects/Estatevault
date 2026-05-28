@@ -3,6 +3,7 @@
 import { useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { pinAction } from "@/lib/api-client/vault";
 
 function SetupPinForm() {
   const router = useRouter();
@@ -40,15 +41,9 @@ function SetupPinForm() {
       return;
     }
 
-    const res = await fetch("/api/vault/pin", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "create", pin }),
-    });
-
-    const data = await res.json();
-    if (!res.ok) {
-      setError(data.error || "Failed to set PIN.");
+    const { error: pinErr } = await pinAction({ action: "create", pin });
+    if (pinErr) {
+      setError(pinErr);
       setLoading(false);
       return;
     }

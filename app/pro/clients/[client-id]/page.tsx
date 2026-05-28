@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { updateClient } from "@/lib/api-client/partner";
 
 interface ClientDetail { id: string; created_at: string; profiles: { full_name: string; email: string; phone: string } | null }
 interface Order { id: string; product_type: string; status: string; amount_total: number; partner_cut: number; attorney_review_requested: boolean; complexity_flag: boolean; complexity_flag_reason: string; created_at: string }
@@ -49,7 +50,7 @@ export default function ClientDetailPage() {
     const { data: partner } = await supabase.from("partners").select("id").eq("profile_id", user.id).single();
     if (!partner) return;
 
-    await fetch("/api/partner/clients", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ clientId, partnerId: partner.id, note: newNote }) });
+    await updateClient({ clientId, partnerId: partner.id, note: newNote });
     setNotes((prev) => [{ id: Date.now().toString(), note: newNote, created_at: new Date().toISOString() }, ...prev]);
     setNewNote("");
   }

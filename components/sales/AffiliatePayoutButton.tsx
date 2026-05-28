@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { affiliatePayout } from "@/lib/api-client/sales";
 
 function fmtDollars(cents: number) {
   return `$${(cents / 100).toLocaleString(undefined, {
@@ -39,15 +40,12 @@ export default function AffiliatePayoutButton({
 
     setBusy(true);
     try {
-      const res = await fetch(`/api/sales/affiliates/${affiliateId}/payout`, {
-        method: "POST",
-      });
-      const data = await res.json().catch(() => ({}));
-      if (res.ok) {
-        alert(`Payout of ${fmtDollars(data.amount_cents ?? unpaidCents)} sent.`);
-        router.refresh();
+      const { data, error } = await affiliatePayout(affiliateId);
+      if (error) {
+        alert(error);
       } else {
-        alert(data.error || "Payout failed.");
+        alert(`Payout of ${fmtDollars((data as Record<string, unknown>)?.amount_cents as number ?? unpaidCents)} sent.`);
+        router.refresh();
       }
     } catch {
       alert("Payout failed.");

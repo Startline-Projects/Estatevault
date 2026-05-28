@@ -2,6 +2,8 @@
 
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
+import { getOrdersMissingDocs } from "@/lib/api-client/sales";
+import { regenerateMissing } from "@/lib/api-client/documents";
 
 type OrderRow = {
   orderId: string;
@@ -36,13 +38,12 @@ export default function RegenerateDocsPage() {
     setLoading(true);
     setLoadError("");
     try {
-      const res = await fetch("/api/admin/orders-missing-docs", { cache: "no-store" });
-      const data = await res.json();
-      if (!res.ok) {
-        setLoadError(data.error || "Failed to load orders.");
+      const { data, error } = await getOrdersMissingDocs();
+      if (error) {
+        setLoadError(error);
         setOrders([]);
       } else {
-        setOrders(data.orders || []);
+        setOrders((data?.orders || []) as OrderRow[]);
       }
     } catch {
       setLoadError("Network error.");
@@ -58,20 +59,18 @@ export default function RegenerateDocsPage() {
   async function regenerate(orderId: string) {
     setState((s) => ({ ...s, [orderId]: { stage: "running" } }));
     try {
-      const res = await fetch(`/api/documents/regenerate-missing?order_id=${orderId}`, {
-        cache: "no-store",
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        setState((s) => ({ ...s, [orderId]: { stage: "error", message: data.error || "Failed", log: data.log } }));
+      const result = await regenerateMissing(orderId);
+      const d = result.data as Record<string, unknown> | undefined;
+      if (result.error) {
+        setState((s) => ({ ...s, [orderId]: { stage: "error", message: result.error, log: d?.log as string[] | undefined } }));
         return;
       }
       setState((s) => ({
         ...s,
         [orderId]: {
           stage: "ok",
-          message: `Regenerated ${data.regenerated ?? data.documents_generated ?? 0} document(s).`,
-          log: data.log,
+          message: `Regenerated ${(d?.regenerated as number) ?? (d?.documents_generated as number) ?? 0} document(s).`,
+          log: d?.log as string[] | undefined,
         },
       }));
       setTimeout(() => loadOrders(), 800);

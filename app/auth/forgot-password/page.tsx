@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { recovery } from "@/lib/api-client/auth";
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
@@ -18,15 +19,9 @@ export default function ForgotPasswordPage() {
     setLoading(true);
 
     try {
-      const res = await fetch("/api/auth/recovery", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: email.trim().toLowerCase() }),
-      });
-
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        setError(data.error || "Unable to send reset email. Please try again.");
+      const { error: recoveryErr } = await recovery(email.trim().toLowerCase());
+      if (recoveryErr) {
+        setError(recoveryErr);
         setLoading(false);
         return;
       }

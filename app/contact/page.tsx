@@ -3,6 +3,7 @@
 import { useState, FormEvent } from "react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import { contact } from "@/lib/api-client/misc";
 
 export default function ContactPage() {
   const [name, setName] = useState("");
@@ -26,15 +27,8 @@ export default function ContactPage() {
     setError(null);
 
     try {
-      const res = await fetch("/api/contact", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, email, message }),
-      });
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data.error || "Send failed");
-      }
+      const { error: apiError } = await contact({ name, email, message });
+      if (apiError) throw new Error(apiError);
       setSubmitted(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Send failed");

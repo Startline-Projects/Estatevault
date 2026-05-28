@@ -7,6 +7,8 @@ import AnimatedCheckmark from "@/components/success/AnimatedCheckmark";
 import PasswordSetup from "@/components/success/PasswordSetup";
 import { createClient } from "@/lib/supabase/client";
 import PartnerThemedShell, { BrandedLoadingWordmark } from "@/components/partner/PartnerThemedShell";
+import { processNow, checkStatus, downloadBySession, downloadZip } from "@/lib/api-client/documents";
+import { verifySession } from "@/lib/api-client/checkout";
 
 type Step = { label: string; status: "done" | "active" | "pending" };
 
@@ -42,10 +44,10 @@ function SuccessContent() {
     try {
       if (isTest) {
         // Test mode: use server-side API (no auth, bypasses RLS)
-        const res = await fetch(`/api/documents/check-status?order_id=${oid}`);
-        const data = await res.json();
-        if (data.ready && data.documents.length > 0) {
-          setDocuments(data.documents.map((d: { id: string; document_type: string; status: string; has_file: boolean }) => ({
+        const { data } = await checkStatus(oid);
+        if (data && (data as Record<string, unknown>).ready && ((data as Record<string, unknown>).documents as unknown[]).length > 0) {
+          const docs = (data as Record<string, unknown>).documents as Array<{ id: string; document_type: string; status: string; has_file: boolean }>;
+          setDocuments(docs.map((d) => ({
             id: d.id, document_type: d.document_type, status: d.status, storage_path: d.has_file ? "exists" : null,
           })));
           setDocsReady(true);
@@ -98,7 +100,7 @@ function SuccessContent() {
         setLoading(false);
 
         // Trigger document generation (fire-and-forget, don't await)
-        fetch(`/api/documents/process-now?order_id=${orderId}`).catch(() => {});
+        processNow(orderId).catch(() => {});
 
         // Poll for document readiness
         const poll = setInterval(async () => {
@@ -119,32 +121,32 @@ function SuccessContent() {
       }
 
       try {
-        const res = await fetch(`/api/checkout/verify?session_id=${sessionId}`);
-        const data = await res.json();
+        const { data: verifyData, error: verifyErr } = await verifySession(sessionId);
 
-        if (!res.ok) {
-          setError(data.error || "Unable to verify payment.");
+        if (verifyErr) {
+          setError(verifyErr || "Unable to verify payment.");
           setLoading(false);
           return;
         }
 
-        setAttorneyReview(data.attorneyReview);
-        if (data.email) setEmail(data.email);
-        if (data.userId) setUserId(data.userId);
-        if (data.clientName) setClientName(data.clientName);
-        if (data.hasExistingAccount) setHasExistingAccount(true);
+        const vd = verifyData as Record<string, unknown>;
+        setAttorneyReview(vd.attorneyReview as boolean);
+        if (vd.email) setEmail(vd.email as string);
+        if (vd.userId) setUserId(vd.userId as string);
+        if (vd.clientName) setClientName(vd.clientName as string);
+        if (vd.hasExistingAccount) setHasExistingAccount(true);
 
-        if (data.attorneyReview) {
+        if (vd.attorneyReview) {
           setSteps([
-            { label: `Payment confirmed, $${data.amount}`, status: "done" },
+            { label: `Payment confirmed, $${vd.amount}`, status: "done" },
             { label: "Generating your Will Package...", status: "active" },
             { label: "Attorney review in progress (up to 4 days)", status: "pending" },
             { label: "Documents unlocked after approval", status: "pending" },
           ]);
 
           // Trigger generation for attorney review orders, docs must exist before attorney can review
-          if (data.orderId) {
-            fetch(`/api/documents/process-now?order_id=${data.orderId}`).catch(() => {});
+          if (vd.orderId) {
+            processNow(vd.orderId as string).catch(() => {});
           }
         } else {
           setSteps([
@@ -155,11 +157,11 @@ function SuccessContent() {
           ]);
 
           // Trigger document generation immediately
-          if (data.orderId) {
-            fetch(`/api/documents/process-now?order_id=${data.orderId}`).catch(() => {});
+          if (vd.orderId) {
+            processNow(vd.orderId as string).catch(() => {});
 
             const poll = setInterval(async () => {
-              const ready = await pollDocuments(data.orderId);
+              const ready = await pollDocuments(vd.orderId as string);
               if (ready) clearInterval(poll);
             }, 5000);
             setTimeout(() => clearInterval(poll), 300000);
@@ -179,19 +181,18 @@ function SuccessContent() {
   async function handleDownload(doc: DocumentRecord) {
     try {
       if (!doc.storage_path) return;
-      const params = new URLSearchParams({ id: doc.id });
-      if (sessionId) params.set("session_id", sessionId);
-      if (orderId) params.set("order_id", orderId);
-      const res = await fetch(`/api/documents/download-by-session?${params.toString()}`);
-      const data = await res.json();
-      if (!res.ok || !data.url) {
-        setError(data.error || "Download failed.");
+      const dlParams: { id: string; session_id?: string; order_id?: string } = { id: doc.id };
+      if (sessionId) dlParams.session_id = sessionId;
+      if (orderId) dlParams.order_id = orderId;
+      const { data, error: dlErr } = await downloadBySession(dlParams);
+      if (dlErr || !data?.url) {
+        setError(dlErr || "Download failed.");
         return;
       }
 
       // Sealed: ciphertext at signed URL — must decrypt in browser worker.
       // Vault must be unlocked (user must have completed onboarding passphrase).
-      if (data.sealed) {
+      if ((data as Record<string, unknown>).sealed) {
         try {
           const cipherRes = await fetch(data.url);
           if (!cipherRes.ok) throw new Error(`storage fetch ${cipherRes.status}`);
@@ -323,7 +324,7 @@ function SuccessContent() {
                   setError("Your documents are encrypted. Use the buttons below to download each one. Set up your vault passphrase first if prompted.");
                   return;
                 }
-                const res = await fetch(`/api/documents/download-zip?order_id=${orderId}&first_name=${encodeURIComponent(fn)}&last_name=${encodeURIComponent(ln)}`);
+                const res = await downloadZip({ order_id: orderId, first_name: fn, last_name: ln });
                 if (!res.ok) return;
                 const blob = await res.blob();
                 const url = URL.createObjectURL(blob);
