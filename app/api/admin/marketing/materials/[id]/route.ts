@@ -1,4 +1,6 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
+import { withRoute } from "@/lib/api/route";
+import { ok, fail } from "@/lib/api/response";
 import { requireAdmin, BUCKET } from "@/lib/marketing/admin-auth";
 import { ALLOWED_MIME, MAX_FILE_BYTES } from "@/lib/marketing/categories";
 
@@ -6,9 +8,9 @@ function safeName(name: string) {
   return name.replace(/[^a-zA-Z0-9._-]+/g, "-").replace(/-+/g, "-").toLowerCase();
 }
 
-export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
+export const PATCH = withRoute(async (req: NextRequest, { params }: { params: { id: string } }) => {
   const auth = await requireAdmin();
-  if (!auth.ok) return NextResponse.json({ error: auth.error }, { status: auth.status });
+  if (!auth.ok) return fail(auth.error, auth.status);
 
   const ctype = req.headers.get("content-type") || "";
   const updates: Record<string, unknown> = {};
@@ -46,19 +48,19 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     .select("storage_path, is_global, partner_slug")
     .eq("id", params.id)
     .single();
-  if (!existing) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  if (!existing) return fail("Not found", 404);
 
   if (newFile) {
-    if (!ALLOWED_MIME.includes(newFile.type)) return NextResponse.json({ error: "Unsupported file type" }, { status: 400 });
-    if (newFile.size > MAX_FILE_BYTES) return NextResponse.json({ error: "File too large (max 25MB)" }, { status: 400 });
+    if (!ALLOWED_MIME.includes(newFile.type)) return fail("Unsupported file type", 400);
+    if (newFile.size > MAX_FILE_BYTES) return fail("File too large (max 25MB)", 400);
     const targetGlobal = newIsGlobal ?? existing.is_global;
     const targetSlug = newPartnerSlug ?? existing.partner_slug;
     const folder = targetGlobal ? "_global" : targetSlug;
-    if (!folder) return NextResponse.json({ error: "Missing target" }, { status: 400 });
+    if (!folder) return fail("Missing target", 400);
     const path = `${folder}/${crypto.randomUUID()}-${safeName(newFile.name)}`;
     const bytes = new Uint8Array(await newFile.arrayBuffer());
     const { error: upErr } = await auth.admin.storage.from(BUCKET).upload(path, bytes, { contentType: newFile.type, upsert: false });
-    if (upErr) return NextResponse.json({ error: upErr.message }, { status: 500 });
+    if (upErr) return fail(upErr.message, 500);
     updates.storage_path = path;
     updates.mime_type = newFile.type;
     updates.file_size_bytes = newFile.size;
@@ -70,30 +72,30 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     .eq("id", params.id)
     .select()
     .single();
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) return fail(error.message, 500);
 
   if (newFile && existing.storage_path) {
     await auth.admin.storage.from(BUCKET).remove([existing.storage_path]);
   }
-  return NextResponse.json({ material: data });
-}
+  return ok({ material: data });
+});
 
-export async function DELETE(_req: NextRequest, { params }: { params: { id: string } }) {
+export const DELETE = withRoute(async (_req: NextRequest, { params }: { params: { id: string } }) => {
   const auth = await requireAdmin();
-  if (!auth.ok) return NextResponse.json({ error: auth.error }, { status: auth.status });
+  if (!auth.ok) return fail(auth.error, auth.status);
 
   const { data: existing } = await auth.admin
     .from("marketing_materials")
     .select("storage_path")
     .eq("id", params.id)
     .single();
-  if (!existing) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  if (!existing) return fail("Not found", 404);
 
   const { error } = await auth.admin.from("marketing_materials").delete().eq("id", params.id);
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) return fail(error.message, 500);
 
   if (existing.storage_path) {
     await auth.admin.storage.from(BUCKET).remove([existing.storage_path]);
   }
-  return NextResponse.json({ ok: true });
-}
+  return ok({ ok: true });
+});

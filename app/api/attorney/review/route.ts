@@ -1,62 +1,40 @@
-import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
-import { createServerClient } from "@supabase/ssr";
+import { NextRequest } from "next/server";
+import { requireAuth } from "@/lib/api/auth";
+import { withRoute } from "@/lib/api/route";
+import { ok, fail } from "@/lib/api/response";
+import * as attorneyReviewRepo from "@/lib/repos/server/attorneyReviewRepo";
 
-function createAdminClient() {
-  return createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    { cookies: { getAll: () => [], setAll: () => {} } }
-  );
-}
+export const GET = withRoute(async (req: NextRequest) => {
+  const auth = await requireAuth(["review_attorney", "admin"]);
+  if ("error" in auth) return auth.error;
 
-export async function GET(request: Request) {
-  const supabase = createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const reviewId = new URL(req.url).searchParams.get("id");
+  if (!reviewId) return fail("Missing id", 400);
 
-  const { searchParams } = new URL(request.url);
-  const reviewId = searchParams.get("id");
-  if (!reviewId) return NextResponse.json({ error: "Missing id" }, { status: 400 });
+  const isAdmin = auth.profile.user_type === "admin";
 
-  const admin = createAdminClient();
+  const { data: review } = await attorneyReviewRepo.getById(auth.admin, reviewId);
+  if (!review) return fail("Review not found", 404);
 
-  // Verify the requesting user is the assigned attorney (or admin)
-  const { data: profile } = await admin.from("profiles").select("user_type").eq("id", user.id).single();
-  const isAdmin = profile?.user_type === "admin";
+  if (!isAdmin && review.attorney_id !== auth.user.id) return fail("Forbidden", 403);
 
-  const { data: review } = await admin
-    .from("attorney_reviews")
-    .select("id, order_id, status, sla_deadline, created_at, partner_id, attorney_id")
-    .eq("id", reviewId)
-    .single();
-
-  if (!review) return NextResponse.json({ error: "Review not found" }, { status: 404 });
-
-  // Only assigned attorney or admin can view
-  if (!isAdmin && review.attorney_id !== user.id) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
-
-  // Fetch order
-  const { data: order } = await admin
+  const { data: order } = await auth.admin
     .from("orders")
     .select("id, product_type, client_id, amount_total")
     .eq("id", review.order_id)
     .single();
 
-  // Fetch client → profile
   let clientName: string | null = null;
   let clientEmail: string | null = null;
   if (order?.client_id) {
-    const { data: client } = await admin
+    const { data: client } = await auth.admin
       .from("clients")
       .select("id, profile_id")
       .eq("id", order.client_id)
       .single();
 
     if (client?.profile_id) {
-      const { data: clientProfile } = await admin
+      const { data: clientProfile } = await auth.admin
         .from("profiles")
         .select("full_name, email")
         .eq("id", client.profile_id)
@@ -66,10 +44,9 @@ export async function GET(request: Request) {
     }
   }
 
-  // Fetch partner
   let partnerCompany: string | null = null;
   if (review.partner_id) {
-    const { data: partner } = await admin
+    const { data: partner } = await auth.admin
       .from("partners")
       .select("company_name")
       .eq("id", review.partner_id)
@@ -77,23 +54,20 @@ export async function GET(request: Request) {
     partnerCompany = partner?.company_name || null;
   }
 
-  // Fetch documents (base columns — always present).
-  const { data: documents } = await admin
+  const { data: documents } = await auth.admin
     .from("documents")
     .select("id, document_type, storage_path, status")
     .eq("order_id", review.order_id)
     .order("created_at", { ascending: true });
 
-  // Edit-and-upload columns live in a later migration. Fetch separately and
-  // tolerate failure so a missing migration never empties the document list.
   const extra: Record<string, { review_docx_path: string | null; reviewed_path: string | null; reviewed_uploaded_at: string | null }> = {};
-  const { data: extDocs } = await admin
+  const { data: extDocs } = await auth.admin
     .from("documents")
     .select("id, review_docx_path, reviewed_path, reviewed_uploaded_at")
     .eq("order_id", review.order_id);
   if (extDocs) for (const e of extDocs) extra[e.id] = e;
 
-  return NextResponse.json({
+  return ok({
     review: {
       id: review.id,
       order_id: review.order_id,
@@ -117,4 +91,4 @@ export async function GET(request: Request) {
       reviewed_uploaded_at: extra[d.id]?.reviewed_uploaded_at || null,
     })),
   });
-}
+});

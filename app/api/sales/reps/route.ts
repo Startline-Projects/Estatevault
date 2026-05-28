@@ -1,52 +1,21 @@
-import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
-import { createServerClient } from "@supabase/ssr";
+import { NextRequest } from "next/server";
+import { requireAuth } from "@/lib/api/auth";
+import { withRoute } from "@/lib/api/route";
+import { ok, fail } from "@/lib/api/response";
+import * as profileRepo from "@/lib/repos/server/profileRepo";
+import * as partnerRepo from "@/lib/repos/server/partnerRepo";
+import * as auditLogRepo from "@/lib/repos/server/auditLogRepo";
 
-function createAdminClient() {
-  return createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    { cookies: { getAll: () => [], setAll: () => {} } }
-  );
-}
+export const GET = withRoute(async (_req: NextRequest) => {
+  const auth = await requireAuth(["admin"]);
+  if ("error" in auth) return auth.error;
 
-export async function GET() {
-  const supabase = createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+  const { data: reps, error: repsErr } = await profileRepo.findAllSalesReps(auth.admin);
+  if (repsErr) return fail("Failed to fetch reps", 500);
 
-  // Admin only
-  const admin = createAdminClient();
-  const { data: profile } = await admin
-    .from("profiles")
-    .select("user_type")
-    .eq("id", user.id)
-    .single();
-
-  if (!profile || profile.user_type !== "admin") {
-    return NextResponse.json({ error: "Admin access required" }, { status: 403 });
-  }
-
-  // Fetch all sales reps
-  const { data: reps, error: repsErr } = await admin
-    .from("profiles")
-    .select("id, full_name, email, created_at, commission_rate")
-    .eq("user_type", "sales_rep")
-    .order("created_at", { ascending: false });
-
-  if (repsErr) {
-    return NextResponse.json({ error: "Failed to fetch reps" }, { status: 500 });
-  }
-
-  // Count active partners for each rep
   const repsWithCounts = await Promise.all(
     (reps || []).map(async (rep) => {
-      const { count } = await admin
-        .from("partners")
-        .select("id", { count: "exact", head: true })
-        .eq("created_by", rep.id)
-        .eq("status", "active");
-
+      const { count } = await partnerRepo.countActiveByCreator(auth.admin, rep.id);
       return {
         id: rep.id,
         full_name: rep.full_name || "Unknown",
@@ -58,38 +27,29 @@ export async function GET() {
     })
   );
 
-  return NextResponse.json({ reps: repsWithCounts });
-}
+  return ok({ reps: repsWithCounts });
+});
 
-export async function PATCH(request: Request) {
-  const supabase = createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+export const PATCH = withRoute(async (req: NextRequest) => {
+  const auth = await requireAuth(["admin"]);
+  if ("error" in auth) return auth.error;
 
-  const admin = createAdminClient();
-  const { data: profile } = await admin.from("profiles").select("user_type").eq("id", user.id).single();
-  if (!profile || profile.user_type !== "admin") {
-    return NextResponse.json({ error: "Admin access required" }, { status: 403 });
-  }
-
-  const { repId, commissionRate } = await request.json();
-  if (!repId || commissionRate === undefined) {
-    return NextResponse.json({ error: "Missing repId or commissionRate" }, { status: 400 });
-  }
+  const { repId, commissionRate } = await req.json();
+  if (!repId || commissionRate === undefined) return fail("Missing repId or commissionRate", 400);
 
   const parsed = parseFloat(commissionRate);
   if (isNaN(parsed) || parsed < 0 || parsed > 100) {
-    return NextResponse.json({ error: "Commission rate must be between 0 and 100" }, { status: 400 });
+    return fail("Commission rate must be between 0 and 100", 400);
   }
 
-  await admin.from("profiles").update({ commission_rate: parsed / 100 }).eq("id", repId).eq("user_type", "sales_rep");
-  await admin.from("audit_log").insert({
-    actor_id: user.id,
+  await profileRepo.updateCommissionRate(auth.admin, repId, parsed / 100);
+  await auditLogRepo.insertEntry(auth.admin, {
+    actor_id: auth.user.id,
     action: "sales_rep.commission_updated",
     resource_type: "profile",
     resource_id: repId,
     metadata: { commission_rate: parsed / 100 },
   });
 
-  return NextResponse.json({ success: true });
-}
+  return ok({ success: true });
+});

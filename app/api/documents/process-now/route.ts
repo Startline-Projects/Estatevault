@@ -1,43 +1,15 @@
-import { NextResponse, type NextRequest } from "next/server";
-import { createServerClient } from "@supabase/ssr";
+import { type NextRequest } from "next/server";
+import { withRoute } from "@/lib/api/route";
+import { ok, fail } from "@/lib/api/response";
+import { createAdminClient, requireAuth } from "@/lib/api/auth";
 import { claude, CLAUDE_MODEL } from "@/lib/claude";
 import { uploadDocument } from "@/lib/documents/storage";
 import { sendDocumentEmail, sendAttorneyReviewPendingEmail, buildAssetChecklist } from "@/lib/email";
 import { wantsNotification } from "@/lib/notifications/prefs";
-import { requireAuth } from "@/lib/api/auth";
+import { getTemplate } from "@/lib/documents/templates/resolve";
+import * as auditLogRepo from "@/lib/repos/server/auditLogRepo";
 
-function createAdminClient() {
-  return createServerClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, { cookies: { getAll: () => [], setAll: () => {} } });
-}
-
-async function getTemplate(docType: string) {
-  switch (docType) {
-    case "will": {
-      const { willSystemPrompt, buildWillPrompt } = await import("@/lib/documents/templates/michigan-will");
-      return { systemPrompt: willSystemPrompt, buildPrompt: buildWillPrompt };
-    }
-    case "poa": {
-      const { poaSystemPrompt, buildPOAPrompt } = await import("@/lib/documents/templates/michigan-poa");
-      return { systemPrompt: poaSystemPrompt, buildPrompt: buildPOAPrompt };
-    }
-    case "healthcare_directive": {
-      const { hcdSystemPrompt, buildHCDPrompt } = await import("@/lib/documents/templates/michigan-healthcare-directive");
-      return { systemPrompt: hcdSystemPrompt, buildPrompt: buildHCDPrompt };
-    }
-    case "trust": {
-      const { trustSystemPrompt, buildTrustPrompt } = await import("@/lib/documents/templates/michigan-revocable-trust");
-      return { systemPrompt: trustSystemPrompt, buildPrompt: buildTrustPrompt };
-    }
-    case "pour_over_will": {
-      const { pourOverWillSystemPrompt, buildPourOverWillPrompt } = await import("@/lib/documents/templates/michigan-pour-over-will");
-      return { systemPrompt: pourOverWillSystemPrompt, buildPrompt: buildPourOverWillPrompt };
-    }
-    default:
-      throw new Error(`Unknown document type: ${docType}`);
-  }
-}
-
-export async function GET(request: NextRequest) {
+export const GET = withRoute(async (request: NextRequest) => {
   const auth = await requireAuth(["admin"], request);
   if ("error" in auth) return auth.error;
 
@@ -47,7 +19,7 @@ export async function GET(request: NextRequest) {
     const orderId = searchParams.get("order_id");
 
     if (!orderId) {
-      return NextResponse.json({ error: "Add ?order_id=XXX to the URL", log });
+      return fail("Add ?order_id=XXX to the URL", 400, { log });
     }
 
     const supabase = createAdminClient();
@@ -62,7 +34,7 @@ export async function GET(request: NextRequest) {
 
     if (orderErr || !order) {
       log.push(`2. Order NOT found: ${orderErr?.message || "no data"}`);
-      return NextResponse.json({ error: "Order not found", log });
+      return fail("Order not found", 404, { log });
     }
 
     const isAttorneyReview = order.attorney_review_requested === true;
@@ -83,14 +55,14 @@ export async function GET(request: NextRequest) {
       else log.push("3. No quiz session found for client_id");
     } else {
       log.push("3. No intake_data, no quiz_session_id, and no client_id");
-      return NextResponse.json({ error: "No intake answers available", log });
+      return fail("No intake answers available", 400, { log });
     }
 
     log.push(`4. Intake has ${Object.keys(quizAnswers).length} fields. firstName=${quizAnswers.firstName}, lastName=${quizAnswers.lastName}`);
 
     if (!process.env.ANTHROPIC_API_KEY || process.env.ANTHROPIC_API_KEY === "placeholder") {
       log.push("5. ANTHROPIC_API_KEY is missing!");
-      return NextResponse.json({ error: "Anthropic API key not configured", log });
+      return fail("Anthropic API key not configured", 500, { log });
     }
     log.push("5. ANTHROPIC_API_KEY is set");
 
@@ -165,7 +137,6 @@ export async function GET(request: NextRequest) {
 
         const storageClientId = isTestOrder ? "test" : (order.client_id || "unknown");
         const path = await uploadDocument(storageClientId, order.id, docType, pdfBuffer, docxBuffer);
-        // uploadDocument sets doc status to "generated", we will update below
         log.push(`   ${docType}: uploaded to ${path}`);
         results.push({ docType, success: true, path });
       } catch (docError) {
@@ -177,12 +148,10 @@ export async function GET(request: NextRequest) {
 
     // Update order and document statuses based on attorney review
     if (isAttorneyReview) {
-      // Order goes to "review", attorney must approve before client can download
       await supabase.from("orders").update({ status: "review" }).eq("id", orderId);
       await supabase.from("documents").update({ status: "review" }).eq("order_id", orderId);
       log.push("8. Order and documents set to 'review' (attorney review required)");
     } else {
-      // No attorney review, deliver immediately
       await supabase.from("orders").update({ status: "delivered" }).eq("id", orderId);
       await supabase.from("documents").update({ status: "delivered", delivered_at: new Date().toISOString() }).eq("order_id", orderId);
       log.push("8. Order and documents set to 'delivered'");
@@ -215,7 +184,7 @@ export async function GET(request: NextRequest) {
               partnerId: clientRow?.partner_id || null,
             });
             log.push(`9. Sent attorney-review-pending email to ${clientEmail}`);
-            await supabase.from("audit_log").insert({
+            await auditLogRepo.insertEntry(supabase, {
               action: "email.attorney_review_pending",
               resource_type: "order",
               resource_id: orderId,
@@ -235,7 +204,7 @@ export async function GET(request: NextRequest) {
               partnerId: clientRow?.partner_id || null,
             });
             log.push(`9. Sent document email to ${clientEmail}`);
-            await supabase.from("audit_log").insert({
+            await auditLogRepo.insertEntry(supabase, {
               action: "email.documents_delivered",
               resource_type: "order",
               resource_id: orderId,
@@ -257,7 +226,7 @@ export async function GET(request: NextRequest) {
       log.push("9. Quiz answers purged (E2EE)");
     }
 
-    return NextResponse.json({
+    return ok({
       success: true,
       order_id: orderId,
       attorney_review: isAttorneyReview,
@@ -269,6 +238,6 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error);
     log.push(`FATAL ERROR: ${msg}`);
-    return NextResponse.json({ error: msg, log }, { status: 500 });
+    return fail(msg, 500, { log });
   }
-}
+});

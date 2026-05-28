@@ -1,24 +1,11 @@
-import { NextResponse } from "next/server";
-import { Resend } from "resend";
+import { NextRequest } from "next/server";
+import { withRoute } from "@/lib/api/route";
+import { ok, fail } from "@/lib/api/response";
 import { generateUrlToken, storeLink } from "@/lib/auth/emailVerification";
-import { resolveSenderForEmail, renderEmailHeader, renderEmailFooter, type EmailBrand } from "@/lib/email";
+import { resolveSenderForEmail, renderEmailHeader, renderEmailFooter, getResend, type EmailBrand } from "@/lib/email";
+import { authRateLimit } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
-
-const resend = new Resend(process.env.RESEND_API_KEY);
-
-const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
-function checkRateLimit(email: string): boolean {
-  const now = Date.now();
-  const entry = rateLimitMap.get(email);
-  if (!entry || now > entry.resetAt) {
-    rateLimitMap.set(email, { count: 1, resetAt: now + 60_000 });
-    return true;
-  }
-  if (entry.count >= 3) return false;
-  entry.count++;
-  return true;
-}
 
 function buildEmailHtml(verifyLink: string, brand: EmailBrand): string {
   return `<!DOCTYPE html>
@@ -49,53 +36,42 @@ function buildEmailHtml(verifyLink: string, brand: EmailBrand): string {
 </html>`;
 }
 
-export async function POST(request: Request) {
-  try {
-    const { email, sessionId, partnerSlug, partnerId } = await request.json();
-    const normalizedEmail = String(email || "").trim().toLowerCase();
-    const session = String(sessionId || "").trim();
+export const POST = withRoute(async (req: NextRequest) => {
+  const { email, sessionId, partnerSlug, partnerId } = await req.json();
+  const normalizedEmail = String(email || "").trim().toLowerCase();
+  const session = String(sessionId || "").trim();
 
-    if (!normalizedEmail || !session || session.length < 16) {
-      return NextResponse.json({ error: "Email and sessionId required." }, { status: 400 });
-    }
+  if (!normalizedEmail || !session || session.length < 16) return fail("Email and sessionId required.", 400);
 
-    if (!checkRateLimit(normalizedEmail)) {
-      return NextResponse.json(
-        { error: "Too many attempts. Wait a minute." },
-        { status: 429 }
-      );
-    }
+  const { success } = await authRateLimit.limit(`verify-link:${normalizedEmail}`);
+  if (!success) return fail("Too many attempts. Wait a minute.", 429);
 
-    const linkToken = generateUrlToken();
-    storeLink(normalizedEmail, linkToken, session);
+  const linkToken = generateUrlToken();
+  storeLink(normalizedEmail, linkToken, session);
 
-    const { origin } = new URL(request.url);
-    const verifyLink = `${origin}/api/auth/verify-link?token=${encodeURIComponent(
-      linkToken
-    )}&email=${encodeURIComponent(normalizedEmail)}`;
+  const { origin } = new URL(req.url);
+  const verifyLink = `${origin}/api/auth/verify-link?token=${encodeURIComponent(
+    linkToken
+  )}&email=${encodeURIComponent(normalizedEmail)}`;
 
-    const sender = await resolveSenderForEmail({
-      email: normalizedEmail,
-      partnerId: partnerId || null,
-      partnerSlug: partnerSlug || null,
-    });
+  const sender = await resolveSenderForEmail({
+    email: normalizedEmail,
+    partnerId: partnerId || null,
+    partnerSlug: partnerSlug || null,
+  });
 
-    const { error: sendErr } = await resend.emails.send({
-      from: sender.from,
-      replyTo: sender.replyTo,
-      to: normalizedEmail,
-      subject: "Confirm your email to continue",
-      html: buildEmailHtml(verifyLink, sender.brand),
-    });
+  const { error: sendErr } = await getResend().emails.send({
+    from: sender.from,
+    replyTo: sender.replyTo,
+    to: normalizedEmail,
+    subject: "Confirm your email to continue",
+    html: buildEmailHtml(verifyLink, sender.brand),
+  });
 
-    if (sendErr) {
-      console.error("send-verify-link Resend error:", sendErr);
-      return NextResponse.json({ error: "Failed to send email." }, { status: 500 });
-    }
-
-    return NextResponse.json({ success: true });
-  } catch (err) {
-    console.error("send-verify-link error:", err);
-    return NextResponse.json({ error: "Failed to send link." }, { status: 500 });
+  if (sendErr) {
+    console.error("send-verify-link Resend error:", sendErr);
+    return fail("Failed to send email.", 500);
   }
-}
+
+  return ok({ success: true });
+});

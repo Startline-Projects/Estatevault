@@ -89,3 +89,73 @@ export function createReturningWithSub(admin: Admin, row: Record<string, unknown
 export function setProfileId(admin: Admin, clientId: string, profileId: string) {
   return admin.from("clients").update({ profile_id: profileId }).eq("id", clientId);
 }
+
+// Reminder-cron state: profile link + last-sent timestamps.
+export function getReminderStateById(admin: Admin, clientId: string) {
+  return admin
+    .from("clients")
+    .select("profile_id, last_annual_review_sent_at, last_life_event_checkin_sent_at")
+    .eq("id", clientId)
+    .maybeSingle();
+}
+
+export function stampAnnualReview(admin: Admin, clientId: string) {
+  return admin
+    .from("clients")
+    .update({ last_annual_review_sent_at: new Date().toISOString() })
+    .eq("id", clientId);
+}
+
+export function stampLifeEventCheckin(admin: Admin, clientId: string) {
+  return admin
+    .from("clients")
+    .update({ last_life_event_checkin_sent_at: new Date().toISOString() })
+    .eq("id", clientId);
+}
+
+// Find a client by vault Stripe subscription ID (webhook renewal/failure/deletion).
+export function findBySubscriptionId(admin: Admin, subscriptionId: string) {
+  return admin
+    .from("clients")
+    .select("id, profile_id")
+    .eq("vault_subscription_stripe_id", subscriptionId)
+    .single();
+}
+
+// Update vault subscription fields.
+export function updateVaultSubscription(
+  admin: Admin,
+  clientId: string,
+  patch: Record<string, unknown>,
+) {
+  return admin.from("clients").update(patch).eq("id", clientId);
+}
+
+// Activate vault subscription by Stripe subscription ID.
+export function activateVaultByStripeId(
+  admin: Admin,
+  subscriptionId: string,
+  expiry: string,
+) {
+  return admin
+    .from("clients")
+    .update({ vault_subscription_status: "active", vault_subscription_expiry: expiry })
+    .eq("vault_subscription_stripe_id", subscriptionId);
+}
+
+// Cancel vault subscription by Stripe subscription ID.
+export function cancelVaultByStripeId(admin: Admin, subscriptionId: string) {
+  return admin
+    .from("clients")
+    .update({ vault_subscription_status: "cancelled", vault_subscription_stripe_id: null })
+    .eq("vault_subscription_stripe_id", subscriptionId);
+}
+
+// Find client by profile ID (returns id only).
+export function findByProfileId(admin: Admin, profileId: string) {
+  return admin
+    .from("clients")
+    .select("id")
+    .eq("profile_id", profileId)
+    .single();
+}

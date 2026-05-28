@@ -1,33 +1,26 @@
-import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
-import { createServerClient } from "@supabase/ssr";
+import { type NextRequest } from "next/server";
+import { withRoute } from "@/lib/api/route";
+import { ok, fail } from "@/lib/api/response";
+import { requireAuth, createAdminClient } from "@/lib/api/auth";
 import { getDocumentDownloadUrl } from "@/lib/documents/storage";
+import * as auditLogRepo from "@/lib/repos/server/auditLogRepo";
 
-function createAdminClient() {
-  return createServerClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, { cookies: { getAll: () => [], setAll: () => {} } });
-}
-
-export async function GET(request: Request) {
-  const supabase = createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+export const GET = withRoute(async (request: NextRequest) => {
+  const auth = await requireAuth(undefined, request);
+  if ("error" in auth) return auth.error;
+  const { user, profile, admin } = auth;
 
   const { searchParams } = new URL(request.url);
   const documentId = searchParams.get("id");
-  if (!documentId) return NextResponse.json({ error: "Missing document id" }, { status: 400 });
+  if (!documentId) return fail("Missing document id", 400);
 
-  const admin = createAdminClient();
-
-  // Get document
   const { data: doc } = await admin
     .from("documents")
     .select("storage_path, client_id, order_id, sealed, sealed_for_user_id, attorney_sealed_path, attorney_sealed_for")
     .eq("id", documentId)
     .single();
-  if (!doc || !doc.storage_path) return NextResponse.json({ error: "Document not found" }, { status: 404 });
+  if (!doc || !doc.storage_path) return fail("Document not found", 404);
 
-  // Attorney-edited PDF columns live in a later migration. Fetch separately and
-  // tolerate failure so a missing migration never breaks the original download.
   let reviewedPath: string | null = null;
   let reviewedSealed = false;
   const { data: rev } = await admin
@@ -40,23 +33,28 @@ export async function GET(request: Request) {
     reviewedSealed = !!rev.reviewed_sealed;
   }
 
-  // Verify access: client owns it OR partner has access
-  const { data: client } = await admin.from("clients").select("profile_id, partner_id").eq("id", doc.client_id).single();
-  if (!client) return NextResponse.json({ error: "Access denied" }, { status: 403 });
+  const { data: client } = await admin
+    .from("clients")
+    .select("profile_id, partner_id")
+    .eq("id", doc.client_id)
+    .single();
+  if (!client) return fail("Access denied", 403);
 
   const isClient = client.profile_id === user.id;
   let isPartner = false;
   if (client.partner_id) {
-    const { data: partner } = await admin.from("partners").select("profile_id").eq("id", client.partner_id).single();
+    const { data: partner } = await admin
+      .from("partners")
+      .select("profile_id")
+      .eq("id", client.partner_id)
+      .single();
     if (partner?.profile_id === user.id) isPartner = true;
   }
 
-  const { data: profile } = await admin.from("profiles").select("user_type").eq("id", user.id).single();
-  const isAdmin = profile?.user_type === "admin";
+  const isAdmin = profile.user_type === "admin";
 
-  // Check if user is a review attorney assigned to this order
   let isReviewAttorney = false;
-  if (profile?.user_type === "review_attorney") {
+  if (profile.user_type === "review_attorney") {
     const { data: ar } = await admin
       .from("attorney_reviews")
       .select("id")
@@ -67,15 +65,9 @@ export async function GET(request: Request) {
   }
 
   if (!isClient && !isPartner && !isAdmin && !isReviewAttorney) {
-    return NextResponse.json({ error: "Access denied" }, { status: 403 });
+    return fail("Access denied", 403);
   }
 
-  // Block client download while order is under attorney review.
-  // Attorney-review orders stay locked from the moment documents start generating
-  // through the review itself, until the attorney approves (status -> 'delivered').
-  // Without the attorney_review_requested gate, docs uploaded one-by-one during
-  // generation are downloadable before the order ever reaches 'review'. Non-review
-  // orders are unaffected.
   if (isClient && !isAdmin) {
     const { data: order } = await admin
       .from("orders")
@@ -83,14 +75,10 @@ export async function GET(request: Request) {
       .eq("id", doc.order_id)
       .single();
     if (order?.attorney_review_requested && order.status !== "delivered") {
-      return NextResponse.json({ error: "Documents are under attorney review and will be available once approved." }, { status: 403 });
+      return fail("Documents are under attorney review and will be available once approved.", 403);
     }
   }
 
-  // Path + sealed routing:
-  //  - Review attorney → original (or attorney-sealed copy) so they review what was generated.
-  //  - Everyone else (client/partner/admin) → the attorney-edited PDF if one was uploaded,
-  //    otherwise the originally generated PDF.
   let path = doc.storage_path as string;
   let sealed = !!doc.sealed;
   if (isReviewAttorney) {
@@ -103,9 +91,9 @@ export async function GET(request: Request) {
   }
 
   const url = await getDocumentDownloadUrl(path);
-  if (!url) return NextResponse.json({ error: "File not available" }, { status: 404 });
+  if (!url) return fail("File not available", 404);
 
-  await admin.from("audit_log").insert({
+  await auditLogRepo.insertEntry(admin, {
     actor_id: user.id,
     action: "document.downloaded",
     resource_type: "document",
@@ -113,5 +101,5 @@ export async function GET(request: Request) {
     metadata: { sealed, reviewed: !isReviewAttorney && !!reviewedPath },
   });
 
-  return NextResponse.json({ url, sealed, encVersion: 1 });
-}
+  return ok({ url, sealed, encVersion: 1 });
+});

@@ -1,95 +1,62 @@
-import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
-import { createServerClient } from "@supabase/ssr";
+import { NextRequest } from "next/server";
+import { requireAuth } from "@/lib/api/auth";
+import { withRoute } from "@/lib/api/route";
+import { ok, fail } from "@/lib/api/response";
 import { sealForRecipient } from "@/lib/documents/seal";
 import { byteaToBytes } from "@/lib/api/crypto";
 import { docxToPdf } from "@/lib/documents/convert";
+import * as attorneyReviewRepo from "@/lib/repos/server/attorneyReviewRepo";
+import * as auditLogRepo from "@/lib/repos/server/auditLogRepo";
 
-export const maxDuration = 120; // conversion can take a few seconds
+export const maxDuration = 120;
 
-function createAdminClient() {
-  return createServerClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, { cookies: { getAll: () => [], setAll: () => {} } });
-}
-
-const MAX_BYTES = 20 * 1024 * 1024; // 20 MB
+const MAX_BYTES = 20 * 1024 * 1024;
 const DOCX_MIME = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
 
-// Attorney uploads the edited DOCX. We keep the DOCX, convert it to PDF, seal the
-// PDF to the client, and record reviewed_path. The client download then serves
-// this PDF instead of the originally generated one. Originals are never overwritten.
-export async function POST(request: Request) {
-  const supabase = createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+export const POST = withRoute(async (req: NextRequest) => {
+  const auth = await requireAuth(["review_attorney", "admin"]);
+  if ("error" in auth) return auth.error;
 
-  const form = await request.formData().catch(() => null);
-  if (!form) return NextResponse.json({ error: "Invalid form data" }, { status: 400 });
+  const form = await req.formData().catch(() => null);
+  if (!form) return fail("Invalid form data", 400);
 
   const documentId = form.get("documentId");
   const file = form.get("file");
-  if (typeof documentId !== "string" || !documentId) {
-    return NextResponse.json({ error: "Missing documentId" }, { status: 400 });
-  }
-  if (!(file instanceof File)) {
-    return NextResponse.json({ error: "Missing file" }, { status: 400 });
-  }
+  if (typeof documentId !== "string" || !documentId) return fail("Missing documentId", 400);
+  if (!(file instanceof File)) return fail("Missing file", 400);
 
-  // Attorney uploads a Word document; we convert it to PDF for the client.
   const isDocx = file.type === DOCX_MIME || file.name.toLowerCase().endsWith(".docx");
-  if (!isDocx) {
-    return NextResponse.json({ error: "Please upload a DOCX (Word) file." }, { status: 400 });
-  }
-  if (file.size === 0 || file.size > MAX_BYTES) {
-    return NextResponse.json({ error: "File must be between 1 byte and 20 MB." }, { status: 400 });
-  }
+  if (!isDocx) return fail("Please upload a DOCX (Word) file.", 400);
+  if (file.size === 0 || file.size > MAX_BYTES) return fail("File must be between 1 byte and 20 MB.", 400);
 
-  const admin = createAdminClient();
-
-  const { data: doc } = await admin
+  const { data: doc } = await auth.admin
     .from("documents")
     .select("id, client_id, order_id, document_type")
     .eq("id", documentId)
     .single();
-  if (!doc) return NextResponse.json({ error: "Document not found" }, { status: 404 });
+  if (!doc) return fail("Document not found", 404);
 
-  // Only the assigned attorney for this order (or admin) may upload.
-  const { data: profile } = await admin.from("profiles").select("user_type").eq("id", user.id).single();
-  const isAdmin = profile?.user_type === "admin";
-  const { data: ar } = await admin
-    .from("attorney_reviews")
-    .select("id, status")
-    .eq("order_id", doc.order_id)
-    .eq("attorney_id", user.id)
-    .maybeSingle();
-  if (!isAdmin && !ar) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
+  const isAdmin = auth.profile.user_type === "admin";
+  const { data: ar } = await attorneyReviewRepo.isAssignedAttorney(auth.admin, doc.order_id, auth.user.id);
+  if (!isAdmin && !ar) return fail("Forbidden", 403);
 
   const docxBytes = Buffer.from(await file.arrayBuffer());
 
-  // Keep the original DOCX (audit + future re-edit). Stored plaintext, like the
-  // generated review DOCX. Non-fatal if it fails.
   const srcPath = `${doc.client_id}/${doc.order_id}/${doc.document_type}.reviewed.src.docx`;
-  const { error: srcErr } = await admin.storage.from("documents").upload(srcPath, docxBytes, {
+  const { error: srcErr } = await auth.admin.storage.from("documents").upload(srcPath, docxBytes, {
     contentType: DOCX_MIME,
     upsert: true,
   });
   if (srcErr) console.warn("[upload-reviewed] source DOCX upload failed (non-fatal):", srcErr.message);
 
-  // Convert DOCX -> PDF (the client always receives a PDF).
   let pdfBytes: Buffer;
   try {
     pdfBytes = await docxToPdf(docxBytes);
   } catch (e) {
-    console.error("[upload-reviewed] DOCX->PDF conversion failed:", e);
-    return NextResponse.json(
-      { error: e instanceof Error ? e.message : "Could not convert the document to PDF." },
-      { status: 502 },
-    );
+    return fail(e instanceof Error ? e.message : "Could not convert the document to PDF.", 502);
   }
 
-  // Seal the converted PDF to the client (plaintext fallback if no pubkey).
-  const { data: client } = await admin
+  const { data: client } = await auth.admin
     .from("clients")
     .select("profile_id, pubkey_x25519")
     .eq("id", doc.client_id)
@@ -105,49 +72,38 @@ export async function POST(request: Request) {
       toUpload = await sealForRecipient(toUpload, recipPub);
       sealed = true;
       sealedFor = client.profile_id ?? null;
-    } else {
-      console.warn(`[upload-reviewed] client pubkey wrong length (${recipPub.length}), uploading plaintext`);
     }
   }
 
   const path = `${doc.client_id}/${doc.order_id}/${doc.document_type}.reviewed.pdf`;
-  const { error: upErr } = await admin.storage.from("documents").upload(path, toUpload, {
+  const { error: upErr } = await auth.admin.storage.from("documents").upload(path, toUpload, {
     contentType: sealed ? "application/octet-stream" : "application/pdf",
     upsert: true,
   });
-  if (upErr) {
-    console.error("[upload-reviewed] storage upload failed:", upErr);
-    return NextResponse.json({ error: "Upload failed" }, { status: 500 });
-  }
+  if (upErr) return fail("Upload failed", 500);
 
-  // Core update — must succeed for the client to receive the edited PDF.
-  const { error: updErr } = await admin.from("documents").update({
+  const { error: updErr } = await auth.admin.from("documents").update({
     reviewed_path: path,
     reviewed_sealed: sealed,
     reviewed_for_user_id: sealedFor,
     reviewed_uploaded_at: new Date().toISOString(),
-    reviewed_by: user.id,
+    reviewed_by: auth.user.id,
   }).eq("id", documentId);
-  if (updErr) {
-    console.error("[upload-reviewed] documents update failed:", updErr);
-    return NextResponse.json({ error: "Failed to record upload (is the migration applied?)" }, { status: 500 });
-  }
+  if (updErr) return fail("Failed to record upload", 500);
 
-  // Source-DOCX pointer — requires 20260521_attorney_reviewed_src.sql. Tolerate
-  // failure so the edited PDF still reaches the client on older envs.
   if (!srcErr) {
-    const { error: srcUpdErr } = await admin.from("documents")
+    const { error: srcUpdErr } = await auth.admin.from("documents")
       .update({ reviewed_src_path: srcPath }).eq("id", documentId);
-    if (srcUpdErr) console.warn("[upload-reviewed] reviewed_src_path update failed (apply 20260521_attorney_reviewed_src.sql):", srcUpdErr.message);
+    if (srcUpdErr) console.warn("[upload-reviewed] reviewed_src_path update failed:", srcUpdErr.message);
   }
 
-  await admin.from("audit_log").insert({
-    actor_id: user.id,
+  await auditLogRepo.insertEntry(auth.admin, {
+    actor_id: auth.user.id,
     action: "attorney_review.reviewed_doc_uploaded",
     resource_type: "document",
     resource_id: documentId,
     metadata: { document_type: doc.document_type, order_id: doc.order_id, sealed, converted_from: "docx" },
   });
 
-  return NextResponse.json({ success: true });
-}
+  return ok({ success: true });
+});

@@ -1,45 +1,31 @@
-/**
- * Cron: daily. Emails a yearly estate-plan review nudge to clients whose
- * plan was delivered ~1 year ago, then re-nudges yearly.
- * Gated by profiles.notification_preferences.annual_review.
- * Vercel cron auth via CRON_SECRET header.
- */
-import { NextResponse } from "next/server";
-import { createServerClient } from "@supabase/ssr";
+import { type NextRequest } from "next/server";
+import { withRoute } from "@/lib/api/route";
+import { ok, fail } from "@/lib/api/response";
+import { createAdminClient } from "@/lib/api/auth";
 import { sendAnnualReviewEmail } from "@/lib/email";
 import { wantsNotification } from "@/lib/notifications/prefs";
+import * as orderRepo from "@/lib/repos/server/orderRepo";
+import * as clientRepo from "@/lib/repos/server/clientRepo";
+import * as profileRepo from "@/lib/repos/server/profileRepo";
+import * as auditLogRepo from "@/lib/repos/server/auditLogRepo";
 
 export const runtime = "nodejs";
 
 const DAY = 24 * 60 * 60 * 1000;
 
-function admin() {
-  return createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    { cookies: { getAll: () => [], setAll: () => {} } },
-  );
-}
-
-export async function GET(req: Request) {
+export const GET = withRoute(async (req: NextRequest) => {
   const secret = process.env.CRON_SECRET;
   const auth = req.headers.get("authorization");
   if (!secret || auth !== `Bearer ${secret}`) {
-    return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+    return fail("unauthorized", 401);
   }
 
-  const db = admin();
+  const admin = createAdminClient();
   const now = Date.now();
-  const deliveredCutoff = new Date(now - 365 * DAY).toISOString();
+  const cutoff = new Date(now - 365 * DAY).toISOString();
   const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.estatevault.us";
 
-  // Delivered plans at least a year old. One client may have several; keep latest.
-  const { data: orders } = await db
-    .from("orders")
-    .select("client_id, partner_id, delivered_at")
-    .eq("status", "delivered")
-    .not("delivered_at", "is", null)
-    .lte("delivered_at", deliveredCutoff);
+  const { data: orders } = await orderRepo.findDeliveredBefore(admin, cutoff);
 
   const byClient = new Map<string, { partnerId: string | null; deliveredAt: string }>();
   for (const o of orders || []) {
@@ -52,37 +38,27 @@ export async function GET(req: Request) {
 
   let sent = 0;
   for (const [clientId, info] of Array.from(byClient.entries())) {
-    const { data: client } = await db
-      .from("clients")
-      .select("profile_id, last_annual_review_sent_at")
-      .eq("id", clientId)
-      .maybeSingle();
+    const { data: client } = await clientRepo.getReminderStateById(admin, clientId);
     const profileId = client?.profile_id;
     if (!profileId) continue;
 
-    // Send at most once per ~year (360d guard against daily-cron / tz drift).
     const lastSent = client?.last_annual_review_sent_at;
     if (lastSent && now - new Date(lastSent).getTime() < 360 * DAY) continue;
 
-    if (!(await wantsNotification(db, profileId, "annual_review"))) continue;
+    if (!(await wantsNotification(admin, profileId, "annual_review"))) continue;
 
-    const { data: profile } = await db
-      .from("profiles")
-      .select("email, full_name")
-      .eq("id", profileId)
-      .maybeSingle();
-    const email = profile?.email;
-    if (!email) continue;
+    const { data: profile } = await profileRepo.getEmailAndNameById(admin, profileId);
+    if (!profile?.email) continue;
 
     await sendAnnualReviewEmail({
-      to: email,
-      loginLink: `${baseUrl}/auth/login?email=${encodeURIComponent(email)}`,
+      to: profile.email,
+      loginLink: `${baseUrl}/auth/login?email=${encodeURIComponent(profile.email)}`,
       partnerId: info.partnerId,
-      clientName: profile?.full_name,
+      clientName: profile.full_name,
       deliveredAt: info.deliveredAt,
     });
-    await db.from("clients").update({ last_annual_review_sent_at: new Date().toISOString() }).eq("id", clientId);
-    await db.from("audit_log").insert({
+    await clientRepo.stampAnnualReview(admin, clientId);
+    await auditLogRepo.insertEntry(admin, {
       action: "email.annual_review",
       resource_type: "client",
       resource_id: clientId,
@@ -90,5 +66,5 @@ export async function GET(req: Request) {
     sent++;
   }
 
-  return NextResponse.json({ ok: true, eligible: byClient.size, sent });
-}
+  return ok({ ok: true, eligible: byClient.size, sent });
+});

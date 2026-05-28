@@ -1,61 +1,50 @@
-import { NextResponse } from "next/server";
-import { createServerClient } from "@supabase/ssr";
+import { type NextRequest } from "next/server";
 import Stripe from "stripe";
+import { withRoute } from "@/lib/api/route";
+import { ok, fail } from "@/lib/api/response";
+import { createAdminClient } from "@/lib/api/auth";
 import { getDocumentDownloadUrl } from "@/lib/documents/storage";
 
-function createAdminClient() {
-  return createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    { cookies: { getAll: () => [], setAll: () => {} } }
-  );
-}
+export const GET = withRoute(async (request: NextRequest) => {
+  const { searchParams } = new URL(request.url);
+  const documentId = searchParams.get("id");
+  const sessionId = searchParams.get("session_id");
+  const orderId = searchParams.get("order_id");
 
-// Public download. Authorizes via Stripe session_id OR order_id (test/promo flow).
-// Used on /trust/success and /will/success before user has set password.
-export async function GET(request: Request) {
-  try {
-    const { searchParams } = new URL(request.url);
-    const documentId = searchParams.get("id");
-    const sessionId = searchParams.get("session_id");
-    const orderId = searchParams.get("order_id");
+  if (!documentId) return fail("Missing document id", 400);
+  if (!sessionId && !orderId) return fail("Missing session_id or order_id", 400);
 
-    if (!documentId) return NextResponse.json({ error: "Missing document id" }, { status: 400 });
-    if (!sessionId && !orderId) return NextResponse.json({ error: "Missing session_id or order_id" }, { status: 400 });
+  const admin = createAdminClient();
 
-    const admin = createAdminClient();
+  const { data: doc } = await admin
+    .from("documents")
+    .select("storage_path, order_id")
+    .eq("id", documentId)
+    .single();
+  if (!doc || !doc.storage_path) return fail("Document not found", 404);
 
-    const { data: doc } = await admin
-      .from("documents")
-      .select("storage_path, order_id")
-      .eq("id", documentId)
-      .single();
-    if (!doc || !doc.storage_path) return NextResponse.json({ error: "Document not found" }, { status: 404 });
+  let authorized = false;
 
-    // Authorization
-    let authorized = false;
-
-    if (sessionId) {
-      const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: "2026-03-25.dahlia" });
-      const session = await stripe.checkout.sessions.retrieve(sessionId);
-      const sessionOrderId = session.metadata?.order_id;
-      if (sessionOrderId && sessionOrderId === doc.order_id) authorized = true;
-    }
-
-    if (!authorized && orderId && orderId === doc.order_id) {
-      // Only allow order_id fallback for test/promo orders (no Stripe session)
-      const { data: order } = await admin.from("orders").select("id, order_type, promo_code").eq("id", orderId).single();
-      if (order && (order.order_type === "test" || order.promo_code)) authorized = true;
-    }
-
-    if (!authorized) return NextResponse.json({ error: "Access denied" }, { status: 403 });
-
-    const url = await getDocumentDownloadUrl(doc.storage_path);
-    if (!url) return NextResponse.json({ error: "File not available" }, { status: 404 });
-
-    return NextResponse.json({ url });
-  } catch (e) {
-    console.error("download-by-session error:", e);
-    return NextResponse.json({ error: "Download failed" }, { status: 500 });
+  if (sessionId) {
+    const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: "2026-03-25.dahlia" });
+    const session = await stripe.checkout.sessions.retrieve(sessionId);
+    const sessionOrderId = session.metadata?.order_id;
+    if (sessionOrderId && sessionOrderId === doc.order_id) authorized = true;
   }
-}
+
+  if (!authorized && orderId && orderId === doc.order_id) {
+    const { data: order } = await admin
+      .from("orders")
+      .select("id, order_type, promo_code")
+      .eq("id", orderId)
+      .single();
+    if (order && (order.order_type === "test" || order.promo_code)) authorized = true;
+  }
+
+  if (!authorized) return fail("Access denied", 403);
+
+  const url = await getDocumentDownloadUrl(doc.storage_path);
+  if (!url) return fail("File not available", 404);
+
+  return ok({ url });
+});

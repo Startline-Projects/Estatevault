@@ -1,66 +1,27 @@
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
 
-import { NextResponse } from "next/server";
-import { createServerClient } from "@supabase/ssr";
-import { createClient } from "@/lib/supabase/server";
+import { type NextRequest } from "next/server";
+import { withRoute } from "@/lib/api/route";
+import { ok, fail } from "@/lib/api/response";
+import { createAdminClient, requireAuth } from "@/lib/api/auth";
 import { claude, CLAUDE_MODEL } from "@/lib/claude";
 import { uploadDocument } from "@/lib/documents/storage";
+import { getTemplate } from "@/lib/documents/templates/resolve";
 
-function createAdminClient() {
-  return createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    { cookies: { getAll: () => [], setAll: () => {} } }
-  );
-}
+export const GET = withRoute(async (request: NextRequest) => {
+  const auth = await requireAuth(["admin"], request);
+  if ("error" in auth) return auth.error;
 
-async function getTemplate(docType: string) {
-  switch (docType) {
-    case "will": {
-      const { willSystemPrompt, buildWillPrompt } = await import("@/lib/documents/templates/michigan-will");
-      return { systemPrompt: willSystemPrompt, buildPrompt: buildWillPrompt };
-    }
-    case "poa": {
-      const { poaSystemPrompt, buildPOAPrompt } = await import("@/lib/documents/templates/michigan-poa");
-      return { systemPrompt: poaSystemPrompt, buildPrompt: buildPOAPrompt };
-    }
-    case "healthcare_directive": {
-      const { hcdSystemPrompt, buildHCDPrompt } = await import("@/lib/documents/templates/michigan-healthcare-directive");
-      return { systemPrompt: hcdSystemPrompt, buildPrompt: buildHCDPrompt };
-    }
-    case "trust": {
-      const { trustSystemPrompt, buildTrustPrompt } = await import("@/lib/documents/templates/michigan-revocable-trust");
-      return { systemPrompt: trustSystemPrompt, buildPrompt: buildTrustPrompt };
-    }
-    case "pour_over_will": {
-      const { pourOverWillSystemPrompt, buildPourOverWillPrompt } = await import("@/lib/documents/templates/michigan-pour-over-will");
-      return { systemPrompt: pourOverWillSystemPrompt, buildPrompt: buildPourOverWillPrompt };
-    }
-    default:
-      throw new Error(`Unknown document type: ${docType}`);
-  }
-}
-
-export async function GET(request: Request) {
   const log: string[] = [];
   try {
-    // Admin-only gate
-    const userClient = createClient();
-    const { data: { user } } = await userClient.auth.getUser();
-    if (!user) return NextResponse.json({ error: "Unauthorized", log }, { status: 401 });
-    const supabase = createAdminClient();
-    const { data: callerProfile } = await supabase
-      .from("profiles").select("user_type").eq("id", user.id).single();
-    if (callerProfile?.user_type !== "admin") {
-      return NextResponse.json({ error: "Forbidden", log }, { status: 403 });
-    }
-
     const { searchParams } = new URL(request.url);
     const orderId = searchParams.get("order_id");
     if (!orderId) {
-      return NextResponse.json({ error: "Add ?order_id=XXX", log }, { status: 400 });
+      return fail("Add ?order_id=XXX", 400, { log });
     }
+
+    const supabase = createAdminClient();
 
     const { data: order, error: orderErr } = await supabase
       .from("orders")
@@ -68,7 +29,7 @@ export async function GET(request: Request) {
       .eq("id", orderId)
       .single();
     if (orderErr || !order) {
-      return NextResponse.json({ error: "Order not found", log }, { status: 404 });
+      return fail("Order not found", 404, { log });
     }
     log.push(`order ${order.id} status=${order.status} attorney_review=${order.attorney_review_requested}`);
 
@@ -79,7 +40,7 @@ export async function GET(request: Request) {
       .is("storage_path", null);
 
     if (!missingDocs || missingDocs.length === 0) {
-      return NextResponse.json({ message: "No missing documents", log });
+      return ok({ message: "No missing documents", log });
     }
     log.push(`missing: ${missingDocs.map((d) => d.document_type).join(", ")}`);
 
@@ -96,11 +57,11 @@ export async function GET(request: Request) {
       }
     }
     if (Object.keys(intake).length === 0) {
-      return NextResponse.json({ error: "No intake answers available (quiz purged and order.intake_data empty)", log }, { status: 400 });
+      return fail("No intake answers available (quiz purged and order.intake_data empty)", 400, { log });
     }
 
     if (!process.env.ANTHROPIC_API_KEY || process.env.ANTHROPIC_API_KEY === "placeholder") {
-      return NextResponse.json({ error: "ANTHROPIC_API_KEY missing", log }, { status: 500 });
+      return fail("ANTHROPIC_API_KEY missing", 500, { log });
     }
 
     const isTestOrder = order.order_type === "test";
@@ -180,7 +141,7 @@ export async function GET(request: Request) {
       }
     }
 
-    return NextResponse.json({
+    return ok({
       order_id: orderId,
       regenerated: results.filter((r) => r.success).length,
       failed: results.filter((r) => !r.success).length,
@@ -190,6 +151,6 @@ export async function GET(request: Request) {
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error);
     log.push(`FATAL: ${msg}`);
-    return NextResponse.json({ error: msg, log }, { status: 500 });
+    return fail(msg, 500, { log });
   }
-}
+});

@@ -1,9 +1,11 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
+import { withRoute } from "@/lib/api/route";
+import { ok, fail } from "@/lib/api/response";
 import { requireClientUser, b64encode, byteaToBytes, checkRate, limiters, logAudit } from "@/lib/api/crypto";
 
 export const runtime = "nodejs";
 
-export async function GET(req: NextRequest) {
+export const GET = withRoute(async (req: NextRequest) => {
   const ctx = await requireClientUser(req);
   if ("error" in ctx) return ctx.error;
   const { user, profile, client, admin } = ctx;
@@ -12,15 +14,15 @@ export async function GET(req: NextRequest) {
   if (rl) return rl;
 
   if (!client.crypto_setup_at || !client.wrapped_mk_pass || !client.kdf_salt || !client.kdf_params) {
-    return NextResponse.json({ error: "crypto not bootstrapped" }, { status: 404 });
+    return fail("crypto not bootstrapped", 404);
   }
 
   await logAudit(admin, { actor_id: profile.id, action: "crypto.bundle.fetch" });
 
-  return NextResponse.json({
+  return ok({
     salt: b64encode(byteaToBytes(client.kdf_salt)),
     kdfParams: client.kdf_params,
     wrappedMkPass: b64encode(byteaToBytes(client.wrapped_mk_pass)),
     encVersion: client.enc_version ?? 1,
   });
-}
+});

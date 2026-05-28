@@ -1,281 +1,158 @@
-import { NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { createHash } from "crypto";
-import { createClient } from "@/lib/supabase/server";
-import { createServerClient } from "@supabase/ssr";
-import { Resend } from "resend";
+import { requireAuth } from "@/lib/api/auth";
+import { withRoute } from "@/lib/api/route";
+import { ok, fail } from "@/lib/api/response";
 import { issueVetoToken } from "@/lib/security/vetoToken";
 import { issueTrusteeToken } from "@/lib/security/trusteeToken";
+import * as fvRepo from "@/lib/repos/server/farewellVerificationRepo";
+import * as auditLogRepo from "@/lib/repos/server/auditLogRepo";
+import {
+  sendOwnerVetoEmail,
+  sendFarewellUnlockEmail,
+  sendVerificationRejectedEmail,
+  sendTrusteeUnlockEmail,
+} from "@/lib/email";
 
-const resend = new Resend(process.env.RESEND_API_KEY);
-// TESTING SHORTCUT: set TRUSTEE_BYPASS_VETO_WINDOW=true in .env.local to
-// collapse the 72-hour owner-veto window to 0 and immediately issue the
-// trustee unlock-link email on admin approval. Remove or set to "false"
-// before production.
 const VAULT_UNLOCK_WINDOW_HOURS = process.env.TRUSTEE_BYPASS_VETO_WINDOW === "true" ? 0 : 72;
 
 function hashToken(t: string): string {
   return createHash("sha256").update(t).digest("hex");
 }
 
-function createAdminClient() {
-  return createServerClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, { cookies: { getAll: () => [], setAll: () => {} } });
-}
+export const GET = withRoute(async (_req: NextRequest) => {
+  const auth = await requireAuth(["admin"]);
+  if ("error" in auth) return auth.error;
 
-export async function GET() {
-  try {
-    const supabase = createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const { data: requests } = await fvRepo.findPending(auth.admin);
 
-    const admin = createAdminClient();
-    const { data: profile } = await admin.from("profiles").select("user_type").eq("id", user.id).single();
-    if (!profile || profile.user_type !== "admin") {
-      return NextResponse.json({ error: "Admin access required" }, { status: 403 });
-    }
+  const enriched = await Promise.all((requests || []).map(async (req) => {
+    const profile = await fvRepo.getClientOwnerProfile(auth.admin, req.client_id);
+    const { data: trustee } = await fvRepo.getTrusteeName(auth.admin, req.trustee_id);
+    const { data: certUrl } = await fvRepo.getCertificateUrl(auth.admin, req.certificate_storage_path);
 
-    const { data: requests } = await admin
-      .from("farewell_verification_requests")
-      .select("id, client_id, trustee_id, trustee_email, certificate_storage_path, status, submitted_at, reviewed_at, notes")
-      .eq("status", "pending")
-      .order("submitted_at", { ascending: true });
+    return {
+      ...req,
+      client_name: profile?.full_name || "Unknown",
+      trustee_name: trustee?.trustee_name || "Unknown",
+      certificate_url: certUrl?.signedUrl || null,
+    };
+  }));
 
-    // Enrich with client and trustee names
-    const enriched = await Promise.all((requests || []).map(async (req) => {
-      const { data: client } = await admin
-        .from("clients")
-        .select("profile_id")
-        .eq("id", req.client_id)
-        .single();
+  return ok({ requests: enriched });
+});
 
-      let clientName = "Unknown";
-      if (client?.profile_id) {
-        const { data: prof } = await admin.from("profiles").select("full_name").eq("id", client.profile_id).single();
-        clientName = prof?.full_name || "Unknown";
-      }
+export const POST = withRoute(async (request: NextRequest) => {
+  const auth = await requireAuth(["admin"]);
+  if ("error" in auth) return auth.error;
 
-      const { data: trustee } = await admin
-        .from("vault_trustees")
-        .select("trustee_name")
-        .eq("id", req.trustee_id)
-        .single();
+  const { requestId, action, notes } = await request.json();
+  if (!requestId || !action) return fail("Missing requestId or action", 400);
 
-      // Generate signed URL for certificate
-      const { data: certUrl } = await admin.storage
-        .from("death-certificates")
-        .createSignedUrl(req.certificate_storage_path, 3600);
+  const { data: verReq } = await fvRepo.getByIdWithStatus(auth.admin, requestId);
+  if (!verReq) return fail("Request not found", 404);
+  if (verReq.status !== "pending") return fail("Request already processed", 400);
 
-      return {
-        ...req,
-        client_name: clientName,
-        trustee_name: trustee?.trustee_name || "Unknown",
-        certificate_url: certUrl?.signedUrl || null,
-      };
-    }));
+  if (action === "approve") {
+    const now = new Date();
+    const expiresAt = new Date(now.getTime() + VAULT_UNLOCK_WINDOW_HOURS * 3600 * 1000);
+    const vetoToken = issueVetoToken(requestId, VAULT_UNLOCK_WINDOW_HOURS * 3600);
+    const vetoTokenHash = hashToken(vetoToken);
 
-    return NextResponse.json({ requests: enriched });
-  } catch (error) {
-    console.error("Farewell verification list error:", error);
-    return NextResponse.json({ error: "Failed to fetch" }, { status: 500 });
-  }
-}
+    await fvRepo.approveRequest(auth.admin, requestId, {
+      status: "approved",
+      reviewed_at: now.toISOString(),
+      reviewed_by: auth.user.id,
+      notes: notes || null,
+      vault_unlock_approved: true,
+      unlock_window_started_at: now.toISOString(),
+      unlock_window_expires_at: expiresAt.toISOString(),
+      owner_veto_token_hash: vetoTokenHash,
+    });
 
-export async function POST(request: Request) {
-  try {
-    const supabase = createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-
-    const admin = createAdminClient();
-    const { data: profile } = await admin.from("profiles").select("user_type").eq("id", user.id).single();
-    if (!profile || profile.user_type !== "admin") {
-      return NextResponse.json({ error: "Admin access required" }, { status: 403 });
-    }
-
-    const { requestId, action, notes } = await request.json();
-    if (!requestId || !action) {
-      return NextResponse.json({ error: "Missing requestId or action" }, { status: 400 });
-    }
-
-    const { data: verReq } = await admin
-      .from("farewell_verification_requests")
-      .select("id, client_id, trustee_email, status")
-      .eq("id", requestId)
-      .single();
-
-    if (!verReq) return NextResponse.json({ error: "Request not found" }, { status: 404 });
-    if (verReq.status !== "pending") return NextResponse.json({ error: "Request already processed" }, { status: 400 });
-
-    if (action === "approve") {
-      // 72h vault-unlock window + owner-veto token.
-      const now = new Date();
-      const expiresAt = new Date(now.getTime() + VAULT_UNLOCK_WINDOW_HOURS * 3600 * 1000);
-      const vetoToken = issueVetoToken(requestId, VAULT_UNLOCK_WINDOW_HOURS * 3600);
-      const vetoTokenHash = hashToken(vetoToken);
-
-      await admin.from("farewell_verification_requests").update({
-        status: "approved",
-        reviewed_at: now.toISOString(),
-        reviewed_by: user.id,
-        notes: notes || null,
-        vault_unlock_approved: true,
-        unlock_window_started_at: now.toISOString(),
-        unlock_window_expires_at: expiresAt.toISOString(),
-        owner_veto_token_hash: vetoTokenHash,
-      }).eq("id", requestId);
-
-      // Email owner: dead-man-switch veto link.
-      try {
-        const { data: ownerClient } = await admin
-          .from("clients")
-          .select("profile_id")
-          .eq("id", verReq.client_id)
-          .single();
-        if (ownerClient?.profile_id) {
-          const { data: ownerProfile } = await admin
-            .from("profiles")
-            .select("email, full_name")
-            .eq("id", ownerClient.profile_id)
-            .single();
-          if (ownerProfile?.email) {
-            const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.estatevault.us";
-            const vetoUrl = `${baseUrl}/farewell/owner-veto?token=${vetoToken}`;
-            await resend.emails.send({
-              from: "EstateVault <info@estatevault.us>",
-              to: ownerProfile.email,
-              subject: "URGENT: Someone has requested access to your vault",
-              html: `<div style="font-family:Inter,sans-serif;max-width:520px;margin:0 auto;padding:32px;color:#2D2D2D;">
-                <h1 style="color:#1C3557;">Vault Access Requested</h1>
-                <p>Hello ${ownerProfile.full_name || ""},</p>
-                <p>A trustee has submitted a request to access your EstateVault. Their submission was reviewed by our team. If approved without action from you, vault access will be granted in <strong>72 hours</strong> (by ${expiresAt.toUTCString()}).</p>
-                <p><strong>If you are alive and well, click the button below to cancel this request immediately.</strong></p>
-                <div style="text-align:center;margin:32px 0;">
-                  <a href="${vetoUrl}" style="background:#C9A84C;color:#fff;text-decoration:none;padding:14px 28px;border-radius:9999px;font-weight:600;">I'm alive — Cancel Access</a>
-                </div>
-                <p style="color:#6b7280;font-size:13px;">This link is single-use and expires in 72 hours. You will receive this email every 12 hours during the review window.</p>
-                <p style="color:#9ca3af;font-size:11px;margin-top:24px;">EstateVault · Protecting what matters most</p>
-              </div>`,
-            });
-          }
-        }
-      } catch (e) { console.error("[veto-email] send failed:", e); }
-
-
-      // Unlock all farewell messages for this client
-      await admin.from("farewell_messages").update({
-        vault_farewell_status: "unlocked",
-        unlocked_at: new Date().toISOString(),
-      }).eq("client_id", verReq.client_id)
-        .in("vault_farewell_status", ["locked", "pending_verification"]);
-
-      // Get client name for email
-      const { data: client } = await admin.from("clients").select("profile_id").eq("id", verReq.client_id).single();
-      let clientName = "your loved one";
-      if (client?.profile_id) {
-        const { data: prof } = await admin.from("profiles").select("full_name").eq("id", client.profile_id).single();
-        clientName = prof?.full_name || "your loved one";
-      }
-
-      // Get all unlocked messages and send emails to recipients
-      const { data: unlockedMessages } = await admin
-        .from("farewell_messages")
-        .select("id, title, recipient_email")
-        .eq("client_id", verReq.client_id)
-        .eq("vault_farewell_status", "unlocked");
-
-      try {
-        for (const msg of unlockedMessages || []) {
-          await resend.emails.send({
-            from: "EstateVault <info@estatevault.us>",
-            to: msg.recipient_email,
-            subject: "A message has been left for you",
-            html: `<div style="font-family:Inter,sans-serif;max-width:500px;margin:0 auto;padding:32px;"><h1 style="color:#1C3557;">A Message for You</h1><p>We're sorry for your loss.</p><p>${clientName} left you a farewell message titled "<strong>${msg.title}</strong>".</p><p>Click below to access it.</p><a href="https://www.estatevault.us/farewell/${verReq.client_id}" style="display:inline-block;background:#C9A84C;color:white;text-decoration:none;padding:14px 24px;border-radius:999px;font-weight:600;font-size:14px;">View Message</a><p style="color:#999;font-size:12px;margin-top:24px;">This link will remain accessible for you to view at any time.</p></div>`,
-          });
-        }
-      } catch (emailErr) { console.error("Farewell unlock email failed:", emailErr); }
-
-      await admin.from("audit_log").insert({
-        actor_id: user.id,
-        action: "farewell.unlocked",
-        resource_type: "farewell_verification_request",
-        resource_id: requestId,
-        metadata: { client_id: verReq.client_id, messages_unlocked: unlockedMessages?.length || 0 },
-      });
-
-      // Bypass: when veto-window collapsed to 0, immediately issue trustee unlock token + email
-      // so testers don't have to wait for the cron sweep.
-      if (VAULT_UNLOCK_WINDOW_HOURS === 0) {
-        try {
-          const ACCESS_TTL_SECONDS = 7 * 24 * 3600;
-          const trusteeToken = issueTrusteeToken(requestId, verReq.trustee_email, ACCESS_TTL_SECONDS);
-          const accessExpiresAt = new Date(now.getTime() + ACCESS_TTL_SECONDS * 1000);
-
-          await admin.from("farewell_verification_requests").update({
-            trustee_access_token_hash: hashToken(trusteeToken),
-            access_expires_at: accessExpiresAt.toISOString(),
-            trustee_email_notified_at: now.toISOString(),
-          }).eq("id", requestId);
-
-          const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
-          const unlockUrl = `${baseUrl}/trustee/unlock?token=${trusteeToken}`;
-          await resend.emails.send({
-            from: "EstateVault <info@estatevault.us>",
-            to: verReq.trustee_email,
-            subject: "Vault Access Approved — Open Within 7 Days",
-            html: `<div style="font-family:Inter,sans-serif;max-width:520px;margin:0 auto;padding:32px;color:#2D2D2D;">
-              <h1 style="color:#1C3557;">Vault Access Approved</h1>
-              <p>Your request has been approved. You can now open the vault.</p>
-              <div style="text-align:center;margin:32px 0;">
-                <a href="${unlockUrl}" style="background:#C9A84C;color:#fff;text-decoration:none;padding:14px 28px;border-radius:9999px;font-weight:600;">Open Vault</a>
-              </div>
-              <p style="color:#6b7280;font-size:13px;">This link expires on <strong>${accessExpiresAt.toUTCString()}</strong>.</p>
-            </div>`,
-          });
-        } catch (e) {
-          console.error("[bypass] inline trustee token issuance failed:", e);
-        }
-      }
-
-      return NextResponse.json({ success: true, action: "approved" });
-    }
-
-    if (action === "reject") {
-      await admin.from("farewell_verification_requests").update({
-        status: "rejected",
-        reviewed_at: new Date().toISOString(),
-        reviewed_by: user.id,
-        notes: notes || null,
-      }).eq("id", requestId);
-
-      // Reset messages back to locked
-      await admin.from("farewell_messages").update({
-        vault_farewell_status: "locked",
-      }).eq("client_id", verReq.client_id)
-        .eq("vault_farewell_status", "pending_verification");
-
-      // Notify trustee
-      try {
-        await resend.emails.send({
-          from: "EstateVault <info@estatevault.us>",
-          to: verReq.trustee_email,
-          subject: "Verification Update",
-          html: `<div style="font-family:Inter,sans-serif;max-width:500px;margin:0 auto;padding:32px;"><h1 style="color:#1C3557;">Verification Update</h1><p>We were unable to verify the documentation you submitted. ${notes ? `<br><br>Reason: ${notes}` : ""}</p><p>If you believe this is an error, please resubmit with a clearer copy of the documentation.</p><p style="color:#999;font-size:12px;">- EstateVault</p></div>`,
+    try {
+      const ownerProfile = await fvRepo.getClientOwnerProfile(auth.admin, verReq.client_id);
+      if (ownerProfile?.email) {
+        const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.estatevault.us";
+        const vetoUrl = `${baseUrl}/farewell/owner-veto?token=${vetoToken}`;
+        await sendOwnerVetoEmail({
+          to: ownerProfile.email,
+          ownerName: ownerProfile.full_name || "",
+          vetoUrl,
+          expiresAt: expiresAt.toUTCString(),
         });
-      } catch (emailErr) { console.error("Rejection email failed:", emailErr); }
+      }
+    } catch (e) { console.error("[veto-email] send failed:", e); }
 
-      await admin.from("audit_log").insert({
-        actor_id: user.id,
-        action: "farewell.verification_rejected",
-        resource_type: "farewell_verification_request",
-        resource_id: requestId,
-        metadata: { client_id: verReq.client_id },
-      });
+    await fvRepo.unlockFarewellMessages(auth.admin, verReq.client_id);
 
-      return NextResponse.json({ success: true, action: "rejected" });
+    const clientName = await fvRepo.getClientNameByClientId(auth.admin, verReq.client_id);
+
+    const { data: unlockedMessages } = await fvRepo.getUnlockedMessages(auth.admin, verReq.client_id);
+
+    try {
+      for (const msg of unlockedMessages || []) {
+        await sendFarewellUnlockEmail({
+          to: msg.recipient_email,
+          clientName,
+          messageTitle: msg.title,
+          accessUrl: `https://www.estatevault.us/farewell/${verReq.client_id}`,
+        });
+      }
+    } catch (emailErr) { console.error("Farewell unlock email failed:", emailErr); }
+
+    await auditLogRepo.insertEntry(auth.admin, {
+      actor_id: auth.user.id,
+      action: "farewell.unlocked",
+      resource_type: "farewell_verification_request",
+      resource_id: requestId,
+      metadata: { client_id: verReq.client_id, messages_unlocked: unlockedMessages?.length || 0 },
+    });
+
+    if (VAULT_UNLOCK_WINDOW_HOURS === 0) {
+      try {
+        const ACCESS_TTL_SECONDS = 7 * 24 * 3600;
+        const trusteeToken = issueTrusteeToken(requestId, verReq.trustee_email, ACCESS_TTL_SECONDS);
+        const accessExpiresAt = new Date(now.getTime() + ACCESS_TTL_SECONDS * 1000);
+
+        await fvRepo.stampTrusteeNotified(auth.admin, requestId, {
+          trustee_access_token_hash: hashToken(trusteeToken),
+          access_expires_at: accessExpiresAt.toISOString(),
+          trustee_email_notified_at: now.toISOString(),
+        });
+
+        const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+        await sendTrusteeUnlockEmail({
+          to: verReq.trustee_email,
+          unlockUrl: `${baseUrl}/trustee/unlock?token=${trusteeToken}`,
+          expiresAt: accessExpiresAt,
+        });
+      } catch (e) {
+        console.error("[bypass] inline trustee token issuance failed:", e);
+      }
     }
 
-    return NextResponse.json({ error: "Invalid action" }, { status: 400 });
-  } catch (error) {
-    console.error("Farewell verification action error:", error);
-    return NextResponse.json({ error: "Failed to process" }, { status: 500 });
+    return ok({ success: true, action: "approved" });
   }
-}
+
+  if (action === "reject") {
+    await fvRepo.rejectRequest(auth.admin, requestId, auth.user.id, notes || null);
+    await fvRepo.resetFarewellMessages(auth.admin, verReq.client_id);
+
+    try {
+      await sendVerificationRejectedEmail({ to: verReq.trustee_email, notes });
+    } catch (emailErr) { console.error("Rejection email failed:", emailErr); }
+
+    await auditLogRepo.insertEntry(auth.admin, {
+      actor_id: auth.user.id,
+      action: "farewell.verification_rejected",
+      resource_type: "farewell_verification_request",
+      resource_id: requestId,
+      metadata: { client_id: verReq.client_id },
+    });
+
+    return ok({ success: true, action: "rejected" });
+  }
+
+  return fail("Invalid action", 400);
+});

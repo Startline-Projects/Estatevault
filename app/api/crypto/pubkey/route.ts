@@ -1,21 +1,18 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { z } from "zod";
 import { requireAuth } from "@/lib/api/auth";
+import { withRoute } from "@/lib/api/route";
+import { ok, fail } from "@/lib/api/response";
 import { b64encode, byteaToBytes, checkRate, limiters, logAudit } from "@/lib/api/crypto";
 
 export const runtime = "nodejs";
 
-// Lookup recipient pubkey for sharing.
-// Allow either:
-//   ?email=foo@bar.com   (must already be registered EstateVault user)
-//   ?userId=<auth.users.id>
-// Returns X25519 pub only (Ed25519 not needed for sharing).
 const QuerySchema = z.object({
   email: z.string().email().optional(),
   userId: z.string().uuid().optional(),
 }).refine(v => !!(v.email || v.userId), { message: "email or userId required" });
 
-export async function GET(req: NextRequest) {
+export const GET = withRoute(async (req: NextRequest) => {
   const auth = await requireAuth();
   if ("error" in auth) return auth.error;
   const { admin, user, profile } = auth;
@@ -25,9 +22,7 @@ export async function GET(req: NextRequest) {
 
   const { searchParams } = new URL(req.url);
   const parsed = QuerySchema.safeParse(Object.fromEntries(searchParams));
-  if (!parsed.success) {
-    return NextResponse.json({ error: "invalid query" }, { status: 400 });
-  }
+  if (!parsed.success) return fail("invalid query", 400);
 
   let recipientUserId = parsed.data.userId;
   if (!recipientUserId && parsed.data.email) {
@@ -36,7 +31,7 @@ export async function GET(req: NextRequest) {
       .select("id")
       .ilike("email", parsed.data.email)
       .maybeSingle();
-    if (!prof) return NextResponse.json({ error: "recipient not registered" }, { status: 404 });
+    if (!prof) return fail("recipient not registered", 404);
     recipientUserId = prof.id;
   }
 
@@ -46,9 +41,7 @@ export async function GET(req: NextRequest) {
     .eq("profile_id", recipientUserId!)
     .maybeSingle();
 
-  if (!client?.pubkey_x25519) {
-    return NextResponse.json({ error: "recipient has no E2EE setup" }, { status: 404 });
-  }
+  if (!client?.pubkey_x25519) return fail("recipient has no E2EE setup", 404);
 
   await logAudit(admin, {
     actor_id: profile.id,
@@ -56,9 +49,9 @@ export async function GET(req: NextRequest) {
     meta: { recipient_user_id: recipientUserId },
   });
 
-  return NextResponse.json({
+  return ok({
     userId: recipientUserId,
     pubX25519: b64encode(byteaToBytes(client.pubkey_x25519)),
     encVersion: client.enc_version ?? 1,
   });
-}
+});

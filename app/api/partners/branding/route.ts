@@ -1,20 +1,14 @@
-import { NextResponse } from "next/server";
-import { createServerClient } from "@supabase/ssr";
+import { NextRequest } from "next/server";
+import { createAdminClient } from "@/lib/api/auth";
+import { withRoute } from "@/lib/api/route";
+import { ok, fail } from "@/lib/api/response";
 
-function createAdminClient() {
-  return createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    { cookies: { getAll: () => [], setAll: () => {} } }
-  );
-}
-
-export async function GET(request: Request) {
-  const { searchParams } = new URL(request.url);
+export const GET = withRoute(async (req: NextRequest) => {
+  const { searchParams } = new URL(req.url);
   const id = searchParams.get("id");
   const domain = searchParams.get("domain")?.toLowerCase().trim();
   const slug = searchParams.get("slug");
-  if (!id && !domain && !slug) return NextResponse.json({ error: "Missing id|domain|slug" }, { status: 400 });
+  if (!id && !domain && !slug) return fail("Missing id|domain|slug", 400);
 
   const admin = createAdminClient();
   const cols = "id, company_name, product_name, logo_url, accent_color, theme_preset, hero_recipe, highlight_dark, cta_text_override";
@@ -26,10 +20,9 @@ export async function GET(request: Request) {
 
   const { data: rows, error } = await query;
   const data = rows?.[0];
+  if (error || !data) return fail("Partner not found", 404);
 
-  if (error || !data) return NextResponse.json({ error: "Partner not found" }, { status: 404 });
-
-  return NextResponse.json({
+  return ok({
     id: data.id,
     companyName: data.company_name,
     productName: data.product_name || "Legacy Protection",
@@ -40,4 +33,4 @@ export async function GET(request: Request) {
     highlightDark: data.highlight_dark || null,
     ctaTextOverride: data.cta_text_override || null,
   });
-}
+});

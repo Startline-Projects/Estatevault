@@ -1,164 +1,124 @@
-import { NextResponse } from "next/server";
-import { Resend } from "resend";
-import { issueTrusteeToken, hashToken } from "@/lib/security/trusteeToken";
+import { NextRequest } from "next/server";
 import { createAdminClient } from "@/lib/api/auth";
+import { withRoute } from "@/lib/api/route";
+import { ok, fail } from "@/lib/api/response";
+import { issueTrusteeToken, hashToken } from "@/lib/security/trusteeToken";
 import { getOrCreateUserDek } from "@/lib/api/dek";
 import { deriveSubKey, INFO, zero } from "@/lib/crypto/keyManager";
 import { bytesToBytea } from "@/lib/api/crypto";
 import { blindIndex, normalize } from "@/lib/crypto/blindIndex";
 import { authRateLimit } from "@/lib/rate-limit";
+import { getResend } from "@/lib/email";
+import * as fvRepo from "@/lib/repos/server/farewellVerificationRepo";
 
 export const runtime = "nodejs";
 
-const resend = new Resend(process.env.RESEND_API_KEY);
 const ACCESS_TTL_SECONDS = 7 * 24 * 3600;
 const RESEND_COOLDOWN_MS = 60 * 1000;
 
-// POST /api/farewell/access
-// Trustee verifies identity and gets signed URLs for unlocked messages.
-// No auth required, trustee is not a Supabase user.
-export async function POST(request: Request) {
-  try {
-    const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
-    const { success } = await authRateLimit.limit(`farewell-access:${ip}`);
-    if (!success) {
-      return NextResponse.json({ error: "Too many requests" }, { status: 429 });
-    }
+export const POST = withRoute(async (req: NextRequest) => {
+  const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+  const { success } = await authRateLimit.limit(`farewell-access:${ip}`);
+  if (!success) return fail("Too many requests", 429);
 
-    const { clientId, trusteeEmail } = await request.json();
+  const { clientId, trusteeEmail } = await req.json();
+  if (!clientId || !trusteeEmail) return fail("Missing clientId or trusteeEmail", 400);
 
-    if (!clientId || !trusteeEmail) {
-      return NextResponse.json({ error: "Missing clientId or trusteeEmail" }, { status: 400 });
-    }
+  const admin = createAdminClient();
 
-    const admin = createAdminClient();
-
-    // 1. Verify this email is a registered trustee for this client.
-    // Option A: trustee email is encrypted; match via per-user blind index.
-    const { data: ownerClient } = await admin
-      .from("clients")
-      .select("id, wrapped_dek")
-      .eq("id", clientId)
-      .maybeSingle();
-    if (!ownerClient) {
-      return NextResponse.json(
-        { error: "No trustee account found for this email. Please check your email address." },
-        { status: 404 }
-      );
-    }
-
-    const dek = await getOrCreateUserDek(admin, ownerClient);
-    const indexKey = await deriveSubKey(dek, INFO.INDEX);
-    let emailBlindHex: string;
-    try {
-      emailBlindHex = bytesToBytea(blindIndex(indexKey, normalize(trusteeEmail)));
-    } finally {
-      zero(indexKey);
-      zero(dek);
-    }
-
-    const { data: trustee } = await admin
-      .from("vault_trustees")
-      .select("id, status, confirmed_at, access_scope")
-      .eq("client_id", clientId)
-      .eq("email_blind", emailBlindHex)
-      .maybeSingle();
-
-    if (!trustee) {
-      return NextResponse.json(
-        { error: "No trustee account found for this email. Please check your email address." },
-        { status: 404 }
-      );
-    }
-
-    // Trustee must have accepted invite email first.
-    if (!trustee.confirmed_at || trustee.status === "pending") {
-      return NextResponse.json({ state: "trustee_not_confirmed" });
-    }
-
-    // 2. Per-trustee gate: must have an approved verification request (cert uploaded + admin-approved + not vetoed).
-    const { data: req } = await admin
-      .from("farewell_verification_requests")
-      .select("id, status, vault_unlock_approved, owner_vetoed_at, certificate_storage_path, submitted_at, unlock_window_expires_at, access_expires_at, trustee_email_notified_at")
-      .eq("client_id", clientId)
-      .ilike("trustee_email", trusteeEmail)
-      .order("submitted_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-
-    if (!req) {
-      return NextResponse.json({ state: "no_request" });
-    }
-    if (req.owner_vetoed_at) {
-      return NextResponse.json({ state: "vetoed" });
-    }
-    if (req.status === "rejected") {
-      return NextResponse.json({ state: "rejected" });
-    }
-    if (req.status !== "approved" || !req.vault_unlock_approved) {
-      return NextResponse.json({ state: "pending_approval" });
-    }
-
-    // Approved → do NOT return vault content from this endpoint. Issue a fresh
-    // trustee unlock token, email the sign-in link, and tell the UI to show a
-    // "check your email" state. Real vault content is only accessible via the
-    // /trustee/unlock OTP flow.
-    const now = Date.now();
-    const lastSentAt = req.trustee_email_notified_at ? new Date(req.trustee_email_notified_at).getTime() : 0;
-    if (now - lastSentAt < RESEND_COOLDOWN_MS) {
-      return NextResponse.json({
-        state: "email_sent",
-        cooldown: true,
-        trusteeEmail,
-      });
-    }
-
-    const token = issueTrusteeToken(req.id, trusteeEmail, ACCESS_TTL_SECONDS);
-    const accessExpiresAt = new Date(now + ACCESS_TTL_SECONDS * 1000);
-
-    await admin.from("farewell_verification_requests").update({
-      trustee_access_token_hash: hashToken(token),
-      access_expires_at: accessExpiresAt.toISOString(),
-      trustee_email_notified_at: new Date(now).toISOString(),
-    }).eq("id", req.id);
-
-    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
-    const unlockUrl = `${baseUrl}/trustee/unlock?token=${token}`;
-
-    try {
-      await resend.emails.send({
-        from: "EstateVault <info@estatevault.us>",
-        to: trusteeEmail,
-        subject: "Your Vault Sign-In Link",
-        html: `<div style="font-family:Inter,sans-serif;max-width:520px;margin:0 auto;padding:32px;color:#2D2D2D;">
-          <h1 style="color:#1C3557;">Sign In to View the Vault</h1>
-          <p>You requested access to the vault associated with this email. Click the button below to verify your identity and open the vault.</p>
-          <div style="text-align:center;margin:32px 0;">
-            <a href="${unlockUrl}" style="background:#C9A84C;color:#fff;text-decoration:none;padding:14px 28px;border-radius:9999px;font-weight:600;">Open Vault</a>
-          </div>
-          <p style="color:#6b7280;font-size:13px;">This link expires on <strong>${accessExpiresAt.toUTCString()}</strong>. You will receive a one-time code by email to confirm your identity once you open the link.</p>
-          <p style="color:#9ca3af;font-size:11px;margin-top:24px;">If you didn't request this, you can ignore this email.</p>
-        </div>`,
-      });
-    } catch (e) {
-      console.error("[farewell/access] sign-in email failed:", e);
-      return NextResponse.json({ error: "Failed to send sign-in email" }, { status: 500 });
-    }
-
-    await admin.from("trustee_access_audit").insert({
-      trustee_id: trustee.id,
-      client_id: clientId,
-      request_id: req.id,
-      action: "signin_email_sent",
-      metadata: { trustee_email: trusteeEmail },
-    });
-
-    return NextResponse.json({
-      state: "email_sent",
-      trusteeEmail,
-    });
-  } catch (error) {
-    console.error("Farewell access error:", error);
-    return NextResponse.json({ error: "Failed to process request" }, { status: 500 });
+  const { data: ownerClient } = await admin
+    .from("clients")
+    .select("id, wrapped_dek")
+    .eq("id", clientId)
+    .maybeSingle();
+  if (!ownerClient) {
+    return fail("No trustee account found for this email. Please check your email address.", 404);
   }
-}
+
+  const dek = await getOrCreateUserDek(admin, ownerClient);
+  const indexKey = await deriveSubKey(dek, INFO.INDEX);
+  let emailBlindHex: string;
+  try {
+    emailBlindHex = bytesToBytea(blindIndex(indexKey, normalize(trusteeEmail)));
+  } finally {
+    zero(indexKey);
+    zero(dek);
+  }
+
+  const { data: trustee } = await admin
+    .from("vault_trustees")
+    .select("id, status, confirmed_at, access_scope")
+    .eq("client_id", clientId)
+    .eq("email_blind", emailBlindHex)
+    .maybeSingle();
+
+  if (!trustee) {
+    return fail("No trustee account found for this email. Please check your email address.", 404);
+  }
+
+  if (!trustee.confirmed_at || trustee.status === "pending") {
+    return ok({ state: "trustee_not_confirmed" });
+  }
+
+  const { data: fvReq } = await admin
+    .from("farewell_verification_requests")
+    .select("id, status, vault_unlock_approved, owner_vetoed_at, certificate_storage_path, submitted_at, unlock_window_expires_at, access_expires_at, trustee_email_notified_at")
+    .eq("client_id", clientId)
+    .ilike("trustee_email", trusteeEmail)
+    .order("submitted_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (!fvReq) return ok({ state: "no_request" });
+  if (fvReq.owner_vetoed_at) return ok({ state: "vetoed" });
+  if (fvReq.status === "rejected") return ok({ state: "rejected" });
+  if (fvReq.status !== "approved" || !fvReq.vault_unlock_approved) return ok({ state: "pending_approval" });
+
+  const now = Date.now();
+  const lastSentAt = fvReq.trustee_email_notified_at ? new Date(fvReq.trustee_email_notified_at).getTime() : 0;
+  if (now - lastSentAt < RESEND_COOLDOWN_MS) {
+    return ok({ state: "email_sent", cooldown: true, trusteeEmail });
+  }
+
+  const token = issueTrusteeToken(fvReq.id, trusteeEmail, ACCESS_TTL_SECONDS);
+  const accessExpiresAt = new Date(now + ACCESS_TTL_SECONDS * 1000);
+
+  await admin.from("farewell_verification_requests").update({
+    trustee_access_token_hash: hashToken(token),
+    access_expires_at: accessExpiresAt.toISOString(),
+    trustee_email_notified_at: new Date(now).toISOString(),
+  }).eq("id", fvReq.id);
+
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+  const unlockUrl = `${baseUrl}/trustee/unlock?token=${token}`;
+
+  try {
+    await getResend().emails.send({
+      from: "EstateVault <info@estatevault.us>",
+      to: trusteeEmail,
+      subject: "Your Vault Sign-In Link",
+      html: `<div style="font-family:Inter,sans-serif;max-width:520px;margin:0 auto;padding:32px;color:#2D2D2D;">
+        <h1 style="color:#1C3557;">Sign In to View the Vault</h1>
+        <p>You requested access to the vault associated with this email. Click the button below to verify your identity and open the vault.</p>
+        <div style="text-align:center;margin:32px 0;">
+          <a href="${unlockUrl}" style="background:#C9A84C;color:#fff;text-decoration:none;padding:14px 28px;border-radius:9999px;font-weight:600;">Open Vault</a>
+        </div>
+        <p style="color:#6b7280;font-size:13px;">This link expires on <strong>${accessExpiresAt.toUTCString()}</strong>. You will receive a one-time code by email to confirm your identity once you open the link.</p>
+        <p style="color:#9ca3af;font-size:11px;margin-top:24px;">If you didn't request this, you can ignore this email.</p>
+      </div>`,
+    });
+  } catch (e) {
+    console.error("[farewell/access] sign-in email failed:", e);
+    return fail("Failed to send sign-in email", 500);
+  }
+
+  await fvRepo.insertTrusteeAudit(admin, {
+    trustee_id: trustee.id,
+    client_id: clientId,
+    request_id: fvReq.id,
+    action: "signin_email_sent",
+    metadata: { trustee_email: trusteeEmail },
+  });
+
+  return ok({ state: "email_sent", trusteeEmail });
+});

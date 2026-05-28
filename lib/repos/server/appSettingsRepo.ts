@@ -8,3 +8,12 @@ type Admin = ReturnType<typeof createAdminClient>;
 export function getByKey(admin: Admin, key: string) {
   return admin.from("app_settings").select("value").eq("key", key).single();
 }
+
+export function upsertByKey(admin: Admin, key: string, value: unknown, updatedBy: string) {
+  return admin.from("app_settings").upsert({
+    key,
+    value,
+    updated_at: new Date().toISOString(),
+    updated_by: updatedBy,
+  });
+}

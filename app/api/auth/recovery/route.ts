@@ -1,19 +1,10 @@
-import { NextResponse } from "next/server";
-import { createServerClient } from "@supabase/ssr";
-import { Resend } from "resend";
-import { resolveSenderForEmail, renderEmailHeader, renderEmailFooter, type EmailBrand } from "@/lib/email";
+import { NextRequest } from "next/server";
+import { createAdminClient } from "@/lib/api/auth";
+import { withRoute } from "@/lib/api/route";
+import { ok } from "@/lib/api/response";
+import { resolveSenderForEmail, renderEmailHeader, renderEmailFooter, getResend, type EmailBrand } from "@/lib/email";
 
 export const dynamic = "force-dynamic";
-
-function createAdminClient() {
-  return createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    { cookies: { getAll: () => [], setAll: () => {} } }
-  );
-}
-
-const resend = new Resend(process.env.RESEND_API_KEY);
 
 function buildEmailHtml(resetLink: string, brand: EmailBrand): string {
   return `<!DOCTYPE html>
@@ -44,53 +35,43 @@ function buildEmailHtml(resetLink: string, brand: EmailBrand): string {
 </html>`;
 }
 
-export async function POST(request: Request) {
-  try {
-    const { email } = await request.json();
-    const normalizedEmail = String(email || "").trim().toLowerCase();
+export const POST = withRoute(async (req: NextRequest) => {
+  const { email } = await req.json();
+  const normalizedEmail = String(email || "").trim().toLowerCase();
 
-    if (!normalizedEmail) {
-      return NextResponse.json({ error: "Email is required." }, { status: 400 });
-    }
+  if (!normalizedEmail) return ok({ success: true });
 
-    const { origin } = new URL(request.url);
-    const admin = createAdminClient();
+  const { origin } = new URL(req.url);
+  const admin = createAdminClient();
 
-    const { data: linkData, error: linkErr } = await admin.auth.admin.generateLink({
-      type: "recovery",
-      email: normalizedEmail,
-      options: {
-        redirectTo: `${origin}/auth/reset-password`,
-      },
-    });
+  const { data: linkData, error: linkErr } = await admin.auth.admin.generateLink({
+    type: "recovery",
+    email: normalizedEmail,
+    options: { redirectTo: `${origin}/auth/reset-password` },
+  });
 
-    if (linkErr || !linkData?.properties?.hashed_token) {
-      // Do not leak account existence — return success either way
-      console.error("recovery generateLink failed:", linkErr);
-      return NextResponse.json({ success: true });
-    }
-
-    const resetLink = `${origin}/auth/reset-password?token_hash=${encodeURIComponent(
-      linkData.properties.hashed_token
-    )}&type=recovery`;
-
-    const sender = await resolveSenderForEmail({ email: normalizedEmail });
-
-    const { error: sendErr } = await resend.emails.send({
-      from: sender.from,
-      replyTo: sender.replyTo,
-      to: normalizedEmail,
-      subject: `Reset your ${sender.brand.companyName} password`,
-      html: buildEmailHtml(resetLink, sender.brand),
-    });
-
-    if (sendErr) {
-      console.error("recovery Resend error:", sendErr);
-    }
-
-    return NextResponse.json({ success: true });
-  } catch (err) {
-    console.error("recovery route error:", err);
-    return NextResponse.json({ success: true });
+  if (linkErr || !linkData?.properties?.hashed_token) {
+    console.error("recovery generateLink failed:", linkErr);
+    return ok({ success: true });
   }
-}
+
+  const resetLink = `${origin}/auth/reset-password?token_hash=${encodeURIComponent(
+    linkData.properties.hashed_token
+  )}&type=recovery`;
+
+  const sender = await resolveSenderForEmail({ email: normalizedEmail });
+
+  const { error: sendErr } = await getResend().emails.send({
+    from: sender.from,
+    replyTo: sender.replyTo,
+    to: normalizedEmail,
+    subject: `Reset your ${sender.brand.companyName} password`,
+    html: buildEmailHtml(resetLink, sender.brand),
+  });
+
+  if (sendErr) {
+    console.error("recovery Resend error:", sendErr);
+  }
+
+  return ok({ success: true });
+});

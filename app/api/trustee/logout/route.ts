@@ -1,25 +1,23 @@
-import { NextResponse } from "next/server";
 import { requireTrusteeSession, SESSION_COOKIE } from "@/lib/security/trusteeSession";
-import { createServerClient } from "@supabase/ssr";
+import { createAdminClient } from "@/lib/api/auth";
+import { withRoute } from "@/lib/api/route";
+import { ok } from "@/lib/api/response";
+import * as fvRepo from "@/lib/repos/server/farewellVerificationRepo";
 
 export const runtime = "nodejs";
 
-export async function POST() {
+export const POST = withRoute(async () => {
   const sess = requireTrusteeSession();
   if (sess) {
-    const db = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!,
-      { cookies: { getAll: () => [], setAll: () => {} } },
-    );
-    await db.from("trustee_access_audit").insert({
+    const admin = createAdminClient();
+    await fvRepo.insertTrusteeAudit(admin, {
       trustee_id: sess.trusteeId,
       client_id: sess.clientId,
       request_id: sess.requestId,
       action: "logout",
     });
   }
-  const res = NextResponse.json({ ok: true });
+  const res = ok({ ok: true });
   res.cookies.delete(SESSION_COOKIE);
   return res;
-}
+});

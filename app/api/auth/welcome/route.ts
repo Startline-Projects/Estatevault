@@ -1,20 +1,11 @@
-import { NextResponse } from "next/server";
+import { NextRequest } from "next/server";
+import { createAdminClient } from "@/lib/api/auth";
+import { withRoute } from "@/lib/api/route";
+import { ok, fail } from "@/lib/api/response";
 import { createClient } from "@/lib/supabase/server";
-import { createServerClient } from "@supabase/ssr";
-import { Resend } from "resend";
-import { resolveSenderForEmail } from "@/lib/email";
+import { resolveSenderForEmail, getResend } from "@/lib/email";
 
 export const dynamic = "force-dynamic";
-
-function createAdminClient() {
-  return createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    { cookies: { getAll: () => [], setAll: () => {} } }
-  );
-}
-
-const resend = new Resend(process.env.RESEND_API_KEY);
 
 function buildWelcomeHtml(fullName: string, dashboardUrl: string): string {
   const greeting = fullName ? `Welcome, ${fullName}!` : "Welcome to EstateVault!";
@@ -48,55 +39,46 @@ function buildWelcomeHtml(fullName: string, dashboardUrl: string): string {
 </html>`;
 }
 
-export async function POST(request: Request) {
-  try {
-    const supabase = createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user?.email) {
-      return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
-    }
+export const POST = withRoute(async (req: NextRequest) => {
+  const supabase = createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user?.email) return fail("Not authenticated", 401);
 
-    const admin = createAdminClient();
+  const admin = createAdminClient();
 
-    if (user.user_metadata?.welcome_sent_at) {
-      return NextResponse.json({ success: true, skipped: true });
-    }
+  if (user.user_metadata?.welcome_sent_at) return ok({ success: true, skipped: true });
 
-    const { data: profile } = await admin
-      .from("profiles")
-      .select("full_name")
-      .eq("id", user.id)
-      .maybeSingle();
+  const { data: profile } = await admin
+    .from("profiles")
+    .select("full_name")
+    .eq("id", user.id)
+    .maybeSingle();
 
-    const fullName = (profile?.full_name || user.user_metadata?.full_name || "").trim();
-    const { origin } = new URL(request.url);
-    const dashboardUrl = `${origin}/dashboard`;
+  const fullName = (profile?.full_name || user.user_metadata?.full_name || "").trim();
+  const { origin } = new URL(req.url);
+  const dashboardUrl = `${origin}/dashboard`;
 
-    const sender = await resolveSenderForEmail({ email: user.email });
+  const sender = await resolveSenderForEmail({ email: user.email });
 
-    const { error: sendErr } = await resend.emails.send({
-      from: sender.from,
-      replyTo: sender.replyTo,
-      to: user.email,
-      subject: "Welcome to EstateVault",
-      html: buildWelcomeHtml(fullName, dashboardUrl),
-    });
+  const { error: sendErr } = await getResend().emails.send({
+    from: sender.from,
+    replyTo: sender.replyTo,
+    to: user.email,
+    subject: "Welcome to EstateVault",
+    html: buildWelcomeHtml(fullName, dashboardUrl),
+  });
 
-    if (sendErr) {
-      console.error("welcome Resend error:", sendErr);
-      return NextResponse.json({ success: false, error: "Email failed" }, { status: 500 });
-    }
-
-    await admin.auth.admin.updateUserById(user.id, {
-      user_metadata: {
-        ...(user.user_metadata || {}),
-        welcome_sent_at: new Date().toISOString(),
-      },
-    });
-
-    return NextResponse.json({ success: true });
-  } catch (err) {
-    console.error("welcome route error:", err);
-    return NextResponse.json({ error: "Failed" }, { status: 500 });
+  if (sendErr) {
+    console.error("welcome Resend error:", sendErr);
+    return fail("Email failed", 500);
   }
-}
+
+  await admin.auth.admin.updateUserById(user.id, {
+    user_metadata: {
+      ...(user.user_metadata || {}),
+      welcome_sent_at: new Date().toISOString(),
+    },
+  });
+
+  return ok({ success: true });
+});

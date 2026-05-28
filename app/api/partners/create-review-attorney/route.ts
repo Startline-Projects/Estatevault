@@ -1,105 +1,73 @@
-import { NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+import { NextRequest } from "next/server";
+import { requireAuth } from "@/lib/api/auth";
+import { withRoute } from "@/lib/api/route";
+import { ok, fail } from "@/lib/api/response";
+import * as profileRepo from "@/lib/repos/server/profileRepo";
 
-/**
- * Creates a review attorney profile for a partner firm.
- * Called during partner onboarding step 3 when the partner
- * indicates they have an in-house estate planning attorney.
- *
- * This creates a Supabase auth user + profile with user_type = 'review_attorney'.
- * The attorney receives a magic link email to set up their account.
- */
-export async function POST(request: Request) {
-  try {
-    const body = await request.json();
-    const { partnerId, attorneyName, attorneyEmail, barNumber } = body;
+export const POST = withRoute(async (req: NextRequest) => {
+  const auth = await requireAuth(["partner"]);
+  if ("error" in auth) return auth.error;
 
-    if (!partnerId || !attorneyEmail) {
-      return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
-    }
+  const { partnerId, attorneyName, attorneyEmail, barNumber } = await req.json();
+  if (!partnerId || !attorneyEmail) return fail("Missing required fields", 400);
 
-    // Use service role client to create auth user
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
-    );
+  const { data: partner } = await auth.admin
+    .from("partners")
+    .select("id, profile_id")
+    .eq("id", partnerId)
+    .single();
+  if (!partner) return fail("Partner not found", 404);
+  if (partner.profile_id !== auth.profile.id) return fail("Not authorized", 403);
 
-    // Verify the calling user is the partner admin
-    // Verify the partner exists
-    const { data: partner } = await supabase
-      .from("partners")
-      .select("id, profile_id")
-      .eq("id", partnerId)
-      .single();
+  const normalizedEmail = attorneyEmail.toLowerCase();
+  const { data: existingProfile } = await profileRepo.findByEmail(auth.admin, normalizedEmail);
+  const { data: authMatch } = !existingProfile
+    ? await auth.admin.rpc("find_auth_user_by_email", { lookup_email: normalizedEmail }).returns<{ id: string; email: string }[]>().maybeSingle()
+    : { data: null };
+  const existingUserId = existingProfile?.id || authMatch?.id;
 
-    if (!partner) {
-      return NextResponse.json({ error: "Partner not found" }, { status: 404 });
-    }
+  let profileId: string;
 
-    // Check if a user already exists for this email
-    const { data: existingProfile } = await supabase.from("profiles").select("id").eq("email", attorneyEmail.toLowerCase()).maybeSingle();
-    const { data: authMatch } = !existingProfile
-      ? await supabase.rpc("find_auth_user_by_email", { lookup_email: attorneyEmail.toLowerCase() }).returns<{ id: string; email: string }[]>().maybeSingle()
-      : { data: null };
-    const existingUserId = existingProfile?.id || authMatch?.id;
-
-    let profileId: string;
-
-    if (existingUserId) {
-      // User already exists, update their profile
-      profileId = existingUserId;
-      await supabase
-        .from("profiles")
-        .update({
-          full_name: attorneyName || null,
-          user_type: "review_attorney",
-          bar_number: barNumber || null,
-          is_payroll: false,
-          managed_by_admin: partner.profile_id,
-        })
-        .eq("id", profileId);
-    } else {
-      // Create new auth user
-      const { data: newUser, error: authError } = await supabase.auth.admin.createUser({
-        email: attorneyEmail,
-        email_confirm: true,
-        user_metadata: { full_name: attorneyName || "" },
-      });
-
-      if (authError || !newUser?.user) {
-        console.error("Failed to create review attorney user:", authError);
-        return NextResponse.json(
-          { error: "Failed to create attorney account" },
-          { status: 500 }
-        );
-      }
-
-      profileId = newUser.user.id;
-
-      // Create profile
-      await supabase.from("profiles").upsert({
-        id: profileId,
-        email: attorneyEmail,
+  if (existingUserId) {
+    profileId = existingUserId;
+    await auth.admin
+      .from("profiles")
+      .update({
         full_name: attorneyName || null,
         user_type: "review_attorney",
         bar_number: barNumber || null,
         is_payroll: false,
         managed_by_admin: partner.profile_id,
-      });
+      })
+      .eq("id", profileId);
+  } else {
+    const { data: newUser, error: authError } = await auth.admin.auth.admin.createUser({
+      email: normalizedEmail,
+      email_confirm: true,
+      user_metadata: { full_name: attorneyName || "" },
+    });
+    if (authError || !newUser?.user) return fail("Failed to create attorney account", 500);
 
-      // Send magic link so the attorney can set up their account
-      await supabase.auth.admin.generateLink({
-        type: "magiclink",
-        email: attorneyEmail,
-        options: {
-          redirectTo: `${process.env.NEXT_PUBLIC_BASE_URL || "https://estatevault.us"}/attorney`,
-        },
-      });
-    }
+    profileId = newUser.user.id;
 
-    return NextResponse.json({ profileId });
-  } catch (error) {
-    console.error("Create review attorney error:", error);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    await profileRepo.upsert(auth.admin, {
+      id: profileId,
+      email: normalizedEmail,
+      full_name: attorneyName || null,
+      user_type: "review_attorney",
+      bar_number: barNumber || null,
+      is_payroll: false,
+      managed_by_admin: partner.profile_id,
+    });
+
+    await auth.admin.auth.admin.generateLink({
+      type: "magiclink",
+      email: normalizedEmail,
+      options: {
+        redirectTo: `${process.env.NEXT_PUBLIC_BASE_URL || "https://estatevault.us"}/attorney`,
+      },
+    });
   }
-}
+
+  return ok({ profileId });
+});

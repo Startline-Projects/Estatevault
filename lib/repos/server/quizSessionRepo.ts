@@ -14,3 +14,14 @@ export function insert(admin: Admin, row: Record<string, unknown>) {
 export function insertReturningId(admin: Admin, row: Record<string, unknown>) {
   return admin.from("quiz_sessions").insert(row).select("id").single();
 }
+
+// Latest quiz answers for a client (webhook needs this for intake data).
+export function getLatestAnswersByClient(admin: Admin, clientId: string) {
+  return admin
+    .from("quiz_sessions")
+    .select("id, answers")
+    .eq("client_id", clientId)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .single();
+}

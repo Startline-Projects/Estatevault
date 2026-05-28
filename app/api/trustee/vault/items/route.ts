@@ -1,17 +1,7 @@
-/**
- * GET /api/trustee/vault/items
- * Returns the owner's vault content for the client_id bound to the trustee
- * session, scoped by access_scope.
- *
- * Option A (server-managed): vault_items are decrypted server-side with the
- * owner's DEK and returned as plaintext metadata. File/video bytes stay in
- * Storage (downloaded via signed URL + /api/trustee/vault/file-key). Generated
- * documents (documents table) are already plaintext PDFs.
- *
- * Read-only. Every call audited. Refreshes session cookie.
- */
-import { NextResponse } from "next/server";
-import { createServerClient } from "@supabase/ssr";
+import { NextRequest } from "next/server";
+import { createAdminClient } from "@/lib/api/auth";
+import { withRoute } from "@/lib/api/route";
+import { ok, fail } from "@/lib/api/response";
 import {
   requireTrusteeSession,
   issueSession,
@@ -22,16 +12,9 @@ import { byteaToBytes } from "@/lib/api/crypto";
 import { getOrCreateUserDek } from "@/lib/api/dek";
 import { deriveSubKey, INFO, zero } from "@/lib/crypto/keyManager";
 import { decryptBytes } from "@/lib/crypto/aead";
+import * as fvRepo from "@/lib/repos/server/farewellVerificationRepo";
 
 export const runtime = "nodejs";
-
-function admin() {
-  return createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    { cookies: { getAll: () => [], setAll: () => {} } },
-  );
-}
 
 interface TrusteeVaultItem {
   id: string;
@@ -51,26 +34,20 @@ interface TrusteeFarewell {
   createdAt: string;
 }
 
-export async function GET(req: Request) {
+export const GET = withRoute(async (req: NextRequest) => {
   const sess = requireTrusteeSession();
-  if (!sess) return NextResponse.json({ error: "no session" }, { status: 401 });
+  if (!sess) return fail("no session", 401);
 
-  const db = admin();
+  const admin = createAdminClient();
 
-  // Re-verify request is still approved + not vetoed.
-  const { data: r } = await db
-    .from("farewell_verification_requests")
-    .select("id, owner_vetoed_at, vault_unlock_approved")
-    .eq("id", sess.requestId)
-    .single();
+  const { data: r } = await fvRepo.verifyAccessStillValid(admin, sess.requestId);
   if (!r || r.owner_vetoed_at || !r.vault_unlock_approved) {
-    const res = NextResponse.json({ error: "access revoked" }, { status: 403 });
+    const res = fail("access revoked", 403);
     res.cookies.delete(SESSION_COOKIE);
     return res;
   }
 
-  // Load trustee scope. NULL = legacy full access.
-  const { data: trusteeRow } = await db
+  const { data: trusteeRow } = await admin
     .from("vault_trustees")
     .select("access_scope")
     .eq("id", sess.trusteeId)
@@ -81,23 +58,20 @@ export async function GET(req: Request) {
   const allowDocuments = allowAll ? true : !!scope.documents;
   const allowFarewell = allowAll ? true : !!scope.farewell;
 
-  // Load the owner's client row to obtain the DEK for server-side decryption.
-  const { data: ownerClient } = await db
+  const { data: ownerClient } = await admin
     .from("clients")
     .select("id, wrapped_dek")
     .eq("id", sess.clientId)
     .single();
-  if (!ownerClient) {
-    return NextResponse.json({ error: "owner not found" }, { status: 404 });
-  }
+  if (!ownerClient) return fail("owner not found", 404);
 
-  let itemsQuery = db
+  let itemsQuery = admin
     .from("vault_items")
     .select("id, category, ciphertext, storage_path, created_at, updated_at")
     .eq("client_id", sess.clientId);
   if (allowCategories !== null) {
     if (allowCategories.length === 0) {
-      itemsQuery = itemsQuery.eq("id", "00000000-0000-0000-0000-000000000000"); // force empty
+      itemsQuery = itemsQuery.eq("id", "00000000-0000-0000-0000-000000000000");
     } else {
       itemsQuery = itemsQuery.in("category", allowCategories);
     }
@@ -106,18 +80,16 @@ export async function GET(req: Request) {
     .order("category", { ascending: true })
     .order("updated_at", { ascending: false });
 
-  // Generated documents (wills/trusts) are plaintext PDFs in the documents bucket.
   const { data: docs } = allowDocuments
-    ? await db
+    ? await admin
         .from("documents")
         .select("id, document_type, status, storage_path, created_at")
         .eq("client_id", sess.clientId)
         .order("created_at", { ascending: false })
     : { data: [] as never[] };
 
-  // Farewell title/recipient are encrypted (ciphertext); decrypt below.
   const { data: rawFarewell } = allowFarewell
-    ? await db
+    ? await admin
         .from("farewell_messages")
         .select("id, ciphertext, duration_seconds, storage_path, vault_farewell_status, created_at")
         .eq("client_id", sess.clientId)
@@ -125,11 +97,10 @@ export async function GET(req: Request) {
         .order("created_at", { ascending: false })
     : { data: [] as never[] };
 
-  // Decrypt vault_items + farewell titles server-side with the owner's DB sub-key.
   const vaultItems: TrusteeVaultItem[] = [];
   const farewell: TrusteeFarewell[] = [];
   if ((rawItems && rawItems.length > 0) || (rawFarewell && rawFarewell.length > 0)) {
-    const dek = await getOrCreateUserDek(db, ownerClient);
+    const dek = await getOrCreateUserDek(admin, ownerClient);
     const dbKey = await deriveSubKey(dek, INFO.DB);
     try {
       for (const it of rawItems ?? []) {
@@ -183,10 +154,9 @@ export async function GET(req: Request) {
     }
   }
 
-  // Audit list view.
   const ua = req.headers.get("user-agent") || null;
   const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || null;
-  await db.from("trustee_access_audit").insert({
+  await fvRepo.insertTrusteeAudit(admin, {
     trustee_id: sess.trusteeId,
     client_id: sess.clientId,
     request_id: sess.requestId,
@@ -199,7 +169,6 @@ export async function GET(req: Request) {
     },
   });
 
-  // Refresh session.
   const fresh = issueSession({
     requestId: sess.requestId,
     clientId: sess.clientId,
@@ -207,7 +176,7 @@ export async function GET(req: Request) {
     trusteeEmail: sess.trusteeEmail,
   });
 
-  const res = NextResponse.json({
+  const res = ok({
     ok: true,
     vaultItems,
     documents: (docs || []).map(d => ({
@@ -228,4 +197,4 @@ export async function GET(req: Request) {
     path: "/",
   });
   return res;
-}
+});

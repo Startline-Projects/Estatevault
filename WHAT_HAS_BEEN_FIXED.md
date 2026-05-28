@@ -368,15 +368,354 @@ Before starting Phase 1, fixed gate blockers from Phase 0:
 
 ---
 
-## Next: Phase 2 — Structural Refactor (Server Repos + Thin Routes)
+---
 
-Per PRODUCTION_PLAN.md, Phase 2 migrates ~96 remaining routes onto kernel pattern. Groups in order:
-1. cron (4 routes)
-2. webhooks (~6 routes)
-3. documents (~12 routes)
-4. partner / sales (~20 routes)
-5. attorney (~8 routes)
-6. crypto (~6 routes)
-7. admin (~10 routes)
-8. trustee (~10 routes)
-9. auth (~10 routes)
+---
+
+# Phase 2 — Structural Refactor: What Has Been Fixed
+
+> **Date:** 2026-05-28
+> **Branch:** Yahia-Dev
+> **Status:** Groups 1–3 complete. Gate GREEN (193/193 tests, TSC clean, lint warnings-only). Group 4 (partner/sales) next.
+
+---
+
+## Group 1 — Cron Routes (4 routes) ✅
+
+All 4 cron routes fully rewritten to kernel pattern.
+
+| Route | Changes |
+|-------|---------|
+| `api/cron/annual-review-reminder` | withRoute + createAdminClient (shared) + ok/fail + orderRepo.findDeliveredBefore + clientRepo.getReminderStateById/stampAnnualReview + profileRepo.getEmailAndNameById + auditLogRepo |
+| `api/cron/life-event-checkin` | Same pattern: withRoute + repos + clientRepo.stampLifeEventCheckin |
+| `api/cron/farewell-window-expired` | withRoute + repos + sendTrusteeUnlockEmail + farewellVerificationRepo.insertTrusteeAudit (writes to `trustee_access_audit`, NOT `audit_log`) |
+| `api/cron/farewell-veto-reminder` | withRoute + repos + sendVetoReminderEmail + farewellVerificationRepo |
+
+### New repos created:
+- `lib/repos/server/farewellVerificationRepo.ts` — findExpiredUnnotified, stampTrusteeNotified, findActiveVetoWindows, updateVetoTokenHash, insertTrusteeAudit
+- `lib/repos/server/auditLogRepo.ts` — insertEntry (shared audit_log writes)
+
+### New email functions added to `lib/email.ts`:
+- `sendDunningEmail` — vault subscription payment failure
+- `sendTrusteeUnlockEmail` — 7-day vault access link
+- `sendVetoReminderEmail` — owner veto reminder
+
+### Repo extensions:
+- `orderRepo.ts` — added findDeliveredBefore
+- `clientRepo.ts` — added getReminderStateById, stampAnnualReview, stampLifeEventCheckin, findBySubscriptionId, updateVaultSubscription, activateVaultByStripeId, cancelVaultByStripeId, findByProfileId
+- `profileRepo.ts` — added getEmailAndNameById
+
+---
+
+## Group 2 — Webhook Routes (1 major route) ✅
+
+### `api/webhooks/stripe` (770→~600 lines)
+Major rewrite of the Stripe webhook monolith:
+- Replaced local createAdminClient → shared import
+- Wrapped with withRoute + ok/fail
+- All inline `audit_log.insert` → auditLogRepo.insertEntry
+- All inline `new Resend` → sendDunningEmail from shared email module
+- Split into helper functions: handleVaultSubscriptionCheckout, handleDocumentCheckout, handleAttorneyReview, resolveOrCreateGuestClient
+- Idempotency via stripeWebhookRepo.checkIdempotency
+
+### New repos created:
+- `lib/repos/server/stripeWebhookRepo.ts` — checkIdempotency
+- `lib/repos/server/payoutRepo.ts` — insertPartnerPayout, insertAffiliatePayout
+- `lib/repos/server/attorneyReviewRepo.ts` — insert
+
+### Repo extensions:
+- `affiliateRepo.ts` — added getStripeAccountById, incrementStats
+- `partnerRepo.ts` — added getStripeAndTier, getStripeAndRevenuePct, getReviewRoutingInfo
+- `quizSessionRepo.ts` — added getLatestAnswersByClient
+
+---
+
+## Group 3 — Document Routes (10 routes) ✅
+
+All 10 document routes refactored (check-status already done in Phase 0).
+
+### Simple kernel swaps (7 routes):
+| Route | Changes |
+|-------|---------|
+| `documents/status` | withRoute + ok/fail + requireAuth |
+| `documents/generate` | withRoute + ok/fail + quizSessionRepo + orderRepo + auditLogRepo |
+| `documents/download-by-session` | withRoute + ok/fail + createAdminClient (shared) |
+| `documents/cleanup-test-orders` | withRoute + ok/fail + createAdminClient (shared) + auditLogRepo |
+| `documents/download` | withRoute + ok/fail + requireAuth + auditLogRepo |
+| `documents/send-email` | withRoute + ok/fail + requireAuth + auditLogRepo |
+| `documents/download-zip` | withRoute + fail + createAdminClient (returns binary NextResponse) |
+
+### Complex kernel swaps (3 routes):
+| Route | Lines | Changes |
+|-------|-------|---------|
+| `documents/process` | 419→410 | Removed local createAdminClient + getTemplate, withRoute, ok/fail, auditLogRepo (3 inline inserts replaced incl. notifyClientByEmail helper) |
+| `documents/process-now` | 275→258 | Same kernel swap, removed local createAdminClient + getTemplate, auditLogRepo (2 inline inserts), kept requireAuth(["admin"]) from Phase 0 |
+| `documents/regenerate-missing` | 196→172 | Same kernel swap + replaced 10-line manual admin auth with requireAuth(["admin"]), removed createClient import |
+
+### Shared module extracted:
+- `lib/documents/templates/resolve.ts` — getTemplate() extracted from 3 files that duplicated it identically
+
+### Bonus fix:
+- `lib/api/auth.ts` — added `"review_attorney"` to UserType union (was missing, caused TSC error in download/route.ts)
+
+---
+
+## Verify Gate Results
+
+```
+npx tsc --noEmit  → clean (0 errors)
+npm run lint      → warnings only (pre-existing <img> warnings)
+npm test          → 19 files, 193 tests, all passing
+```
+
+---
+
+## Group 4 — Partner/Sales Routes (19 routes) ✅
+
+All 19 partner/sales routes fully rewritten to kernel pattern.
+
+### Subgroup A — Partner Email Routes (4 routes):
+| Route | Changes |
+|-------|---------|
+| `api/partner/email/reset` | withRoute + ok/fail + partnerRepo.getEmailSettingsByProfileId + partnerRepo.update |
+| `api/partner/email/setup` | withRoute + ok/fail + partnerRepo.getEmailSettingsByProfileId + partnerRepo.update |
+| `api/partner/email/verify` | withRoute + ok/fail + partnerRepo.getEmailSettingsByProfileId + partnerRepo.update + apiRateLimit |
+| `api/partner/email/test` | withRoute + ok/fail + partnerRepo.getEmailSettingsByProfileId + apiRateLimit |
+
+### Subgroup B — Sales Utility Routes (5 routes):
+| Route | Changes |
+|-------|---------|
+| `api/sales/partner-last-login` | withRoute + requireAuth(["sales_rep","admin"]) + ok/fail + partnerRepo.getProfileId |
+| `api/sales/reps` | withRoute + requireAuth(["admin"]) + ok/fail + profileRepo.findAllSalesReps + partnerRepo.countActiveByCreator + auditLogRepo |
+| `api/sales/send-welcome-email` | withRoute + requireAuth(["sales_rep","admin"]) + ok/fail |
+| `api/sales/create-partner` | withRoute + requireAuth(["sales_rep","admin"]) + ok/fail + partnerRepo.findBySlug + profileRepo.findByEmail + auditLogRepo |
+| `api/sales/create-rep` | withRoute + requireAuth(["admin"]) + ok/fail + profileRepo.upsert + auditLogRepo |
+
+### Subgroup C — Affiliate Routes (2 routes):
+| Route | Changes |
+|-------|---------|
+| `api/sales/affiliates/[id]/payout` | withRoute + requireAuth(["admin"]) + ok/fail + affiliateRepo.getPayoutInfoById/getAttributedOrders/getPriorPayouts/insertPayout + auditLogRepo |
+| `api/sales/affiliates/[id]/status` | withRoute + requireAuth(["admin"]) + ok/fail + affiliateRepo.getWithStatus/updateStatus + auditLogRepo |
+
+### Subgroup D — Partner Domain Routes (3 routes):
+| Route | Changes |
+|-------|---------|
+| `api/partner/add-domain` | withRoute + requireAuth(["partner"]) + ok/fail + partnerRepo.getDomainInfoByProfileId + partnerRepo.update + auditLogRepo |
+| `api/partner/vault-subdomain` | withRoute + requireAuth(["partner"]) + ok/fail + partnerRepo.getDomainInfoByProfileId + partnerRepo.isSubdomainTaken + auditLogRepo |
+| `api/partner/verify-domain` | withRoute + requireAuth(["partner"]) + ok/fail + partnerRepo.getDomainInfoByProfileId + partnerRepo.update |
+
+### Subgroup E — Partner Business Routes (3 routes):
+| Route | Changes |
+|-------|---------|
+| `api/partner/revenue` | withRoute + requireAuth(["partner"]) + ok/fail + partnerRepo.getCompletedOrders/getPendingOrders/getRecentPayouts |
+| `api/partner/stripe-connect` | withRoute + requireAuth(["partner"]) + ok/fail + partnerRepo.getStripeByProfileId + partnerRepo.update |
+| `api/partner/vault-client-checkout` | withRoute + requireAuth(["partner"]) + ok/fail + partnerRepo.getVaultCheckoutInfoByProfileId + profileRepo.findByEmail + profileRepo.upsert |
+
+### Subgroup F — Partners Routes (2 routes):
+| Route | Changes |
+|-------|---------|
+| `api/partners/branding` | withRoute + ok/fail + createAdminClient (shared, public endpoint) |
+| `api/partners/create-review-attorney` | withRoute + requireAuth(["partner"]) + ok/fail + profileRepo.findByEmail + profileRepo.upsert + ownership check |
+
+### New repo functions added:
+- `partnerRepo.ts` — getEmailSettingsByProfileId, getDomainInfoByProfileId, getStripeByProfileId, getVaultCheckoutInfoByProfileId, isSubdomainTaken, findBySlug, getProfileId, getCompletedOrders, getPendingOrders, getRecentPayouts, countActiveByCreator
+- `affiliateRepo.ts` — getPayoutInfoById, getAttributedOrders, getPriorPayouts, insertPayout, updateStatus, getWithStatus
+- `profileRepo.ts` — findAllSalesReps, updateCommissionRate, findByEmail
+
+---
+
+## Group 5 — Attorney Routes (6 routes) ✅
+
+All 6 attorney routes fully rewritten to kernel pattern.
+
+| Route | Changes |
+|-------|---------|
+| `api/attorney/approve` | withRoute + requireAuth(["review_attorney","admin"]) + ok/fail + attorneyReviewRepo.getById/updateDecision + auditLogRepo |
+| `api/attorney/check-sla` | withRoute + ok/fail + createAdminClient (shared) + attorneyReviewRepo.findOverdue + auditLogRepo |
+| `api/attorney/notify-client` | withRoute + requireAuth(["review_attorney","admin"]) + ok/fail + attorneyReviewRepo.getReviewWithOrder |
+| `api/attorney/review` | withRoute + requireAuth(["review_attorney","admin"]) + ok/fail + attorneyReviewRepo.getById |
+| `api/attorney/review-docx` | withRoute + requireAuth(["review_attorney","admin"]) + ok/fail + attorneyReviewRepo.isAssignedAttorney + auditLogRepo |
+| `api/attorney/upload-reviewed` | withRoute + requireAuth(["review_attorney","admin"]) + ok/fail + attorneyReviewRepo.isAssignedAttorney + auditLogRepo |
+
+### New repo functions added:
+- `attorneyReviewRepo.ts` — getById, updateDecision, findOverdue, isAssignedAttorney, getReviewWithOrder
+
+---
+
+## Group 6 — Crypto Routes (7 routes) ✅
+
+All 7 crypto routes wrapped with `withRoute` + switched to `ok()`/`fail()`.
+
+| Route | Changes |
+|-------|---------|
+| `api/crypto/bootstrap` | withRoute + ok/fail (already used requireClientUser + Zod + rate limiting + audit) |
+| `api/crypto/bundle` | withRoute + ok/fail |
+| `api/crypto/pubkey` | withRoute + ok/fail (already used requireAuth) |
+| `api/crypto/recovery-bundle` | withRoute + ok/fail |
+| `api/crypto/rotate-passphrase` | withRoute + ok/fail |
+| `api/crypto/rotate-recovery` | withRoute + ok/fail |
+| `api/crypto/shamir-setup` | withRoute + ok/fail (POST + GET) |
+
+Note: Crypto routes already had Zod validation, Upstash rate limiting, and audit logging. Only needed withRoute error wrapper + consistent response helpers.
+
+---
+
+## Verify Gate Results (Groups 4-6)
+
+```
+npx tsc --noEmit  → clean (0 errors)
+npm run lint      → warnings only (pre-existing <img> warnings)
+npm test          → 19 files, 193 tests, all passing
+```
+
+---
+
+## Group 7 — Admin Routes (6 routes) ✅
+
+All 6 admin routes fully rewritten to kernel pattern.
+
+| Route | Changes |
+|-------|---------|
+| `api/admin/farewell-verification` (GET+POST) | withRoute + requireAuth(["admin"]) + ok/fail + fvRepo (findPending, getByIdWithStatus, approveRequest, rejectRequest, unlockFarewellMessages, resetFarewellMessages, getUnlockedMessages, getClientOwnerProfile, getClientNameByClientId, getTrusteeName, getCertificateUrl) + auditLogRepo + shared emails (sendOwnerVetoEmail, sendFarewellUnlockEmail, sendVerificationRejectedEmail, sendTrusteeUnlockEmail) |
+| `api/admin/marketing/materials` (GET+POST) | withRoute + ok/fail (keeps requireAdmin from marketing/admin-auth) |
+| `api/admin/marketing/materials/[id]` (PATCH+DELETE) | withRoute + ok/fail (keeps requireAdmin) |
+| `api/admin/marketing/partners` (GET) | withRoute + ok/fail (keeps requireAdmin) |
+| `api/admin/orders-missing-docs` (GET) | withRoute + requireAuth(["admin"]) + ok/fail. Removed local createAdminClient + manual auth. Kept inline queries (admin report, not reusable) |
+| `api/admin/test-promo` (GET+POST) | withRoute + ok/fail. GET: createAdminClient + appSettingsRepo.getByKey (unauthenticated, used by checkout). POST: requireAuth(["admin"]) + appSettingsRepo.upsertByKey + auditLogRepo |
+
+### New repo functions added:
+- `farewellVerificationRepo.ts` — findPending, getByIdWithStatus, approveRequest, rejectRequest, unlockFarewellMessages, resetFarewellMessages, getUnlockedMessages, getClientOwnerProfile, getClientNameByClientId, getTrusteeName, getCertificateUrl, verifyAccessStillValid, getByIdForOtp, storeOtp, burnOtp, incrementOtpAttempts
+- `appSettingsRepo.ts` — upsertByKey
+
+### New email functions added to `lib/email.ts`:
+- `sendOwnerVetoEmail` — owner dead-man-switch veto notification
+- `sendFarewellUnlockEmail` — farewell message recipient notification
+- `sendVerificationRejectedEmail` — trustee rejection notification
+- `sendTrusteeOtpEmail` — trustee OTP verification code
+- `sendVetoAccessCancelledEmail` — trustee veto cancellation notification
+
+### Verify Gate Results (Group 7)
+
+```
+npx tsc --noEmit  → clean (0 errors)
+```
+
+---
+
+## Group 8 — Trustee Routes (6 routes) ✅
+
+> **Date:** 2026-05-28
+
+All 6 trustee routes refactored to kernel pattern.
+
+| Route | Changes |
+|-------|---------|
+| `trustee/logout` | Replaced `createServerClient` → shared `createAdminClient`. `withRoute` + `ok`. `fvRepo.insertTrusteeAudit` for audit. |
+| `trustee/unlock-otp` | Replaced local `admin()` + `new Resend()` → shared `createAdminClient` + `sendTrusteeOtpEmail`. `fvRepo.getByIdForOtp` + `fvRepo.storeOtp`. `withRoute` + `ok/fail`. |
+| `trustee/unlock-verify` | `fvRepo.getByIdForOtp` + `fvRepo.incrementOtpAttempts` + `fvRepo.burnOtp`. Session cookie on success. `withRoute` + `ok/fail`. |
+| `trustee/vault/download-url` | `fvRepo.verifyAccessStillValid`. Kept inline document/vault_item/farewell branching. `fvRepo.insertTrusteeAudit`. |
+| `trustee/vault/file-key` | `fvRepo.verifyAccessStillValid`. Kept inline crypto (DEK unwrap, sub-key derive). `fvRepo.insertTrusteeAudit`. |
+| `trustee/vault/items` | Largest route (~230 lines). Kept inline: scope lookup, client DEK, vault_items/documents/farewell_messages queries, all crypto ops, session refresh. `fvRepo.verifyAccessStillValid` + `fvRepo.insertTrusteeAudit`. |
+
+**Key decisions:**
+- Trustee routes use `requireTrusteeSession()` — NOT `requireAuth()`. Trustees are not Supabase users.
+- Trustee audit goes to `trustee_access_audit` table via `fvRepo.insertTrusteeAudit()`, not `audit_log`.
+- Complex vault routes (download-url, file-key, items) keep inline queries — trustee-specific branching makes extraction add complexity without benefit.
+
+### Verify Gate (Group 8)
+```
+npx tsc --noEmit  → clean (0 errors)
+```
+
+---
+
+## Group 9 — Auth + Farewell Routes (15 routes) ✅
+
+> **Date:** 2026-05-28
+
+All 15 routes refactored. 1 route intentionally skipped (verify-link returns HTML).
+
+### Auth Routes (12 files)
+
+| Route | Changes |
+|-------|---------|
+| `auth/check-email` | Replaced local `createAdminClient` → shared import. `withRoute` + `ok/fail`. |
+| `auth/check-verification` | `withRoute` + `ok`. Uses `pollLink` from emailVerification. |
+| `auth/handoff` | `withRoute` + `ok/fail`. No DB, uses `encryptHandoff`. |
+| `auth/handoff/consume` | `withRoute` + `ok/fail`. Uses `decryptHandoff`. |
+| `auth/verify-code` | `withRoute` + `ok/fail`. Uses `verifyCode` from emailVerification. |
+| `auth/send-verify-code` | Replaced in-memory `rateLimitMap` → `authRateLimit`. `new Resend()` → `getResend()`. `withRoute` + `ok/fail`. |
+| `auth/send-verify-link` | Same pattern: `authRateLimit`, `getResend()`, `withRoute` + `ok/fail`. |
+| `auth/resend-verification` | Replaced local `createAdminClient` + `rateLimitMap` + `new Resend()`. Returns `ok({ success: true })` even on rate limit (no account existence leak). |
+| `auth/recovery` | Replaced local `createAdminClient` + `new Resend()`. Returns `ok({ success: true })` always (no account existence leak). |
+| `auth/signup` | Replaced local `createAdminClient`. `withRoute` + `ok/fail`. |
+| `auth/welcome` | Replaced local `createAdminClient` + `new Resend()` → shared imports + `getResend()`. Keeps `createClient` for session cookie auth. |
+| `auth/set-password` | Already had shared `createAdminClient` + `authRateLimit` from Phase 0. Added `withRoute` + `ok/fail`. Inline audit_log → `auditLogRepo.insertEntry`. |
+
+**Skipped:** `auth/verify-link` — returns HTML pages, not JSON. `withRoute`'s error response would produce JSON for an HTML endpoint.
+
+### Farewell Routes (3 files)
+
+| Route | Changes |
+|-------|---------|
+| `farewell/owner-veto` | Replaced local `admin()` + `new Resend()`. Uses shared `createAdminClient`, `sendVetoAccessCancelledEmail`, `auditLogRepo.insertEntry`. Kept local `hashToken`. Both GET + POST wrapped. |
+| `farewell/verify` | `new Resend()` → `getResend()`. Inline `audit_log` insert → `auditLogRepo.insertEntry`. Complex route: crypto blind index, scope-aware content check, certificate upload. |
+| `farewell/access` | `new Resend()` → `getResend()`. Inline `trustee_access_audit` → `fvRepo.insertTrusteeAudit`. Complex route: blind index matching, trustee state machine. |
+
+### Infrastructure change
+- `lib/email.ts` — `getResend()` changed from private to `export` (needed by auth/farewell routes that build custom HTML emails inline).
+
+### Verify Gate (Group 9)
+```
+npx tsc --noEmit  → clean (0 errors)
+npm run lint      → warnings only (pre-existing <img>, useEffect dep)
+npm test          → 193/193 passed
+```
+
+---
+
+## H-10 — Checkout Dedup (Will/Trust) ✅
+
+> **Date:** 2026-05-28
+
+Extracted shared checkout logic into `lib/checkout/createCheckoutSession.ts`. Will/trust routes → thin wrappers.
+
+### What was created
+- **`lib/checkout/createCheckoutSession.ts`** — Shared function handling: plan conflict check, test promo path, client creation, split calculation, order creation, quiz session, free promo path (account creation + temp password), Stripe session, affiliate attribution, audit logging.
+- **`ProductConfig` type** — Parameterizes: productType, baseAmount, defaultEvCut, docTypes, recommendation, stripeName, stripeDescription, attorneyDescription, successPath, cancelPath.
+- **`CheckoutInput` type** — Union of will + trust fields. Trust-only fields (complexityFlag, complexityReasons, declinedAttorneyReview, confirmOverride) are optional.
+- Prices imported from `lib/orders/pricing.ts` (PRICES, EV_DEFAULT_CUT) — no hardcoded amounts.
+
+### What changed
+- `app/api/checkout/will/route.ts` — 424 lines → 32 lines. Validates with `willCheckoutSchema`, passes `WILL_CONFIG` to shared function.
+- `app/api/checkout/trust/route.ts` — 394 lines → 32 lines. Validates with `trustCheckoutSchema`, passes `TRUST_CONFIG` to shared function.
+
+### Behavioral parity
+- Trust override handling (`confirmOverride`) preserved in shared function.
+- Trust complexity fields (`complexity_flag`, `complexity_flag_reason`) conditionally added to order.
+- Trust quiz answers include `declinedAttorneyReview` when present.
+- Will route had no override handling — shared function's override check is a no-op when `confirmOverride` is undefined.
+
+### Verify Gate (H-10)
+```
+npx tsc --noEmit  → clean (0 errors)
+npm run lint      → warnings only (pre-existing)
+npm test          → 193/193 passed
+```
+
+---
+
+## Phase 2 Complete ✅
+
+> **Date:** 2026-05-28
+
+All 9 route groups + checkout dedup done. Every route on kernel pattern (withRoute + ok/fail + shared createAdminClient + repo layer + Upstash rate limiting + lazy getResend).
+
+### Summary
+- **Groups 1-7:** Completed 2026-05-27 (webhooks, documents, partner, sales, attorney, crypto, admin, cron)
+- **Group 8:** Trustee routes (6 files) — 2026-05-28
+- **Group 9:** Auth + farewell routes (15 files) — 2026-05-28
+- **H-10:** Checkout dedup — 2026-05-28
+- **Skipped:** `auth/verify-link` (returns HTML, not JSON)
+
+### Next: Phase 3 — Validation at Every Boundary (M-06)

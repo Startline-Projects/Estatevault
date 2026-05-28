@@ -2,7 +2,7 @@ import { Resend } from "resend";
 import { createServerClient } from "@supabase/ssr";
 
 let _resend: Resend | null = null;
-function getResend(): Resend {
+export function getResend(): Resend {
   if (!_resend) {
     _resend = new Resend(process.env.RESEND_API_KEY!);
   }
@@ -488,6 +488,141 @@ export async function sendAnnualReviewEmail({
   }
 }
 
+export async function sendDunningEmail({
+  to,
+  fullName,
+}: {
+  to: string;
+  fullName?: string | null;
+}) {
+  try {
+    await getResend().emails.send({
+      from: DEFAULT_FROM,
+      to,
+      subject: "Action Required, Vault Subscription Payment Failed",
+      html: `<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#f4f4f5;font-family:'Inter',Arial,sans-serif;">
+  <div style="max-width:600px;margin:0 auto;background:#ffffff;">
+    ${renderEmailHeader(defaultBrand())}
+    <div style="padding:32px;">
+      <h2 style="margin:0 0 16px;font-size:22px;color:#1C3557;">Payment Failed</h2>
+      <p style="margin:0 0 16px;font-size:14px;color:#2D2D2D;line-height:1.6;">
+        Hi ${escapeHtml(fullName || "there")},
+      </p>
+      <p style="margin:0 0 16px;font-size:14px;color:#2D2D2D;line-height:1.6;">
+        We were unable to process your annual Vault subscription payment of $99.
+        Your premium vault features (free amendments, farewell messages) will be
+        paused until payment is resolved.
+      </p>
+      <p style="margin:0 0 16px;font-size:14px;color:#2D2D2D;line-height:1.6;">
+        Please update your payment method to continue enjoying these benefits.
+      </p>
+      <div style="text-align:center;margin:32px 0;">
+        <a href="https://www.estatevault.us/dashboard/settings" style="display:inline-block;background:#C9A84C;color:#ffffff;text-decoration:none;padding:14px 32px;border-radius:50px;font-size:14px;font-weight:600;">
+          Update Payment Method
+        </a>
+      </div>
+    </div>
+    ${renderEmailFooter(defaultBrand())}
+  </div>
+</body>
+</html>`,
+    });
+  } catch (e) {
+    console.error("Dunning email failed:", e);
+  }
+}
+
+export async function sendTrusteeUnlockEmail({
+  to,
+  unlockUrl,
+  expiresAt,
+}: {
+  to: string;
+  unlockUrl: string;
+  expiresAt: Date;
+}) {
+  try {
+    await getResend().emails.send({
+      from: DEFAULT_FROM,
+      to,
+      subject: "Vault Access Approved — Open Within 7 Days",
+      html: `<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#f4f4f5;font-family:'Inter',Arial,sans-serif;">
+  <div style="max-width:600px;margin:0 auto;background:#ffffff;">
+    ${renderEmailHeader(defaultBrand())}
+    <div style="padding:32px;">
+      <h2 style="margin:0 0 16px;font-size:22px;color:#1C3557;">Vault Access Approved</h2>
+      <p style="margin:0 0 16px;font-size:14px;color:#2D2D2D;line-height:1.6;">
+        Your request has been approved and the review period has ended. You can now access the vault.
+      </p>
+      <div style="text-align:center;margin:32px 0;">
+        <a href="${unlockUrl}" style="display:inline-block;background:#C9A84C;color:#ffffff;text-decoration:none;padding:14px 28px;border-radius:9999px;font-weight:600;">Open Vault</a>
+      </div>
+      <p style="margin:0;font-size:13px;color:#6b7280;">
+        This link expires on <strong>${expiresAt.toUTCString()}</strong>.
+        You will be sent a one-time code by email to confirm your identity.
+      </p>
+    </div>
+    ${renderEmailFooter(defaultBrand())}
+  </div>
+</body>
+</html>`,
+    });
+  } catch (e) {
+    console.error("Trustee-unlock email failed:", e);
+    throw e;
+  }
+}
+
+export async function sendVetoReminderEmail({
+  to,
+  vetoUrl,
+  expiresAt,
+  clientName,
+}: {
+  to: string;
+  vetoUrl: string;
+  expiresAt: Date;
+  clientName?: string | null;
+}) {
+  try {
+    await getResend().emails.send({
+      from: DEFAULT_FROM,
+      to,
+      subject: "REMINDER: Vault access pending — cancel if you're alive",
+      html: `<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#f4f4f5;font-family:'Inter',Arial,sans-serif;">
+  <div style="max-width:600px;margin:0 auto;background:#ffffff;">
+    ${renderEmailHeader(defaultBrand())}
+    <div style="padding:32px;">
+      <h2 style="margin:0 0 16px;font-size:22px;color:#1C3557;">Vault Access Pending</h2>
+      ${greetingHtml(clientName)}
+      <p style="margin:0 0 16px;font-size:14px;color:#2D2D2D;line-height:1.6;">
+        A trustee has requested access to your EstateVault. Access will be granted on
+        <strong>${expiresAt.toUTCString()}</strong> unless cancelled.
+      </p>
+      <div style="text-align:center;margin:32px 0;">
+        <a href="${vetoUrl}" style="display:inline-block;background:#C9A84C;color:#ffffff;text-decoration:none;padding:14px 28px;border-radius:9999px;font-weight:600;">I'm alive — Cancel Access</a>
+      </div>
+    </div>
+    ${renderEmailFooter(defaultBrand())}
+  </div>
+</body>
+</html>`,
+    });
+  } catch (e) {
+    console.error("Veto-reminder email failed:", e);
+    throw e;
+  }
+}
+
 export async function sendLifeEventCheckInEmail({
   to,
   loginLink,
@@ -543,4 +678,100 @@ export async function sendLifeEventCheckInEmail({
   } catch (e) {
     console.error("Life-event check-in email failed:", e);
   }
+}
+
+export async function sendOwnerVetoEmail({
+  to,
+  ownerName,
+  vetoUrl,
+  expiresAt,
+}: {
+  to: string;
+  ownerName: string;
+  vetoUrl: string;
+  expiresAt: string;
+}) {
+  await getResend().emails.send({
+    from: "EstateVault <info@estatevault.us>",
+    to,
+    subject: "URGENT: Someone has requested access to your vault",
+    html: `<div style="font-family:Inter,sans-serif;max-width:520px;margin:0 auto;padding:32px;color:#2D2D2D;">
+      <h1 style="color:#1C3557;">Vault Access Requested</h1>
+      <p>Hello ${ownerName || ""},</p>
+      <p>A trustee has submitted a request to access your EstateVault. Their submission was reviewed by our team. If approved without action from you, vault access will be granted in <strong>72 hours</strong> (by ${expiresAt}).</p>
+      <p><strong>If you are alive and well, click the button below to cancel this request immediately.</strong></p>
+      <div style="text-align:center;margin:32px 0;">
+        <a href="${vetoUrl}" style="background:#C9A84C;color:#fff;text-decoration:none;padding:14px 28px;border-radius:9999px;font-weight:600;">I'm alive — Cancel Access</a>
+      </div>
+      <p style="color:#6b7280;font-size:13px;">This link is single-use and expires in 72 hours. You will receive this email every 12 hours during the review window.</p>
+      <p style="color:#9ca3af;font-size:11px;margin-top:24px;">EstateVault · Protecting what matters most</p>
+    </div>`,
+  });
+}
+
+export async function sendFarewellUnlockEmail({
+  to,
+  clientName,
+  messageTitle,
+  accessUrl,
+}: {
+  to: string;
+  clientName: string;
+  messageTitle: string;
+  accessUrl: string;
+}) {
+  await getResend().emails.send({
+    from: "EstateVault <info@estatevault.us>",
+    to,
+    subject: "A message has been left for you",
+    html: `<div style="font-family:Inter,sans-serif;max-width:500px;margin:0 auto;padding:32px;"><h1 style="color:#1C3557;">A Message for You</h1><p>We're sorry for your loss.</p><p>${clientName} left you a farewell message titled "<strong>${messageTitle}</strong>".</p><p>Click below to access it.</p><a href="${accessUrl}" style="display:inline-block;background:#C9A84C;color:white;text-decoration:none;padding:14px 24px;border-radius:999px;font-weight:600;font-size:14px;">View Message</a><p style="color:#999;font-size:12px;margin-top:24px;">This link will remain accessible for you to view at any time.</p></div>`,
+  });
+}
+
+export async function sendVerificationRejectedEmail({
+  to,
+  notes,
+}: {
+  to: string;
+  notes?: string | null;
+}) {
+  await getResend().emails.send({
+    from: "EstateVault <info@estatevault.us>",
+    to,
+    subject: "Verification Update",
+    html: `<div style="font-family:Inter,sans-serif;max-width:500px;margin:0 auto;padding:32px;"><h1 style="color:#1C3557;">Verification Update</h1><p>We were unable to verify the documentation you submitted. ${notes ? `<br><br>Reason: ${notes}` : ""}</p><p>If you believe this is an error, please resubmit with a clearer copy of the documentation.</p><p style="color:#999;font-size:12px;">- EstateVault</p></div>`,
+  });
+}
+
+export async function sendTrusteeOtpEmail({
+  to,
+  code,
+}: {
+  to: string;
+  code: string;
+}) {
+  await getResend().emails.send({
+    from: "EstateVault <info@estatevault.us>",
+    to,
+    subject: `EstateVault verification code: ${code}`,
+    html: `<div style="font-family:Inter,sans-serif;max-width:480px;margin:0 auto;padding:32px;color:#2D2D2D;">
+      <h1 style="color:#1C3557;">Your verification code</h1>
+      <p style="font-size:32px;font-weight:700;letter-spacing:8px;color:#1C3557;text-align:center;margin:24px 0;">${code}</p>
+      <p style="color:#6b7280;font-size:14px;">Enter this code on the vault access page. It expires in 10 minutes.</p>
+      <p style="color:#9ca3af;font-size:11px;margin-top:24px;">If you didn't request this, ignore this email.</p>
+    </div>`,
+  });
+}
+
+export async function sendVetoAccessCancelledEmail({
+  to,
+}: {
+  to: string;
+}) {
+  await getResend().emails.send({
+    from: "EstateVault <info@estatevault.us>",
+    to,
+    subject: "Vault access request cancelled",
+    html: `<div style="font-family:Inter,sans-serif;max-width:500px;margin:0 auto;padding:32px;color:#2D2D2D;"><h1 style="color:#1C3557;">Request Cancelled</h1><p>The vault access request has been cancelled by the account owner. No further action is needed.</p><p style="color:#9ca3af;font-size:11px;margin-top:24px;">EstateVault</p></div>`,
+  });
 }

@@ -1,29 +1,22 @@
-import { NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { Resend } from "resend";
 import { requireAuth } from "@/lib/api/auth";
+import { withRoute } from "@/lib/api/route";
+import { ok, fail } from "@/lib/api/response";
 import { apiRateLimit } from "@/lib/rate-limit";
+import * as partnerRepo from "@/lib/repos/server/partnerRepo";
 
-export async function POST() {
+export const POST = withRoute(async (_req: NextRequest) => {
   const auth = await requireAuth(["partner"]);
   if ("error" in auth) return auth.error;
 
   const { success: rlOk } = await apiRateLimit.limit(`test-email:${auth.profile.id}`);
-  if (!rlOk) {
-    return NextResponse.json({ error: "rate limited" }, { status: 429 });
-  }
+  if (!rlOk) return fail("rate limited", 429);
 
-  const { data: partner } = await auth.admin
-    .from("partners")
-    .select("id, sender_name, sender_email, email_verified, company_name")
-    .eq("profile_id", auth.profile.id)
-    .single();
-  if (!partner) return NextResponse.json({ error: "partner not found" }, { status: 404 });
-  if (!partner.email_verified || !partner.sender_email) {
-    return NextResponse.json({ error: "domain not verified" }, { status: 400 });
-  }
-  if (!auth.user.email) {
-    return NextResponse.json({ error: "no recipient" }, { status: 400 });
-  }
+  const { data: partner } = await partnerRepo.getEmailSettingsByProfileId(auth.admin, auth.profile.id);
+  if (!partner) return fail("partner not found", 404);
+  if (!partner.email_verified || !partner.sender_email) return fail("domain not verified", 400);
+  if (!auth.user.email) return fail("no recipient", 400);
 
   const resend = new Resend(process.env.RESEND_API_KEY!);
   const from = `${partner.sender_name || partner.company_name} <${partner.sender_email}>`;
@@ -34,8 +27,7 @@ export async function POST() {
     subject: `Test email from ${partner.sender_name || partner.company_name}`,
     html: `<p>This is a test email from your white-label sender address.</p><p>From: ${from}</p>`,
   });
-  if (sent.error) {
-    return NextResponse.json({ error: sent.error.message }, { status: 400 });
-  }
-  return NextResponse.json({ ok: true });
-}
+  if (sent.error) return fail("send failed", 400);
+
+  return ok({ ok: true });
+});

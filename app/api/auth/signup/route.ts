@@ -1,105 +1,70 @@
-import { NextResponse } from "next/server";
-import { createServerClient } from "@supabase/ssr";
+import { NextRequest } from "next/server";
+import { createAdminClient } from "@/lib/api/auth";
+import { withRoute } from "@/lib/api/route";
+import { ok, fail } from "@/lib/api/response";
 import { consumeVerifiedToken } from "@/lib/auth/emailVerification";
 import { sendWelcomeEmail } from "@/lib/email";
 
-function createAdminClient() {
-  return createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    { cookies: { getAll: () => [], setAll: () => {} } }
-  );
-}
+export const POST = withRoute(async (req: NextRequest) => {
+  const { email, password, fullName, verifiedToken, partnerSlug } = await req.json();
+  const normalizedEmail = String(email || "").trim().toLowerCase();
 
-export async function POST(request: Request) {
-  try {
-    const { email, password, fullName, verifiedToken, partnerSlug } = await request.json();
-    const normalizedEmail = String(email || "").trim().toLowerCase();
-
-    if (!normalizedEmail || !password) {
-      return NextResponse.json({ error: "Email and password are required." }, { status: 400 });
-    }
-
-    if (password.length < 8) {
-      return NextResponse.json({ error: "Password must be at least 8 characters." }, { status: 400 });
-    }
-
-    if (!verifiedToken || !consumeVerifiedToken(normalizedEmail, verifiedToken)) {
-      return NextResponse.json(
-        { error: "Please verify your email first." },
-        { status: 403 }
-      );
-    }
-
-    const admin = createAdminClient();
-
-    const { data: existingProfile, error: existingProfileErr } = await admin
-      .from("profiles")
-      .select("id")
-      .eq("email", normalizedEmail)
-      .maybeSingle();
-
-    if (existingProfileErr) {
-      return NextResponse.json({ error: "Unable to validate existing account." }, { status: 500 });
-    }
-
-    if (existingProfile) {
-      return NextResponse.json(
-        { error: "An account with this email already exists. Please sign in." },
-        { status: 409 }
-      );
-    }
-
-    const { data: newUser, error: createErr } = await admin.auth.admin.createUser({
-      email: normalizedEmail,
-      password,
-      email_confirm: true,
-      user_metadata: { full_name: (fullName || "").trim(), user_type: "client" },
-    });
-
-    if (createErr || !newUser.user) {
-      return NextResponse.json(
-        { error: createErr?.message || "Failed to create account." },
-        { status: 500 }
-      );
-    }
-
-    const { error: upsertErr } = await admin.from("profiles").upsert({
-      id: newUser.user.id,
-      email: normalizedEmail,
-      full_name: (fullName || "").trim() || null,
-      user_type: "client",
-    });
-
-    if (upsertErr) {
-      return NextResponse.json({ error: "Failed to finalize profile setup." }, { status: 500 });
-    }
-
-    let resolvedPartnerId: string | null = null;
-    if (partnerSlug) {
-      const { data: partner } = await admin
-        .from("partners")
-        .select("id")
-        .eq("partner_slug", partnerSlug)
-        .maybeSingle();
-      resolvedPartnerId = partner?.id || null;
-    }
-
-    try {
-      const { origin } = new URL(request.url);
-      await sendWelcomeEmail({
-        to: normalizedEmail,
-        fullName: (fullName || "").trim() || null,
-        loginLink: `${origin}/auth/login?email=${encodeURIComponent(normalizedEmail)}`,
-        partnerId: resolvedPartnerId,
-      });
-    } catch (mailErr) {
-      console.error("welcome email failed:", mailErr);
-    }
-
-    return NextResponse.json({ success: true, userId: newUser.user.id });
-  } catch (error) {
-    console.error("Signup route error:", error);
-    return NextResponse.json({ error: "Failed to create account." }, { status: 500 });
+  if (!normalizedEmail || !password) return fail("Email and password are required.", 400);
+  if (password.length < 8) return fail("Password must be at least 8 characters.", 400);
+  if (!verifiedToken || !consumeVerifiedToken(normalizedEmail, verifiedToken)) {
+    return fail("Please verify your email first.", 403);
   }
-}
+
+  const admin = createAdminClient();
+
+  const { data: existingProfile, error: existingProfileErr } = await admin
+    .from("profiles")
+    .select("id")
+    .eq("email", normalizedEmail)
+    .maybeSingle();
+
+  if (existingProfileErr) return fail("Unable to validate existing account.", 500);
+  if (existingProfile) return fail("An account with this email already exists. Please sign in.", 409);
+
+  const { data: newUser, error: createErr } = await admin.auth.admin.createUser({
+    email: normalizedEmail,
+    password,
+    email_confirm: true,
+    user_metadata: { full_name: (fullName || "").trim(), user_type: "client" },
+  });
+
+  if (createErr || !newUser.user) return fail(createErr?.message || "Failed to create account.", 500);
+
+  const { error: upsertErr } = await admin.from("profiles").upsert({
+    id: newUser.user.id,
+    email: normalizedEmail,
+    full_name: (fullName || "").trim() || null,
+    user_type: "client",
+  });
+
+  if (upsertErr) return fail("Failed to finalize profile setup.", 500);
+
+  let resolvedPartnerId: string | null = null;
+  if (partnerSlug) {
+    const { data: partner } = await admin
+      .from("partners")
+      .select("id")
+      .eq("partner_slug", partnerSlug)
+      .maybeSingle();
+    resolvedPartnerId = partner?.id || null;
+  }
+
+  try {
+    const { origin } = new URL(req.url);
+    await sendWelcomeEmail({
+      to: normalizedEmail,
+      fullName: (fullName || "").trim() || null,
+      loginLink: `${origin}/auth/login?email=${encodeURIComponent(normalizedEmail)}`,
+      partnerId: resolvedPartnerId,
+    });
+  } catch (mailErr) {
+    console.error("welcome email failed:", mailErr);
+  }
+
+  return ok({ success: true, userId: newUser.user.id });
+});

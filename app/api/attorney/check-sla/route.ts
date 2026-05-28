@@ -1,28 +1,20 @@
-import { NextResponse } from "next/server";
-import { createServerClient } from "@supabase/ssr";
-
 export const dynamic = "force-dynamic";
 
-function createAdminClient() {
-  return createServerClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, { cookies: { getAll: () => [], setAll: () => {} } });
-}
+import { NextRequest } from "next/server";
+import { createAdminClient } from "@/lib/api/auth";
+import { withRoute } from "@/lib/api/route";
+import { ok } from "@/lib/api/response";
+import * as attorneyReviewRepo from "@/lib/repos/server/attorneyReviewRepo";
+import * as auditLogRepo from "@/lib/repos/server/auditLogRepo";
 
-export async function GET() {
-  const supabase = createAdminClient();
+export const GET = withRoute(async (_req: NextRequest) => {
+  const admin = createAdminClient();
 
-  // Find overdue reviews
-  const { data: overdue } = await supabase
-    .from("attorney_reviews")
-    .select("id, order_id, attorney_id, sla_deadline")
-    .in("status", ["pending", "in_review"])
-    .lt("sla_deadline", new Date().toISOString());
-
-  if (!overdue || overdue.length === 0) {
-    return NextResponse.json({ message: "No overdue reviews" });
-  }
+  const { data: overdue } = await attorneyReviewRepo.findOverdue(admin);
+  if (!overdue || overdue.length === 0) return ok({ message: "No overdue reviews" });
 
   for (const review of overdue) {
-    await supabase.from("audit_log").insert({
+    await auditLogRepo.insertEntry(admin, {
       action: "attorney_review.sla_overdue",
       resource_type: "attorney_review",
       resource_id: review.id,
@@ -30,5 +22,5 @@ export async function GET() {
     });
   }
 
-  return NextResponse.json({ overdue_count: overdue.length });
-}
+  return ok({ overdue_count: overdue.length });
+});

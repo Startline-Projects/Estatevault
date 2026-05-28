@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createServerClient } from "@supabase/ssr";
 
-export type UserType = "client" | "partner" | "sales_rep" | "admin" | "attorney";
+export type UserType = "client" | "partner" | "sales_rep" | "admin" | "attorney" | "review_attorney";
 
 export function createAdminClient() {
   return createServerClient(

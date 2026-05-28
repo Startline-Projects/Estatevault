@@ -1,126 +1,96 @@
-import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
-import { createServerClient } from "@supabase/ssr";
+import { NextRequest } from "next/server";
+import { Resend } from "resend";
+import { randomBytes } from "crypto";
+import { requireAuth } from "@/lib/api/auth";
+import { withRoute } from "@/lib/api/route";
+import { ok, fail } from "@/lib/api/response";
 import { partnerUrl, normalizeBusinessDomain } from "@/lib/hosts";
+import * as partnerRepo from "@/lib/repos/server/partnerRepo";
+import * as profileRepo from "@/lib/repos/server/profileRepo";
+import * as auditLogRepo from "@/lib/repos/server/auditLogRepo";
 
-function createAdminClient() {
-  return createServerClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, { cookies: { getAll: () => [], setAll: () => {} } });
-}
+export const POST = withRoute(async (req: NextRequest) => {
+  const auth = await requireAuth(["sales_rep", "admin"]);
+  if ("error" in auth) return auth.error;
 
-export async function POST(request: Request) {
-  const supabase = createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
-
-  // Verify sales rep or admin using admin client (bypasses RLS)
-  const admin = createAdminClient();
-  const { data: profile, error: profileErr } = await admin.from("profiles").select("user_type").eq("id", user.id).single();
-  if (profileErr || !profile || !["sales_rep", "admin"].includes(profile.user_type)) {
-    console.error("Auth check failed:", profileErr, profile);
-    return NextResponse.json({ error: "Not authorized as sales rep" }, { status: 403 });
-  }
-
-  const body = await request.json();
+  const body = await req.json();
   const { companyName, ownerName, email, businessUrl, phone, state, professionalType, tier, source, notes, promoCode, partnerRevenuePct } = body;
 
-  if (!companyName || !ownerName || !email) {
-    return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
-  }
+  if (!companyName || !ownerName || !email) return fail("Missing required fields", 400);
 
-  // Generate slug from business URL
   const cleanBusinessUrl = businessUrl ? normalizeBusinessDomain(businessUrl) : "";
   const urlForSlug = cleanBusinessUrl || companyName;
   const slug = urlForSlug.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 
-  const { data: existingPartner } = await admin.from("partners").select("id").eq("partner_slug", slug).single();
-  if (existingPartner) {
-    return NextResponse.json({ error: "A partner with this business URL already exists." }, { status: 409 });
-  }
+  const { data: existingPartner } = await partnerRepo.findBySlug(auth.admin, slug);
+  if (existingPartner) return fail("A partner with this business URL already exists.", 409);
 
-  // Generate temp password using crypto-safe randomness
-  const { randomBytes } = await import("crypto");
   const chars = "ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!@#";
   const bytes = randomBytes(12);
   let tempPassword = "";
   for (let i = 0; i < 12; i++) tempPassword += chars[bytes[i] % chars.length];
 
-  // Check if auth user already exists with this email
-  const { data: existingProfile } = await admin.from("profiles").select("id, user_type").eq("email", email).single();
+  const { data: existingProfile } = await profileRepo.findByEmail(auth.admin, email);
   let userId: string;
 
   if (existingProfile) {
-    // Block overwriting privileged accounts (sales_rep, admin) with partner role
     if (["sales_rep", "admin"].includes(existingProfile.user_type)) {
-      return NextResponse.json({ error: "This email belongs to an internal account and cannot be used for a partner." }, { status: 409 });
+      return fail("This email belongs to an internal account and cannot be used for a partner.", 409);
     }
-    // User already exists, reset their password to the new temp password
     userId = existingProfile.id;
-    await admin.auth.admin.updateUserById(userId, {
+    await auth.admin.auth.admin.updateUserById(userId, {
       password: tempPassword,
       user_metadata: { full_name: ownerName, user_type: "partner" },
     });
   } else {
-    // Create new auth user
-    const { data: newUser, error: createErr } = await admin.auth.admin.createUser({
+    const { data: newUser, error: createErr } = await auth.admin.auth.admin.createUser({
       email,
       password: tempPassword,
       email_confirm: true,
       user_metadata: { full_name: ownerName, user_type: "partner" },
     });
-
-    if (createErr || !newUser.user) {
-      return NextResponse.json({ error: "Failed to create user: " + (createErr?.message || "unknown") }, { status: 500 });
-    }
+    if (createErr || !newUser.user) return fail("Failed to create user", 500);
     userId = newUser.user.id;
   }
 
-  // Force-set password again to ensure it's definitely applied
-  await admin.auth.admin.updateUserById(userId, { password: tempPassword });
+  await auth.admin.auth.admin.updateUserById(userId, { password: tempPassword });
 
-  // Ensure profile exists with partner type
-  const { data: profileCheck } = await admin.from("profiles").select("id").eq("id", userId).single();
+  const { data: profileCheck } = await auth.admin.from("profiles").select("id").eq("id", userId).single();
   if (!profileCheck) {
-    await admin.from("profiles").insert({ id: userId, email, full_name: ownerName, user_type: "partner", phone, state: state || "Michigan" });
+    await profileRepo.upsert(auth.admin, { id: userId, email, full_name: ownerName, user_type: "partner", phone, state: state || "Michigan" });
   } else {
-    await admin.from("profiles").update({ user_type: "partner", full_name: ownerName, phone }).eq("id", userId);
+    await auth.admin.from("profiles").update({ user_type: "partner", full_name: ownerName, phone }).eq("id", userId);
   }
 
-  // Validate promo code if provided
   const VALID_PARTNER_PROMOS: Record<string, boolean> = { FREE676: true };
   const validPromo = promoCode && VALID_PARTNER_PROMOS[promoCode.toUpperCase()] ? promoCode.toUpperCase() : null;
 
-  // Create partner record
-  const { data: partner, error: partnerErr } = await admin.from("partners").insert({
+  const { data: partner, error: partnerErr } = await auth.admin.from("partners").insert({
     profile_id: userId,
     company_name: companyName,
     business_url: businessUrl || "",
     tier: tier || "standard",
     status: "onboarding",
     partner_slug: slug,
-    created_by: user.id,
+    created_by: auth.user.id,
     created_by_notes: notes || null,
     prospect_source: source || null,
     partner_revenue_pct: partnerRevenuePct || 0,
     ...(validPromo ? { promo_code: validPromo, one_time_fee_paid: true, onboarding_step: 2 } : {}),
   }).select("id").single();
 
-  if (partnerErr || !partner) {
-    return NextResponse.json({ error: "Failed to create partner: " + (partnerErr?.message || "unknown") }, { status: 500 });
-  }
+  if (partnerErr || !partner) return fail("Failed to create partner", 500);
 
-  // Audit log
-  await admin.from("audit_log").insert({
-    actor_id: user.id,
+  await auditLogRepo.insertEntry(auth.admin, {
+    actor_id: auth.user.id,
     action: "partner.created",
     resource_type: "partner",
     resource_id: partner.id,
     metadata: { company_name: companyName, tier, source, professional_type: professionalType },
   });
 
-  // Send welcome email to partner
   try {
-    const { Resend } = await import("resend");
-    const resend = new Resend(process.env.RESEND_API_KEY);
+    const resend = new Resend(process.env.RESEND_API_KEY!);
     const isBasic = tier === "basic";
     await resend.emails.send({
       from: "EstateVault <info@estatevault.us>",
@@ -159,5 +129,5 @@ export async function POST(request: Request) {
     console.error("Partner welcome email failed:", emailErr);
   }
 
-  return NextResponse.json({ partnerId: partner.id, email, slug });
-}
+  return ok({ partnerId: partner.id, email, slug });
+});

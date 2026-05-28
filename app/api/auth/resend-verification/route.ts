@@ -1,32 +1,11 @@
-import { NextResponse } from "next/server";
-import { createServerClient } from "@supabase/ssr";
-import { Resend } from "resend";
-import { resolveSenderForEmail } from "@/lib/email";
+import { NextRequest } from "next/server";
+import { createAdminClient } from "@/lib/api/auth";
+import { withRoute } from "@/lib/api/route";
+import { ok } from "@/lib/api/response";
+import { resolveSenderForEmail, getResend } from "@/lib/email";
+import { authRateLimit } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
-
-function createAdminClient() {
-  return createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    { cookies: { getAll: () => [], setAll: () => {} } }
-  );
-}
-
-const resend = new Resend(process.env.RESEND_API_KEY);
-
-const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
-function checkRateLimit(email: string): boolean {
-  const now = Date.now();
-  const entry = rateLimitMap.get(email);
-  if (!entry || now > entry.resetAt) {
-    rateLimitMap.set(email, { count: 1, resetAt: now + 60_000 });
-    return true;
-  }
-  if (entry.count >= 3) return false;
-  entry.count++;
-  return true;
-}
 
 function buildVerifyEmailHtml(verifyLink: string): string {
   return `<!DOCTYPE html>
@@ -58,58 +37,46 @@ function buildVerifyEmailHtml(verifyLink: string): string {
 </html>`;
 }
 
-export async function POST(request: Request) {
-  try {
-    const { email } = await request.json();
-    const normalizedEmail = String(email || "").trim().toLowerCase();
+export const POST = withRoute(async (req: NextRequest) => {
+  const { email } = await req.json();
+  const normalizedEmail = String(email || "").trim().toLowerCase();
 
-    if (!normalizedEmail) {
-      return NextResponse.json({ error: "Email is required." }, { status: 400 });
-    }
+  if (!normalizedEmail) return ok({ success: true });
 
-    if (!checkRateLimit(normalizedEmail)) {
-      return NextResponse.json(
-        { error: "Too many attempts. Please wait a minute and try again." },
-        { status: 429 }
-      );
-    }
+  const { success } = await authRateLimit.limit(`resend-verify:${normalizedEmail}`);
+  if (!success) return ok({ success: true });
 
-    const { origin } = new URL(request.url);
-    const admin = createAdminClient();
+  const { origin } = new URL(req.url);
+  const admin = createAdminClient();
 
-    // Magic link doubles as email confirmation for existing unconfirmed users.
-    const { data: linkData, error: linkErr } = await admin.auth.admin.generateLink({
-      type: "magiclink",
-      email: normalizedEmail,
-      options: { redirectTo: `${origin}/auth/verify` },
-    });
+  const { data: linkData, error: linkErr } = await admin.auth.admin.generateLink({
+    type: "magiclink",
+    email: normalizedEmail,
+    options: { redirectTo: `${origin}/auth/verify` },
+  });
 
-    if (linkErr || !linkData?.properties?.hashed_token) {
-      console.error("resend-verification generateLink failed:", linkErr);
-      return NextResponse.json({ success: true });
-    }
-
-    const verifyLink = `${origin}/auth/verify?token_hash=${encodeURIComponent(
-      linkData.properties.hashed_token
-    )}&type=magiclink`;
-
-    const sender = await resolveSenderForEmail({ email: normalizedEmail });
-
-    const { error: sendErr } = await resend.emails.send({
-      from: sender.from,
-      replyTo: sender.replyTo,
-      to: normalizedEmail,
-      subject: "Confirm your EstateVault email",
-      html: buildVerifyEmailHtml(verifyLink),
-    });
-
-    if (sendErr) {
-      console.error("resend-verification Resend error:", sendErr);
-    }
-
-    return NextResponse.json({ success: true });
-  } catch (err) {
-    console.error("resend-verification route error:", err);
-    return NextResponse.json({ success: true });
+  if (linkErr || !linkData?.properties?.hashed_token) {
+    console.error("resend-verification generateLink failed:", linkErr);
+    return ok({ success: true });
   }
-}
+
+  const verifyLink = `${origin}/auth/verify?token_hash=${encodeURIComponent(
+    linkData.properties.hashed_token
+  )}&type=magiclink`;
+
+  const sender = await resolveSenderForEmail({ email: normalizedEmail });
+
+  const { error: sendErr } = await getResend().emails.send({
+    from: sender.from,
+    replyTo: sender.replyTo,
+    to: normalizedEmail,
+    subject: "Confirm your EstateVault email",
+    html: buildVerifyEmailHtml(verifyLink),
+  });
+
+  if (sendErr) {
+    console.error("resend-verification Resend error:", sendErr);
+  }
+
+  return ok({ success: true });
+});

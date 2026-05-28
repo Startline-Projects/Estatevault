@@ -16,3 +16,14 @@ export function insert(admin: Admin, row: Record<string, unknown>) {
 export function update(admin: Admin, orderId: string, patch: Record<string, unknown>) {
   return admin.from("orders").update(patch).eq("id", orderId);
 }
+
+// Delivered orders whose delivery date is at or before `cutoff`.
+// Used by reminder crons to find clients eligible for nudges.
+export function findDeliveredBefore(admin: Admin, cutoff: string) {
+  return admin
+    .from("orders")
+    .select("client_id, partner_id, delivered_at")
+    .eq("status", "delivered")
+    .not("delivered_at", "is", null)
+    .lte("delivered_at", cutoff);
+}

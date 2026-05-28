@@ -1,38 +1,18 @@
-import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
-import { createServerClient } from "@supabase/ssr";
-
-export const dynamic = "force-dynamic";
-
-function createAdminClient() {
-  return createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    { cookies: { getAll: () => [], setAll: () => {} } }
-  );
-}
+import { NextRequest } from "next/server";
+import { requireAuth } from "@/lib/api/auth";
+import { withRoute } from "@/lib/api/route";
+import { ok, fail } from "@/lib/api/response";
 
 const EXPECTED_DOCS: Record<string, string[]> = {
   will: ["will", "poa", "healthcare_directive"],
   trust: ["trust", "pour_over_will", "poa", "healthcare_directive"],
 };
 
-export async function GET() {
-  const supabase = createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+export const GET = withRoute(async (_req: NextRequest) => {
+  const auth = await requireAuth(["admin"]);
+  if ("error" in auth) return auth.error;
 
-  const admin = createAdminClient();
-  const { data: profile } = await admin
-    .from("profiles")
-    .select("user_type")
-    .eq("id", user.id)
-    .single();
-  if (profile?.user_type !== "admin") {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
-
-  const { data: orders, error: ordersErr } = await admin
+  const { data: orders, error: ordersErr } = await auth.admin
     .from("orders")
     .select("id, client_id, product_type, status, order_type, created_at, attorney_review_requested")
     .in("product_type", ["will", "trust"])
@@ -40,11 +20,11 @@ export async function GET() {
     .order("created_at", { ascending: false })
     .limit(200);
 
-  if (ordersErr) return NextResponse.json({ error: ordersErr.message }, { status: 500 });
-  if (!orders?.length) return NextResponse.json({ orders: [] });
+  if (ordersErr) return fail(ordersErr.message, 500);
+  if (!orders?.length) return ok({ orders: [] });
 
   const orderIds = orders.map((o) => o.id);
-  const { data: docs } = await admin
+  const { data: docs } = await auth.admin
     .from("documents")
     .select("id, order_id, document_type, status, storage_path")
     .in("order_id", orderIds);
@@ -52,13 +32,13 @@ export async function GET() {
   const clientIds = Array.from(new Set(orders.map((o) => o.client_id).filter(Boolean))) as string[];
   const clientInfoMap = new Map<string, { email: string | null; fullName: string | null }>();
   if (clientIds.length) {
-    const { data: clientRows } = await admin
+    const { data: clientRows } = await auth.admin
       .from("clients")
       .select("id, profile_id")
       .in("id", clientIds);
     const profileIds = (clientRows || []).map((c) => c.profile_id).filter(Boolean) as string[];
     const { data: profiles } = profileIds.length
-      ? await admin.from("profiles").select("id, email, full_name").in("id", profileIds)
+      ? await auth.admin.from("profiles").select("id, email, full_name").in("id", profileIds)
       : { data: [] as { id: string; email: string | null; full_name: string | null }[] };
     const profileById = new Map(
       (profiles || []).map((p) => [p.id, { email: p.email, fullName: p.full_name }])
@@ -103,5 +83,5 @@ export async function GET() {
     });
   }
 
-  return NextResponse.json({ orders: result });
-}
+  return ok({ orders: result });
+});

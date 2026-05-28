@@ -1,24 +1,12 @@
-import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
-import { createServerClient } from "@supabase/ssr";
-
-function createAdminClient() {
-  return createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    {
-      cookies: {
-        getAll: () => [],
-        setAll: () => {},
-      },
-    }
-  );
-}
+import { NextRequest } from "next/server";
+import { requireAuth } from "@/lib/api/auth";
+import { withRoute } from "@/lib/api/route";
+import { ok, fail } from "@/lib/api/response";
+import * as partnerRepo from "@/lib/repos/server/partnerRepo";
 
 function getNextFriday(): string {
   const now = new Date();
   const dayOfWeek = now.getDay();
-  // Days until next Friday (5 = Friday)
   const daysUntilFriday = dayOfWeek <= 5 ? 5 - dayOfWeek : 7 - dayOfWeek + 5;
   const nextFriday = new Date(now);
   nextFriday.setDate(now.getDate() + (daysUntilFriday === 0 ? 7 : daysUntilFriday));
@@ -26,156 +14,80 @@ function getNextFriday(): string {
   return nextFriday.toISOString();
 }
 
-export async function GET() {
-  try {
-    const supabase = createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+export const GET = withRoute(async (_req: NextRequest) => {
+  const auth = await requireAuth(["partner"]);
+  if ("error" in auth) return auth.error;
 
-    const admin = createAdminClient();
+  const { data: partnerRow } = await auth.admin
+    .from("partners")
+    .select("id")
+    .eq("profile_id", auth.profile.id)
+    .single();
+  if (!partnerRow) return fail("Partner profile not found", 404);
 
-    // Get the partner record for this user
-    const { data: partner, error: partnerError } = await admin
-      .from("partners")
-      .select("id")
-      .eq("profile_id", user.id)
-      .single();
+  const partnerId = partnerRow.id;
 
-    if (partnerError || !partner) {
-      return NextResponse.json(
-        { error: "Partner profile not found" },
-        { status: 404 }
-      );
-    }
+  const { data: orders, error: ordersError } = await partnerRepo.getCompletedOrders(auth.admin, partnerId);
+  if (ordersError) return fail("Failed to fetch orders", 500);
 
-    const partnerId = partner.id;
+  const now = new Date();
+  const currentMonth = now.getMonth();
+  const currentYear = now.getFullYear();
+  const mtdStart = new Date(currentYear, currentMonth, 1);
+  const lastMonthStart = new Date(currentYear, currentMonth - 1, 1);
+  const lastMonthEnd = new Date(currentYear, currentMonth, 0, 23, 59, 59, 999);
+  const ytdStart = new Date(currentYear, 0, 1);
 
-    // Get all completed orders for this partner
-    const { data: orders, error: ordersError } = await admin
-      .from("orders")
-      .select("id, partner_cut, product_type, created_at, status")
-      .eq("partner_id", partnerId)
-      .in("status", ["paid", "delivered"]);
+  let mtdEarnings = 0;
+  let lastMonthEarnings = 0;
+  let ytdEarnings = 0;
+  let allTimeEarnings = 0;
 
-    if (ordersError) {
-      return NextResponse.json(
-        { error: "Failed to fetch orders" },
-        { status: 500 }
-      );
-    }
+  const earningsByType: Record<string, number> = {
+    will: 0, trust: 0, amendment: 0, attorney_review: 0, vault_subscription: 0,
+  };
+  const monthlyTrendMap: Record<string, number> = {};
 
-    const now = new Date();
-    const currentMonth = now.getMonth();
-    const currentYear = now.getFullYear();
+  for (const order of orders || []) {
+    const amount = order.partner_cut || 0;
+    const orderDate = new Date(order.created_at);
+    const productType = order.product_type || "other";
 
-    // Calculate the first day of current month and last month
-    const mtdStart = new Date(currentYear, currentMonth, 1);
-    const lastMonthStart = new Date(currentYear, currentMonth - 1, 1);
-    const lastMonthEnd = new Date(currentYear, currentMonth, 0, 23, 59, 59, 999);
-    const ytdStart = new Date(currentYear, 0, 1);
+    allTimeEarnings += amount;
+    if (orderDate >= mtdStart) mtdEarnings += amount;
+    if (orderDate >= lastMonthStart && orderDate <= lastMonthEnd) lastMonthEarnings += amount;
+    if (orderDate >= ytdStart) ytdEarnings += amount;
+    if (productType in earningsByType) earningsByType[productType] += amount;
 
-    let mtdEarnings = 0;
-    let lastMonthEarnings = 0;
-    let ytdEarnings = 0;
-    let allTimeEarnings = 0;
-    let pendingBalance = 0;
-
-    const earningsByType: Record<string, number> = {
-      will: 0,
-      trust: 0,
-      amendment: 0,
-      attorney_review: 0,
-      vault_subscription: 0,
-    };
-
-    const monthlyTrendMap: Record<string, number> = {};
-
-    for (const order of orders || []) {
-      const amount = order.partner_cut || 0;
-      const orderDate = new Date(order.created_at);
-      const productType = order.product_type || "other";
-
-      allTimeEarnings += amount;
-
-      // MTD
-      if (orderDate >= mtdStart) {
-        mtdEarnings += amount;
-      }
-
-      // Last month
-      if (orderDate >= lastMonthStart && orderDate <= lastMonthEnd) {
-        lastMonthEarnings += amount;
-      }
-
-      // YTD
-      if (orderDate >= ytdStart) {
-        ytdEarnings += amount;
-      }
-
-      // By type
-      if (productType in earningsByType) {
-        earningsByType[productType] += amount;
-      }
-
-      // Monthly trend (key: YYYY-MM)
-      const monthKey = `${orderDate.getFullYear()}-${String(
-        orderDate.getMonth() + 1
-      ).padStart(2, "0")}`;
-      monthlyTrendMap[monthKey] = (monthlyTrendMap[monthKey] || 0) + amount;
-    }
-
-    // Get pending orders (paid but not yet transferred)
-    const { data: pendingOrders } = await admin
-      .from("orders")
-      .select("partner_cut")
-      .eq("partner_id", partnerId)
-      .eq("status", "paid")
-      .is("transfer_id", null);
-
-    for (const order of pendingOrders || []) {
-      pendingBalance += order.partner_cut || 0;
-    }
-
-    // Build monthly trend array sorted by month
-    const monthlyTrend = Object.entries(monthlyTrendMap)
-      .sort(([a], [b]) => a.localeCompare(b))
-      .map(([month, amount]) => ({ month, amount }));
-
-    // Get recent payouts (transfers)
-    const { data: recentPayouts } = await admin
-      .from("orders")
-      .select("id, partner_cut, product_type, created_at, transfer_id")
-      .eq("partner_id", partnerId)
-      .not("transfer_id", "is", null)
-      .order("created_at", { ascending: false })
-      .limit(10);
-
-    return NextResponse.json({
-      mtd_earnings: mtdEarnings,
-      last_month_earnings: lastMonthEarnings,
-      ytd_earnings: ytdEarnings,
-      all_time_earnings: allTimeEarnings,
-      pending_balance: pendingBalance,
-      next_payout_date: getNextFriday(),
-      earnings_by_type: earningsByType,
-      recent_payouts: (recentPayouts || []).map((p) => ({
-        id: p.id,
-        amount: p.partner_cut,
-        product_type: p.product_type,
-        date: p.created_at,
-        transfer_id: p.transfer_id,
-      })),
-      monthly_trend: monthlyTrend,
-    });
-  } catch (error) {
-    console.error("Revenue API error:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch revenue data" },
-      { status: 500 }
-    );
+    const monthKey = `${orderDate.getFullYear()}-${String(orderDate.getMonth() + 1).padStart(2, "0")}`;
+    monthlyTrendMap[monthKey] = (monthlyTrendMap[monthKey] || 0) + amount;
   }
-}
+
+  const { data: pendingOrders } = await partnerRepo.getPendingOrders(auth.admin, partnerId);
+  let pendingBalance = 0;
+  for (const order of pendingOrders || []) pendingBalance += order.partner_cut || 0;
+
+  const monthlyTrend = Object.entries(monthlyTrendMap)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([month, amount]) => ({ month, amount }));
+
+  const { data: recentPayouts } = await partnerRepo.getRecentPayouts(auth.admin, partnerId);
+
+  return ok({
+    mtd_earnings: mtdEarnings,
+    last_month_earnings: lastMonthEarnings,
+    ytd_earnings: ytdEarnings,
+    all_time_earnings: allTimeEarnings,
+    pending_balance: pendingBalance,
+    next_payout_date: getNextFriday(),
+    earnings_by_type: earningsByType,
+    recent_payouts: (recentPayouts || []).map((p) => ({
+      id: p.id,
+      amount: p.partner_cut,
+      product_type: p.product_type,
+      date: p.created_at,
+      transfer_id: p.transfer_id,
+    })),
+    monthly_trend: monthlyTrend,
+  });
+});
