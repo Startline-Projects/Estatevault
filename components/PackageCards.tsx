@@ -1,10 +1,11 @@
 import Link from "next/link";
+import { PRICES, formatPrice } from "@/lib/orders/pricing";
 
 const packages = [
   {
     title: "Will Package",
     descriptor: "Direct your wishes through the court",
-    price: "$400",
+    price: formatPrice(PRICES.will),
     popular: false,
     features: [
       "Last Will & Testament",
@@ -19,7 +20,7 @@ const packages = [
   {
     title: "Trust Package",
     descriptor: "Bypass probate and protect privately",
-    price: "$600",
+    price: formatPrice(PRICES.trust),
     popular: true,
     features: [
       "Revocable Living Trust",

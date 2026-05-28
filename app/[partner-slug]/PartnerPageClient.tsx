@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { buildPartnerTheme, themeToCssVars, buildHeroRecipe, type ThemePresetId, type HeroRecipeId } from "@/lib/partner-pages/theme";
+import { PRICES, formatPrice } from "@/lib/orders/pricing";
 
 export interface PartnerBranding {
   id: string;
@@ -29,7 +30,7 @@ const faqs = [
   { q: "What is the Family Vault?", a: "The Vault is a secure encrypted storage system inside your account where you can store your estate documents, insurance policies, financial account details, and digital credentials, everything your family needs in one place." },
   { q: "Is my information secure?", a: "Yes. All data is protected with 256-bit AES encryption. Your Vault has a separate PIN from your account password. Our platform meets bank-grade security standards." },
   { q: "What happens after I purchase?", a: "Your documents are generated immediately. You receive a download link by email and permanent access through your account. An execution guide walks you through signing requirements." },
-  { q: "Can I update my documents later?", a: "Yes. Life events like marriage, divorce, new children, or new property can be reflected through a document amendment for $50." },
+  { q: "Can I update my documents later?", a: `Yes. Life events like marriage, divorce, new children, or new property can be reflected through a document amendment for ${formatPrice(PRICES.amendment)}.` },
 ];
 
 function AccordionItem({
@@ -103,7 +104,7 @@ export default function PartnerPageClient({ branding }: { branding: PartnerBrand
   const isNorthwood = partnerSlug === "northwoodwealthadvisors-com";
   const textColor = isNorthwood ? "#000000" : (landingTextColor || "#1C3557");
   const theme = useMemo(() => buildPartnerTheme(accentColor, themePresetId ?? "cool"), [accentColor, themePresetId]);
-  const themeVars = useMemo(() => ({ ...(themeToCssVars(theme) as React.CSSProperties), ["--lt" as any]: textColor }), [theme, textColor]);
+  const themeVars = useMemo(() => ({ ...themeToCssVars(theme), "--lt": textColor } as React.CSSProperties), [theme, textColor]);
   const heroRecipe = useMemo(
     () => buildHeroRecipe(accentColor, heroRecipeId ?? "mesh", { highlightDark, ctaText: ctaTextOverride }),
     [accentColor, heroRecipeId, highlightDark, ctaTextOverride]
@@ -456,8 +457,8 @@ export default function PartnerPageClient({ branding }: { branding: PartnerBrand
 
             <div className="mt-16 grid grid-cols-1 md:grid-cols-2 gap-8">
               {[
-                { title: "Will Package", descriptor: "Direct your wishes through the court", price: "$400", popular: false, features: ["Last Will & Testament", "Durable Power of Attorney", "Healthcare Directive", "Execution Guide", "Family Vault Access"], cta: "Begin Your Will", href: willHref },
-                { title: "Trust Package", descriptor: "Bypass probate and protect privately", price: "$600", popular: true, features: ["Revocable Living Trust", "Pour-Over Will", "Durable Power of Attorney", "Healthcare Directive", "Asset Funding Checklist", "Family Vault Access", "Attorney Review Available"], cta: "Begin Your Trust", href: trustHref },
+                { title: "Will Package", descriptor: "Direct your wishes through the court", price: formatPrice(PRICES.will), popular: false, features: ["Last Will & Testament", "Durable Power of Attorney", "Healthcare Directive", "Execution Guide", "Family Vault Access"], cta: "Begin Your Will", href: willHref },
+                { title: "Trust Package", descriptor: "Bypass probate and protect privately", price: formatPrice(PRICES.trust), popular: true, features: ["Revocable Living Trust", "Pour-Over Will", "Durable Power of Attorney", "Healthcare Directive", "Asset Funding Checklist", "Family Vault Access", "Attorney Review Available"], cta: "Begin Your Trust", href: trustHref },
               ].map((pkg) => (
                 <div
                   key={pkg.title}

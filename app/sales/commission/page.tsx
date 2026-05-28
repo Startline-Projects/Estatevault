@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { PARTNER_PLATFORM_FEE } from "@/lib/orders/pricing";
 
 interface PartnerRow {
   id: string;
@@ -23,9 +24,9 @@ interface BreakdownRow {
 
 // Expected platform fee by tier (cents). Used when partner hasn't paid yet.
 const TIER_FEE_CENTS: Record<string, number> = {
-  basic: 50000,
-  standard: 120000,
-  enterprise: 600000,
+  basic: PARTNER_PLATFORM_FEE.basic,
+  standard: PARTNER_PLATFORM_FEE.standard,
+  enterprise: PARTNER_PLATFORM_FEE.enterprise,
 };
 
 function effectiveFeeCents(p: PartnerRow): number {

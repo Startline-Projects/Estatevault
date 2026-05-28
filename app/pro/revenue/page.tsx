@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { PRICES } from "@/lib/orders/pricing";
 
 interface EarningsBreakdown {
   type: string;
@@ -74,7 +75,7 @@ export default function ProRevenuePage() {
         return;
       }
 
-      const VAULT_PRICE_CENTS = 9900;
+      const VAULT_PRICE_CENTS = PRICES.vaultSubscriptionYear;
       const partnerPct = Number(partner.partner_revenue_pct) || 0;
 
       const now = new Date();

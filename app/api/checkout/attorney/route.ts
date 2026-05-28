@@ -5,10 +5,7 @@ import { withRoute } from "@/lib/api/route";
 import * as profileRepo from "@/lib/repos/server/profileRepo";
 import * as partnerRepo from "@/lib/repos/server/partnerRepo";
 import { attorneyCheckoutSchema } from "@/lib/validation/schemas";
-
-const VALID_PROMO_CODES: Record<string, boolean> = {
-  TPFP: true,
-};
+import { PROMO_CODES, PARTNER_PLATFORM_FEE, DEFAULT_ATTORNEY_REVIEW_FEE } from "@/lib/orders/pricing";
 
 export const POST = withRoute(async (request: Request) => {
   try {
@@ -36,7 +33,7 @@ export const POST = withRoute(async (request: Request) => {
       promo_code,
     } = parsed.data;
 
-    const isPromoFree = promo_code && VALID_PROMO_CODES[promo_code.toUpperCase()];
+    const isPromoFree = promo_code && promo_code.toUpperCase() in PROMO_CODES;
 
     // If promo code makes it free, skip Stripe, create account directly
     if (isPromoFree) {
@@ -83,7 +80,7 @@ export const POST = withRoute(async (request: Request) => {
         status: "pending_verification",
         professional_type: "attorney",
         bar_number: bar_number || null,
-        custom_review_fee: (review_fee || 300) * 100,
+        custom_review_fee: review_fee ? review_fee * 100 : DEFAULT_ATTORNEY_REVIEW_FEE,
         practice_areas: practice_area ? [practice_area] : [],
         partner_slug: partnerSlug,
         one_time_fee_paid: true,
@@ -117,7 +114,7 @@ export const POST = withRoute(async (request: Request) => {
           html: `<p><strong>New attorney partner signed up with promo code ${promo_code.toUpperCase()}</strong></p>
             <p>Name: ${name}<br>Email: ${email}<br>Phone: ${phone || "N/A"}<br>
             Firm: ${firm_name || "N/A"}<br>Bar Number: ${bar_number}<br>
-            Tier: ${tier}<br>Review Fee: $${review_fee || 300}<br>
+            Tier: ${tier}<br>Review Fee: $${review_fee || DEFAULT_ATTORNEY_REVIEW_FEE / 100}<br>
             Practice Area: ${practice_area || "N/A"}</p>
             <p>Please verify bar number at michbar.org and activate account.</p>`,
         });
@@ -131,8 +128,7 @@ export const POST = withRoute(async (request: Request) => {
       });
     }
 
-    // Normal paid flow, create Stripe checkout session
-    const amount = tier === "professional" ? 600000 : 120000;
+    const amount = tier === "professional" ? PARTNER_PLATFORM_FEE.enterprise : PARTNER_PLATFORM_FEE.standard;
     const planName = tier === "professional" ? "Professional" : "Standard";
     const origin = request.headers.get("origin") || "https://www.estatevault.us";
 

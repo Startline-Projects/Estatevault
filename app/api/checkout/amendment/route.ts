@@ -9,6 +9,7 @@ import * as partnerRepo from "@/lib/repos/server/partnerRepo";
 import * as orderRepo from "@/lib/repos/server/orderRepo";
 import * as quizSessionRepo from "@/lib/repos/server/quizSessionRepo";
 import { amendmentCheckoutSchema } from "@/lib/validation/schemas";
+import { PRICES, EV_DEFAULT_CUT, PRODUCT_NAMES } from "@/lib/orders/pricing";
 
 export const POST = withRoute(async (request: Request) => {
   try {
@@ -74,13 +75,13 @@ export const POST = withRoute(async (request: Request) => {
     // Paid amendment, normal Stripe flow
     const { evCut, partnerCut } = partnerId
       ? calculateSplit("amendment", partnerTier)
-      : { evCut: 5000, partnerCut: 0 };
+      : { evCut: EV_DEFAULT_CUT.amendment, partnerCut: 0 };
 
     const { data: order, error: orderError } = await orderRepo.insert(supabase, {
       client_id: client.id,
       product_type: "amendment",
       status: "pending",
-      amount_total: 5000,
+      amount_total: PRICES.amendment,
       ev_cut: evCut,
       partner_cut: partnerCut,
       partner_id: partnerId,
@@ -96,7 +97,7 @@ export const POST = withRoute(async (request: Request) => {
     const origin = request.headers.get("origin") || "https://www.estatevault.us";
     const session = await stripe.checkout.sessions.create({
       mode: "payment",
-      line_items: [{ price_data: { currency: "usd", product_data: { name: "Document Amendment", description: `${changeType}: ${description.substring(0, 100)}` }, unit_amount: 5000 }, quantity: 1 }],
+      line_items: [{ price_data: { currency: "usd", product_data: { name: PRODUCT_NAMES.amendment, description: `${changeType}: ${description.substring(0, 100)}` }, unit_amount: PRICES.amendment }, quantity: 1 }],
       success_url: `${origin}/dashboard/documents?amended=true`,
       cancel_url: `${origin}/dashboard/amendment`,
       metadata: { order_id: order.id, client_id: client.id, product_type: "amendment", attorney_review: "false", partner_id: partnerId || "" },

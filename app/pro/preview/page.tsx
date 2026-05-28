@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { PARTNER_SPLITS, formatPrice } from "@/lib/orders/pricing";
 
 export default function ProPreviewPage() {
   const router = useRouter();
@@ -25,8 +26,9 @@ export default function ProPreviewPage() {
     load();
   }, [router]);
 
-  const willEarnings = tier === "enterprise" ? "$350" : "$300";
-  const trustEarnings = tier === "enterprise" ? "$450" : "$400";
+  const splitKey = tier === "enterprise" ? "enterprise" : "standard";
+  const willEarnings = formatPrice(PARTNER_SPLITS.will[splitKey].partner);
+  const trustEarnings = formatPrice(PARTNER_SPLITS.trust[splitKey].partner);
 
   return (
     <div className="min-h-screen bg-navy px-6 py-12">

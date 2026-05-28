@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
 import { normalizeBusinessDomain } from "@/lib/hosts";
+import { PRICES, PARTNER_PLATFORM_FEE, PARTNER_SPLITS, formatPrice } from "@/lib/orders/pricing";
 
 interface PartnerData {
   id: string;
@@ -359,7 +360,7 @@ export default function ProSettingsPage() {
     {
       key: "plan",
       title: "Plan",
-      subtitle: isBasic ? "Basic Plan — $500 one-time" : isEnterprise ? "Enterprise Plan — $6,000 one-time" : "Standard Plan — $1,200 one-time",
+      subtitle: isBasic ? `Basic Plan — ${formatPrice(PARTNER_PLATFORM_FEE.basic)} one-time` : isEnterprise ? `Enterprise Plan — ${formatPrice(PARTNER_PLATFORM_FEE.enterprise)} one-time` : `Standard Plan — ${formatPrice(PARTNER_PLATFORM_FEE.standard)} one-time`,
       content: (
         <div>
           <div className="rounded-xl bg-gray-50 p-4">
@@ -369,7 +370,7 @@ export default function ProSettingsPage() {
                   {isBasic ? "Basic" : isEnterprise ? "Enterprise" : "Standard"} Plan
                 </p>
                 <p className="text-xs text-charcoal/50 mt-1">
-                  {isBasic ? "$500 one-time · White-label vault only" : isEnterprise ? "$6,000 one-time · Unlimited documents" : "$1,200 one-time · Unlimited documents"}
+                  {isBasic ? `${formatPrice(PARTNER_PLATFORM_FEE.basic)} one-time · White-label vault only` : isEnterprise ? `${formatPrice(PARTNER_PLATFORM_FEE.enterprise)} one-time · Unlimited documents` : `${formatPrice(PARTNER_PLATFORM_FEE.standard)} one-time · Unlimited documents`}
                 </p>
               </div>
               <span className={`rounded-full px-3 py-1 text-xs font-semibold ${isBasic ? "bg-blue-50 text-blue-600" : isEnterprise ? "bg-gold/20 text-gold" : "bg-navy/10 text-navy"}`}>
@@ -522,19 +523,19 @@ export default function ProSettingsPage() {
             {[
               {
                 name: "Will Package",
-                clientPays: "$400",
-                earnings: isEnterprise ? "$350" : "$300",
+                clientPays: formatPrice(PRICES.will),
+                earnings: formatPrice(PARTNER_SPLITS.will[isEnterprise ? "enterprise" : "standard"].partner),
               },
               {
                 name: "Trust Package",
-                clientPays: "$600",
-                earnings: isEnterprise ? "$450" : "$400",
+                clientPays: formatPrice(PRICES.trust),
+                earnings: formatPrice(PARTNER_SPLITS.trust[isEnterprise ? "enterprise" : "standard"].partner),
               },
-              { name: "Attorney Review", clientPays: "$300", earnings: "$0 (goes to attorney)" },
+              { name: "Attorney Review", clientPays: formatPrice(PRICES.attorneyReview), earnings: "$0 (goes to attorney)" },
               {
                 name: "Document Amendment",
-                clientPays: "$50",
-                earnings: "$10",
+                clientPays: formatPrice(PRICES.amendment),
+                earnings: formatPrice(PARTNER_SPLITS.amendment[isEnterprise ? "enterprise" : "standard"].partner),
               },
             ].map((pkg) => (
               <div key={pkg.name} className="rounded-lg bg-gray-50 p-4">
@@ -831,7 +832,7 @@ export default function ProSettingsPage() {
                 />
               </div>
               <p className="mt-1 text-xs text-charcoal/50">
-                Default is $300. This fee goes directly to your firm via Stripe Connect.
+                Default is {formatPrice(PRICES.attorneyReview)}. This fee goes directly to your firm via Stripe Connect.
               </p>
             </div>
             <div className="rounded-lg bg-navy/5 p-4">
@@ -872,7 +873,7 @@ export default function ProSettingsPage() {
             <div className="rounded-lg bg-gray-50 p-4">
               <p className="text-xs font-medium text-navy">What clients see</p>
               <ul className="mt-2 space-y-1 text-xs text-charcoal/50">
-                <li>• Optional $300 attorney review add-on at checkout</li>
+                <li>• Optional {formatPrice(PRICES.attorneyReview)} attorney review add-on at checkout</li>
                 <li>• Reviews completed within 48 hours</li>
                 <li>• Handled by a licensed estate planning attorney</li>
               </ul>

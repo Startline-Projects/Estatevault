@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { useState } from "react";
 import type { QuizAnswers, Recommendation } from "@/lib/quiz-types";
 import { usePartnerBranding } from "@/components/partner/PartnerThemedShell";
+import { PRICES, formatPrice } from "@/lib/orders/pricing";
 import YesNoTiles from "./YesNoTiles";
 
 interface ResultScreenProps {
@@ -53,7 +54,7 @@ export default function ResultScreen({
     ? "A Will Package is the right fit for your situation."
     : "A Trust Package is the right fit for your situation.";
   const bullets = isWill ? willBullets : trustBullets;
-  const price = isWill ? "$400" : "$600";
+  const price = isWill ? formatPrice(PRICES.will) : formatPrice(PRICES.trust);
   const features = isWill ? willFeatures : trustFeatures;
   const searchParams = useSearchParams();
   const partnerParam = searchParams?.get("partner");

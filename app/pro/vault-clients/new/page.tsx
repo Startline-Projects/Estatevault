@@ -2,6 +2,7 @@
 
 import { useState, useRef } from "react";
 import Link from "next/link";
+import { PRICES, formatPrice } from "@/lib/orders/pricing";
 
 function generatePassword(length = 12) {
   const chars = "ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!@#$";
@@ -86,7 +87,7 @@ export default function NewVaultClientPage() {
       </div>
 
       <h1 className="text-2xl font-bold text-navy">Add Vault Client</h1>
-      <p className="mt-1 text-sm text-charcoal/60">Create a vault for your client. You pay the $99/year fee.</p>
+      <p className="mt-1 text-sm text-charcoal/60">Create a vault for your client. You pay the {formatPrice(PRICES.vaultSubscriptionYear)}/year fee.</p>
 
       {/* Step indicator */}
       <div className="mt-6 flex items-center gap-0">
@@ -211,7 +212,7 @@ export default function NewVaultClientPage() {
                 <p className="text-sm font-semibold text-navy">Vault Subscription</p>
                 <p className="text-xs text-charcoal/60">Annual · renews automatically</p>
               </div>
-              <p className="text-lg font-bold text-navy">$99<span className="text-xs font-normal text-charcoal/60">/yr</span></p>
+              <p className="text-lg font-bold text-navy">{formatPrice(PRICES.vaultSubscriptionYear)}<span className="text-xs font-normal text-charcoal/60">/yr</span></p>
             </div>
 
             <label className="flex items-start gap-3 cursor-pointer">
@@ -235,7 +236,7 @@ export default function NewVaultClientPage() {
                 disabled={!confirmed || loading}
                 className="flex-1 min-h-[44px] rounded-full bg-gold text-sm font-semibold text-white hover:bg-gold/90 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {loading ? "Processing..." : "Pay $99/yr →"}
+                {loading ? "Processing..." : `Pay ${formatPrice(PRICES.vaultSubscriptionYear)}/yr →`}
               </button>
             </div>
           </div>

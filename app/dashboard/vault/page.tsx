@@ -6,6 +6,7 @@ import SubscriptionBanner from "@/components/dashboard/SubscriptionBanner";
 import { listItems, createItem, deleteItem, type VaultCategory } from "@/lib/repos/vaultRepo";
 import { downloadDocument } from "@/lib/repos/documentRepo";
 import { listFarewellMessages } from "@/lib/repos/videoRepo";
+import { PRICES, formatPrice } from "@/lib/orders/pricing";
 
 interface VaultItem {
   id: string;
@@ -755,7 +756,7 @@ export default function VaultPage() {
           <div className="w-full max-w-sm rounded-2xl bg-white p-8 shadow-2xl text-center">
             <span className="text-4xl">🔒</span>
             <h2 className="mt-4 text-lg font-bold text-navy">Vault Plan Required</h2>
-            <p className="mt-2 text-sm text-charcoal/60">This section is part of the EstateVault Plan ($99/year). Upgrade to securely store and protect all your important information.</p>
+            <p className="mt-2 text-sm text-charcoal/60">This section is part of the EstateVault Plan ({formatPrice(PRICES.vaultSubscriptionYear)}/year). Upgrade to securely store and protect all your important information.</p>
             <div className="mt-6 flex flex-col gap-3">
               <button
                 onClick={async () => {
@@ -766,7 +767,7 @@ export default function VaultPage() {
                 }}
                 className="w-full min-h-[44px] flex items-center justify-center rounded-full bg-gold text-sm font-semibold text-white hover:bg-gold/90 transition-colors"
               >
-                Upgrade, $99/year
+                Upgrade, {formatPrice(PRICES.vaultSubscriptionYear)}/year
               </button>
               <button onClick={() => setShowUpgradePrompt(false)} className="text-sm text-charcoal/50 hover:text-charcoal transition-colors">
                 Maybe later

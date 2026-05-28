@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { normalizeBusinessDomain } from "@/lib/hosts";
+import { PRICES, PARTNER_PLATFORM_FEE, formatPrice } from "@/lib/orders/pricing";
 
 const US_STATES = [
   "Alabama","Alaska","Arizona","Arkansas","California","Colorado","Connecticut",
@@ -24,15 +25,17 @@ const PROFESSIONAL_TYPES = [
 ];
 
 const PLAN_TIERS: { label: string; value: string; price: string; description: string }[] = [
-  { label: "Basic", value: "basic", price: "$500 one-time", description: "White-label vault only" },
-  { label: "Standard", value: "standard", price: "$1,200 one-time", description: "Full estate planning platform" },
-  { label: "Enterprise", value: "enterprise", price: "$6,000 one-time", description: "Full platform + custom domain" },
+  { label: "Basic", value: "basic", price: `${formatPrice(PARTNER_PLATFORM_FEE.basic)} one-time`, description: "White-label vault only" },
+  { label: "Standard", value: "standard", price: `${formatPrice(PARTNER_PLATFORM_FEE.standard)} one-time`, description: "Full estate planning platform" },
+  { label: "Enterprise", value: "enterprise", price: `${formatPrice(PARTNER_PLATFORM_FEE.enterprise)} one-time`, description: "Full platform + custom domain" },
 ];
 
 // Fixed revenue splits by tier (non-basic locked per CLAUDE.md pricing rules).
+// Standard: partner earns 75% (e.g. will split partner/ev from PARTNER_SPLITS)
+// Enterprise: partner earns ~87% (e.g. will split partner/ev from PARTNER_SPLITS)
 const TIER_FIXED_REVENUE_PCT: Record<string, number> = {
-  standard: 75,    // $300 of $400 will / $400 of $600 trust
-  enterprise: 87,  // $350 of $400 will / $450 of $600 trust
+  standard: 75,
+  enterprise: 87,
 };
 
 const LEAD_SOURCES = [
@@ -373,7 +376,7 @@ export default function NewPartnerPage() {
                   onChange={(e) => set("partnerRevenuePct", Number(e.target.value))}
                   className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gold/40 focus:border-gold"
                 />
-                <p className="mt-1 text-xs text-gray-400">Percentage of vault subscription revenue ($99/yr) sent directly to partner via Stripe.</p>
+                <p className="mt-1 text-xs text-gray-400">Percentage of vault subscription revenue ({formatPrice(PRICES.vaultSubscriptionYear)}/yr) sent directly to partner via Stripe.</p>
               </div>
             )}
             {form.planTier in TIER_FIXED_REVENUE_PCT && (

@@ -7,6 +7,7 @@ import { createClient } from "@/lib/supabase/client";
 import type { ComplexityResult } from "@/lib/trust-types";
 import PartnerThemedShell, { usePartnerBranding } from "@/components/partner/PartnerThemedShell";
 import EmailVerifyGate from "@/components/auth/EmailVerifyGate";
+import { PRICES, formatPrice } from "@/lib/orders/pricing";
 
 function BrandedWordmark({ className = "" }: { className?: string }) {
   const branding = usePartnerBranding();
@@ -48,7 +49,7 @@ export default function TrustCheckoutPage() {
   const [emailVerified, setEmailVerified] = useState(false);
   const [verifiedEmail, setVerifiedEmail] = useState("");
 
-  const total = promoApplied ? 0 : (attorneyReview ? 900 : 600);
+  const total = promoApplied ? 0 : (attorneyReview ? (PRICES.trust + PRICES.attorneyReview) / 100 : PRICES.trust / 100);
 
   useEffect(() => {
     async function init() {
@@ -251,15 +252,15 @@ export default function TrustCheckoutPage() {
             <div className="flex items-center justify-between">
               <span className="text-sm font-medium text-charcoal">Trust Package</span>
               {promoApplied ? (
-                <span className="text-sm font-bold"><span className="line-through text-gray-400 mr-2">$600</span><span className="text-green-600">FREE</span></span>
+                <span className="text-sm font-bold"><span className="line-through text-gray-400 mr-2">{formatPrice(PRICES.trust)}</span><span className="text-green-600">FREE</span></span>
               ) : (
-                <span className="text-sm font-bold text-navy">$600</span>
+                <span className="text-sm font-bold text-navy">{formatPrice(PRICES.trust)}</span>
               )}
             </div>
             {!promoApplied && attorneyReview && (
               <div className="mt-2 flex items-center justify-between">
                 <span className="text-sm font-medium text-charcoal">Attorney Review</span>
-                <span className="text-sm font-bold text-navy">$300</span>
+                <span className="text-sm font-bold text-navy">{formatPrice(PRICES.attorneyReview)}</span>
               </div>
             )}
             <hr className="my-4 border-gray-100" />
@@ -345,7 +346,7 @@ export default function TrustCheckoutPage() {
                   <div>
                     <h3 className="text-base font-bold text-navy">Attorney Review, Recommended</h3>
                     <p className="mt-2 text-sm text-charcoal/60 leading-relaxed">Based on your answers, your situation has some complexity ({complexity.reasons.join(", ").toLowerCase()}) that benefits from attorney review.</p>
-                    <p className="mt-2 text-sm text-charcoal/60">A licensed Michigan attorney will review your trust before delivery. 48-hour turnaround. $300.</p>
+                    <p className="mt-2 text-sm text-charcoal/60">A licensed Michigan attorney will review your trust before delivery. 48-hour turnaround. {formatPrice(PRICES.attorneyReview)}.</p>
                   </div>
                 </div>
                 <label className="mt-4 flex items-center gap-3 cursor-pointer">
@@ -367,7 +368,7 @@ export default function TrustCheckoutPage() {
                 <div className="flex items-start gap-3">
                   <span className="text-2xl">⚖</span>
                   <div className="flex-1">
-                    <h3 className="text-base font-bold text-navy">Add Attorney Review, $300</h3>
+                    <h3 className="text-base font-bold text-navy">Add Attorney Review, {formatPrice(PRICES.attorneyReview)}</h3>
                     <p className="mt-1 text-sm text-charcoal/60 leading-relaxed">A licensed Michigan attorney will personally review your trust before delivery. (48hr turnaround)</p>
                   </div>
                 </div>

@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
+import { PRICES, formatPrice } from "@/lib/orders/pricing";
 
 interface VaultClient {
   id: string;
@@ -68,7 +69,7 @@ export default function VaultClientsPage() {
         </Link>
       </div>
 
-      <p className="mt-2 text-sm text-charcoal/60">Create vaults for your clients. You pay the $99/year subscription — they get secure document storage and a PIN-protected vault.</p>
+      <p className="mt-2 text-sm text-charcoal/60">Create vaults for your clients. You pay the {formatPrice(PRICES.vaultSubscriptionYear)}/year subscription — they get secure document storage and a PIN-protected vault.</p>
 
       {clients.length === 0 ? (
         <div className="mt-16 text-center">

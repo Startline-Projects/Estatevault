@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
+import { PRICES, formatPrice } from "@/lib/orders/pricing";
 
 const EXECUTION_GUIDES: Record<string, { title: string; steps: string[] }> = {
   will: {
@@ -378,7 +379,7 @@ export default function DocumentsPage() {
           {/* Amendment section */}
           <div className="mt-6 rounded-xl bg-gray-50 border border-gray-200 p-6">
             <h3 className="text-base font-bold text-navy">Need to make a change?</h3>
-            <p className="mt-1 text-sm text-charcoal/60">Life happens. Update your documents for $50.</p>
+            <p className="mt-1 text-sm text-charcoal/60">Life happens. Update your documents for {formatPrice(PRICES.amendment)}.</p>
             <Link href="/dashboard/amendment" className="mt-4 inline-flex items-center rounded-full bg-navy px-6 py-2.5 text-sm font-semibold text-white hover:bg-navy/90 transition-colors">
               Request an Amendment
             </Link>

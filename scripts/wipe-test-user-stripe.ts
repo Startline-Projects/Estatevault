@@ -13,6 +13,7 @@
  */
 import Stripe from "stripe";
 import * as dotenv from "dotenv";
+import { PRICES } from "../lib/orders/pricing";
 dotenv.config({ path: ".env.local" });
 
 const email = (process.argv[2] ?? "waleed50602@gmail.com").toLowerCase();
@@ -27,7 +28,7 @@ function isVaultSub(s: Stripe.Subscription): boolean {
     s.metadata?.product_type === "vault_subscription" ||
     s.items.data.some(
       (it) =>
-        it.price.unit_amount === 9900 && it.price.recurring?.interval === "year"
+        it.price.unit_amount === PRICES.vaultSubscriptionYear && it.price.recurring?.interval === "year"
     )
   );
 }

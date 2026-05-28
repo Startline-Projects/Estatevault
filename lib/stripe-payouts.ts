@@ -1,4 +1,5 @@
 import { stripe } from './stripe'
+import { PARTNER_SPLITS, AFFILIATE_SPLITS } from './orders/pricing'
 
 export function calculateSplit(
   productType: string,
@@ -6,36 +7,12 @@ export function calculateSplit(
   opts?: { affiliate?: boolean }
 ): { evCut: number; partnerCut: number; affiliateCut: number } {
   if (opts?.affiliate) {
-    const affiliateSplits: Record<string, { ev: number; affiliate: number }> = {
-      will: { ev: 30000, affiliate: 10000 },
-      trust: { ev: 40000, affiliate: 20000 },
-      amendment: { ev: 5000, affiliate: 0 },
-      attorney_review: { ev: 0, affiliate: 0 },
-    }
-    const a = affiliateSplits[productType]
+    const a = AFFILIATE_SPLITS[productType]
     if (!a) return { evCut: 0, partnerCut: 0, affiliateCut: 0 }
     return { evCut: a.ev, partnerCut: 0, affiliateCut: a.affiliate }
   }
 
-  const splits: Record<string, Record<string, { ev: number; partner: number }>> = {
-    will: {
-      standard: { ev: 10000, partner: 30000 },
-      enterprise: { ev: 5000, partner: 35000 },
-    },
-    trust: {
-      standard: { ev: 20000, partner: 40000 },
-      enterprise: { ev: 15000, partner: 45000 },
-    },
-    amendment: {
-      standard: { ev: 1500, partner: 3500 },
-      enterprise: { ev: 1000, partner: 4000 },
-    },
-    attorney_review: {
-      standard: { ev: 0, partner: 0 },
-      enterprise: { ev: 0, partner: 0 },
-    },
-  }
-  const split = splits[productType]?.[partnerTier]
+  const split = PARTNER_SPLITS[productType]?.[partnerTier]
   if (!split) return { evCut: 0, partnerCut: 0, affiliateCut: 0 }
   return { evCut: split.ev, partnerCut: split.partner, affiliateCut: 0 }
 }

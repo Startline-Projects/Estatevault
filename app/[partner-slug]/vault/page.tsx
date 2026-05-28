@@ -2,6 +2,7 @@ import { createServerClient } from "@supabase/ssr";
 import { redirect } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
+import { PRICES, formatPrice } from "@/lib/orders/pricing";
 
 function createAdminClient() {
   return createServerClient(
@@ -136,7 +137,7 @@ export default async function VaultLandingPage({
           </Link>
         </div>
         <div style={{ display: "flex", gap: 18, justifyContent: "center", flexWrap: "wrap", fontSize: 13, color: subtext, marginTop: 20 }}>
-          <span>✓ $99/year</span>
+          <span>✓ {formatPrice(PRICES.vaultSubscriptionYear)}/year</span>
           <span>✓ Cancel anytime</span>
           <span>✓ 256-bit encryption</span>
         </div>
@@ -211,7 +212,7 @@ export default async function VaultLandingPage({
             Start protecting your family today
           </h2>
           <div style={{ display: "flex", alignItems: "baseline", justifyContent: "center", gap: 6, margin: "24px 0 4px" }}>
-            <span style={{ fontSize: 52, fontWeight: 800, color: accent }}>$99</span>
+            <span style={{ fontSize: 52, fontWeight: 800, color: accent }}>{formatPrice(PRICES.vaultSubscriptionYear)}</span>
             <span style={{ fontSize: 16, color: subtext, fontWeight: 600 }}>/ year</span>
           </div>
           <p style={{ color: subtext, marginBottom: 32, fontSize: 14 }}>no setup fee · cancel anytime</p>
@@ -234,7 +235,7 @@ export default async function VaultLandingPage({
             className="ev-cta"
             style={{ display: "block", fontSize: 16, fontWeight: 700, color: "#fff", backgroundColor: accent, padding: "16px 32px", borderRadius: 999, textDecoration: "none" }}
           >
-            Get Started — $99/year
+            Get Started — {formatPrice(PRICES.vaultSubscriptionYear)}/year
           </Link>
           <p style={{ fontSize: 12, color: subtext, marginTop: 14 }}>
             Powered by EstateVault · Bank-grade security

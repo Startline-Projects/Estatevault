@@ -1,5 +1,6 @@
 import { Resend } from "resend";
 import { createServerClient } from "@supabase/ssr";
+import { PRICES, formatPrice } from "@/lib/orders/pricing";
 
 let _resend: Resend | null = null;
 export function getResend(): Resend {
@@ -529,7 +530,7 @@ export async function sendDunningEmail({
         Hi ${escapeHtml(fullName || "there")},
       </p>
       <p style="margin:0 0 16px;font-size:14px;color:#2D2D2D;line-height:1.6;">
-        We were unable to process your annual Vault subscription payment of $99.
+        We were unable to process your annual Vault subscription payment of ${formatPrice(PRICES.vaultSubscriptionYear)}.
         Your premium vault features (free amendments, farewell messages) will be
         paused until payment is resolved.
       </p>

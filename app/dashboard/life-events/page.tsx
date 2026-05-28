@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { PRICES, formatPrice } from "@/lib/orders/pricing";
 
 const EVENTS = [
   { id: "married", icon: "💍", title: "Got Married", description: "Update beneficiaries and consider adding your spouse as trustee or executor.", urgent: false, recommendation: "Update your beneficiary designations and consider adding your spouse to your estate plan.", action: "amendment" },
@@ -72,7 +73,7 @@ export default function LifeEventsPage() {
               <div className="mt-4">
                 {event.action === "amendment" ? (
                   <Link href="/dashboard/amendment" className="inline-flex items-center rounded-full bg-navy px-5 py-2 text-sm font-semibold text-white hover:bg-navy/90 transition-colors">
-                    Request Amendment, $50
+                    Request Amendment, {formatPrice(PRICES.amendment)}
                   </Link>
                 ) : (
                   <Link href="/attorney-referral" className="inline-flex items-center rounded-full bg-amber-600 px-5 py-2 text-sm font-semibold text-white hover:bg-amber-700 transition-colors">

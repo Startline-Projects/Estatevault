@@ -32,7 +32,7 @@ export interface DocumentJob {
   error: string | null;
 }
 
-function sanitizeForRedis(obj: Record<string, unknown>): Record<string, string> {
+function sanitizeForRedis(obj: Record<string, unknown> | object): Record<string, string> {
   const sanitized: Record<string, string> = {};
   for (const [key, value] of Object.entries(obj)) {
     if (value === null || value === undefined) {
@@ -50,7 +50,7 @@ export async function addJob(job: DocumentJob): Promise<void> {
   if (!redis) {
     throw new Error("Redis not configured — cannot queue document job");
   }
-  const sanitized = sanitizeForRedis(job as unknown as Record<string, unknown>);
+  const sanitized = sanitizeForRedis(job);
   await redis.hset(`job:${job.job_id}`, sanitized);
   await redis.expire(`job:${job.job_id}`, JOB_TTL_SECONDS);
   await redis.lpush("doc_queue", job.job_id);
@@ -80,7 +80,7 @@ export async function getJob(jobId: string): Promise<DocumentJob | null> {
 
 export async function updateJob(jobId: string, updates: Partial<DocumentJob>): Promise<void> {
   if (!redis) return;
-  const sanitized = sanitizeForRedis(updates as unknown as Record<string, unknown>);
+  const sanitized = sanitizeForRedis(updates);
   await redis.hset(`job:${jobId}`, sanitized);
   await redis.expire(`job:${jobId}`, JOB_TTL_SECONDS);
 }

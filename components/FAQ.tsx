@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { PRICES, formatPrice } from "@/lib/orders/pricing";
 
 const faqs = [
   {
@@ -25,7 +26,7 @@ const faqs = [
   },
   {
     q: "Can I update my documents later?",
-    a: "Yes. Life events like marriage, divorce, new children, or new property can be reflected through a document amendment for $50.",
+    a: `Yes. Life events like marriage, divorce, new children, or new property can be reflected through a document amendment for ${formatPrice(PRICES.amendment)}.`,
   },
 ];
 

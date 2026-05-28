@@ -6,6 +6,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import PartnerThemedShell, { usePartnerBranding } from "@/components/partner/PartnerThemedShell";
 import EmailVerifyGate from "@/components/auth/EmailVerifyGate";
+import { PRICES, formatPrice } from "@/lib/orders/pricing";
 
 function BrandedWordmark({ className = "" }: { className?: string }) {
   const branding = usePartnerBranding();
@@ -43,7 +44,7 @@ export default function WillCheckoutPage() {
   const [emailVerified, setEmailVerified] = useState(false);
   const [verifiedEmail, setVerifiedEmail] = useState("");
 
-  const total = promoApplied ? 0 : (attorneyReview ? 700 : 400);
+  const total = promoApplied ? 0 : (attorneyReview ? (PRICES.will + PRICES.attorneyReview) / 100 : PRICES.will / 100);
 
   useEffect(() => {
     async function init() {
@@ -266,17 +267,17 @@ export default function WillCheckoutPage() {
               <span className="text-sm font-medium text-charcoal">Will Package</span>
               {promoApplied ? (
                 <span className="text-sm font-bold">
-                  <span className="line-through text-gray-400 mr-2">$400</span>
+                  <span className="line-through text-gray-400 mr-2">{formatPrice(PRICES.will)}</span>
                   <span className="text-green-600">FREE</span>
                 </span>
               ) : (
-                <span className="text-sm font-bold text-navy">$400</span>
+                <span className="text-sm font-bold text-navy">{formatPrice(PRICES.will)}</span>
               )}
             </div>
             {!promoApplied && attorneyReview && (
               <div className="mt-2 flex items-center justify-between">
                 <span className="text-sm font-medium text-charcoal">Attorney Review</span>
-                <span className="text-sm font-bold text-navy">$300</span>
+                <span className="text-sm font-bold text-navy">{formatPrice(PRICES.attorneyReview)}</span>
               </div>
             )}
             <hr className="my-4 border-gray-100" />
@@ -348,7 +349,7 @@ export default function WillCheckoutPage() {
             <div className="flex items-start gap-3">
               <span className="text-2xl">⚖</span>
               <div className="flex-1">
-                <h3 className="text-base font-bold text-navy">Attorney Review, $300</h3>
+                <h3 className="text-base font-bold text-navy">Attorney Review, {formatPrice(PRICES.attorneyReview)}</h3>
                 <p className="mt-1 text-sm text-charcoal/60 leading-relaxed">A licensed Michigan attorney will personally review your documents before delivery. (48hr turnaround)</p>
               </div>
             </div>

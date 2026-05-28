@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createServerClient } from "@supabase/ssr";
 import { stripe } from "@/lib/stripe";
+import { PRICES } from "@/lib/orders/pricing";
 
 function admin() {
   return createServerClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, { cookies: { getAll: () => [], setAll: () => {} } });
@@ -35,7 +36,7 @@ export async function POST() {
     const subs = await stripe.subscriptions.list({ customer: cust.id, status: "active", limit: 5 });
     const vaultSub = subs.data.find((s) =>
       s.metadata?.product_type === "vault_subscription" ||
-      s.items.data.some((it) => it.price.unit_amount === 9900 && it.price.recurring?.interval === "year")
+      s.items.data.some((it) => it.price.unit_amount === PRICES.vaultSubscriptionYear && it.price.recurring?.interval === "year")
     );
     if (vaultSub) {
       const periodEnd = vaultSub.items.data[0]?.current_period_end ?? (Date.now() / 1000 + 365 * 86400);

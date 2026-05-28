@@ -7,6 +7,7 @@ import * as partnerRepo from "@/lib/repos/server/partnerRepo";
 import * as profileRepo from "@/lib/repos/server/profileRepo";
 import * as clientRepo from "@/lib/repos/server/clientRepo";
 import { vaultSubscriptionCheckoutSchema } from "@/lib/validation/schemas";
+import { PRICES } from "@/lib/orders/pricing";
 
 export const POST = withRoute(async (request: Request) => {
   try {
@@ -147,7 +148,7 @@ export const POST = withRoute(async (request: Request) => {
             name: "EstateVault Vault Plan",
             description: "Annual vault subscription — secure document storage, farewell messages, trustee access",
           },
-          unit_amount: 9900,
+          unit_amount: PRICES.vaultSubscriptionYear,
           recurring: { interval: "year" },
         },
         quantity: 1,

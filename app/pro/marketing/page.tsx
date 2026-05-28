@@ -5,6 +5,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { substituteTokens, type PartnerData } from "@/lib/marketing/substitute";
 import { usePartnerAccent } from "@/lib/partner-accent-context";
+import { PRICES, formatPrice } from "@/lib/orders/pricing";
 
 const TABS = ["All", "Scripts", "Email", "Social Media", "Print Materials", "Presentations"];
 
@@ -42,8 +43,8 @@ Documents are based on attorney-approved templates and include everything your f
 - Healthcare Directive
 - Family Vault (secure storage for all your important documents and accounts)
 
-Will Package: $400
-Trust Package: $600
+Will Package: ${formatPrice(PRICES.will)}
+Trust Package: ${formatPrice(PRICES.trust)}
 
 Get started at [white-label URL]
 
@@ -59,7 +60,7 @@ I wanted to follow up on my note from last week about estate planning.
 
 Many of my clients have been surprised by how quick and affordable this has become. Most finish in under 15 minutes.
 
-[Product Name] generates attorney-reviewed documents for $400 (will) or $600 (trust), a fraction of traditional attorney costs.
+[Product Name] generates attorney-reviewed documents for ${formatPrice(PRICES.will)} (will) or ${formatPrice(PRICES.trust)} (trust), a fraction of traditional attorney costs.
 
 Your family's protection shouldn't wait.
 
@@ -73,7 +74,7 @@ It's been about a year since you created your estate plan through [Product Name]
 
 A lot can change in a year, new assets, family changes, address changes. We recommend a quick annual review to make sure your plan is still current.
 
-Document amendments are available for $50.
+Document amendments are available for ${formatPrice(PRICES.amendment)}.
 
 If you have questions, I'm here to help.
 
@@ -87,7 +88,7 @@ const SOCIAL_POSTS = {
 
 If something happened to you tomorrow, your family would face months of court proceedings and thousands in legal fees.
 
-Through [Company Name], your clients can create attorney-reviewed estate planning documents in 15 minutes for $400-$600.
+Through [Company Name], your clients can create attorney-reviewed estate planning documents in 15 minutes for ${formatPrice(PRICES.will)}-${formatPrice(PRICES.trust)}.
 
 I've been helping families protect what matters most. Ask me how.
 
@@ -116,12 +117,12 @@ If your clients have been putting off estate planning, let's talk.
 
 Through [Company Name], you can create a complete estate plan, will or trust, in about 15 minutes. Attorney-reviewed documents, specific to [State].
 
-Will Package: $400
-Trust Package: $600
+Will Package: ${formatPrice(PRICES.will)}
+Trust Package: ${formatPrice(PRICES.trust)}
 
 Have questions? Send me a message.
 
-[white-label URL]`, imageText: "Protect Your Family\nin 15 Minutes", size: "1200x630" },
+[white-label URL]`, imageText: `Protect Your Family\nin 15 Minutes`, size: "1200x630" },
     { title: "Question Hook", caption: `Quick question for my [City] friends:
 
 Do you have a will? Most people don't, and it means the state decides what happens to your assets and who raises your children.
@@ -133,14 +134,14 @@ It's a will or trust.
 
 I help families in [City] create complete estate plans through [Product Name], attorney-reviewed, affordable, and done in 15 minutes.
 
-[white-label URL]`, imageText: "Will: $400\nTrust: $600\nPeace of mind: Priceless", size: "1200x630" },
+[white-label URL]`, imageText: `Will: ${formatPrice(PRICES.will)}\nTrust: ${formatPrice(PRICES.trust)}\nPeace of mind: Priceless`, size: "1200x630" },
   ],
   instagram: [
     { title: "Shield", caption: `Estate planning used to mean expensive attorney appointments and months of waiting.
 
 Not anymore. Link in bio. 🏛✨
 
-#EstatePlanning #ProtectYourFamily #FinancialPlanning #FamilyFirst`, imageText: "Protect Your Family.\n15 Minutes. $400.", size: "1080x1080" },
+#EstatePlanning #ProtectYourFamily #FinancialPlanning #FamilyFirst`, imageText: `Protect Your Family.\n15 Minutes. ${formatPrice(PRICES.will)}.`, size: "1080x1080" },
     { title: "Vault", caption: `Your family shouldn't have to search for your important documents when they need them most.
 
 Attorney-reviewed estate planning + a secure family vault for all your documents, accounts, and passwords.
@@ -154,7 +155,7 @@ Created in 15 minutes. Protecting families in [City].
 
 Link in bio to get started. 💛
 
-#EstatePlanning #ProtectYourFamily`, imageText: "Will: $400\nTrust: $600\nPeace of mind:\nPriceless", size: "1080x1080" },
+#EstatePlanning #ProtectYourFamily`, imageText: `Will: ${formatPrice(PRICES.will)}\nTrust: ${formatPrice(PRICES.trust)}\nPeace of mind:\nPriceless`, size: "1080x1080" },
   ],
 };
 
@@ -601,7 +602,7 @@ export default function MarketingPage() {
                 <p className="text-xs text-white/60">{partner?.companyName || "Company"}</p>
                 <p className="text-base font-bold text-white mt-2">Introducing {partner?.productName || "Legacy Protection"}</p>
                 <p className="text-xs text-white/70 mt-1">Attorney-Reviewed Estate Planning</p>
-                <p className="text-sm font-bold mt-3" style={{ color: accent }}>Will: $400 &middot; Trust: $600</p>
+                <p className="text-sm font-bold mt-3" style={{ color: accent }}>Will: {formatPrice(PRICES.will)} &middot; Trust: {formatPrice(PRICES.trust)}</p>
               </div>
               <h3 className="text-sm font-bold text-navy">Client Presentation Slide</h3>
               <p className="mt-1 text-xs text-charcoal/50">Drop into your existing presentations.</p>
@@ -610,7 +611,7 @@ export default function MarketingPage() {
             <div className="rounded-xl bg-white border border-gray-200 p-5">
               <div className="bg-white border border-gray-200 rounded-lg p-6 mb-4">
                 <p className="text-xs font-bold text-navy">{partner?.productName || "Legacy Protection"}</p>
-                <p className="text-xs text-charcoal/60 mt-2">Attorney-reviewed estate planning for your clients. Will Package $400. Trust Package $600. Includes a secure Family Vault.</p>
+                <p className="text-xs text-charcoal/60 mt-2">Attorney-reviewed estate planning for your clients. Will Package {formatPrice(PRICES.will)}. Trust Package {formatPrice(PRICES.trust)}. Includes a secure Family Vault.</p>
                 <p className="text-xs mt-2" style={{ color: accent }}>{partner?.businessUrl ? `legacy.${partner.businessUrl}` : "estatevault.com"}</p>
               </div>
               <h3 className="text-sm font-bold text-navy">Client One-Pager</h3>

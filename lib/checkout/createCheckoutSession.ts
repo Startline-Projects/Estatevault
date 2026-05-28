@@ -5,7 +5,7 @@ import { calculateSplit } from "@/lib/stripe-payouts";
 import { AFFILIATE_COOKIE } from "@/lib/affiliate";
 import { checkPlanConflict } from "@/lib/orders/plan-conflict";
 import { createAdminClient } from "@/lib/api/auth";
-import { PRICES } from "@/lib/orders/pricing";
+import { PRICES, PROMO_CODES } from "@/lib/orders/pricing";
 import * as clientRepo from "@/lib/repos/server/clientRepo";
 import * as partnerRepo from "@/lib/repos/server/partnerRepo";
 import * as orderRepo from "@/lib/repos/server/orderRepo";
@@ -43,8 +43,6 @@ export type CheckoutInput = {
   confirmOverride?: boolean;
 };
 
-const VALID_PROMO_CODES: Record<string, boolean> = { FREE134: true };
-
 export async function createCheckoutSession(
   request: Request,
   config: ProductConfig,
@@ -61,8 +59,9 @@ export async function createCheckoutSession(
     (typeof promoEmail === "string" && promoEmail) ||
     (intakeAnswers?.email as string | undefined);
 
-  const isPromoFree = promoCode && VALID_PROMO_CODES[promoCode.toUpperCase()];
-  const isTestCode = promoCode && promoCode.toUpperCase() === "TEST";
+  const upperPromo = promoCode?.toUpperCase() as keyof typeof PROMO_CODES | undefined;
+  const isPromoFree = upperPromo && upperPromo in PROMO_CODES && PROMO_CODES[upperPromo] === "free";
+  const isTestCode = upperPromo && upperPromo in PROMO_CODES && PROMO_CODES[upperPromo] === "test";
 
   const supabase = createAdminClient();
 

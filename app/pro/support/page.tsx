@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { PRICES, PARTNER_SPLITS, formatPrice } from "@/lib/orders/pricing";
 
 const CONTACT_CARDS = [
   {
@@ -31,7 +32,7 @@ const FAQS = [
   {
     question: "How do I get paid for client documents?",
     answer:
-      "You earn a fixed commission for every document your clients complete. Will packages earn you $300 (Standard) or $350 (Enterprise), and trust packages earn $400 or $450 respectively. Payouts transfer instantly to your Stripe Connect account on every sale. No minimum, no weekly batching — bank deposit timing follows your Stripe payout schedule.",
+      `You earn a fixed commission for every document your clients complete. Will packages earn you ${formatPrice(PARTNER_SPLITS.will.standard.partner)} (Standard) or ${formatPrice(PARTNER_SPLITS.will.enterprise.partner)} (Enterprise), and trust packages earn ${formatPrice(PARTNER_SPLITS.trust.standard.partner)} or ${formatPrice(PARTNER_SPLITS.trust.enterprise.partner)} respectively. Payouts transfer instantly to your Stripe Connect account on every sale. No minimum, no weekly batching — bank deposit timing follows your Stripe payout schedule.`,
   },
   {
     question: "What happens when a client triggers a hard stop?",
@@ -41,7 +42,7 @@ const FAQS = [
   {
     question: "Can I change the pricing my clients see?",
     answer:
-      "No. Pricing is fixed by EstateVault to maintain a premium brand and ensure consistent earnings for all partners. Will packages are $400, trust packages are $600, attorney review is $300, and amendments are $50. These prices cannot be modified.",
+      `No. Pricing is fixed by EstateVault to maintain a premium brand and ensure consistent earnings for all partners. Will packages are ${formatPrice(PRICES.will)}, trust packages are ${formatPrice(PRICES.trust)}, attorney review is ${formatPrice(PRICES.attorneyReview)}, and amendments are ${formatPrice(PRICES.amendment)}. These prices cannot be modified.`,
   },
   {
     question: "How does the certification training work?",
@@ -79,7 +80,7 @@ const VAULT_FAQS = [
   {
     question: "How much does vault access cost clients?",
     answer:
-      "Vault subscriptions are $99 per year per client. As a Basic partner, 100% of the subscription revenue goes to you — EstateVault does not take a cut. Subscriptions renew annually and are managed automatically via Stripe.",
+      `Vault subscriptions are ${formatPrice(PRICES.vaultSubscriptionYear)} per year per client. As a Basic partner, 100% of the subscription revenue goes to you — EstateVault does not take a cut. Subscriptions renew annually and are managed automatically via Stripe.`,
   },
   {
     question: "What happens if a client cancels their subscription?",

@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import SubscriptionBanner from "@/components/dashboard/SubscriptionBanner";
+import { PRICES, formatPrice } from "@/lib/orders/pricing";
 
 const CHANGE_OPTIONS = [
   "Beneficiary",
@@ -67,7 +68,7 @@ export default function AmendmentPage() {
         <p className="mt-1 text-sm text-charcoal/60">
           {isSubscriber
             ? "Amendments are included with your Vault subscription at no extra charge."
-            : "Update your estate planning documents for $50."
+            : `Update your estate planning documents for ${formatPrice(PRICES.amendment)}.`
           }
         </p>
       </div>
@@ -93,7 +94,7 @@ export default function AmendmentPage() {
         <button onClick={handleSubmit} disabled={loading || !changeType || !description.trim()} className="mt-6 w-full min-h-[44px] rounded-full bg-gold py-3 text-sm font-semibold text-white hover:bg-gold/90 disabled:opacity-50 disabled:cursor-not-allowed">
           {loading
             ? (isSubscriber ? "Submitting..." : "Redirecting to payment...")
-            : (isSubscriber ? "Submit Amendment (Included with Subscription)" : "Proceed to Payment, $50")
+            : (isSubscriber ? "Submit Amendment (Included with Subscription)" : `Proceed to Payment, ${formatPrice(PRICES.amendment)}`)
           }
         </button>
         {!isSubscriber && <p className="mt-2 text-center text-xs text-charcoal/60">Secure payment powered by Stripe</p>}

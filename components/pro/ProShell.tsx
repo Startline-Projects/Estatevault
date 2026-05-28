@@ -214,7 +214,7 @@ export default function ProShell({ companyName, userName, tier, logoUrl, onboard
   return (
     <div
       className="min-h-screen bg-gray-50"
-      style={{ ["--partner-accent" as any]: accent, ["--partner-accent-dark" as any]: accentDark }}
+      style={{ "--partner-accent": accent, "--partner-accent-dark": accentDark } as React.CSSProperties}
     >
       {/* Desktop sidebar */}
       <aside style={sidebarBgStyle} className={`fixed left-0 top-0 z-40 hidden md:flex h-screen w-60 flex-col ${sidebarBgClass}`}>{sidebar}</aside>

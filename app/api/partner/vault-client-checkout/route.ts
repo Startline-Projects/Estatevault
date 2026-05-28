@@ -7,6 +7,7 @@ import { partnerVaultClientCheckoutSchema } from "@/lib/validation/schemas";
 import { stripe } from "@/lib/stripe";
 import * as partnerRepo from "@/lib/repos/server/partnerRepo";
 import * as profileRepo from "@/lib/repos/server/profileRepo";
+import { PRICES } from "@/lib/orders/pricing";
 
 export const POST = withRoute(async (req: NextRequest) => {
   const auth = await requireAuth(["partner"]);
@@ -65,7 +66,7 @@ export const POST = withRoute(async (req: NextRequest) => {
           name: `Vault — ${clientName.trim()}`,
           description: `Annual vault subscription for ${normalizedEmail}`,
         },
-        unit_amount: 9900,
+        unit_amount: PRICES.vaultSubscriptionYear,
         recurring: { interval: "year" },
       },
       quantity: 1,

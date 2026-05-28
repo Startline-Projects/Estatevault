@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { PRICES, PARTNER_SPLITS, formatPrice } from "@/lib/orders/pricing";
 
 export default function Step3Page() {
   const router = useRouter();
@@ -38,10 +39,11 @@ export default function Step3Page() {
   }, []);
 
   const isEnterprise = tier === "enterprise";
-  const willEarnings = isEnterprise ? "$350" : "$300";
-  const trustEarnings = isEnterprise ? "$450" : "$400";
-  const amendEarnings = "$10";
-  const scenarioEarnings = isEnterprise ? "$2,250" : "$2,000";
+  const splitKey = isEnterprise ? "enterprise" : "standard";
+  const willEarnings = formatPrice(PARTNER_SPLITS.will[splitKey].partner);
+  const trustEarnings = formatPrice(PARTNER_SPLITS.trust[splitKey].partner);
+  const amendEarnings = formatPrice(PARTNER_SPLITS.amendment[splitKey].partner);
+  const scenarioEarnings = formatPrice(PARTNER_SPLITS.trust[splitKey].partner * 5);
 
   async function handleContinue() {
     if (!accepted) return;
@@ -91,14 +93,14 @@ export default function Step3Page() {
         <div className="rounded-xl bg-white border border-gray-200 p-6">
           <h3 className="text-base font-bold text-navy">Will Package</h3>
           <div className="mt-4 space-y-2 text-sm">
-            <div className="flex justify-between"><span className="text-charcoal/60">Client pays</span><span className="font-semibold text-navy">$400</span></div>
+            <div className="flex justify-between"><span className="text-charcoal/60">Client pays</span><span className="font-semibold text-navy">{formatPrice(PRICES.will)}</span></div>
             <div className="flex justify-between"><span className="text-charcoal/60">Your earnings</span><span className="font-semibold text-green-600">{willEarnings}</span></div>
           </div>
         </div>
         <div className="rounded-xl bg-white border border-gray-200 p-6">
           <h3 className="text-base font-bold text-navy">Trust Package</h3>
           <div className="mt-4 space-y-2 text-sm">
-            <div className="flex justify-between"><span className="text-charcoal/60">Client pays</span><span className="font-semibold text-navy">$600</span></div>
+            <div className="flex justify-between"><span className="text-charcoal/60">Client pays</span><span className="font-semibold text-navy">{formatPrice(PRICES.trust)}</span></div>
             <div className="flex justify-between"><span className="text-charcoal/60">Your earnings</span><span className="font-semibold text-green-600">{trustEarnings}</span></div>
           </div>
         </div>
@@ -109,8 +111,8 @@ export default function Step3Page() {
           <div className="rounded-xl bg-white border border-gray-200 p-6">
             <h3 className="text-base font-bold text-navy">Attorney Review Add-On</h3>
             <div className="mt-4 space-y-2 text-sm">
-              <div className="flex justify-between"><span className="text-charcoal/60">Client pays</span><span className="font-semibold text-navy">$300</span></div>
-              <div className="flex justify-between"><span className="text-charcoal/60">Your earnings</span><span className="font-semibold text-green-600">$300</span></div>
+              <div className="flex justify-between"><span className="text-charcoal/60">Client pays</span><span className="font-semibold text-navy">{formatPrice(PRICES.attorneyReview)}</span></div>
+              <div className="flex justify-between"><span className="text-charcoal/60">Your earnings</span><span className="font-semibold text-green-600">{formatPrice(PRICES.attorneyReview)}</span></div>
             </div>
             <p className="mt-3 text-xs text-charcoal/60">As a reviewing attorney, you earn 100% of the review fee when clients in your network request attorney review.</p>
           </div>
@@ -118,7 +120,7 @@ export default function Step3Page() {
           <div className="rounded-xl bg-white border border-gray-200 p-6">
             <h3 className="text-base font-bold text-navy">Attorney Review Add-On</h3>
             <div className="mt-4 space-y-2 text-sm">
-              <div className="flex justify-between"><span className="text-charcoal/60">Client pays</span><span className="font-semibold text-navy">$300</span></div>
+              <div className="flex justify-between"><span className="text-charcoal/60">Client pays</span><span className="font-semibold text-navy">{formatPrice(PRICES.attorneyReview)}</span></div>
               <div className="flex justify-between"><span className="text-charcoal/60">Goes to</span><span className="text-charcoal/50">Reviewing attorney</span></div>
             </div>
             <p className="mt-3 text-xs text-charcoal/60">Attorney review fees go directly to the reviewing attorney. This protects you from any fee-splitting concerns.</p>
@@ -127,7 +129,7 @@ export default function Step3Page() {
         <div className="rounded-xl bg-white border border-gray-200 p-6">
           <h3 className="text-base font-bold text-navy">Document Amendment</h3>
           <div className="mt-4 space-y-2 text-sm">
-            <div className="flex justify-between"><span className="text-charcoal/60">Client pays</span><span className="font-semibold text-navy">$50</span></div>
+            <div className="flex justify-between"><span className="text-charcoal/60">Client pays</span><span className="font-semibold text-navy">{formatPrice(PRICES.amendment)}</span></div>
             <div className="flex justify-between"><span className="text-charcoal/60">Your earnings</span><span className="font-semibold text-green-600">{amendEarnings}</span></div>
           </div>
         </div>
@@ -160,7 +162,7 @@ export default function Step3Page() {
             >
               <p className="text-sm font-semibold text-navy">Yes, we have an estate attorney</p>
               <p className="mt-1 text-xs text-charcoal/50">
-                Reviews are handled in-house. The $300 review fee goes to your firm.
+                Reviews are handled in-house. The {formatPrice(PRICES.attorneyReview)} review fee goes to your firm.
               </p>
             </button>
             <button

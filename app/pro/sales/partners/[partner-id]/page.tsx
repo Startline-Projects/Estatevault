@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { PROMO_CODES } from "@/lib/orders/pricing";
 
 type TabKey = "overview" | "performance" | "activity" | "notes";
 
@@ -236,7 +237,7 @@ export default function PartnerDetailPage() {
     setPromoSaved(false);
     const supabase = createClient();
     const upper = promoInput.trim().toUpperCase();
-    const VALID_PARTNER_PROMOS: Record<string, boolean> = { FREE676: true };
+    const VALID_PARTNER_PROMOS: Record<string, boolean> = Object.fromEntries(Object.keys(PROMO_CODES).map(k => [k, true]));
     if (!VALID_PARTNER_PROMOS[upper]) {
       alert("Invalid promo code.");
       setPromoSaving(false);

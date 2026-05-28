@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
 import { THEME_PRESETS, HERO_RECIPES, buildPartnerTheme, buildHeroRecipe, contrastRatio, type ThemePresetId, type HeroRecipeId } from "@/lib/partner-pages/theme";
+import { PRICES, formatPrice } from "@/lib/orders/pricing";
 
 export default function Step2Page() {
   const router = useRouter();
@@ -107,7 +108,7 @@ export default function Step2Page() {
         <p className="text-center text-sm font-bold mb-3" style={{ color: landingTextColor }}>Simple Pricing</p>
         <div className="rounded-xl border-2 p-4 text-center" style={{ borderColor: accentColor }}>
           <p className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: effectiveLightHL }}>Will Package</p>
-          <p className="mt-1 text-2xl font-bold" style={{ color: landingTextColor }}>$400</p>
+          <p className="mt-1 text-2xl font-bold" style={{ color: landingTextColor }}>{formatPrice(PRICES.will)}</p>
           <p className="mt-0.5 text-[10px] text-charcoal/60">Attorney-reviewed · State-specific</p>
           <span className="mt-3 inline-block rounded-full px-4 py-1.5 text-[10px] font-semibold" style={{ background: accentColor, color: previewHero.ctaText }}>Get Started</span>
         </div>

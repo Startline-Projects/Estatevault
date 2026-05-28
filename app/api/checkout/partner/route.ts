@@ -5,6 +5,7 @@ import { createAdminClient } from "@/lib/api/auth";
 import { withRoute } from "@/lib/api/route";
 import * as partnerRepo from "@/lib/repos/server/partnerRepo";
 import { partnerCheckoutSchema } from "@/lib/validation/schemas";
+import { PARTNER_PLATFORM_FEE } from "@/lib/orders/pricing";
 
 export const POST = withRoute(async (request: Request) => {
   try {
@@ -19,7 +20,7 @@ export const POST = withRoute(async (request: Request) => {
     const { data: { user } } = await authClient.auth.getUser();
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-    const amount = tier === "enterprise" ? 600000 : tier === "basic" ? 50000 : 120000;
+    const amount = PARTNER_PLATFORM_FEE[tier];
     const planName = tier === "enterprise" ? "Enterprise" : tier === "basic" ? "Basic" : "Standard";
     const successPath = tier === "basic" ? "/pro/onboarding/step-2-vault" : "/pro/onboarding/step-2";
 

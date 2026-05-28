@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import SubscriptionBanner from "@/components/dashboard/SubscriptionBanner";
+import { PRICES, formatPrice } from "@/lib/orders/pricing";
 import FarewellRecorder from "@/components/dashboard/FarewellRecorder";
 import FarewellUploader from "@/components/dashboard/FarewellUploader";
 import {
@@ -140,7 +141,7 @@ export default function FarewellMessagesPage() {
               <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
             </svg>
           </div>
-          <p className="text-sm text-gray-500">Subscribe to the Vault Plan ($99/year) to access Farewell Messages.</p>
+          <p className="text-sm text-gray-500">Subscribe to the Vault Plan ({formatPrice(PRICES.vaultSubscriptionYear)}/year) to access Farewell Messages.</p>
         </div>
       </div>
     );

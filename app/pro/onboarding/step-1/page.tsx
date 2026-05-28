@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { PRICES, PARTNER_PLATFORM_FEE, PARTNER_SPLITS, PROMO_CODES, formatPrice } from "@/lib/orders/pricing";
 
 export default function Step1Page() {
   const router = useRouter();
@@ -36,7 +37,7 @@ export default function Step1Page() {
       const nextStep = isBasic ? "/pro/onboarding/step-2-vault" : "/pro/onboarding/step-2";
       if (partner.annual_fee_paid || partner.one_time_fee_paid) setAlreadyPaid(true);
       const cameFromInternal = typeof document !== "undefined" && document.referrer.includes(window.location.host);
-      if (!cameFromInternal && partner.promo_code && partner.promo_code.toUpperCase() === "FREE676" && !partner.one_time_fee_paid && !partner.annual_fee_paid) {
+      if (!cameFromInternal && partner.promo_code && partner.promo_code.toUpperCase() in PROMO_CODES && !partner.one_time_fee_paid && !partner.annual_fee_paid) {
         await supabase.from("partners").update({ one_time_fee_paid: true, onboarding_step: 2 }).eq("id", partner.id);
         router.push(nextStep);
         return;
@@ -45,8 +46,8 @@ export default function Step1Page() {
     load();
   }, [router]);
 
-  const earningsPerTrust = selectedTier === "enterprise" ? 450 : 400;
-  const platformFee = selectedTier === "enterprise" ? 6000 : selectedTier === "basic" ? 500 : 1200;
+  const earningsPerTrust = PARTNER_SPLITS.trust[selectedTier === "enterprise" ? "enterprise" : "standard"].partner / 100;
+  const platformFee = PARTNER_PLATFORM_FEE[selectedTier] / 100;
   const monthlyEarnings = sliderValue * earningsPerTrust;
   const annualEarnings = monthlyEarnings * 12;
   const netFirstYearProfit = annualEarnings - platformFee;
@@ -82,9 +83,9 @@ export default function Step1Page() {
   }
 
   const plans = [
-    { tier: "basic" as const, name: "Basic", price: "$500 one-time", badge: null, features: ["White-label secure vault", "Custom subdomain (yourname.estatevault.us)", "Brand with logo, colors & tagline", "Trustee management for clients", "Farewell video storage", "Email support"], btnClass: "bg-navy text-white hover:bg-navy/90" },
-    { tier: "standard" as const, name: "Standard", price: "$1,200 one-time", badge: null, features: ["Unlimited will and trust documents", "Branded white-label platform", "Custom subdomain (legacy.yourdomain.com)", "Branded email delivery", "3 team seats", "Partner earnings: $300/will · $400/trust", "Email and chat support", "Marketing toolkit"], btnClass: "bg-navy text-white hover:bg-navy/90" },
-    { tier: "enterprise" as const, name: "Enterprise", price: "$6,000 one-time", badge: "Most Popular for Agencies", features: ["Everything in Standard", "Lower EstateVault cut: $50/will · $150/trust", "Partner earnings: $350/will · $450/trust", "Custom domain support", "10 team seats", "Custom commission hierarchy for sub-agents", "Dedicated account manager", "Attorney review tier included (10/month)"], btnClass: "bg-gold text-white hover:bg-gold/90" },
+    { tier: "basic" as const, name: "Basic", price: `${formatPrice(PARTNER_PLATFORM_FEE.basic)} one-time`, badge: null, features: ["White-label secure vault", "Custom subdomain (yourname.estatevault.us)", "Brand with logo, colors & tagline", "Trustee management for clients", "Farewell video storage", "Email support"], btnClass: "bg-navy text-white hover:bg-navy/90" },
+    { tier: "standard" as const, name: "Standard", price: `${formatPrice(PARTNER_PLATFORM_FEE.standard)} one-time`, badge: null, features: ["Unlimited will and trust documents", "Branded white-label platform", "Custom subdomain (legacy.yourdomain.com)", "Branded email delivery", "3 team seats", `Partner earnings: ${formatPrice(PARTNER_SPLITS.will.standard.partner)}/will · ${formatPrice(PARTNER_SPLITS.trust.standard.partner)}/trust`, "Email and chat support", "Marketing toolkit"], btnClass: "bg-navy text-white hover:bg-navy/90" },
+    { tier: "enterprise" as const, name: "Enterprise", price: `${formatPrice(PARTNER_PLATFORM_FEE.enterprise)} one-time`, badge: "Most Popular for Agencies", features: ["Everything in Standard", `Lower EstateVault cut: ${formatPrice(PARTNER_SPLITS.will.enterprise.ev)}/will · ${formatPrice(PARTNER_SPLITS.trust.enterprise.ev)}/trust`, `Partner earnings: ${formatPrice(PARTNER_SPLITS.will.enterprise.partner)}/will · ${formatPrice(PARTNER_SPLITS.trust.enterprise.partner)}/trust`, "Custom domain support", "10 team seats", "Custom commission hierarchy for sub-agents", "Dedicated account manager", "Attorney review tier included (10/month)"], btnClass: "bg-gold text-white hover:bg-gold/90" },
   ];
 
   return (
@@ -139,7 +140,7 @@ export default function Step1Page() {
       {error && <div className="mt-4 rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">{error}</div>}
 
       <button onClick={handleGetStarted} disabled={!agreed || loading || !partnerId} className="mt-8 w-full min-h-[44px] rounded-full bg-gold py-3.5 text-sm font-semibold text-white hover:bg-gold/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
-        {loading ? "Redirecting to payment..." : !partnerId ? "Loading..." : `Get Started — ${selectedTier === "enterprise" ? "$6,000" : selectedTier === "basic" ? "$500" : "$1,200"} one-time`}
+        {loading ? "Redirecting to payment..." : !partnerId ? "Loading..." : `Get Started — ${formatPrice(PARTNER_PLATFORM_FEE[selectedTier])} one-time`}
       </button>
 
       {showAgreement && (

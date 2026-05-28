@@ -1008,4 +1008,177 @@ npm test          → 19 files, 193 tests, all passing
 
 ---
 
-### Next: Phase 5 — Type System + Config Hardening
+---
+
+---
+
+# Phase 5 — Type System + Config Hardening: What Has Been Fixed
+
+> **Date:** 2026-05-28
+> **Branch:** Yahia-Dev
+> **Status:** Steps 5.3 + 5.4 complete. Steps 5.1 (DB types) + 5.2 (migration baseline) deferred (requires Supabase CLI). Gate GREEN (193/193 tests, TSC clean, lint warnings-only).
+
+---
+
+## Step 5.1 — Generate Supabase DB Types (H-12 partial) — DEFERRED
+
+Requires Supabase CLI linked to project. Will run `supabase gen types typescript > types/db.generated.ts` when CLI is set up.
+
+## Step 5.2 — Migration Baseline (H-12 partial) — DEFERRED
+
+Requires Supabase CLI. Will export current schema as `00000000000000_baseline.sql`.
+
+---
+
+## Step 5.3 — SSOT Pricing Finish (Full Sweep) ✅
+
+### Expanded `lib/orders/pricing.ts`
+Added to the single source of truth:
+- `PROMO_CODES.FREE676` — was hardcoded in 4 files
+- `PARTNER_SPLITS` — revenue split table by product × tier (was hardcoded in `stripe-payouts.ts`)
+- `AFFILIATE_SPLITS` — affiliate split table (was hardcoded in `stripe-payouts.ts`)
+- `PRODUCT_NAMES` — Stripe product display names (will, trust, amendment, vault)
+- `ATTORNEY_REVIEW_FEE_RANGE` — min/max for attorney signup validation
+- `formatPrice(cents)` — display helper (`formatPrice(40000)` → `"$400"`)
+- `PromoCode` type — union of promo code keys
+
+### P0 — API Routes (6 files)
+| Route | Hardcoded replaced |
+|-------|-------------------|
+| `checkout/amendment` | `5000` → `PRICES.amendment`, `"Document Amendment"` → `PRODUCT_NAMES.amendment`, `{ evCut: 5000 }` → `EV_DEFAULT_CUT.amendment` |
+| `checkout/partner` | Ternary fee lookup → `PARTNER_PLATFORM_FEE[tier]` |
+| `checkout/attorney` | Local `VALID_PROMO_CODES` → `PROMO_CODES`, `(review_fee \|\| 300) * 100` → `DEFAULT_ATTORNEY_REVIEW_FEE`, `600000/120000` → `PARTNER_PLATFORM_FEE.enterprise/standard` |
+| `checkout/vault-subscription` | `9900` → `PRICES.vaultSubscriptionYear` |
+| `partner/vault-client-checkout` | `9900` → `PRICES.vaultSubscriptionYear` |
+| `subscription/sync` | `9900` → `PRICES.vaultSubscriptionYear` |
+
+### P1 — Lib Files (4 files)
+| File | Hardcoded replaced |
+|------|-------------------|
+| `lib/stripe-payouts.ts` | Entire inline split tables → import `PARTNER_SPLITS` + `AFFILIATE_SPLITS` from pricing.ts |
+| `lib/attorney-review/routing.ts` | `DEFAULT_REVIEW_FEE_CENTS = 30000` → import `DEFAULT_ATTORNEY_REVIEW_FEE` |
+| `lib/checkout/createCheckoutSession.ts` | Local `VALID_PROMO_CODES` → `PROMO_CODES`, string "TEST" check → `PROMO_CODES[upperPromo] === "test"` |
+| `app/api/sales/create-partner/route.ts` | Local `VALID_PARTNER_PROMOS = { FREE676: true }` → `PROMO_CODES` |
+
+### P2 — Partner Dashboard Pages (10 files)
+| File | Hardcoded replaced |
+|------|-------------------|
+| `pro/revenue/page.tsx` | `VAULT_PRICE_CENTS = 9900` → `PRICES.vaultSubscriptionYear` |
+| `sales/commission/page.tsx` | `50000/120000/600000` → `PARTNER_PLATFORM_FEE.*` |
+| `pro/onboarding/step-1/page.tsx` | "FREE676" → `PROMO_CODES`, all plan fees and split amounts → `PARTNER_PLATFORM_FEE.*`, `PARTNER_SPLITS.*` |
+| `pro/onboarding/step-2/page.tsx` | "$400" → `formatPrice(PRICES.will)` |
+| `pro/onboarding/step-3/page.tsx` | All product prices + partner earnings → `formatPrice()` calls |
+| `pro/preview/page.tsx` | Partner earnings → `formatPrice(PARTNER_SPLITS.*)` |
+| `pro/settings/page.tsx` | Plan fees, pricing grid, attorney review defaults → `formatPrice()` calls |
+| `pro/sales/partners/[partner-id]/page.tsx` | `{ FREE676: true }` → `PROMO_CODES` |
+| `pro/vault-clients/page.tsx` | "$99/year" → `formatPrice(PRICES.vaultSubscriptionYear)` |
+| `pro/vault-clients/new/page.tsx` | "$99", "$99/yr" → `formatPrice(PRICES.vaultSubscriptionYear)` |
+
+### P3 — Client Pages + Components (12 files)
+| File | Hardcoded replaced |
+|------|-------------------|
+| `components/PackageCards.tsx` | "$400"/"$600" → `formatPrice(PRICES.will/trust)` |
+| `components/quiz/ResultScreen.tsx` | "$400"/"$600" → `formatPrice(PRICES.will/trust)` |
+| `components/FAQ.tsx` | "$50" → `formatPrice(PRICES.amendment)` |
+| `components/dashboard/SubscriptionBanner.tsx` | "$99/year" → `formatPrice(PRICES.vaultSubscriptionYear)` |
+| `dashboard/amendment/page.tsx` | "$50" (×2) → `formatPrice(PRICES.amendment)` |
+| `dashboard/life-events/page.tsx` | "$50" → `formatPrice(PRICES.amendment)` |
+| `dashboard/documents/page.tsx` | "$50" → `formatPrice(PRICES.amendment)` |
+| `dashboard/vault/page.tsx` | "$99/year" (×2) → `formatPrice(PRICES.vaultSubscriptionYear)` |
+| `dashboard/vault/farewell/page.tsx` | "$99/year" → `formatPrice(PRICES.vaultSubscriptionYear)` |
+| `will/checkout/page.tsx` | "$400" (×2), "$300" (×2) → `formatPrice()` calls |
+| `trust/checkout/page.tsx` | "$600" (×2), "$300" (×3) → `formatPrice()` calls |
+
+### P4 — Marketing/Landing Pages + Email + Scripts (10 files)
+| File | Hardcoded replaced |
+|------|-------------------|
+| `[partner-slug]/PartnerPageClient.tsx` | "$50" FAQ, "$400"/"$600" pricing cards → `formatPrice()` |
+| `[partner-slug]/vault/page.tsx` | "$99" (×3) → `formatPrice(PRICES.vaultSubscriptionYear)` |
+| `pro/marketing/page.tsx` | All email/social template dollar amounts → `formatPrice()` |
+| `pro/support/page.tsx` | FAQ answers with earnings + prices → `formatPrice()` |
+| `professionals/page.tsx` | STEPS earnings, TIERS prices, TIER_CONFIG values → pricing imports |
+| `sales/new-partner/page.tsx` | Plan tier prices, "$99/yr" → `formatPrice()` |
+| `pro/sales/new-partner/page.tsx` | Plan tier prices → `formatPrice()` |
+| `lib/email.ts` | "$99" in dunning email → `formatPrice(PRICES.vaultSubscriptionYear)` |
+| `scripts/backfill-vault-orders.ts` | `VAULT_PRICE_CENTS = 9900` → `PRICES.vaultSubscriptionYear` |
+| `scripts/wipe-test-user-stripe.ts` | `9900` → `PRICES.vaultSubscriptionYear` |
+
+**Total: ~42 files updated. Zero hardcoded dollar amounts remain in API routes or lib files.**
+
+---
+
+## Step 5.4 — Type Safety Fixes (L-01 partial) ✅
+
+### Fixed (7 casts eliminated):
+| File | Cast | Fix |
+|------|------|-----|
+| `app/[partner-slug]/PartnerPageClient.tsx` | `["--lt" as any]` | Cast whole object `as React.CSSProperties` |
+| `components/pro/ProShell.tsx` | `["--partner-accent" as any]` (×2) | Cast whole style object `as React.CSSProperties` |
+| `scripts/_ws-polyfill.ts` | `@ts-ignore` + `as any` | `as unknown as typeof WebSocket` |
+| `scripts/test-db-seed.ts` | `(TEST_USERS as any)[key]` | `TEST_USERS[key as keyof typeof TEST_USERS]` |
+| `app/api/webhooks/stripe/route.ts` | `(invoice as unknown as Record).subscription` (×2) | Extract from raw `event.data.object` with proper type narrowing |
+| `lib/queue/document-queue.ts` | `job as unknown as Record` (×2) + `updates as unknown as Record` | Widen `sanitizeForRedis` to accept `object` |
+
+### Remaining (blocked on 5.1 — Supabase generated types):
+- 10 `as unknown as` casts in client components for Supabase query results
+- These require generated DB types to fix properly
+
+---
+
+## Files Modified (Phase 5 complete list)
+
+### Pricing module
+| File | Changes |
+|------|---------|
+| `lib/orders/pricing.ts` | Added PARTNER_SPLITS, AFFILIATE_SPLITS, PRODUCT_NAMES, PROMO_CODES.FREE676, ATTORNEY_REVIEW_FEE_RANGE, formatPrice(), PromoCode type |
+
+### API routes (7 files)
+| File | Changes |
+|------|---------|
+| `app/api/checkout/amendment/route.ts` | Import pricing, replace hardcoded amounts |
+| `app/api/checkout/partner/route.ts` | Import pricing, replace fee lookup |
+| `app/api/checkout/attorney/route.ts` | Import pricing, replace promo codes + fees |
+| `app/api/checkout/vault-subscription/route.ts` | Import pricing, replace 9900 |
+| `app/api/partner/vault-client-checkout/route.ts` | Import pricing, replace 9900 |
+| `app/api/subscription/sync/route.ts` | Import pricing, replace 9900 |
+| `app/api/sales/create-partner/route.ts` | Import pricing, replace promo codes |
+
+### Lib files (4 files)
+| File | Changes |
+|------|---------|
+| `lib/stripe-payouts.ts` | Import PARTNER_SPLITS + AFFILIATE_SPLITS, delete inline tables |
+| `lib/attorney-review/routing.ts` | Import DEFAULT_ATTORNEY_REVIEW_FEE |
+| `lib/checkout/createCheckoutSession.ts` | Import PROMO_CODES, delete local map |
+| `lib/email.ts` | Import pricing, replace "$99" |
+
+### UI files (~30 files)
+Components: PackageCards, ResultScreen, FAQ, SubscriptionBanner
+Dashboard: amendment, life-events, documents, vault, vault/farewell
+Checkout: will/checkout, trust/checkout
+Partner: revenue, settings, onboarding/step-1/2/3, preview, vault-clients, vault-clients/new, sales/partners/[id], sales/new-partner
+Marketing: PartnerPageClient, vault, marketing, support, professionals
+Sales: commission, new-partner
+
+### Type safety (6 files)
+| File | Changes |
+|------|---------|
+| `app/[partner-slug]/PartnerPageClient.tsx` | CSS custom prop cast fix |
+| `components/pro/ProShell.tsx` | CSS custom prop cast fix |
+| `scripts/_ws-polyfill.ts` | Remove @ts-ignore + as any |
+| `scripts/test-db-seed.ts` | Typed key access |
+| `app/api/webhooks/stripe/route.ts` | Stripe Invoice subscription access fix |
+| `lib/queue/document-queue.ts` | Widen sanitizeForRedis signature |
+
+---
+
+## Verify Gate Results
+
+```
+npx tsc --noEmit  → clean (0 errors)
+npm run lint      → warnings only (pre-existing <img>, useEffect deps)
+npm test          → 19 files, 193 tests, all passing
+```
+
+---
+
+### Next: Phase 6 — Frontend Production Quality

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { PARTNER_PLATFORM_FEE, formatPrice } from "@/lib/orders/pricing";
 
 const US_STATES = [
   "Alabama","Alaska","Arizona","Arkansas","California","Colorado","Connecticut",
@@ -23,9 +24,9 @@ const PROFESSIONAL_TYPES = [
 ];
 
 const PLAN_TIERS: { label: string; value: string; price: string; description: string }[] = [
-  { label: "Basic", value: "basic", price: "$500 one-time", description: "White-label vault only" },
-  { label: "Standard", value: "standard", price: "$1,200 one-time", description: "Full estate planning platform" },
-  { label: "Enterprise", value: "enterprise", price: "$6,000 one-time", description: "Full platform + custom domain" },
+  { label: "Basic", value: "basic", price: `${formatPrice(PARTNER_PLATFORM_FEE.basic)} one-time`, description: "White-label vault only" },
+  { label: "Standard", value: "standard", price: `${formatPrice(PARTNER_PLATFORM_FEE.standard)} one-time`, description: "Full estate planning platform" },
+  { label: "Enterprise", value: "enterprise", price: `${formatPrice(PARTNER_PLATFORM_FEE.enterprise)} one-time`, description: "Full platform + custom domain" },
 ];
 
 const LEAD_SOURCES = [

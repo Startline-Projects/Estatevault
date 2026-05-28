@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import Footer from "@/components/Footer";
 import { partnerUrl } from "@/lib/hosts";
+import { PRICES, PARTNER_SPLITS, PARTNER_PLATFORM_FEE, formatPrice } from "@/lib/orders/pricing";
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -203,9 +204,9 @@ const STEPS = [
     eyebrow: "Get Paid Instantly",
     title: "You earn on every document",
     description:
-      "Will Package: you earn $300. Trust Package: you earn $400. Paid instantly to your Stripe account on every sale.",
+      `Will Package: you earn ${formatPrice(PARTNER_SPLITS.will.standard.partner)}. Trust Package: you earn ${formatPrice(PARTNER_SPLITS.trust.standard.partner)}. Paid instantly to your Stripe account on every sale.`,
     bullets: [
-      "$300 per will, $400 per trust",
+      `${formatPrice(PARTNER_SPLITS.will.standard.partner)} per will, ${formatPrice(PARTNER_SPLITS.trust.standard.partner)} per trust`,
       "Instant payout per sale",
       "Real-time revenue dashboard",
     ],
@@ -452,7 +453,7 @@ const STANDARD_FEATURES = [
 const ENTERPRISE_FEATURES = [
   "Everything in Standard",
   "Custom subdomain (yourfirm.estatevault.com)",
-  "Higher payout: $350 / will · $450 / trust",
+  `Higher payout: ${formatPrice(PARTNER_SPLITS.will.enterprise.partner)} / will · ${formatPrice(PARTNER_SPLITS.trust.enterprise.partner)} / trust`,
   "Priority onboarding with dedicated rep",
   "Co branded marketing campaigns",
   "API access for CRM integration",
@@ -480,12 +481,12 @@ const TIERS: PricingTier[] = [
   {
     name: "Standard",
     label: "Standard Partner",
-    price: "$1,200",
+    price: formatPrice(PARTNER_PLATFORM_FEE.standard),
     cadence: "one-time",
     bestFor: "Best for: growing practices",
     blurb:
       "Full estate planning platform with will and trust document revenue.",
-    earnings: "$300 / will · $400 / trust",
+    earnings: `${formatPrice(PARTNER_SPLITS.will.standard.partner)} / will · ${formatPrice(PARTNER_SPLITS.trust.standard.partner)} / trust`,
     features: STANDARD_FEATURES,
     ctaLabel: "Request Standard Access",
     icon: (
@@ -499,12 +500,12 @@ const TIERS: PricingTier[] = [
   {
     name: "Enterprise",
     label: "Enterprise Partner",
-    price: "$6,000",
+    price: formatPrice(PARTNER_PLATFORM_FEE.enterprise),
     cadence: "one-time",
     bestFor: "Best for: established firms",
     blurb:
       "Maximum earnings, custom subdomain, and dedicated partnership support.",
-    earnings: "$350 / will · $450 / trust",
+    earnings: `${formatPrice(PARTNER_SPLITS.will.enterprise.partner)} / will · ${formatPrice(PARTNER_SPLITS.trust.enterprise.partner)} / trust`,
     features: ENTERPRISE_FEATURES,
     ctaLabel: "Request Enterprise Access",
     icon: (
@@ -726,17 +727,17 @@ const TIER_CONFIG: Record<
 > = {
   standard: {
     label: "Standard",
-    price: "$1,200 one-time",
-    trustEarning: 400,
-    willEarning: 300,
-    platformFee: 1200,
+    price: `${formatPrice(PARTNER_PLATFORM_FEE.standard)} one-time`,
+    trustEarning: PARTNER_SPLITS.trust.standard.partner / 100,
+    willEarning: PARTNER_SPLITS.will.standard.partner / 100,
+    platformFee: PARTNER_PLATFORM_FEE.standard / 100,
   },
   professional: {
     label: "Professional",
-    price: "$6,000 one-time",
-    trustEarning: 450,
-    willEarning: 350,
-    platformFee: 6000,
+    price: `${formatPrice(PARTNER_PLATFORM_FEE.enterprise)} one-time`,
+    trustEarning: PARTNER_SPLITS.trust.enterprise.partner / 100,
+    willEarning: PARTNER_SPLITS.will.enterprise.partner / 100,
+    platformFee: PARTNER_PLATFORM_FEE.enterprise / 100,
   },
 };
 

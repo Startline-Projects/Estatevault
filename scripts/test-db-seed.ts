@@ -54,7 +54,7 @@ async function main() {
     salesRep: "sales_rep",
   };
   for (const [key, id] of Object.entries(userIds)) {
-    const u = (TEST_USERS as any)[key];
+    const u = TEST_USERS[key as keyof typeof TEST_USERS];
     const { error } = await supabase
       .from("profiles")
       .upsert({ id, email: u.email, full_name: u.name, user_type: typeMap[key] }, { onConflict: "id" });

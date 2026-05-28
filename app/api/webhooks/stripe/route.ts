@@ -54,7 +54,8 @@ export const POST = withRoute(async (request: NextRequest) => {
   if (event.type === "invoice.payment_succeeded") {
     const invoice = event.data.object as Stripe.Invoice;
     if (invoice.billing_reason === "subscription_cycle") {
-      const subscriptionId = (invoice as unknown as Record<string, unknown>).subscription as string | null;
+      const rawSub = (event.data.object as unknown as Record<string, unknown>).subscription;
+      const subscriptionId = typeof rawSub === "string" ? rawSub : null;
       if (subscriptionId) {
         const expiry = new Date();
         expiry.setFullYear(expiry.getFullYear() + 1);
@@ -72,7 +73,8 @@ export const POST = withRoute(async (request: NextRequest) => {
 
   if (event.type === "invoice.payment_failed") {
     const invoice = event.data.object as Stripe.Invoice;
-    const subscriptionId = (invoice as unknown as Record<string, unknown>).subscription as string | null;
+    const rawSub = (event.data.object as unknown as Record<string, unknown>).subscription;
+    const subscriptionId = typeof rawSub === "string" ? rawSub : null;
     if (subscriptionId) {
       const { data: client } = await clientRepo.findBySubscriptionId(supabase, subscriptionId);
       if (client) {

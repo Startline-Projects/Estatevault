@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { PRICES, formatPrice } from "@/lib/orders/pricing";
 
 interface SubscriptionStatus {
   status: string;
@@ -93,7 +94,7 @@ export default function SubscriptionBanner({ onStatusLoaded }: { onStatusLoaded?
     <div className="rounded-xl bg-navy/5 border border-navy/10 p-5">
       <div className="flex items-start justify-between">
         <div>
-          <p className="text-sm font-bold text-navy">Upgrade to Vault Plan, $99/year</p>
+          <p className="text-sm font-bold text-navy">Upgrade to Vault Plan, {formatPrice(PRICES.vaultSubscriptionYear)}/year</p>
           <ul className="mt-2 space-y-1">
             <li className="flex items-center gap-2 text-xs text-charcoal/70">
               <span className="text-gold">&#10003;</span> Unlimited free document amendments

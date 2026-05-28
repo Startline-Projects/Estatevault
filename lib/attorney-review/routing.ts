@@ -23,22 +23,11 @@
  */
 
 import type { ReviewRouting, PartnerForRouting } from "./types";
+import { DEFAULT_ATTORNEY_REVIEW_FEE } from "@/lib/orders/pricing";
 
-/**
- * Mo Murshed's email, used to look up his profile ID at runtime.
- * His profile must exist in the database with user_type = 'review_attorney'.
- */
 export const INHOUSE_ATTORNEY_EMAIL = "test-attorney@estatevault.test";
-
-/**
- * EstateVault admin email, controls fee for all in-house reviews.
- */
 export const ESTATEVAULT_ADMIN_EMAIL = "ockmedk@gmail.com";
-
-/**
- * Default attorney review fee in cents ($300).
- */
-export const DEFAULT_REVIEW_FEE_CENTS = 30000;
+export const DEFAULT_REVIEW_FEE_CENTS = DEFAULT_ATTORNEY_REVIEW_FEE;
 
 /**
  * Resolves the review routing for an order.

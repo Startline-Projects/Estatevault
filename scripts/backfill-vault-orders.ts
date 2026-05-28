@@ -4,6 +4,7 @@
  */
 import { createClient } from "@supabase/supabase-js";
 import * as dotenv from "dotenv";
+import { PRICES } from "../lib/orders/pricing";
 dotenv.config({ path: ".env.local" });
 
 const supabase = createClient(
@@ -11,7 +12,7 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-const VAULT_PRICE_CENTS = 9900; // $99/year
+const VAULT_PRICE_CENTS = PRICES.vaultSubscriptionYear;
 
 async function main() {
   const partnerEmail = process.argv[2];
