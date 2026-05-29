@@ -19,7 +19,7 @@ export default function ClientDetailPage() {
   const [notes, setNotes] = useState<Note[]>([]);
   const [newNote, setNewNote] = useState("");
   const [tab, setTab] = useState("overview");
-  const [activity, setActivity] = useState<Array<{ action: string; created_at: string }>>([]);
+  const [activity, setActivity] = useState<Array<{ action: string; created_at: string | null }>>([]);
 
   useEffect(() => {
     async function load() {
@@ -136,7 +136,7 @@ export default function ClientDetailPage() {
             {activity.length === 0 ? <p className="text-sm text-charcoal/50">No activity recorded.</p> : activity.map((a, i) => (
               <div key={i} className="flex items-center justify-between text-sm">
                 <span className="text-charcoal/70">{a.action.replace(/\./g, " ").replace(/\b\w/g, (c) => c.toUpperCase())}</span>
-                <span className="text-xs text-charcoal/60">{new Date(a.created_at).toLocaleDateString()}</span>
+                <span className="text-xs text-charcoal/60">{new Date(a.created_at ?? "").toLocaleDateString()}</span>
               </div>
             ))}
           </div>

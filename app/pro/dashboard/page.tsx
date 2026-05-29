@@ -30,7 +30,7 @@ export default function ProDashboardPage() {
   const [accentColor, setAccentColor] = useState("#C9A84C");
   const [stats, setStats] = useState({ clients: 0, docsThisMonth: 0, mtdEarnings: 0, referralFees: 0 });
   const [vaultStats, setVaultStats] = useState({ vaultClients: 0, activeSubscriptions: 0 });
-  const [recentActivity, setRecentActivity] = useState<Array<{ action: string; created_at: string }>>([]);
+  const [recentActivity, setRecentActivity] = useState<Array<{ action: string; created_at: string | null }>>([]);
   const [dismissed, setDismissed] = useState(false);
   const [copied, setCopied] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -56,7 +56,7 @@ export default function ProDashboardPage() {
       setCompanyName(partner.company_name || "Partner");
       setBusinessUrl(partner.business_url || "");
       setCertified(partner.certification_completed || false);
-      setTier(partner.tier || "standard");
+      setTier((partner.tier || "standard") as "" | "basic" | "standard" | "enterprise");
       setVaultSubdomain(partner.vault_subdomain || "");
       setAccentColor(partner.accent_color || "#C9A84C");
 
@@ -280,7 +280,7 @@ export default function ProDashboardPage() {
                   <span className="h-2 w-2 rounded-full bg-green-400" />
                   <span className="text-charcoal/70">{a.action.replace(/\./g, " ").replace(/\b\w/g, (c) => c.toUpperCase())}</span>
                 </div>
-                <span className="text-xs text-charcoal/60">{timeAgo(a.created_at)}</span>
+                <span className="text-xs text-charcoal/60">{timeAgo(a.created_at ?? "")}</span>
               </div>
             ))}
           </div>

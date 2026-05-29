@@ -186,9 +186,10 @@ export default async function AffiliateDashboardPage({
     .reduce((sum, p) => sum + (p.amount_cents || 0), 0);
   const pendingCents = Math.max(0, earnedCents - paidCents);
 
+  const totalClicks = affiliate.total_clicks ?? 0;
   const conversionRate =
-    affiliate.total_clicks > 0
-      ? (conversions / affiliate.total_clicks) * 100
+    totalClicks > 0
+      ? (conversions / totalClicks) * 100
       : 0;
 
   // Trend buckets (last 30 days)
@@ -256,7 +257,7 @@ export default async function AffiliateDashboardPage({
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div className="bg-white rounded-xl border border-gray-200 p-6">
               <p className="text-xs font-semibold text-charcoal/60 uppercase tracking-wider">Clicks</p>
-              <p className="mt-2 text-3xl font-bold text-navy">{affiliate.total_clicks}</p>
+              <p className="mt-2 text-3xl font-bold text-navy">{totalClicks}</p>
             </div>
             <div className="bg-white rounded-xl border border-gray-200 p-6">
               <p className="text-xs font-semibold text-charcoal/60 uppercase tracking-wider">Conversions</p>
@@ -314,7 +315,7 @@ export default async function AffiliateDashboardPage({
               <p className="text-xs font-semibold text-charcoal/60 uppercase tracking-wider">Conversion Rate</p>
               <p className="mt-2 text-3xl font-bold text-navy">{conversionRate.toFixed(1)}%</p>
               <p className="mt-1 text-xs text-charcoal/50">
-                {conversions} of {affiliate.total_clicks} clicks
+                {conversions} of {totalClicks} clicks
               </p>
             </div>
             <div className="bg-white rounded-xl border border-gray-200 p-6">

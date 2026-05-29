@@ -3,8 +3,8 @@
 import { useState, useEffect, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
 
-interface Prospect { id: string; company_name: string; contact_name: string; email: string; professional_type: string; stage: string; created_at: string }
-interface PartnerCard { id: string; company_name: string; tier: string; onboarding_step: number; onboarding_completed: boolean; certification_completed: boolean; status: string; created_at: string }
+interface Prospect { id: string; company_name: string; contact_name: string | null; email: string | null; professional_type: string | null; stage: string; created_at: string | null }
+interface PartnerCard { id: string; company_name: string; tier: string; onboarding_step: number | null; onboarding_completed: boolean | null; certification_completed: boolean | null; status: string | null; created_at: string | null }
 
 const MANUAL_STAGES = ["prospect", "contacted", "demo_shown"];
 const COLUMNS = [
@@ -32,7 +32,7 @@ export default function PipelinePage() {
     setRepId(user.id);
 
     const { data: p } = await supabase.from("sales_prospects").select("*").eq("sales_rep_id", user.id).order("created_at", { ascending: false });
-    setProspects(p || []);
+    setProspects((p || []) as Prospect[]);
 
     const { data: partners } = await supabase.from("partners").select("id, company_name, tier, onboarding_step, onboarding_completed, certification_completed, status, created_at").eq("created_by", user.id);
     setPartners(partners || []);
@@ -61,17 +61,17 @@ export default function PipelinePage() {
   function getColumnCards(columnId: string) {
     if (columnId === "prospect" || columnId === "contacted" || columnId === "demo_shown") {
       return prospects.filter((p) => p.stage === columnId).map((p) => ({
-        id: p.id, name: p.company_name, sub: p.professional_type || p.email, date: p.created_at, type: "prospect" as const,
+        id: p.id, name: p.company_name, sub: p.professional_type || p.email || "", date: p.created_at, type: "prospect" as const,
       }));
     }
     if (columnId === "agreement_sent") {
-      return partners.filter((p) => !p.onboarding_completed && p.onboarding_step <= 1 && p.status === "onboarding").map((p) => ({
+      return partners.filter((p) => !p.onboarding_completed && (p.onboarding_step ?? 0) <= 1 && p.status === "onboarding").map((p) => ({
         id: p.id, name: p.company_name, sub: p.tier, date: p.created_at, type: "partner" as const,
       }));
     }
     if (columnId === "onboarding") {
-      return partners.filter((p) => !p.onboarding_completed && p.onboarding_step > 1 && p.status === "onboarding").map((p) => ({
-        id: p.id, name: p.company_name, sub: `Step ${p.onboarding_step} of 7`, date: p.created_at, type: "partner" as const,
+      return partners.filter((p) => !p.onboarding_completed && (p.onboarding_step ?? 0) > 1 && p.status === "onboarding").map((p) => ({
+        id: p.id, name: p.company_name, sub: `Step ${p.onboarding_step ?? 0} of 7`, date: p.created_at, type: "partner" as const,
       }));
     }
     if (columnId === "active") {
@@ -82,7 +82,7 @@ export default function PipelinePage() {
     return [];
   }
 
-  function daysSince(date: string) { return Math.floor((Date.now() - new Date(date).getTime()) / (1000 * 60 * 60 * 24)); }
+  function daysSince(date: string | null) { return Math.floor((Date.now() - new Date(date ?? "").getTime()) / (1000 * 60 * 60 * 24)); }
 
   return (
     <div>

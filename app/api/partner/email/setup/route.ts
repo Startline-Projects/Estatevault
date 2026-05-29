@@ -5,6 +5,7 @@ import { withRoute } from "@/lib/api/route";
 import { ok, fail } from "@/lib/api/response";
 import { partnerEmailSetupSchema } from "@/lib/validation/schemas";
 import * as partnerRepo from "@/lib/repos/server/partnerRepo";
+import type { Json } from "@/types/db.generated";
 
 export const POST = withRoute(async (req: NextRequest) => {
   const auth = await requireAuth(["partner"]);
@@ -23,7 +24,7 @@ export const POST = withRoute(async (req: NextRequest) => {
 
   const resend = new Resend(process.env.RESEND_API_KEY!);
   let domainId = partner.resend_domain_id as string | null;
-  let dnsRecords: unknown = null;
+  let dnsRecords: Json = null;
 
   if (domainId && partner.sender_domain && partner.sender_domain !== domain) {
     try { await resend.domains.remove(domainId); } catch {}
@@ -36,10 +37,10 @@ export const POST = withRoute(async (req: NextRequest) => {
       return fail(created.error?.message || "domain create failed", 400);
     }
     domainId = created.data.id;
-    dnsRecords = (created.data as { records?: unknown }).records ?? null;
+    dnsRecords = ((created.data as { records?: unknown }).records ?? null) as Json;
   } else {
     const got = await resend.domains.get(domainId);
-    dnsRecords = (got.data as { records?: unknown } | null)?.records ?? null;
+    dnsRecords = (((got.data as { records?: unknown } | null)?.records) ?? null) as Json;
   }
 
   await partnerRepo.update(auth.admin, partner.id, {

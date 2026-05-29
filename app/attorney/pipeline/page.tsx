@@ -6,10 +6,10 @@ import { createClient } from "@/lib/supabase/client";
 
 interface ReviewCase {
   id: string;
-  order_id: string;
-  status: string;
-  sla_deadline: string;
-  created_at: string;
+  order_id: string | null;
+  status: string | null;
+  sla_deadline: string | null;
+  created_at: string | null;
   product_type: string;
   partner_company: string | null;
   client_name: string | null;
@@ -57,32 +57,32 @@ export default function AttorneyPipelinePage() {
 
     if (!raw || raw.length === 0) { setCases([]); setLoading(false); return; }
 
-    const orderIds = raw.map((r) => r.order_id).filter(Boolean);
+    const orderIds = raw.map((r) => r.order_id).filter((x): x is string => x != null);
     const { data: orders } = await supabase.from("orders").select("id, product_type, client_id, partner_id").in("id", orderIds);
     const orderMap = Object.fromEntries((orders || []).map((o) => [o.id, o]));
 
-    const clientIds = (orders || []).map((o) => o.client_id).filter(Boolean);
+    const clientIds = (orders || []).map((o) => o.client_id).filter((x): x is string => x != null);
     const { data: clients } = clientIds.length
       ? await supabase.from("clients").select("id, profile_id").in("id", clientIds)
       : { data: [] as { id: string; profile_id: string }[] };
     const clientMap = Object.fromEntries((clients || []).map((c) => [c.id, c]));
 
-    const profileIds = (clients || []).map((c) => c.profile_id).filter(Boolean);
+    const profileIds = (clients || []).map((c) => c.profile_id).filter((x): x is string => x != null);
     const { data: profs } = profileIds.length
       ? await supabase.from("profiles").select("id, full_name, email").in("id", profileIds)
       : { data: [] as { id: string; full_name: string; email: string }[] };
     const profMap = Object.fromEntries((profs || []).map((p) => [p.id, p]));
 
-    const partnerIds = (orders || []).map((o) => o.partner_id).filter(Boolean);
+    const partnerIds = (orders || []).map((o) => o.partner_id).filter((x): x is string => x != null);
     const { data: partners } = partnerIds.length
       ? await supabase.from("partners").select("id, company_name").in("id", partnerIds)
       : { data: [] as { id: string; company_name: string }[] };
     const partnerMap = Object.fromEntries((partners || []).map((p) => [p.id, p]));
 
     const enriched: ReviewCase[] = raw.map((r) => {
-      const o = orderMap[r.order_id];
-      const c = o ? clientMap[o.client_id] : null;
-      const prof = c ? profMap[c.profile_id] : null;
+      const o = r.order_id != null ? orderMap[r.order_id] : undefined;
+      const c = o && o.client_id != null ? clientMap[o.client_id] : null;
+      const prof = c && c.profile_id != null ? profMap[c.profile_id] : null;
       const partner = o?.partner_id ? partnerMap[o.partner_id] : null;
       return {
         ...r,
@@ -102,7 +102,7 @@ export default function AttorneyPipelinePage() {
   async function moveCase(id: string, newStatus: string) {
     const cur = cases.find((c) => c.id === id);
     if (!cur) return;
-    const allowed = MANUAL_TRANSITIONS[cur.status] || [];
+    const allowed = MANUAL_TRANSITIONS[cur.status ?? ""] || [];
     if (!allowed.includes(newStatus)) return;
     const supabase = createClient();
     await supabase.from("attorney_reviews").update({ status: newStatus }).eq("id", id);
@@ -115,7 +115,7 @@ export default function AttorneyPipelinePage() {
       const hay = `${c.client_name || ""} ${c.client_email || ""} ${c.partner_company || ""}`.toLowerCase();
       if (!hay.includes(q)) return false;
     }
-    if (overdueOnly && new Date(c.sla_deadline).getTime() > Date.now()) return false;
+    if (overdueOnly && new Date(c.sla_deadline ?? "").getTime() > Date.now()) return false;
     return true;
   }
 
@@ -129,8 +129,8 @@ export default function AttorneyPipelinePage() {
   const metrics = useMemo(() => {
     const pending = cases.filter((c) => c.status === "pending").length;
     const inReview = cases.filter((c) => c.status === "in_review").length;
-    const overdue = cases.filter((c) => new Date(c.sla_deadline).getTime() < Date.now() && (c.status === "pending" || c.status === "in_review")).length;
-    const done = cases.filter((c) => ["approved", "approved_with_notes", "flagged"].includes(c.status)).length;
+    const overdue = cases.filter((c) => new Date(c.sla_deadline ?? "").getTime() < Date.now() && (c.status === "pending" || c.status === "in_review")).length;
+    const done = cases.filter((c) => ["approved", "approved_with_notes", "flagged"].includes(c.status ?? "")).length;
     return { pending, inReview, overdue, done };
   }, [cases]);
 
@@ -187,7 +187,7 @@ export default function AttorneyPipelinePage() {
           const list = getColumnCases(col.id);
           const isDropTarget = dragOverCol === col.id;
           const draggedCase = dragItem ? cases.find((c) => c.id === dragItem) : null;
-          const canDrop = draggedCase ? (MANUAL_TRANSITIONS[draggedCase.status] || []).includes(col.id) : false;
+          const canDrop = draggedCase ? (MANUAL_TRANSITIONS[draggedCase.status ?? ""] || []).includes(col.id) : false;
           return (
             <div
               key={col.id}
@@ -207,7 +207,7 @@ export default function AttorneyPipelinePage() {
                 isDropTarget && canDrop ? "bg-gold/10 ring-2 ring-gold/40" : "bg-gray-50"
               }`}>
                 {list.map((c) => {
-                  const sla = slaState(c.sla_deadline);
+                  const sla = slaState(c.sla_deadline ?? "");
                   const draggable = c.status === "pending" || c.status === "in_review";
                   return (
                     <Link

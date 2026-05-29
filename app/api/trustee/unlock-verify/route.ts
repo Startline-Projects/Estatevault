@@ -37,20 +37,20 @@ export const POST = withRoute(async (req: NextRequest) => {
   if (expected !== r.otp_email_hash) {
     await fvRepo.incrementOtpAttempts(admin, r.id, r.otp_email_attempts ?? 0);
     await fvRepo.insertTrusteeAudit(admin, {
-      trustee_id: r.trustee_id, client_id: r.client_id, request_id: r.id, action: "otp_failed",
+      trustee_id: r.trustee_id ?? "", client_id: r.client_id, request_id: r.id, action: "otp_failed",
     });
     return fail("wrong code", 401);
   }
 
   await fvRepo.burnOtp(admin, r.id);
   await fvRepo.insertTrusteeAudit(admin, {
-    trustee_id: r.trustee_id, client_id: r.client_id, request_id: r.id, action: "unlocked",
+    trustee_id: r.trustee_id ?? "", client_id: r.client_id, request_id: r.id, action: "unlocked",
   });
 
   const session = issueSession({
     requestId: r.id,
     clientId: r.client_id,
-    trusteeId: r.trustee_id,
+    trusteeId: r.trustee_id ?? "",
     trusteeEmail: r.trustee_email,
   });
 

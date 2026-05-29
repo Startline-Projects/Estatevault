@@ -32,8 +32,8 @@ export default async function DashboardHome() {
 
   const { data: client } = await supabase.from("clients").select("id, funding_checklist").eq("profile_id", user.id).single();
 
-  let orders: Array<{ id: string; product_type: string; status: string; created_at: string; attorney_review_requested: boolean }> = [];
-  let documents: Array<{ id: string; document_type: string; status: string }> = [];
+  let orders: Array<{ id: string; product_type: string; status: string | null; created_at: string | null; attorney_review_requested: boolean | null }> = [];
+  let documents: Array<{ id: string; document_type: string; status: string | null }> = [];
   let vaultCount = 0;
   let isTrustClient = false;
   let fundingComplete = false;
@@ -47,7 +47,7 @@ export default async function DashboardHome() {
     // legacy rows missing order_id. Keeps PackageStatusCard initial state
     // aligned with its poll filter (order_id).
     const latestOrderId = orders[0]?.id;
-    let docsRows: Array<{ id: string; document_type: string; status: string }> = [];
+    let docsRows: Array<{ id: string; document_type: string; status: string | null }> = [];
     if (latestOrderId) {
       const { data: byOrder } = await supabase.from("documents").select("id, document_type, status").eq("order_id", latestOrderId);
       docsRows = byOrder || [];
@@ -97,7 +97,7 @@ export default async function DashboardHome() {
   }
 
   // Check if account is 12+ months old
-  const accountAge = orders.length > 0 ? (Date.now() - new Date(orders[orders.length - 1].created_at).getTime()) / (1000 * 60 * 60 * 24 * 365) : 0;
+  const accountAge = orders.length > 0 ? (Date.now() - new Date(orders[orders.length - 1].created_at ?? "").getTime()) / (1000 * 60 * 60 * 24 * 365) : 0;
   const showAnnualReview = accountAge >= 1;
 
   const latestOrder = orders[0];
@@ -144,8 +144,8 @@ export default async function DashboardHome() {
         <PackageStatusCard
           orderId={latestOrder.id}
           packageName={packageName}
-          initialOrderStatus={latestOrder.status}
-          initialDocuments={documents.map((d) => ({ type: d.document_type, status: d.status }))}
+          initialOrderStatus={latestOrder.status ?? ""}
+          initialDocuments={documents.map((d) => ({ type: d.document_type, status: d.status ?? "" }))}
         />
       )}
 
@@ -155,7 +155,7 @@ export default async function DashboardHome() {
           <DocumentActions
             orderId={latestOrder.id}
             productType={latestOrder.product_type}
-            orderStatus={latestOrder.status}
+            orderStatus={latestOrder.status ?? ""}
           />
         </div>
       )}

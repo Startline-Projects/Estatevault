@@ -5,8 +5,11 @@
 // stays in the route. This repo only owns row-level access to `profiles`.
 
 import { createAdminClient } from "@/lib/api/auth";
+import type { Database } from "@/types/db.generated";
 
 type Admin = ReturnType<typeof createAdminClient>;
+
+type ProfileInsert = Database["public"]["Tables"]["profiles"]["Insert"];
 
 // Look up a profile id by email (used by promo-free account-creation paths).
 export function findIdByEmail(admin: Admin, email: string) {
@@ -24,7 +27,7 @@ export function findIdAndNameByEmail(admin: Admin, email: string) {
 }
 
 // Upsert a profile row.
-export function upsert(admin: Admin, row: Record<string, unknown>) {
+export function upsert(admin: Admin, row: ProfileInsert) {
   return admin.from("profiles").upsert(row);
 }
 

@@ -72,8 +72,8 @@ export const GET = withRoute(async (_req: NextRequest) => {
     result.push({
       orderId: o.id,
       productType: o.product_type,
-      status: o.status,
-      createdAt: o.created_at,
+      status: o.status ?? "",
+      createdAt: o.created_at ?? "",
       clientEmail: client.email,
       clientName: client.fullName,
       expected,

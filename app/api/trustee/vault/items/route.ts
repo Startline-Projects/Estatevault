@@ -123,7 +123,7 @@ export const GET = withRoute(async (req: NextRequest) => {
           label,
           data,
           storagePath: it.storage_path,
-          updatedAt: it.updated_at ?? it.created_at,
+          updatedAt: it.updated_at ?? it.created_at ?? "",
         });
       }
 

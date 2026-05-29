@@ -25,7 +25,7 @@ export default function Step3VaultPage() {
         .eq("profile_id", user.id)
         .single();
       if (!partner || partner.tier !== "basic") { router.push("/pro/dashboard"); return; }
-      if (partner.onboarding_step < 3) { router.push("/pro/onboarding/step-2-vault"); return; }
+      if ((partner.onboarding_step ?? 0) < 3) { router.push("/pro/onboarding/step-2-vault"); return; }
       if (partner.vault_subdomain) { router.push("/pro/dashboard"); return; }
       setPartnerId(partner.id);
       // Pre-fill from company name

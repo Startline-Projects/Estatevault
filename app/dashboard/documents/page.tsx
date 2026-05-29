@@ -62,7 +62,7 @@ const DOC_LABELS: Record<string, string> = {
 interface Document {
   id: string;
   document_type: string;
-  status: string;
+  status: string | null;
   storage_path: string | null;
   generated_at: string | null;
   delivered_at: string | null;
@@ -71,8 +71,8 @@ interface Document {
 interface Order {
   id: string;
   product_type: string;
-  status: string;
-  attorney_review_requested: boolean;
+  status: string | null;
+  attorney_review_requested: boolean | null;
 }
 
 export default function DocumentsPage() {

@@ -22,11 +22,11 @@ export const GET = withRoute(async (req: NextRequest): Promise<NextResponse> => 
     return ok({ ready: false, documents: [] });
   }
 
-  const allReady = docs.every((d: { status: string }) => d.status === "generated" || d.status === "delivered");
+  const allReady = docs.every((d: { status: string | null }) => d.status === "generated" || d.status === "delivered");
 
   return ok({
     ready: allReady,
-    documents: docs.map((d: { id: string; document_type: string; status: string; storage_path: string | null }) => ({
+    documents: docs.map((d: { id: string; document_type: string; status: string | null; storage_path: string | null }) => ({
       id: d.id,
       document_type: d.document_type,
       status: d.status,

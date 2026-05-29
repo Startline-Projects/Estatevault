@@ -13,8 +13,8 @@ interface EarningsBreakdown {
 interface PayoutRow {
   id: string;
   amount: number;
-  status: string;
-  created_at: string;
+  status: string | null;
+  created_at: string | null;
 }
 
 function getNextFriday(): string {
@@ -87,7 +87,7 @@ export default function ProRevenuePage() {
       // Fetch all orders for this partner
       const { data: allOrders } = await supabase
         .from("orders")
-        .select("id, client_id, product_type, partner_cut, status, stripe_transfer_id, created_at")
+        .select("id, client_id, product_type, partner_cut, status, created_at")
         .eq("partner_id", partner.id)
         .in("status", ["paid", "delivered", "generating", "review"]);
 
@@ -119,35 +119,28 @@ export default function ProRevenuePage() {
             product_type: "vault_subscription",
             partner_cut: partnerCutCents,
             status: "paid",
-            stripe_transfer_id: null,
             created_at: c.updated_at || c.created_at,
           });
         }
       }
 
       // MTD
-      const mtdOrders = orders.filter((o) => o.created_at >= monthStart);
+      const mtdOrders = orders.filter((o) => (o.created_at ?? "") >= monthStart);
       const mtdTotal = mtdOrders.reduce((sum, o) => sum + (o.partner_cut || 0), 0);
       setMtd(mtdTotal);
 
       // Last month
       const lastMonthOrders = orders.filter(
-        (o) => o.created_at >= lastMonthStart && o.created_at <= lastMonthEnd
+        (o) => (o.created_at ?? "") >= lastMonthStart && (o.created_at ?? "") <= lastMonthEnd
       );
       setLastMonth(lastMonthOrders.reduce((sum, o) => sum + (o.partner_cut || 0), 0));
 
       // YTD
-      const ytdOrders = orders.filter((o) => o.created_at >= yearStart);
+      const ytdOrders = orders.filter((o) => (o.created_at ?? "") >= yearStart);
       setYtd(ytdOrders.reduce((sum, o) => sum + (o.partner_cut || 0), 0));
 
       // All time
       setAllTime(orders.reduce((sum, o) => sum + (o.partner_cut || 0), 0));
-
-      // Pending balance: any order without a transfer_id is owed to partner.
-      const pendingOrders = orders.filter((o) => !o.stripe_transfer_id);
-      setPendingBalance(
-        pendingOrders.reduce((sum, o) => sum + (o.partner_cut || 0), 0)
-      );
 
       // Breakdown by type
       const willOrders = orders.filter((o) => o.product_type === "will");
@@ -208,9 +201,13 @@ export default function ProRevenuePage() {
         }
       }
 
-      // Synthesize pending payout entries for orders without transfer or payout row
+      // Pending balance: orders not included in any payout are owed to partner.
+      setPendingBalance(
+        orders.filter((o) => !referencedOrderIds.has(o.id)).reduce((sum, o) => sum + (o.partner_cut || 0), 0)
+      );
+
+      // Synthesize pending payout entries for orders without a payout row
       for (const o of orders) {
-        if (o.stripe_transfer_id) continue;
         if (referencedOrderIds.has(o.id)) continue;
         if ((o.partner_cut || 0) <= 0) continue;
         payoutsList.push({
@@ -221,7 +218,7 @@ export default function ProRevenuePage() {
         });
       }
 
-      payoutsList.sort((a, b) => (a.created_at < b.created_at ? 1 : -1));
+      payoutsList.sort((a, b) => ((a.created_at ?? "") < (b.created_at ?? "") ? 1 : -1));
       setPayouts(payoutsList);
     }
     load()
@@ -358,12 +355,12 @@ export default function ProRevenuePage() {
               {payouts.map((p) => (
                 <tr key={p.id} className="border-b border-gray-100">
                   <td className="px-6 py-3 text-charcoal/70">
-                    {new Date(p.created_at).toLocaleDateString()}
+                    {new Date(p.created_at ?? "").toLocaleDateString()}
                   </td>
                   <td className="px-6 py-3 font-semibold text-navy">
                     {dollars(p.amount)}
                   </td>
-                  <td className="px-6 py-3">{payoutStatusBadge(p.status)}</td>
+                  <td className="px-6 py-3">{payoutStatusBadge(p.status ?? "")}</td>
                 </tr>
               ))}
             </tbody>

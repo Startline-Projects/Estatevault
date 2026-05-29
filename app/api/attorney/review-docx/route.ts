@@ -21,6 +21,7 @@ export const GET = withRoute(async (req: NextRequest) => {
   if (!doc || !doc.review_docx_path) return fail("No editable document available.", 404);
 
   const isAdmin = auth.profile.user_type === "admin";
+  if (!doc.order_id) return fail("Document has no associated order", 400);
   const { data: ar } = await attorneyReviewRepo.isAssignedAttorney(auth.admin, doc.order_id, auth.user.id);
 
   if (!isAdmin && !ar) return fail("Forbidden", 403);

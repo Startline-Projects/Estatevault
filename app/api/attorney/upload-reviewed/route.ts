@@ -35,6 +35,8 @@ export const POST = withRoute(async (req: NextRequest) => {
     .eq("id", documentId)
     .single();
   if (!doc) return fail("Document not found", 404);
+  if (!doc.order_id) return fail("Document has no associated order", 400);
+  if (!doc.client_id) return fail("Document has no associated client", 400);
 
   const isAdmin = auth.profile.user_type === "admin";
   const { data: ar } = await attorneyReviewRepo.isAssignedAttorney(auth.admin, doc.order_id, auth.user.id);

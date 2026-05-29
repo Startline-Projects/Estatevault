@@ -82,7 +82,9 @@ export const POST = withRoute(async (request: NextRequest) => {
           vault_subscription_status: "past_due",
         });
         try {
-          const { data: profile } = await profileRepo.getEmailAndNameById(supabase, client.profile_id);
+          const { data: profile } = client.profile_id
+            ? await profileRepo.getEmailAndNameById(supabase, client.profile_id)
+            : { data: null };
           if (profile?.email) {
             await sendDunningEmail({ to: profile.email, fullName: profile.full_name });
           }
@@ -228,7 +230,6 @@ async function handleVaultSubscriptionCheckout(
       if (transfer) {
         await orderRepo.update(supabase, vaultOrder.id, {
           status: "delivered",
-          transfer_id: transfer.id,
         });
         await payoutRepo.insertPartnerPayout(supabase, {
           partner_id: partnerId,
@@ -576,10 +577,16 @@ async function handleAttorneyReview(
   const slaDeadline = new Date();
   slaDeadline.setHours(slaDeadline.getHours() + 96);
 
-  let partnerForRouting = null;
+  let partnerForRouting: import("@/lib/attorney-review/types").PartnerForRouting | null = null;
   if (partnerId) {
     const { data } = await partnerRepo.getReviewRoutingInfo(supabase, partnerId);
-    partnerForRouting = data;
+    if (data) {
+      partnerForRouting = {
+        ...data,
+        profile_id: data.profile_id ?? "",
+        has_inhouse_estate_attorney: data.has_inhouse_estate_attorney ?? false,
+      };
+    }
   }
 
   const { data: moProfile } = await profileRepo.findIdByEmailMaybe(supabase, INHOUSE_ATTORNEY_EMAIL);

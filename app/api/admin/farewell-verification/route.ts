@@ -29,7 +29,7 @@ export const GET = withRoute(async (_req: NextRequest) => {
 
   const enriched = await Promise.all((requests || []).map(async (req) => {
     const profile = await fvRepo.getClientOwnerProfile(auth.admin, req.client_id);
-    const { data: trustee } = await fvRepo.getTrusteeName(auth.admin, req.trustee_id);
+    const { data: trustee } = await fvRepo.getTrusteeName(auth.admin, req.trustee_id ?? "");
     const { data: certUrl } = await fvRepo.getCertificateUrl(auth.admin, req.certificate_storage_path);
 
     return {

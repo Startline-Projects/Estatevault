@@ -5,6 +5,7 @@ import { withRoute } from "@/lib/api/route";
 import { ok, fail } from "@/lib/api/response";
 import { apiRateLimit } from "@/lib/rate-limit";
 import * as partnerRepo from "@/lib/repos/server/partnerRepo";
+import type { Json } from "@/types/db.generated";
 
 export const POST = withRoute(async (_req: NextRequest) => {
   const auth = await requireAuth(["partner"]);
@@ -23,7 +24,7 @@ export const POST = withRoute(async (_req: NextRequest) => {
 
   const status = (got.data as { status?: string }).status;
   const verified = status === "verified";
-  const records = (got.data as { records?: unknown }).records ?? null;
+  const records = (((got.data as { records?: unknown }).records) ?? null) as Json;
 
   await partnerRepo.update(auth.admin, partner.id, {
     email_verified: verified,

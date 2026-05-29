@@ -60,7 +60,7 @@ export default function SettingsPage() {
         setProfile({
           full_name: data.full_name || "",
           phone: data.phone || "",
-          notification_preferences: data.notification_preferences || { documents_delivered: true, annual_review: true, life_event_reminders: true },
+          notification_preferences: (data.notification_preferences as { documents_delivered: boolean; annual_review: boolean; life_event_reminders: boolean } | null) || { documents_delivered: true, annual_review: true, life_event_reminders: true },
         });
       }
 

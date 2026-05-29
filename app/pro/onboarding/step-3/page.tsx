@@ -53,10 +53,7 @@ export default function Step3Page() {
 
     // Save in-house attorney selection
     if (isAttorney) {
-      const updateData: Record<string, unknown> = {
-        has_inhouse_estate_attorney: hasInhouseAttorney === true,
-        onboarding_step: 4,
-      };
+      let inhouseReviewAttorneyId: string | undefined;
 
       // If they have an in-house attorney, create a profile for that attorney
       if (hasInhouseAttorney && inhouseAttorneyEmail) {
@@ -68,11 +65,15 @@ export default function Step3Page() {
           barNumber: inhouseAttorneyBar,
         });
         if (!error && data) {
-          updateData.inhouse_review_attorney_id = (data as unknown as { profileId: string }).profileId;
+          inhouseReviewAttorneyId = (data as unknown as { profileId: string }).profileId;
         }
       }
 
-      await supabase.from("partners").update(updateData).eq("id", partnerId);
+      await supabase.from("partners").update({
+        has_inhouse_estate_attorney: hasInhouseAttorney === true,
+        onboarding_step: 4,
+        ...(inhouseReviewAttorneyId ? { inhouse_review_attorney_id: inhouseReviewAttorneyId } : {}),
+      }).eq("id", partnerId);
     } else {
       await supabase.from("partners").update({ onboarding_step: 4 }).eq("id", partnerId);
     }

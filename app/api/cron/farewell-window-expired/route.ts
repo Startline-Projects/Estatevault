@@ -50,7 +50,7 @@ export const GET = withRoute(async (req: NextRequest) => {
     try {
       await sendTrusteeUnlockEmail({ to: r.trustee_email, unlockUrl, expiresAt });
       await farewellVerificationRepo.insertTrusteeAudit(admin, {
-        trustee_id: r.trustee_id,
+        trustee_id: r.trustee_id ?? "",
         client_id: r.client_id,
         request_id: r.id,
         action: "unlock_link_emailed",

@@ -4,25 +4,31 @@
 // stay in the route by design.
 
 import { createAdminClient } from "@/lib/api/auth";
+import type { Database } from "@/types/db.generated";
 
 type Admin = ReturnType<typeof createAdminClient>;
 
+type OrderInsert = Database["public"]["Tables"]["orders"]["Insert"];
+type OrderUpdate = Database["public"]["Tables"]["orders"]["Update"];
+
 // Insert an order, returning its id.
-export function insert(admin: Admin, row: Record<string, unknown>) {
+export function insert(admin: Admin, row: OrderInsert) {
   return admin.from("orders").insert(row).select("id").single();
 }
 
 // Patch an order by id (e.g. stripe_session_id, quiz_session_id, promo→free).
-export function update(admin: Admin, orderId: string, patch: Record<string, unknown>) {
+export function update(admin: Admin, orderId: string, patch: OrderUpdate) {
   return admin.from("orders").update(patch).eq("id", orderId);
 }
 
-// Delivered orders whose delivery date is at or before `cutoff`.
+// Delivered documents whose delivery date is at or before `cutoff`.
 // Used by reminder crons to find clients eligible for nudges.
+// `delivered_at` lives on `documents`, not `orders`, so we query documents
+// and join to orders for client_id / partner_id.
 export function findDeliveredBefore(admin: Admin, cutoff: string) {
   return admin
-    .from("orders")
-    .select("client_id, partner_id, delivered_at")
+    .from("documents")
+    .select("delivered_at, order_id, orders!inner(client_id, partner_id)")
     .eq("status", "delivered")
     .not("delivered_at", "is", null)
     .lte("delivered_at", cutoff)

@@ -7,8 +7,12 @@
 // accidentally update/delete another client's row.
 
 import { createAdminClient } from "@/lib/api/auth";
+import type { Database } from "@/types/db.generated";
 
 type Admin = ReturnType<typeof createAdminClient>;
+
+type VaultItemInsert = Database["public"]["Tables"]["vault_items"]["Insert"];
+type VaultItemUpdate = Database["public"]["Tables"]["vault_items"]["Update"];
 
 // List a client's items, newest first. Owner-scoped.
 export function listByClient(admin: Admin, clientId: string) {
@@ -20,7 +24,7 @@ export function listByClient(admin: Admin, clientId: string) {
 }
 
 // Insert a new (encrypted) item; returns its id.
-export function insert(admin: Admin, row: Record<string, unknown>) {
+export function insert(admin: Admin, row: VaultItemInsert) {
   return admin.from("vault_items").insert(row).select("id").single();
 }
 
@@ -35,7 +39,7 @@ export function getOwnerAndData(admin: Admin, id: string) {
 }
 
 // Update an item, scoped to its owner.
-export function updateForOwner(admin: Admin, id: string, clientId: string, update: Record<string, unknown>) {
+export function updateForOwner(admin: Admin, id: string, clientId: string, update: VaultItemUpdate) {
   return admin.from("vault_items").update(update).eq("id", id).eq("client_id", clientId);
 }
 
@@ -83,7 +87,7 @@ export function fetchUnencrypted(admin: Admin, clientId: string, limit: number) 
 
 // Persist the encrypted form of one row. Idempotent + owner-scoped: only writes
 // when ciphertext is still NULL and the row belongs to the client.
-export function encryptRow(admin: Admin, id: string, clientId: string, update: Record<string, unknown>) {
+export function encryptRow(admin: Admin, id: string, clientId: string, update: VaultItemUpdate) {
   return admin
     .from("vault_items")
     .update(update, { count: "exact" })

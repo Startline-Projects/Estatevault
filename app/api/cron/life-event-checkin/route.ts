@@ -28,11 +28,14 @@ export const GET = withRoute(async (req: NextRequest) => {
   const { data: orders } = await orderRepo.findDeliveredBefore(admin, cutoff);
 
   const byClient = new Map<string, { partnerId: string | null; deliveredAt: string }>();
-  for (const o of orders || []) {
-    if (!o.client_id) continue;
-    const prev = byClient.get(o.client_id);
-    if (!prev || o.delivered_at > prev.deliveredAt) {
-      byClient.set(o.client_id, { partnerId: o.partner_id || null, deliveredAt: o.delivered_at });
+  for (const doc of orders || []) {
+    // Each row is a document with a nested orders object (from the join).
+    const order = doc.orders as unknown as { client_id: string | null; partner_id: string | null };
+    const clientId = order?.client_id;
+    if (!clientId || !doc.delivered_at) continue;
+    const prev = byClient.get(clientId);
+    if (!prev || doc.delivered_at > prev.deliveredAt) {
+      byClient.set(clientId, { partnerId: order.partner_id || null, deliveredAt: doc.delivered_at });
     }
   }
 

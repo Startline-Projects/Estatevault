@@ -6,8 +6,8 @@ import { createClient } from "@/lib/supabase/client";
 interface DocumentRow {
   id: string;
   product_type: string;
-  status: string;
-  created_at: string;
+  status: string | null;
+  created_at: string | null;
   client_name: string;
 }
 
@@ -69,7 +69,7 @@ export default function ProDocumentsPage() {
         return;
       }
 
-      const clientIds = Array.from(new Set(orders.map((o) => o.client_id)));
+      const clientIds = Array.from(new Set(orders.map((o) => o.client_id).filter((x): x is string => x != null)));
       const { data: clients } = await supabase
         .from("clients")
         .select("id, profiles(full_name, email)")
@@ -88,7 +88,7 @@ export default function ProDocumentsPage() {
         product_type: o.product_type,
         status: o.status,
         created_at: o.created_at,
-        client_name: clientMap[o.client_id] || "Unknown",
+        client_name: (o.client_id != null ? clientMap[o.client_id] : undefined) || "Unknown",
       }));
 
       setDocuments(rows);
@@ -184,9 +184,9 @@ export default function ProDocumentsPage() {
                       {d.product_type === "trust" ? "Trust Package" : "Will Package"}
                     </span>
                   </td>
-                  <td className="px-4 py-3">{statusBadge(d.status)}</td>
+                  <td className="px-4 py-3">{statusBadge(d.status ?? "")}</td>
                   <td className="px-4 py-3 text-charcoal/50 text-xs">
-                    {new Date(d.created_at).toLocaleDateString()}
+                    {new Date(d.created_at ?? "").toLocaleDateString()}
                   </td>
                 </tr>
               ))}

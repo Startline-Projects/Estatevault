@@ -128,8 +128,9 @@ export const GET = withRoute(async (request: NextRequest) => {
 
         // Restore status to match siblings
         const targetStatus = isAttorneyReview && order.status === "review" ? "review" : "delivered";
-        const updates: Record<string, unknown> = { status: targetStatus };
-        if (targetStatus === "delivered") updates.delivered_at = new Date().toISOString();
+        const updates = targetStatus === "delivered"
+          ? { status: targetStatus, delivered_at: new Date().toISOString() }
+          : { status: targetStatus };
         await supabase.from("documents").update(updates).eq("id", doc.id);
 
         log.push(`${docType}: uploaded to ${path}`);

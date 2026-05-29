@@ -29,7 +29,7 @@ export const POST = withRoute(async (
 
   const { data: priorPayouts } = await affiliateRepo.getPriorPayouts(auth.admin, affiliateId);
   const covered = (priorPayouts ?? [])
-    .filter((p) => COVERING_PAYOUT_STATUSES.includes(p.status))
+    .filter((p) => p.status != null && COVERING_PAYOUT_STATUSES.includes(p.status))
     .reduce((s, p) => s + (p.amount_cents || 0), 0);
 
   const unpaid = earned - covered;

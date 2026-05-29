@@ -46,7 +46,7 @@ export const POST = withRoute(async (req: NextRequest) => {
   }
 
   await fvRepo.insertTrusteeAudit(admin, {
-    trustee_id: r.trustee_id,
+    trustee_id: r.trustee_id ?? "",
     client_id: r.client_id,
     request_id: r.id,
     action: "otp_sent",

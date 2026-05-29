@@ -6,10 +6,10 @@ import { createClient } from "@/lib/supabase/client";
 
 interface Review {
   id: string;
-  order_id: string;
-  status: string;
-  sla_deadline: string;
-  created_at: string;
+  order_id: string | null;
+  status: string | null;
+  sla_deadline: string | null;
+  created_at: string | null;
   reviewer_type: string | null;
   fee_destination: string | null;
   fee_amount: number | null;
@@ -95,7 +95,7 @@ export default function AttorneyQueuePage() {
       }
 
       // Fetch orders separately to get product_type and client_id
-      const orderIds = rawReviews.map((r) => r.order_id).filter(Boolean);
+      const orderIds = rawReviews.map((r) => r.order_id).filter((x): x is string => x != null);
       const { data: orders } = await supabase
         .from("orders")
         .select("id, product_type, client_id")
@@ -104,7 +104,7 @@ export default function AttorneyQueuePage() {
       const orderMap = Object.fromEntries((orders || []).map((o) => [o.id, o]));
 
       // Fetch clients to get profile_id
-      const clientIds = (orders || []).map((o) => o.client_id).filter(Boolean);
+      const clientIds = (orders || []).map((o) => o.client_id).filter((x): x is string => x != null);
       const { data: clients } = await supabase
         .from("clients")
         .select("id, profile_id")
@@ -113,7 +113,7 @@ export default function AttorneyQueuePage() {
       const clientMap = Object.fromEntries((clients || []).map((c) => [c.id, c]));
 
       // Fetch client profiles
-      const profileIds = (clients || []).map((c) => c.profile_id).filter(Boolean);
+      const profileIds = (clients || []).map((c) => c.profile_id).filter((x): x is string => x != null);
       const { data: clientProfiles } = await supabase
         .from("profiles")
         .select("id, full_name, email")
@@ -122,7 +122,7 @@ export default function AttorneyQueuePage() {
       const profileMap = Object.fromEntries((clientProfiles || []).map((p) => [p.id, p]));
 
       // Fetch partners
-      const partnerIds = rawReviews.map((r) => r.partner_id).filter(Boolean);
+      const partnerIds = rawReviews.map((r) => r.partner_id).filter((x): x is string => x != null);
       let partnerMap: Record<string, { company_name: string }> = {};
       if (partnerIds.length > 0) {
         const { data: partners } = await supabase
@@ -134,9 +134,9 @@ export default function AttorneyQueuePage() {
 
       // Assemble enriched reviews
       const enriched: Review[] = rawReviews.map((r) => {
-        const order = orderMap[r.order_id] || null;
-        const client = order ? clientMap[order.client_id] : null;
-        const clientProfile = client ? profileMap[client.profile_id] : null;
+        const order = r.order_id != null ? (orderMap[r.order_id] || null) : null;
+        const client = order && order.client_id != null ? clientMap[order.client_id] : null;
+        const clientProfile = client && client.profile_id != null ? profileMap[client.profile_id] : null;
         const partner = r.partner_id ? partnerMap[r.partner_id] : null;
         return {
           ...r,
@@ -195,7 +195,7 @@ export default function AttorneyQueuePage() {
   }
 
   const pending = reviews.filter((r) => r.status === "pending" || r.status === "in_review");
-  const completed = reviews.filter((r) => ["approved", "approved_with_notes", "flagged"].includes(r.status));
+  const completed = reviews.filter((r) => ["approved", "approved_with_notes", "flagged"].includes(r.status ?? ""));
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -280,10 +280,10 @@ export default function AttorneyQueuePage() {
                         <p className="text-sm text-charcoal/60">{r.partner_company || <span className="text-charcoal/30 italic">Direct</span>}</p>
                       </td>
                       <td className="px-5 py-4">
-                        <p className="text-sm text-charcoal/50">{new Date(r.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</p>
+                        <p className="text-sm text-charcoal/50">{new Date(r.created_at ?? "").toLocaleDateString("en-US", { month: "short", day: "numeric" })}</p>
                       </td>
                       <td className="px-5 py-4">
-                        <SLABadge deadline={r.sla_deadline} />
+                        <SLABadge deadline={r.sla_deadline ?? ""} />
                       </td>
                       <td className="px-5 py-4 text-right">
                         <Link
@@ -335,11 +335,11 @@ export default function AttorneyQueuePage() {
                         <p className="text-sm text-charcoal/60">{r.partner_company || <span className="text-charcoal/30 italic">Direct</span>}</p>
                       </td>
                       <td className="px-5 py-4">
-                        <p className="text-sm text-charcoal/50">{new Date(r.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</p>
+                        <p className="text-sm text-charcoal/50">{new Date(r.created_at ?? "").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</p>
                       </td>
                       <td className="px-5 py-4">
-                        <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium ${STATUS_STYLES[r.status] || "bg-gray-100 text-gray-600"}`}>
-                          {STATUS_LABELS[r.status] || r.status}
+                        <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium ${STATUS_STYLES[r.status ?? ""] || "bg-gray-100 text-gray-600"}`}>
+                          {STATUS_LABELS[r.status ?? ""] || r.status}
                         </span>
                       </td>
                     </tr>

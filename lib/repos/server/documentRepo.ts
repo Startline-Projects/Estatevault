@@ -1,10 +1,14 @@
 // Server-side data access for the `documents` table.
 
 import { createAdminClient } from "@/lib/api/auth";
+import type { Database } from "@/types/db.generated";
 
 type Admin = ReturnType<typeof createAdminClient>;
 
-export function insertMany(admin: Admin, rows: Array<Record<string, unknown>>) {
+type DocumentInsert = Database["public"]["Tables"]["documents"]["Insert"];
+type DocumentUpdate = Database["public"]["Tables"]["documents"]["Update"];
+
+export function insertMany(admin: Admin, rows: DocumentInsert[]) {
   return admin.from("documents").insert(rows);
 }
 
@@ -13,7 +17,7 @@ export function updateStatusByType(
   orderId: string,
   docType: string,
   status: string,
-  extra?: Record<string, unknown>,
+  extra?: DocumentUpdate,
 ) {
   return admin
     .from("documents")

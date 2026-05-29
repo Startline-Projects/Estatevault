@@ -12,6 +12,9 @@ import { ok, fail } from "@/lib/api/response";
 import * as trusteeRepo from "@/lib/repos/server/trusteeRepo";
 import * as clientRepo from "@/lib/repos/server/clientRepo";
 import { trusteeCreateSchema, trusteeConfirmSchema } from "@/lib/validation/schemas";
+import type { Database } from "@/types/db.generated";
+
+type TrusteeInsert = Database["public"]["Tables"]["vault_trustees"]["Insert"];
 
 export const runtime = "nodejs";
 
@@ -101,7 +104,7 @@ export const POST = withRoute(async (req: NextRequest) => {
   const dek = await getOrCreateUserDek(admin, client);
   const dbKey = await deriveSubKey(dek, INFO.DB);
   const indexKey = await deriveSubKey(dek, INFO.INDEX);
-  let insertRow: Record<string, unknown>;
+  let insertRow: TrusteeInsert;
   let emailBlindHex: string;
   try {
     emailBlindHex = bytesToBytea(blindIndex(indexKey, normalize(email)));
@@ -170,7 +173,9 @@ export const PATCH = withRoute(async (request: NextRequest) => {
   // Acceptance email — decrypt trustee name/email using the OWNER's DEK
   // (server holds the keys under Option A).
   try {
-    const { data: ownerClient } = await clientRepo.getKeyMaterialById(admin, trustee.client_id);
+    const { data: ownerClient } = trustee.client_id
+      ? await clientRepo.getKeyMaterialById(admin, trustee.client_id)
+      : { data: null };
     if (ownerClient) {
       let trusteeName = "there", trusteeEmail = "";
       const dek = await getOrCreateUserDek(admin, ownerClient);
@@ -187,11 +192,11 @@ export const PATCH = withRoute(async (request: NextRequest) => {
 
       if (trusteeEmail) {
         let ownerName = "your contact";
-        if (ownerClient.profile_id) {
+        if (ownerClient.profile_id != null) {
           const { data: prof } = await admin.from("profiles").select("full_name, email").eq("id", ownerClient.profile_id).single();
           ownerName = prof?.full_name || prof?.email || ownerName;
         }
-        await sendAcceptanceConfirmation({ trustee_name: trusteeName, trustee_email: trusteeEmail, ownerName, clientId: trustee.client_id });
+        await sendAcceptanceConfirmation({ trustee_name: trusteeName, trustee_email: trusteeEmail, ownerName, clientId: trustee.client_id ?? "" });
       }
     }
   } catch (e) {

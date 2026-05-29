@@ -28,6 +28,7 @@ export const GET = withRoute(async (req: NextRequest) => {
 
   let sent = 0;
   for (const r of active || []) {
+    if (!r.unlock_window_expires_at) continue;
     const expiresAt = new Date(r.unlock_window_expires_at);
     const ttlSec = Math.max(60, Math.floor((expiresAt.getTime() - now.getTime()) / 1000));
     const token = issueVetoToken(r.id, ttlSec);

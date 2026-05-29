@@ -16,30 +16,30 @@ interface Prospect {
   stage: string;
   next_action_at: string | null;
   last_contacted_at: string | null;
-  created_at: string;
+  created_at: string | null;
 }
 interface PartnerCard {
   id: string;
   company_name: string;
   tier: string;
-  onboarding_step: number;
-  onboarding_completed: boolean;
-  certification_completed: boolean;
-  status: string;
-  created_at: string;
+  onboarding_step: number | null;
+  onboarding_completed: boolean | null;
+  certification_completed: boolean | null;
+  status: string | null;
+  created_at: string | null;
 }
 interface Activity {
   id: string;
-  prospect_id: string;
+  prospect_id: string | null;
   type: string;
   body: string | null;
-  created_at: string;
+  created_at: string | null;
 }
 type Card = {
   id: string;
   name: string;
   sub: string;
-  date: string;
+  date: string | null;
   type: "prospect" | "partner";
   raw: Prospect | PartnerCard;
 };
@@ -57,8 +57,8 @@ const COLUMNS = [
 const PRO_TYPES = ["Financial Advisor", "CPA / Accountant", "Insurance Agent", "Attorney", "Other"];
 const SOURCES = ["Cold Outreach", "Referral", "Conference", "Existing Relationship", "Inbound Lead", "Other"];
 
-function daysSince(date: string) {
-  return Math.floor((Date.now() - new Date(date).getTime()) / (1000 * 60 * 60 * 24));
+function daysSince(date: string | null) {
+  return Math.floor((Date.now() - new Date(date ?? "").getTime()) / (1000 * 60 * 60 * 24));
 }
 
 export default function PipelinePage() {
@@ -98,8 +98,8 @@ export default function PipelinePage() {
         .select("id, company_name, tier, onboarding_step, onboarding_completed, certification_completed, status, created_at")
         .eq("created_by", user.id),
     ]);
-    setProspects(p || []);
-    setPartners(pa || []);
+    setProspects((p || []) as Prospect[]);
+    setPartners((pa || []) as PartnerCard[]);
     setLoading(false);
   }, []);
 
@@ -184,7 +184,7 @@ export default function PipelinePage() {
     setEditing(false);
     await load();
     const fresh = (await supabase.from("sales_prospects").select("*").eq("id", openCard.id).single()).data;
-    if (fresh) setOpenCard({ ...openCard, raw: fresh, name: fresh.company_name, sub: fresh.professional_type || fresh.email || "" });
+    if (fresh) setOpenCard({ ...openCard, raw: fresh as Prospect, name: fresh.company_name, sub: fresh.professional_type || fresh.email || "" });
   }
 
   async function addNote() {
@@ -208,7 +208,7 @@ export default function PipelinePage() {
       if (filterSource && pr.source !== filterSource) return false;
       if (filterType && pr.professional_type !== filterType) return false;
     }
-    if (stalledOnly && daysSince((p as { created_at: string }).created_at) <= 7) return false;
+    if (stalledOnly && daysSince((p as { created_at: string | null }).created_at) <= 7) return false;
     return true;
   }
 
@@ -227,13 +227,13 @@ export default function PipelinePage() {
     }
     if (columnId === "agreement_sent") {
       return partners
-        .filter((p) => !p.onboarding_completed && p.onboarding_step <= 1 && p.status === "onboarding" && passesFilter(p, true))
+        .filter((p) => !p.onboarding_completed && (p.onboarding_step ?? 0) <= 1 && p.status === "onboarding" && passesFilter(p, true))
         .map((p) => ({ id: p.id, name: p.company_name, sub: p.tier, date: p.created_at, type: "partner" as const, raw: p }));
     }
     if (columnId === "onboarding") {
       return partners
-        .filter((p) => !p.onboarding_completed && p.onboarding_step > 1 && p.status === "onboarding" && passesFilter(p, true))
-        .map((p) => ({ id: p.id, name: p.company_name, sub: `Step ${p.onboarding_step} of 7`, date: p.created_at, type: "partner" as const, raw: p }));
+        .filter((p) => !p.onboarding_completed && (p.onboarding_step ?? 0) > 1 && p.status === "onboarding" && passesFilter(p, true))
+        .map((p) => ({ id: p.id, name: p.company_name, sub: `Step ${p.onboarding_step ?? 0} of 7`, date: p.created_at, type: "partner" as const, raw: p }));
     }
     if (columnId === "active") {
       return partners
@@ -593,14 +593,14 @@ function ProspectDrawer({
         </div>
       </div>
       <p className="text-xs text-charcoal/50 mb-5">
-        Added {new Date(card.date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })} • {daysSince(card.date)}d ago
+        Added {new Date(card.date ?? "").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })} • {daysSince(card.date)}d ago
       </p>
 
       {/* Partner: just info + link */}
       {partner && (
         <div className="space-y-4">
           <Row label="Tier" value={partner.tier} />
-          <Row label="Onboarding" value={partner.onboarding_completed ? "Complete" : `Step ${partner.onboarding_step} of 7`} />
+          <Row label="Onboarding" value={partner.onboarding_completed ? "Complete" : `Step ${partner.onboarding_step ?? 0} of 7`} />
           <Row label="Certification" value={partner.certification_completed ? "Certified" : "Not certified"} />
           <a
             href={`${portalBase}/partners/${partner.id}`}
@@ -679,7 +679,7 @@ function ProspectDrawer({
                       <div key={a.id} className="rounded-lg border border-gray-100 p-2.5 text-xs">
                         <div className="flex items-center justify-between mb-0.5">
                           <span className="font-semibold text-navy uppercase tracking-wider text-[10px]">{a.type.replace("_", " ")}</span>
-                          <span className="text-charcoal/40">{new Date(a.created_at).toLocaleDateString()}</span>
+                          <span className="text-charcoal/40">{new Date(a.created_at ?? "").toLocaleDateString()}</span>
                         </div>
                         {a.body && <p className="text-charcoal/70 whitespace-pre-wrap">{a.body}</p>}
                       </div>

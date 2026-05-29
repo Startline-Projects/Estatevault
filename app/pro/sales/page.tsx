@@ -25,9 +25,9 @@ interface PartnerRow {
   tier: string;
   status: string;
   created_at: string;
+  updated_at: string;
   onboarding_completed: boolean;
-  current_onboarding_step: number;
-  onboarding_step_updated_at: string;
+  onboarding_step: number;
 }
 
 interface OrderRow {
@@ -49,7 +49,7 @@ interface PendingAttorney {
 interface StuckPartner {
   id: string;
   company_name: string;
-  current_onboarding_step: number;
+  onboarding_step: number;
   daysSinceUpdate: number;
 }
 
@@ -125,7 +125,7 @@ export default function SalesDashboardPage() {
       const { data: partners } = await supabase
         .from("partners")
         .select(
-          "id, company_name, tier, status, created_at, onboarding_completed, current_onboarding_step, onboarding_step_updated_at"
+          "id, company_name, tier, status, created_at, updated_at, onboarding_completed, onboarding_step"
         )
         .eq("created_by", user.id);
 
@@ -165,15 +165,15 @@ export default function SalesDashboardPage() {
         .filter(
           (p) =>
             !p.onboarding_completed &&
-            p.onboarding_step_updated_at &&
-            new Date(p.onboarding_step_updated_at) < threeDaysAgo
+            p.updated_at &&
+            new Date(p.updated_at) < threeDaysAgo
         )
         .map((p) => ({
           id: p.id,
           company_name: p.company_name,
-          current_onboarding_step: p.current_onboarding_step,
+          onboarding_step: p.onboarding_step,
           daysSinceUpdate: Math.floor(
-            (Date.now() - new Date(p.onboarding_step_updated_at).getTime()) / (1000 * 60 * 60 * 24)
+            (Date.now() - new Date(p.updated_at).getTime()) / (1000 * 60 * 60 * 24)
           ),
         }));
       setStuckPartners(stuck);
@@ -207,7 +207,7 @@ export default function SalesDashboardPage() {
         .limit(10);
 
       if (leadsData) {
-        setLeads(leadsData as LeadRow[]);
+        setLeads(leadsData as unknown as LeadRow[]);
       }
 
       // Fetch pending attorney verifications
@@ -244,10 +244,10 @@ export default function SalesDashboardPage() {
           (p: {
             id: string;
             company_name: string;
-            bar_number: string;
+            bar_number: string | null;
             tier: string;
             custom_review_fee: number | null;
-            created_at: string;
+            created_at: string | null;
             profile_id: string | null;
           }) => ({
             id: p.id,
@@ -255,7 +255,7 @@ export default function SalesDashboardPage() {
             bar_number: p.bar_number || "N/A",
             tier: p.tier,
             review_fee: p.custom_review_fee,
-            created_at: p.created_at,
+            created_at: p.created_at ?? "",
             profile_name: p.profile_id ? profileMap[p.profile_id]?.full_name || "Unknown" : "Unknown",
             profile_email: p.profile_id ? profileMap[p.profile_id]?.email || "" : "",
           })
@@ -491,7 +491,7 @@ export default function SalesDashboardPage() {
                 <div>
                   <p className="text-sm font-medium text-charcoal">{p.company_name}</p>
                   <p className="text-xs text-gray-500">
-                    Stuck on Step {p.current_onboarding_step} for {p.daysSinceUpdate} days
+                    Stuck on Step {p.onboarding_step} for {p.daysSinceUpdate} days
                   </p>
                 </div>
                 <button

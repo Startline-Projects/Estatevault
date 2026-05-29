@@ -228,7 +228,7 @@ export default function SalesDashboardPage() {
         .limit(10);
 
       if (leadsData) {
-        setLeads(leadsData as LeadRow[]);
+        setLeads(leadsData as unknown as LeadRow[]);
       }
 
       // Fetch pending attorney verifications
@@ -265,10 +265,10 @@ export default function SalesDashboardPage() {
           (p: {
             id: string;
             company_name: string;
-            bar_number: string;
+            bar_number: string | null;
             tier: string;
             custom_review_fee: number | null;
-            created_at: string;
+            created_at: string | null;
             profile_id: string | null;
           }) => ({
             id: p.id,
@@ -276,7 +276,7 @@ export default function SalesDashboardPage() {
             bar_number: p.bar_number || "N/A",
             tier: p.tier,
             review_fee: p.custom_review_fee,
-            created_at: p.created_at,
+            created_at: p.created_at ?? "",
             profile_name: p.profile_id ? profileMap[p.profile_id]?.full_name || "Unknown" : "Unknown",
             profile_email: p.profile_id ? profileMap[p.profile_id]?.email || "" : "",
           })

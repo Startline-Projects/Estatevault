@@ -8,6 +8,10 @@ import { withRoute } from "@/lib/api/route";
 import { ok, fail } from "@/lib/api/response";
 import * as vaultItemRepo from "@/lib/repos/server/vaultItemRepo";
 import { vaultItemSchema } from "@/lib/validation/schemas";
+import type { Database } from "@/types/db.generated";
+
+type VaultItemInsert = Database["public"]["Tables"]["vault_items"]["Insert"];
+type VaultItemUpdate = Database["public"]["Tables"]["vault_items"]["Update"];
 
 export const runtime = "nodejs";
 
@@ -49,12 +53,12 @@ export const GET = withRoute(async (req: NextRequest) => {
         try {
           const pt = await decryptBytes(dbKey, ct);
           const parsed = JSON.parse(new TextDecoder().decode(pt)) as { label: string; data: Record<string, unknown> };
-          items.push({ id: r.id, category: r.category, label: parsed.label, data: parsed.data, storagePath: r.storage_path, encrypted: true, createdAt: r.created_at });
+          items.push({ id: r.id, category: r.category, label: parsed.label, data: parsed.data, storagePath: r.storage_path, encrypted: true, createdAt: r.created_at ?? "" });
         } catch {
-          items.push({ id: r.id, category: r.category, label: "[decryption failed]", data: {}, storagePath: r.storage_path, encrypted: true, createdAt: r.created_at });
+          items.push({ id: r.id, category: r.category, label: "[decryption failed]", data: {}, storagePath: r.storage_path, encrypted: true, createdAt: r.created_at ?? "" });
         }
       } else {
-        items.push({ id: r.id, category: r.category, label: "", data: {}, storagePath: r.storage_path, encrypted: false, createdAt: r.created_at });
+        items.push({ id: r.id, category: r.category, label: "", data: {}, storagePath: r.storage_path, encrypted: false, createdAt: r.created_at ?? "" });
       }
     }
   } finally {
@@ -81,7 +85,7 @@ export const POST = withRoute(async (request: NextRequest) => {
   const dek = await getOrCreateUserDek(admin, client);
   const dbKey = await deriveSubKey(dek, INFO.DB);
   const indexKey = await deriveSubKey(dek, INFO.INDEX);
-  let insertRow: Record<string, unknown>;
+  let insertRow: VaultItemInsert;
   try {
     const payload = new TextEncoder().encode(JSON.stringify({ label: p.label, data: p.data }));
     const env = await encryptBytes(dbKey, payload);
@@ -140,7 +144,7 @@ export const PATCH = withRoute(async (request: NextRequest) => {
   const dek = await getOrCreateUserDek(admin, client);
   const dbKey = await deriveSubKey(dek, INFO.DB);
   const indexKey = await deriveSubKey(dek, INFO.INDEX);
-  let update: Record<string, unknown>;
+  let update: VaultItemUpdate;
   try {
     let curLabel = "";
     let curData: Record<string, unknown> = {};

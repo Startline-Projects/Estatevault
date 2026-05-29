@@ -196,14 +196,12 @@ export const GET = withRoute(async (request: NextRequest) => {
           }
         }
 
-        const storageClientId = isTestOrder ? "test" : order.client_id;
+        const storageClientId = isTestOrder ? "test" : (order.client_id ?? "unknown");
         await uploadDocument(storageClientId, order.id, docType, pdfBuffer, docxBuffer);
         await documentRepo.updateStatusByType(supabase, order.id, docType, "generated");
       } catch (docError) {
         console.error(`Error generating ${docType}:`, docError);
-        await documentRepo.updateStatusByType(supabase, order.id, docType, "failed", {
-          error_message: docError instanceof Error ? docError.message : "Unknown error",
-        });
+        await documentRepo.updateStatusByType(supabase, order.id, docType, "failed");
         failedCount++;
       }
     }
@@ -215,8 +213,9 @@ export const GET = withRoute(async (request: NextRequest) => {
 
     const finalStatus = order.attorney_review_requested ? "review" : "delivered";
     await supabase.from("orders").update({ status: finalStatus }).eq("id", order.id);
-    const docPatch: Record<string, unknown> = { status: finalStatus };
-    if (!order.attorney_review_requested) docPatch.delivered_at = new Date().toISOString();
+    const docPatch = order.attorney_review_requested
+      ? { status: finalStatus }
+      : { status: finalStatus, delivered_at: new Date().toISOString() };
     await supabase.from("documents").update(docPatch).eq("order_id", order.id).eq("status", "generated");
 
     // Notify client via email (delivered → docs ready; review → attorney pending notice)
@@ -331,9 +330,7 @@ export const GET = withRoute(async (request: NextRequest) => {
       });
     } catch (docError) {
       console.error(`Error generating ${docType}:`, docError);
-      await documentRepo.updateStatusByType(supabase, job.order_id, docType, "failed", {
-        error_message: docError instanceof Error ? docError.message : "Unknown error",
-      });
+      await documentRepo.updateStatusByType(supabase, job.order_id, docType, "failed");
       jobFailedCount++;
     }
   }
@@ -360,8 +357,9 @@ export const GET = withRoute(async (request: NextRequest) => {
 
   const finalJobStatus = job.attorney_review ? "review" : "delivered";
   await supabase.from("orders").update({ status: finalJobStatus }).eq("id", job.order_id);
-  const jobDocPatch: Record<string, unknown> = { status: finalJobStatus };
-  if (!job.attorney_review) jobDocPatch.delivered_at = new Date().toISOString();
+  const jobDocPatch = job.attorney_review
+    ? { status: finalJobStatus }
+    : { status: finalJobStatus, delivered_at: new Date().toISOString() };
   await supabase.from("documents").update(jobDocPatch).eq("order_id", job.order_id).eq("status", "generated");
 
   // Notify client via email

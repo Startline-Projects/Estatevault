@@ -2,8 +2,12 @@
 // it from the API layer.
 
 import { createAdminClient } from "@/lib/api/auth";
+import type { Database } from "@/types/db.generated";
 
 type Admin = ReturnType<typeof createAdminClient>;
+
+type PartnerInsert = Database["public"]["Tables"]["partners"]["Insert"];
+type PartnerUpdate = Database["public"]["Tables"]["partners"]["Update"];
 
 // Revenue tier for a partner id (drives the EV/partner split).
 export function getTier(admin: Admin, partnerId: string) {
@@ -20,17 +24,17 @@ export function findStripeInfoBySlug(admin: Admin, partnerSlug: string) {
 }
 
 // Patch a partner row by id (e.g. tier, stripe_session_id).
-export function update(admin: Admin, partnerId: string, patch: Record<string, unknown>) {
+export function update(admin: Admin, partnerId: string, patch: PartnerUpdate) {
   return admin.from("partners").update(patch).eq("id", partnerId);
 }
 
 // Insert a new partner row.
-export function insert(admin: Admin, row: Record<string, unknown>) {
+export function insert(admin: Admin, row: PartnerInsert) {
   return admin.from("partners").insert(row);
 }
 
 // Upsert a partner row (attorney signup retry flows).
-export function upsert(admin: Admin, row: Record<string, unknown>) {
+export function upsert(admin: Admin, row: PartnerInsert) {
   return admin.from("partners").upsert(row);
 }
 
@@ -125,23 +129,43 @@ export function getCompletedOrders(admin: Admin, partnerId: string) {
     .in("status", ["paid", "delivered"]);
 }
 
-// Pending orders for partner (paid, no transfer yet).
-export function getPendingOrders(admin: Admin, partnerId: string) {
-  return admin
+// Pending orders for partner (paid, no payout yet).
+// We find orders that are NOT included in any payout for this partner.
+export async function getPendingOrders(admin: Admin, partnerId: string) {
+  // Get all payout records for this partner to find which orders have been paid out
+  const { data: payoutRows } = await admin
+    .from("payouts")
+    .select("orders_included")
+    .eq("partner_id", partnerId);
+
+  const paidOrderIds = new Set<string>();
+  for (const p of payoutRows || []) {
+    for (const oid of (p.orders_included as string[] | null) || []) {
+      paidOrderIds.add(oid);
+    }
+  }
+
+  // Get all paid orders for this partner
+  const result = await admin
     .from("orders")
-    .select("partner_cut")
+    .select("id, partner_cut")
     .eq("partner_id", partnerId)
-    .eq("status", "paid")
-    .is("transfer_id", null);
+    .eq("status", "paid");
+
+  // Filter out orders that already have a payout
+  if (result.data) {
+    result.data = result.data.filter((o) => !paidOrderIds.has(o.id));
+  }
+
+  return result;
 }
 
-// Recent transferred orders for partner.
+// Recent payouts for partner (from payouts table).
 export function getRecentPayouts(admin: Admin, partnerId: string) {
   return admin
-    .from("orders")
-    .select("id, partner_cut, product_type, created_at, transfer_id")
+    .from("payouts")
+    .select("id, amount, status, stripe_transfer_id, created_at")
     .eq("partner_id", partnerId)
-    .not("transfer_id", "is", null)
     .order("created_at", { ascending: false })
     .limit(10);
 }

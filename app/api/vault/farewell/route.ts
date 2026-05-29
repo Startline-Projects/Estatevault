@@ -10,6 +10,10 @@ import { ok, fail } from "@/lib/api/response";
 import * as farewellRepo from "@/lib/repos/server/farewellRepo";
 import * as clientRepo from "@/lib/repos/server/clientRepo";
 import { farewellCreateSchema, farewellUpdateSchema } from "@/lib/validation/schemas";
+import type { Database } from "@/types/db.generated";
+
+type FarewellInsert = Database["public"]["Tables"]["farewell_messages"]["Insert"];
+type FarewellUpdate = Database["public"]["Tables"]["farewell_messages"]["Update"];
 
 export const runtime = "nodejs";
 
@@ -92,7 +96,7 @@ export const POST = withRoute(async (req: NextRequest) => {
   const dek = await getOrCreateUserDek(admin, client);
   const dbKey = await deriveSubKey(dek, INFO.DB);
   const indexKey = await deriveSubKey(dek, INFO.INDEX);
-  let insertRow: Record<string, unknown>;
+  let insertRow: FarewellInsert;
   try {
     const meta = new TextEncoder().encode(JSON.stringify({ title, recipient_email: recipientEmail }));
     const env = await encryptBytes(dbKey, meta);
@@ -175,7 +179,7 @@ export const PATCH = withRoute(async (req: NextRequest) => {
   const dek = await getOrCreateUserDek(admin, client);
   const dbKey = await deriveSubKey(dek, INFO.DB);
   const indexKey = await deriveSubKey(dek, INFO.INDEX);
-  let update: Record<string, unknown>;
+  let update: FarewellUpdate;
   try {
     let curTitle = "", curRecipient = "";
     const ct = byteaToBytes(existing.ciphertext);

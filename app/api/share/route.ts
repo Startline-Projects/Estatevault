@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/api/auth";
-import { b64decode, b64encode, validateEnvelope } from "@/lib/api/crypto";
+import { b64decode, b64encode, bytesToBytea, validateEnvelope } from "@/lib/api/crypto";
 import { apiRateLimit } from "@/lib/rate-limit";
 import { shareCreateSchema } from "@/lib/validation/schemas";
 
@@ -54,8 +54,8 @@ export async function GET(req: NextRequest) {
       shares: (shares ?? []).map((s) => ({
         id: s.id,
         itemId: s.item_id,
-        wrappedDek: s.wrapped_dek instanceof Uint8Array ? b64encode(s.wrapped_dek) : s.wrapped_dek,
-        senderPubkey: s.sender_pubkey instanceof Uint8Array ? b64encode(s.sender_pubkey) : s.sender_pubkey,
+        wrappedDek: s.wrapped_dek,
+        senderPubkey: s.sender_pubkey,
         encVersion: s.enc_version,
         createdAt: s.created_at,
         item: s.vault_items,
@@ -142,8 +142,8 @@ export async function POST(req: NextRequest) {
       item_id: p.itemId,
       owner_client_id: client.id,
       recipient_user_id: p.recipientUserId,
-      wrapped_dek: wrappedDek,
-      sender_pubkey: senderPub,
+      wrapped_dek: bytesToBytea(wrappedDek),
+      sender_pubkey: bytesToBytea(senderPub),
       enc_version: p.encVersion ?? 1,
       revoked_at: null,
     }, { onConflict: "item_id,recipient_user_id" });

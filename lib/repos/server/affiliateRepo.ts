@@ -1,6 +1,9 @@
 // Server-side data access for the `affiliates` table.
 
 import { createAdminClient } from "@/lib/api/auth";
+import type { Database } from "@/types/db.generated";
+
+type AffiliatePayoutInsert = Database["public"]["Tables"]["affiliate_payouts"]["Insert"];
 
 type Admin = ReturnType<typeof createAdminClient>;
 
@@ -62,7 +65,7 @@ export function getPriorPayouts(admin: Admin, affiliateId: string) {
 }
 
 // Record a payout.
-export function insertPayout(admin: Admin, row: Record<string, unknown>) {
+export function insertPayout(admin: Admin, row: AffiliatePayoutInsert) {
   return admin.from("affiliate_payouts").insert(row);
 }
 

@@ -34,22 +34,25 @@ export const POST = withRoute(async (req: NextRequest) => {
   if (reviewErr) return fail("Failed to update review", 500);
 
   if (decision === "approved" || decision === "approved_with_notes") {
+    if (!review.order_id) return fail("Review has no associated order", 400);
+    const orderId = review.order_id;
+
     const { error: orderErr } = await auth.admin
       .from("orders")
       .update({ status: "delivered" })
-      .eq("id", review.order_id);
+      .eq("id", orderId);
     if (orderErr) return fail("Failed to unlock order", 500);
 
     const { error: docsErr } = await auth.admin
       .from("documents")
       .update({ status: "delivered", delivered_at: new Date().toISOString() })
-      .eq("order_id", review.order_id);
+      .eq("order_id", orderId);
     if (docsErr) return fail("Failed to unlock documents", 500);
 
     const { data: order } = await auth.admin
       .from("orders")
       .select("product_type, client_id, partner_id")
-      .eq("id", review.order_id)
+      .eq("id", orderId)
       .single();
 
     let clientEmail: string | null = null;
@@ -58,11 +61,11 @@ export const POST = withRoute(async (req: NextRequest) => {
 
     if (order) {
       productType = (order.product_type as "will" | "trust") || "will";
-      const { data: client } = await auth.admin
+      const { data: client } = order.client_id ? await auth.admin
         .from("clients")
         .select("profile_id")
         .eq("id", order.client_id)
-        .single();
+        .single() : { data: null };
 
       if (client?.profile_id) {
         clientProfileId = client.profile_id;
@@ -89,7 +92,7 @@ export const POST = withRoute(async (req: NextRequest) => {
       await auditLogRepo.insertEntry(auth.admin, {
         action: "email.documents_delivered_after_review",
         resource_type: "order",
-        resource_id: review.order_id,
+        resource_id: orderId,
       });
     }
   }

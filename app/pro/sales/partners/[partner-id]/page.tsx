@@ -41,14 +41,14 @@ interface MonthlyStats {
 interface AuditEntry {
   id: string;
   action: string;
-  details: string;
+  metadata: Record<string, unknown> | null;
   created_at: string;
 }
 
 interface NoteEntry {
   id: string;
-  content: string;
-  author_name: string;
+  note: string;
+  sales_rep_id: string | null;
   created_at: string;
 }
 
@@ -181,8 +181,9 @@ export default function PartnerDetailPage() {
   async function loadActivity(supabase: ReturnType<typeof createClient>, pid: string) {
     const { data } = await supabase
       .from("audit_log")
-      .select("id, action, details, created_at")
-      .eq("partner_id", pid)
+      .select("id, action, metadata, created_at")
+      .eq("resource_id", pid)
+      .eq("resource_type", "partner")
       .order("created_at", { ascending: false })
       .limit(50);
     setActivity((data || []) as AuditEntry[]);
@@ -191,7 +192,7 @@ export default function PartnerDetailPage() {
   async function loadNotes(supabase: ReturnType<typeof createClient>, pid: string) {
     const { data } = await supabase
       .from("sales_partner_notes")
-      .select("id, content, author_name, created_at")
+      .select("id, note, sales_rep_id, created_at")
       .eq("partner_id", pid)
       .order("created_at", { ascending: false });
     setNotes((data || []) as NoteEntry[]);
@@ -511,7 +512,7 @@ export default function PartnerDetailPage() {
                   <div className="w-2 h-2 rounded-full bg-gold mt-2 shrink-0" />
                   <div className="flex-1 min-w-0">
                     <p className="text-sm text-charcoal font-medium">{a.action}</p>
-                    {a.details && <p className="text-xs text-gray-400 mt-0.5">{a.details}</p>}
+                    {a.metadata && <p className="text-xs text-gray-400 mt-0.5">{JSON.stringify(a.metadata)}</p>}
                   </div>
                   <span className="text-xs text-gray-400 shrink-0">
                     {new Date(a.created_at).toLocaleDateString("en-US", {
@@ -562,7 +563,7 @@ export default function PartnerDetailPage() {
               {notes.map((n) => (
                 <div key={n.id} className="bg-white rounded-xl border border-gray-200 px-5 py-4">
                   <div className="flex items-start justify-between gap-3">
-                    <p className="text-sm text-charcoal flex-1">{n.content}</p>
+                    <p className="text-sm text-charcoal flex-1">{n.note}</p>
                     <span className="text-xs text-gray-400 shrink-0">
                       {new Date(n.created_at).toLocaleDateString("en-US", {
                         month: "short",
@@ -572,8 +573,8 @@ export default function PartnerDetailPage() {
                       })}
                     </span>
                   </div>
-                  {n.author_name && (
-                    <p className="text-xs text-gray-400 mt-1">- {n.author_name}</p>
+                  {n.sales_rep_id && (
+                    <p className="text-xs text-gray-400 mt-1">Rep: {n.sales_rep_id}</p>
                   )}
                 </div>
               ))}

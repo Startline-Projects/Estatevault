@@ -41,7 +41,7 @@ export const GET = withRoute(async (request: NextRequest) => {
   else if (allGenerated && order.attorney_review_requested) status = "review";
   else if (allGenerated) status = "complete";
   else if (order.status === "generating") status = "generating";
-  else status = order.status;
+  else status = order.status ?? "";
 
   return ok({ status, documents, order_status: order.status });
 });

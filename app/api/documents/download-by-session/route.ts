@@ -35,10 +35,10 @@ export const GET = withRoute(async (request: NextRequest) => {
   if (!authorized && orderId && orderId === doc.order_id) {
     const { data: order } = await admin
       .from("orders")
-      .select("id, order_type, promo_code")
+      .select("id, order_type")
       .eq("id", orderId)
       .single();
-    if (order && (order.order_type === "test" || order.promo_code)) authorized = true;
+    if (order && order.order_type === "test") authorized = true;
   }
 
   if (!authorized) return fail("Access denied", 403);

@@ -4,8 +4,12 @@
 // stop inlining `.from("clients")`.
 
 import { createAdminClient } from "@/lib/api/auth";
+import type { Database } from "@/types/db.generated";
 
 type Admin = ReturnType<typeof createAdminClient>;
+
+type ClientInsert = Database["public"]["Tables"]["clients"]["Insert"];
+type ClientUpdate = Database["public"]["Tables"]["clients"]["Update"];
 
 // Subscription status for a known client id.
 export function getSubscriptionById(admin: Admin, clientId: string) {
@@ -76,12 +80,12 @@ export function getKeyMaterialById(admin: Admin, clientId: string) {
 }
 
 // Insert a new client row (checkout flows that bootstrap an account).
-export function create(admin: Admin, row: Record<string, unknown>) {
+export function create(admin: Admin, row: ClientInsert) {
   return admin.from("clients").insert(row).select("id").single();
 }
 
 // Variant returning the subscription status alongside the id.
-export function createReturningWithSub(admin: Admin, row: Record<string, unknown>) {
+export function createReturningWithSub(admin: Admin, row: ClientInsert) {
   return admin.from("clients").insert(row).select("id, vault_subscription_status").single();
 }
 
@@ -126,7 +130,7 @@ export function findBySubscriptionId(admin: Admin, subscriptionId: string) {
 export function updateVaultSubscription(
   admin: Admin,
   clientId: string,
-  patch: Record<string, unknown>,
+  patch: ClientUpdate,
 ) {
   return admin.from("clients").update(patch).eq("id", clientId);
 }

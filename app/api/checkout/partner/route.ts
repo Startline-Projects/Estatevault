@@ -39,7 +39,7 @@ export const POST = withRoute(async (request: Request) => {
 
     // Update tier immediately
     const admin = createAdminClient();
-    await partnerRepo.update(admin, partnerId, { tier, stripe_session_id: session.id });
+    await partnerRepo.update(admin, partnerId, { tier });
 
     return NextResponse.json({ url: session.url });
   } catch (error) {

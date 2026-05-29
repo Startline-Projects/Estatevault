@@ -50,7 +50,7 @@ export const GET = withRoute(async (_req: NextRequest) => {
 
   for (const order of orders || []) {
     const amount = order.partner_cut || 0;
-    const orderDate = new Date(order.created_at);
+    const orderDate = new Date(order.created_at ?? 0);
     const productType = order.product_type || "other";
 
     allTimeEarnings += amount;
@@ -83,10 +83,10 @@ export const GET = withRoute(async (_req: NextRequest) => {
     earnings_by_type: earningsByType,
     recent_payouts: (recentPayouts || []).map((p) => ({
       id: p.id,
-      amount: p.partner_cut,
-      product_type: p.product_type,
+      amount: p.amount,
+      status: p.status,
       date: p.created_at,
-      transfer_id: p.transfer_id,
+      transfer_id: p.stripe_transfer_id,
     })),
     monthly_trend: monthlyTrend,
   });

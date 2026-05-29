@@ -15,6 +15,9 @@ import * as affiliateClickRepo from "@/lib/repos/server/affiliateClickRepo";
 import * as documentRepo from "@/lib/repos/server/documentRepo";
 import * as profileRepo from "@/lib/repos/server/profileRepo";
 import * as appSettingsRepo from "@/lib/repos/server/appSettingsRepo";
+import type { Database, Json } from "@/types/db.generated";
+
+type OrderInsert = Database["public"]["Tables"]["orders"]["Insert"];
 
 export type ProductConfig = {
   productType: "will" | "trust";
@@ -145,7 +148,7 @@ export async function createCheckoutSession(
   }
 
   // ── CREATE ORDER ───────────────────────────────────────
-  const orderFields: Record<string, unknown> = {
+  const orderFields: OrderInsert = {
     client_id: clientId,
     product_type: config.productType,
     status: "pending",
@@ -159,15 +162,10 @@ export async function createCheckoutSession(
     attorney_cut: attorneyAmount,
     acknowledgment_signed: true,
     acknowledgment_signed_at: new Date().toISOString(),
-    intake_data: intakeAnswers,
+    intake_data: intakeAnswers as Json,
+    complexity_flag: complexityFlag !== undefined ? complexityFlag : undefined,
+    complexity_flag_reason: complexityReasons?.length ? complexityReasons.join("; ") : undefined,
   };
-
-  if (complexityFlag !== undefined) {
-    orderFields.complexity_flag = complexityFlag;
-  }
-  if (complexityReasons?.length) {
-    orderFields.complexity_flag_reason = complexityReasons.join("; ");
-  }
 
   const { data: order, error: orderError } = await orderRepo.insert(supabase, orderFields);
   if (orderError || !order) {
@@ -262,7 +260,7 @@ export async function createCheckoutSession(
     action: "checkout.started",
     resource_type: "order",
     resource_id: order.id,
-    metadata: auditMeta,
+    metadata: auditMeta as Json,
   });
 
   return NextResponse.json({ url: session.url });
@@ -327,7 +325,7 @@ async function handleTestPromo(
     affiliate_cut: testAffiliateCut,
     acknowledgment_signed: true,
     acknowledgment_signed_at: new Date().toISOString(),
-    intake_data: intakeAnswers,
+    intake_data: intakeAnswers as Json,
   });
 
   if (orderErr || !order) {

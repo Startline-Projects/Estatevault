@@ -1,11 +1,12 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createServerClient } from "@supabase/ssr";
+import type { Database } from "@/types/db.generated";
 
 export type UserType = "client" | "partner" | "sales_rep" | "admin" | "attorney" | "review_attorney";
 
 export function createAdminClient() {
-  return createServerClient(
+  return createServerClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!,
     { cookies: { getAll: () => [], setAll: () => {} } }
@@ -60,7 +61,7 @@ export async function requireAuth(allowed?: UserType[], req?: NextRequest): Prom
   };
 }
 
-type OrderAccessOk = { order: { id: string; client_id: string | null; partner_id: string | null; attorney_id: string | null } };
+type OrderAccessOk = { order: { id: string; client_id: string | null; partner_id: string | null } };
 type OrderAccessErr = { error: NextResponse };
 
 export async function assertOrderAccess(
@@ -70,7 +71,7 @@ export async function assertOrderAccess(
 ): Promise<OrderAccessOk | OrderAccessErr> {
   const { data: order } = await admin
     .from("orders")
-    .select("id, client_id, partner_id, attorney_id")
+    .select("id, client_id, partner_id")
     .eq("id", orderId)
     .single();
   if (!order) {
@@ -79,7 +80,17 @@ export async function assertOrderAccess(
   const t = profile.user_type;
   if (t === "admin") return { order };
   if (t === "client" && order.client_id === profile.id) return { order };
-  if (t === "attorney" && order.attorney_id === profile.id) return { order };
+  if (t === "review_attorney" || t === "attorney") {
+    // attorney_id lives on attorney_reviews, not orders — check if a review
+    // exists for this order assigned to this attorney's profile_id.
+    const { data: review } = await admin
+      .from("attorney_reviews")
+      .select("id")
+      .eq("order_id", orderId)
+      .eq("attorney_id", profile.id)
+      .maybeSingle();
+    if (review) return { order };
+  }
   if (t === "partner") {
     const { data: partner } = await admin
       .from("partners")

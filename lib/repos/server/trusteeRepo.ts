@@ -4,8 +4,12 @@
 // keyed on the unguessable invite_token (that token is the authorization).
 
 import { createAdminClient } from "@/lib/api/auth";
+import type { Database } from "@/types/db.generated";
 
 type Admin = ReturnType<typeof createAdminClient>;
+
+type TrusteeInsert = Database["public"]["Tables"]["vault_trustees"]["Insert"];
+type TrusteeUpdate = Database["public"]["Tables"]["vault_trustees"]["Update"];
 
 // List a client's trustees (encrypted blob + status fields).
 export function listByClient(admin: Admin, clientId: string) {
@@ -31,7 +35,7 @@ export function findByEmailBlind(admin: Admin, clientId: string, emailBlindHex: 
 }
 
 // Insert a new (encrypted) trustee row.
-export function insert(admin: Admin, row: Record<string, unknown>) {
+export function insert(admin: Admin, row: TrusteeInsert) {
   return admin.from("vault_trustees").insert(row);
 }
 
@@ -83,7 +87,7 @@ export function fetchUnencrypted(admin: Admin, clientId: string, limit: number) 
     .limit(limit);
 }
 
-export function encryptRow(admin: Admin, id: string, clientId: string, update: Record<string, unknown>) {
+export function encryptRow(admin: Admin, id: string, clientId: string, update: TrusteeUpdate) {
   return admin
     .from("vault_trustees")
     .update(update, { count: "exact" })

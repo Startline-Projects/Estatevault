@@ -17,11 +17,13 @@ export const GET = withRoute(async (req: NextRequest) => {
   if (!review) return fail("Review not found", 404);
 
   if (!isAdmin && review.attorney_id !== auth.user.id) return fail("Forbidden", 403);
+  if (!review.order_id) return fail("Review has no associated order", 400);
+  const reviewOrderId = review.order_id;
 
   const { data: order } = await auth.admin
     .from("orders")
     .select("id, product_type, client_id, amount_total")
-    .eq("id", review.order_id)
+    .eq("id", reviewOrderId)
     .single();
 
   let clientName: string | null = null;
@@ -57,14 +59,14 @@ export const GET = withRoute(async (req: NextRequest) => {
   const { data: documents } = await auth.admin
     .from("documents")
     .select("id, document_type, storage_path, status")
-    .eq("order_id", review.order_id)
+    .eq("order_id", reviewOrderId)
     .order("created_at", { ascending: true });
 
   const extra: Record<string, { review_docx_path: string | null; reviewed_path: string | null; reviewed_uploaded_at: string | null }> = {};
   const { data: extDocs } = await auth.admin
     .from("documents")
     .select("id, review_docx_path, reviewed_path, reviewed_uploaded_at")
-    .eq("order_id", review.order_id);
+    .eq("order_id", reviewOrderId);
   if (extDocs) for (const e of extDocs) extra[e.id] = e;
 
   return ok({

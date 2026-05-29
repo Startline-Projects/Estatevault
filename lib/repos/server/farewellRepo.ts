@@ -3,8 +3,12 @@
 // moves rows. Owner-mutations are scoped by client_id.
 
 import { createAdminClient } from "@/lib/api/auth";
+import type { Database } from "@/types/db.generated";
 
 type Admin = ReturnType<typeof createAdminClient>;
+
+type FarewellInsert = Database["public"]["Tables"]["farewell_messages"]["Insert"];
+type FarewellUpdate = Database["public"]["Tables"]["farewell_messages"]["Update"];
 
 const HIDDEN_STATUSES = '("deleted","replaced","expired")';
 
@@ -19,7 +23,7 @@ export function listActiveByClient(admin: Admin, clientId: string) {
 }
 
 // Insert a new (encrypted) message; returns its id.
-export function insert(admin: Admin, row: Record<string, unknown>) {
+export function insert(admin: Admin, row: FarewellInsert) {
   return admin.from("farewell_messages").insert(row).select("id").single();
 }
 
@@ -73,7 +77,7 @@ export function findByStoragePath(admin: Admin, storagePath: string) {
 }
 
 // Update a message, scoped to its owner.
-export function updateForOwner(admin: Admin, messageId: string, clientId: string, update: Record<string, unknown>) {
+export function updateForOwner(admin: Admin, messageId: string, clientId: string, update: FarewellUpdate) {
   return admin
     .from("farewell_messages")
     .update(update)
@@ -103,7 +107,7 @@ export function fetchUnencrypted(admin: Admin, clientId: string, limit: number) 
     .limit(limit);
 }
 
-export function encryptRow(admin: Admin, id: string, clientId: string, update: Record<string, unknown>) {
+export function encryptRow(admin: Admin, id: string, clientId: string, update: FarewellUpdate) {
   return admin
     .from("farewell_messages")
     .update(update, { count: "exact" })

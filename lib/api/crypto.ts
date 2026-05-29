@@ -30,7 +30,7 @@ export function validateEnvelope(buf: Uint8Array, maxLen = 1024) {
 // don't break, while the explicit union lets `"error" in ctx` discriminate.
 export interface ClientRow extends Record<string, unknown> {
   id: string;
-  profile_id: string;
+  profile_id: string | null;
   wrapped_dek?: unknown;
 }
 
@@ -142,6 +142,6 @@ export async function logAudit(
   await admin.from("audit_log").insert({
     actor_id: args.actor_id,
     action: args.action,
-    metadata: args.meta ?? {},
+    metadata: (args.meta ?? {}) as import("@/types/db.generated").Json,
   }).then(() => undefined, () => undefined);
 }

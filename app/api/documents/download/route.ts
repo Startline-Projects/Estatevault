@@ -20,6 +20,8 @@ export const GET = withRoute(async (request: NextRequest) => {
     .eq("id", documentId)
     .single();
   if (!doc || !doc.storage_path) return fail("Document not found", 404);
+  if (!doc.client_id) return fail("Document has no associated client", 400);
+  if (!doc.order_id) return fail("Document has no associated order", 400);
 
   let reviewedPath: string | null = null;
   let reviewedSealed = false;
@@ -79,11 +81,11 @@ export const GET = withRoute(async (request: NextRequest) => {
     }
   }
 
-  let path = doc.storage_path as string;
+  let path = doc.storage_path;
   let sealed = !!doc.sealed;
   if (isReviewAttorney) {
     if (doc.sealed && doc.attorney_sealed_path && doc.attorney_sealed_for === user.id) {
-      path = doc.attorney_sealed_path as string;
+      path = doc.attorney_sealed_path;
     }
   } else if (reviewedPath) {
     path = reviewedPath;

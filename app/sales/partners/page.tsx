@@ -17,8 +17,8 @@ interface Partner {
   status: PartnerStatus;
   onboarding_step: number;
   certification_completed: boolean;
-  created_at: string;
-  updated_at: string;
+  created_at: string | null;
+  updated_at: string | null;
   mtd_docs: number;
   mtd_revenue: number;
 }
@@ -106,7 +106,7 @@ export default function PartnersListPage() {
 
   function isStuck(partner: Partner): boolean {
     if (partner.status !== "onboarding") return false;
-    const updated = new Date(partner.updated_at || partner.created_at);
+    const updated = new Date(partner.updated_at || partner.created_at || "");
     const threeDaysAgo = new Date();
     threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
     return updated < threeDaysAgo;

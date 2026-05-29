@@ -5,12 +5,11 @@ import { createClient } from "@/lib/supabase/client";
 
 interface ReferralRow {
   id: string;
-  client_name: string;
   reason: string;
-  status: string;
-  created_at: string;
-  referral_fee: number;
-  referral_fee_paid: boolean;
+  status: string | null;
+  created_at: string | null;
+  referral_fee: number | null;
+  referral_fee_paid: boolean | null;
 }
 
 function statusBadge(status: string) {
@@ -49,14 +48,13 @@ export default function ProReferralsPage() {
 
       const { data: refs } = await supabase
         .from("referrals")
-        .select("id, client_name, reason, status, created_at, referral_fee, referral_fee_paid")
+        .select("id, reason, status, created_at, referral_fee, referral_fee_paid")
         .eq("partner_id", partner.id)
         .order("created_at", { ascending: false });
 
       setReferrals(
         (refs || []).map((r) => ({
           id: r.id,
-          client_name: r.client_name || "Unknown",
           reason: r.reason || "Attorney referral",
           status: r.status || "pending",
           created_at: r.created_at,
@@ -73,7 +71,7 @@ export default function ProReferralsPage() {
   const converted = referrals.filter((r) => r.status === "converted").length;
   const feesEarned = referrals
     .filter((r) => r.referral_fee_paid)
-    .reduce((sum, r) => sum + r.referral_fee, 0);
+    .reduce((sum, r) => sum + (r.referral_fee ?? 0), 0);
 
   if (loading) {
     return (
@@ -133,9 +131,6 @@ export default function ProReferralsPage() {
             <thead>
               <tr className="bg-gray-50 border-b border-gray-200">
                 <th className="text-left px-4 py-3 text-xs font-semibold text-navy">
-                  Client
-                </th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-navy">
                   Reason
                 </th>
                 <th className="text-left px-4 py-3 text-xs font-semibold text-navy">
@@ -155,13 +150,10 @@ export default function ProReferralsPage() {
                   key={r.id}
                   className="border-b border-gray-100 hover:bg-gray-50"
                 >
-                  <td className="px-4 py-3 font-medium text-navy">
-                    {r.client_name}
-                  </td>
                   <td className="px-4 py-3 text-charcoal/70">{r.reason}</td>
-                  <td className="px-4 py-3">{statusBadge(r.status)}</td>
+                  <td className="px-4 py-3">{statusBadge(r.status ?? "")}</td>
                   <td className="px-4 py-3 text-charcoal/50 text-xs">
-                    {new Date(r.created_at).toLocaleDateString()}
+                    {new Date(r.created_at ?? "").toLocaleDateString()}
                   </td>
                   <td className="px-4 py-3">
                     {r.referral_fee_paid ? (

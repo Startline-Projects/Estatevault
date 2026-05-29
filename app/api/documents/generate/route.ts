@@ -35,8 +35,9 @@ export const POST = withRoute(async (request: NextRequest) => {
     .single();
   if (!order) return fail("Order not found", 404);
 
-  const { data: quiz } = await quizSessionRepo.getLatestAnswersByClient(admin, order.client_id)
-    .then(r => r, () => ({ data: null }));
+  const { data: quiz } = order.client_id
+    ? await quizSessionRepo.getLatestAnswersByClient(admin, order.client_id).then(r => r, () => ({ data: null }))
+    : { data: null };
 
   const documentTypes = order.product_type === "trust"
     ? ["trust", "pour_over_will", "poa", "healthcare_directive"]
@@ -45,11 +46,11 @@ export const POST = withRoute(async (request: NextRequest) => {
   const job: DocumentJob = {
     job_id: randomUUID(),
     order_id,
-    client_id: order.client_id,
+    client_id: order.client_id ?? "",
     document_types: documentTypes,
     intake_answers: (quiz?.answers as Record<string, unknown>) || {},
     product_type: order.product_type,
-    partner_id: order.partner_id || undefined,
+    partner_id: order.partner_id ?? undefined,
     attorney_review: order.attorney_review_requested || false,
     status: "queued",
     created_at: new Date().toISOString(),

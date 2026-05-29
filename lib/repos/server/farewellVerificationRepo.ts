@@ -2,8 +2,12 @@
 // place that queries this table from the API layer.
 
 import { createAdminClient } from "@/lib/api/auth";
+import type { Database, Json } from "@/types/db.generated";
 
 type Admin = ReturnType<typeof createAdminClient>;
+
+type TrusteeAuditInsert = Database["public"]["Tables"]["trustee_access_audit"]["Insert"];
+type FarewellVerificationUpdate = Database["public"]["Tables"]["farewell_verification_requests"]["Update"];
 
 // Requests whose 72h veto window has expired and trustee hasn't been emailed yet.
 export function findExpiredUnnotified(admin: Admin, now: string) {
@@ -61,14 +65,15 @@ export function insertTrusteeAudit(
     client_id: string;
     request_id: string;
     action: string;
-    metadata?: Record<string, unknown>;
-    resource_type?: string;
-    resource_id?: string;
-    ip?: string | null;
+    metadata?: Json | null;
+    resource_type?: string | null;
+    resource_id?: string | null;
+    ip?: unknown;
     user_agent?: string | null;
   },
 ) {
-  return admin.from("trustee_access_audit").insert(row);
+  const payload: TrusteeAuditInsert = row;
+  return admin.from("trustee_access_audit").insert(payload);
 }
 
 export function findPending(admin: Admin) {
@@ -90,7 +95,7 @@ export function getByIdWithStatus(admin: Admin, id: string) {
 export function approveRequest(
   admin: Admin,
   id: string,
-  patch: Record<string, unknown>,
+  patch: FarewellVerificationUpdate,
 ) {
   return admin.from("farewell_verification_requests").update(patch).eq("id", id);
 }
