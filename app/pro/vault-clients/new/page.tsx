@@ -43,7 +43,7 @@ export default function NewVaultClientPage() {
 
   function handleStep2Continue() {
     setPinError("");
-    if (pin.length !== 4) { setPinError("PIN must be 4 digits."); return; }
+    if (pin.length !== 6) { setPinError("PIN must be 6 digits."); return; }
     if (pin !== confirmPin) { setPinError("PINs do not match."); setConfirmPin(""); return; }
     setStep(3);
   }
@@ -142,7 +142,7 @@ export default function NewVaultClientPage() {
         {/* ── Step 2: Set PIN ── */}
         {step === 2 && (
           <div className="space-y-5">
-            <p className="text-sm text-charcoal/70">Set a 4-digit vault PIN for <span className="font-semibold text-navy">{clientName}</span>. Share this with them — they&apos;ll need it to access their vault.</p>
+            <p className="text-sm text-charcoal/70">Set a 6-digit vault PIN for <span className="font-semibold text-navy">{clientName}</span>. Share this with them — they&apos;ll need it to access their vault.</p>
 
             {pinError && (
               <div className="rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">{pinError}</div>
@@ -153,12 +153,12 @@ export default function NewVaultClientPage() {
               <input
                 type="password"
                 inputMode="numeric"
-                pattern="[0-9]{4}"
-                maxLength={4}
+                pattern="[0-9]{6}"
+                maxLength={6}
                 value={pin}
                 onChange={(e) => setPin(e.target.value.replace(/\D/g, ""))}
-                className="w-full min-h-[44px] rounded-xl border-2 border-gray-200 px-4 py-3 text-center text-2xl tracking-[0.75em] font-mono text-charcoal focus:border-gold focus:outline-none"
-                placeholder="••••"
+                className="w-full min-h-[44px] rounded-xl border-2 border-gray-200 px-4 py-3 text-center text-2xl tracking-[0.5em] font-mono text-charcoal focus:border-gold focus:outline-none"
+                placeholder="••••••"
                 autoFocus
               />
             </div>
@@ -167,12 +167,12 @@ export default function NewVaultClientPage() {
               <input
                 type="password"
                 inputMode="numeric"
-                pattern="[0-9]{4}"
-                maxLength={4}
+                pattern="[0-9]{6}"
+                maxLength={6}
                 value={confirmPin}
                 onChange={(e) => setConfirmPin(e.target.value.replace(/\D/g, ""))}
-                className="w-full min-h-[44px] rounded-xl border-2 border-gray-200 px-4 py-3 text-center text-2xl tracking-[0.75em] font-mono text-charcoal focus:border-gold focus:outline-none"
-                placeholder="••••"
+                className="w-full min-h-[44px] rounded-xl border-2 border-gray-200 px-4 py-3 text-center text-2xl tracking-[0.5em] font-mono text-charcoal focus:border-gold focus:outline-none"
+                placeholder="••••••"
               />
             </div>
 
@@ -180,7 +180,7 @@ export default function NewVaultClientPage() {
               <button onClick={() => setStep(1)} className="flex-1 min-h-[44px] rounded-full border border-gray-300 text-sm font-medium text-charcoal hover:bg-gray-50">Back</button>
               <button
                 onClick={handleStep2Continue}
-                disabled={pin.length !== 4 || confirmPin.length !== 4}
+                disabled={pin.length !== 6 || confirmPin.length !== 6}
                 className="flex-1 min-h-[44px] rounded-full bg-gold text-sm font-semibold text-white hover:bg-gold/90 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Continue →

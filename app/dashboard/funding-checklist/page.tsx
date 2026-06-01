@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
+import LoadingScreen from "@/components/ui/LoadingScreen";
 
 const ASSET_DETAILS: Record<string, { instruction: string; details: string }> = {
   "Primary home / real estate in Michigan": {
@@ -76,7 +77,7 @@ export default function FundingChecklistPage() {
     await supabase.from("clients").update({ funding_checklist: updated }).eq("profile_id", user.id);
   }
 
-  if (loading) return <div className="py-20 text-center text-charcoal/50">Loading...</div>;
+  if (loading) return <LoadingScreen message="Loading your checklist…" />;
 
   if (assetTypes.length === 0) {
     return (

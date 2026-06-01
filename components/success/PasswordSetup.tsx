@@ -9,9 +9,10 @@ interface PasswordSetupProps {
   email: string;
   userId?: string;
   defaultName?: string;
+  verifiedToken?: string;
 }
 
-export default function PasswordSetup({ email, userId, defaultName = "" }: PasswordSetupProps) {
+export default function PasswordSetup({ email, userId, defaultName = "", verifiedToken }: PasswordSetupProps) {
   const router = useRouter();
   const [fullName, setFullName] = useState(defaultName);
   const [password, setPassword] = useState("");
@@ -56,7 +57,7 @@ export default function PasswordSetup({ email, userId, defaultName = "" }: Passw
         // Stale or missing session — purge and use set-password flow
         await supabase.auth.signOut().catch(() => {});
         // Call set-password API, it handles userId lookup by email with retry
-        const { error: setPwErr } = await apiSetPassword({ userId: userId || undefined, email, password, fullName: fullName.trim() });
+        const { error: setPwErr } = await apiSetPassword({ userId: userId || undefined, email, password, fullName: fullName.trim(), verifiedToken });
         if (setPwErr) {
           setError(setPwErr);
           setLoading(false);

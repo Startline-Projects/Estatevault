@@ -81,7 +81,13 @@
       "Bash(echo \"exit $?\")",
       "Bash(grep -rln \"useVaultLock\\\\|getKeySession\\\\|vault:pin-expiry\" app components hooks)",
       "Bash(sed -n '1,60p' app/dashboard/vault/farewell/page.tsx)",
-      "Bash(kill -9 79141 93987)"
+      "Bash(kill -9 79141 93987)",
+      "Bash(perl -0pi -e 's/pin\\\\.length !== 4/pin.length !== 6/g; s/confirmPin\\\\.length !== 4/confirmPin.length !== 6/g; s/PIN must be 4 digits/PIN must be 6 digits/g; s/separate 4-digit PIN/separate 6-digit PIN/g; s/pattern=\"\\\\[0-9\\\\]\\\\{4\\\\}\"/pattern=\"[0-9]{6}\"/g; s/maxLength=\\\\{4\\\\}/maxLength={6}/g; s/tracking-\\\\[0\\\\.75em\\\\]/tracking-[0.5em]/g; s/placeholder=\"••••\"/placeholder=\"••••••\"/g' app/auth/vault-pin/page.tsx)",
+      "Bash(perl -0pi -e 's/\\\\^\\\\\\\\d\\\\{4\\\\}\\\\$/^\\\\\\\\d{6}\\\\$/g; s/PIN must be 4 digits/PIN must be 6 digits/g; s/Create a 4-digit PIN/Create a 6-digit PIN/g; s/PIN \\\\\\(4 digits\\\\\\)/PIN \\(6 digits\\)/g; s/pattern=\"\\\\\\\\d\\\\{4\\\\}\"/pattern=\"\\\\\\\\d{6}\"/g; s/maxLength=\\\\{4\\\\}/maxLength={6}/g; s/pin\\\\.length !== 4/pin.length !== 6/g; s/pinConfirm\\\\.length !== 4/pinConfirm.length !== 6/g' app/onboarding/vault-setup/page.tsx)",
+      "Bash(awk '/export const __TRACKED_VAR__ = z.object\\\\\\(/{p=1} p{print} /\\\\}\\\\\\);/{if\\(p\\)exit}' lib/validation/schemas.ts)",
+      "Bash(cat app/api/subscription/sync/route.ts)",
+      "Bash(cat app/api/subscription/status/route.ts)",
+      "Bash(xargs -I{} sh -c 'echo \"=== {} ===\"; cat \"{}\"')"
     ]
   }
 }

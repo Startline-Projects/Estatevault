@@ -1,7 +1,7 @@
 import { type NextRequest } from "next/server";
 import { withRoute } from "@/lib/api/route";
 import { ok, fail } from "@/lib/api/response";
-import { createAdminClient, requireAuth } from "@/lib/api/auth";
+import { createAdminClient } from "@/lib/api/auth";
 import { claude, CLAUDE_MODEL } from "@/lib/claude";
 import { uploadDocument } from "@/lib/documents/storage";
 import { sendDocumentEmail, sendAttorneyReviewPendingEmail, buildAssetChecklist } from "@/lib/email";
@@ -9,10 +9,12 @@ import { wantsNotification } from "@/lib/notifications/prefs";
 import { getTemplate } from "@/lib/documents/templates/resolve";
 import * as auditLogRepo from "@/lib/repos/server/auditLogRepo";
 
+// Public, post-payment generation trigger fired by the order success page
+// (the customer has no session there yet). Listed in middleware publicPaths.
+// Abuse is bounded below: only orders already past payment (status
+// "generating") generate, and already-finished orders short-circuit — so a
+// caller cannot drive repeated Claude generation for an order.
 export const GET = withRoute(async (request: NextRequest) => {
-  const auth = await requireAuth(["admin"], request);
-  if ("error" in auth) return auth.error;
-
   const log: string[] = [];
   try {
     const { searchParams } = new URL(request.url);
@@ -39,6 +41,18 @@ export const GET = withRoute(async (request: NextRequest) => {
 
     const isAttorneyReview = order.attorney_review_requested === true;
     log.push(`2. Order found: type=${order.product_type}, status=${order.status}, attorney_review=${isAttorneyReview}, client_id=${order.client_id}`);
+
+    // Abuse guard (public route): already-finished orders short-circuit, and
+    // only orders past payment ("generating") proceed. Unpaid/"pending" orders
+    // never trigger Claude generation.
+    if (order.status === "delivered" || order.status === "review") {
+      log.push("2b. Order already processed — skipping regeneration");
+      return ok({ success: true, already_processed: true, order_id: orderId, log });
+    }
+    if (order.status !== "generating") {
+      log.push(`2b. Order status "${order.status}" not eligible for generation`);
+      return fail("Order is not ready for document generation", 403, { log });
+    }
 
     // Get quiz answers, prefer intake_data, then quiz_session_id, then client_id
     let quizAnswers: Record<string, unknown> = {};

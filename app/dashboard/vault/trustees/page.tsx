@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { listTrustees, addTrustee, deleteTrustee, FULL_SCOPE, type TrusteePlaintext, type AccessScope } from "@/lib/repos/trusteeRepo";
+import LoadingScreen from "@/components/ui/LoadingScreen";
 
 const REL_OPTIONS = ["Spouse/Partner", "Adult Child", "Sibling", "Parent", "Attorney", "Friend", "Other"];
 
@@ -99,7 +100,7 @@ export default function TrusteesPage() {
     }
   }
 
-  if (loading) return <div className="py-20 text-center text-charcoal/50">Loading...</div>;
+  if (loading) return <LoadingScreen message="Loading trustees…" />;
 
   return (
     <div className="max-w-2xl">

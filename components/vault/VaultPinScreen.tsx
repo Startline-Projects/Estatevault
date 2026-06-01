@@ -12,6 +12,7 @@ interface VaultPinScreenProps {
   onPinErrorClear: () => void;
   onCreatePin: () => void;
   onVerifyPin: () => void;
+  submitting?: boolean;
 }
 
 export default function VaultPinScreen({
@@ -24,6 +25,7 @@ export default function VaultPinScreen({
   onPinErrorClear,
   onCreatePin,
   onVerifyPin,
+  submitting = false,
 }: VaultPinScreenProps) {
   const hasPinError = pinError.length > 0;
   const pinErrorId = "pin-error-message";
@@ -31,8 +33,31 @@ export default function VaultPinScreen({
   // Loading screen while checking PIN status
   if (screen === "pin-check") {
     return (
-      <div className="flex items-center justify-center py-20">
-        <div className="animate-pulse text-gold text-xl font-bold">Loading vault...</div>
+      <div className="max-w-md mx-auto py-16 text-center" role="status" aria-live="polite">
+        <span className="sr-only">Loading your vault</span>
+
+        {/* Lock badge with a rotating gold ring */}
+        <div className="relative mx-auto h-16 w-16">
+          <div className="absolute inset-0 rounded-full border-2 border-gold/15" />
+          <div className="absolute inset-0 rounded-full border-2 border-transparent border-t-gold animate-spin" />
+          <div className="absolute inset-1 rounded-full bg-gold/10 flex items-center justify-center">
+            <span className="text-2xl">🔐</span>
+          </div>
+        </div>
+
+        <h1 className="mt-6 text-lg font-bold text-navy">Unlocking your vault</h1>
+        <p className="mt-1 text-sm text-charcoal/50">Securing your private documents…</p>
+
+        {/* Skeleton tiles that mirror the vault grid forming */}
+        <div className="mt-10 grid grid-cols-2 gap-3" aria-hidden="true">
+          {[0, 1, 2, 3].map((i) => (
+            <div
+              key={i}
+              className="h-20 rounded-xl bg-gray-100 animate-pulse"
+              style={{ animationDelay: `${i * 120}ms` }}
+            />
+          ))}
+        </div>
       </div>
     );
   }
@@ -86,10 +111,11 @@ export default function VaultPinScreen({
         />
         <button
           onClick={onCreatePin}
-          disabled={pin.length !== 6 || confirmPin.length !== 6}
-          className="mt-6 w-full min-h-[44px] rounded-full bg-gold py-3 text-sm font-semibold text-white hover:bg-gold/90 disabled:opacity-50 disabled:cursor-not-allowed"
+          disabled={pin.length !== 6 || confirmPin.length !== 6 || submitting}
+          className="mt-6 flex w-full min-h-[44px] items-center justify-center gap-2 rounded-full bg-gold py-3 text-sm font-semibold text-white hover:bg-gold/90 disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          Create PIN
+          {submitting && <span className="h-4 w-4 rounded-full border-2 border-white/40 border-t-white animate-spin" />}
+          {submitting ? "Setting up…" : "Create PIN"}
         </button>
       </div>
     );
@@ -125,15 +151,16 @@ export default function VaultPinScreen({
         aria-describedby={hasPinError ? pinErrorId : undefined}
         className={`mt-6 w-full text-center rounded-xl border-2 border-gray-200 py-4 leading-none focus:border-gold focus:outline-none ${pin ? "text-2xl tracking-[0.5em]" : "text-sm tracking-normal"}`}
         onKeyDown={(e) => {
-          if (e.key === "Enter" && pin.length === 6) onVerifyPin();
+          if (e.key === "Enter" && pin.length === 6 && !submitting) onVerifyPin();
         }}
       />
       <button
         onClick={onVerifyPin}
-        disabled={pin.length !== 6}
-        className="mt-6 w-full min-h-[44px] rounded-full bg-gold py-3 text-sm font-semibold text-white hover:bg-gold/90 disabled:opacity-50 disabled:cursor-not-allowed"
+        disabled={pin.length !== 6 || submitting}
+        className="mt-6 flex w-full min-h-[44px] items-center justify-center gap-2 rounded-full bg-gold py-3 text-sm font-semibold text-white hover:bg-gold/90 disabled:opacity-50 disabled:cursor-not-allowed"
       >
-        Unlock Vault
+        {submitting && <span className="h-4 w-4 rounded-full border-2 border-white/40 border-t-white animate-spin" />}
+        {submitting ? "Unlocking…" : "Unlock Vault"}
       </button>
     </div>
   );

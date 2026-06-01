@@ -1,4 +1,4 @@
-import { get, post, getRaw, type ApiResult } from "./client";
+import { get, post, getRaw, publicGet, type ApiResult } from "./client";
 
 export type CheckStatusResult = {
   status: string;
@@ -7,12 +7,15 @@ export type CheckStatusResult = {
 
 export type DownloadBySessionResult = { url: string };
 
+// Called from the public, post-payment success page where the visitor has no
+// session yet (account is created on that page). Must use publicGet — authed
+// get() would redirect the whole window to /auth/login on a 401.
 export function processNow(orderId: string): Promise<ApiResult<unknown>> {
-  return get("/api/documents/process-now", { order_id: orderId });
+  return publicGet("/api/documents/process-now", { order_id: orderId });
 }
 
 export function checkStatus(orderId: string): Promise<ApiResult<CheckStatusResult>> {
-  return get("/api/documents/check-status", { order_id: orderId });
+  return publicGet("/api/documents/check-status", { order_id: orderId });
 }
 
 export function downloadBySession(params: {

@@ -12,12 +12,41 @@ interface SubscriptionStatus {
   canUseFarewell: boolean;
 }
 
-export default function SubscriptionBanner({ onStatusLoaded }: { onStatusLoaded?: (status: SubscriptionStatus) => void }) {
-  const [sub, setSub] = useState<SubscriptionStatus | null>(null);
-  const [loading, setLoading] = useState(true);
+type StatusInput = {
+  status: string;
+  expiry?: string | null;
+  canAmendFree?: boolean;
+  canUseFarewell?: boolean;
+};
+
+function normalize(s: StatusInput): SubscriptionStatus {
+  const active = s.status === "active";
+  return {
+    status: s.status,
+    expiry: s.expiry ?? null,
+    canAmendFree: s.canAmendFree ?? active,
+    canUseFarewell: s.canUseFarewell ?? active,
+  };
+}
+
+export default function SubscriptionBanner({ onStatusLoaded, status: statusProp }: { onStatusLoaded?: (status: SubscriptionStatus) => void; status?: StatusInput | null }) {
+  // When the `status` prop is present (even null), the parent owns the fetch — defer to it
+  // and never make our own request. When omitted (undefined), fetch standalone.
+  const managed = statusProp !== undefined;
+  const [sub, setSub] = useState<SubscriptionStatus | null>(statusProp ? normalize(statusProp) : null);
+  const [loading, setLoading] = useState(!managed);
   const [subscribing, setSubscribing] = useState(false);
 
   useEffect(() => {
+    if (managed) {
+      if (statusProp) {
+        const status = normalize(statusProp);
+        setSub(status);
+        onStatusLoaded?.(status);
+      }
+      setLoading(false);
+      return;
+    }
     async function load() {
       try {
         const { data } = await getStatus();
@@ -30,7 +59,7 @@ export default function SubscriptionBanner({ onStatusLoaded }: { onStatusLoaded?
       setLoading(false);
     }
     load();
-  }, [onStatusLoaded]);
+  }, [onStatusLoaded, statusProp, managed]);
 
   async function handleSubscribe() {
     setSubscribing(true);

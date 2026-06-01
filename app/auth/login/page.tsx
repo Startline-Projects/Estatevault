@@ -86,6 +86,14 @@ function LoginForm() {
       return;
     }
 
+    // Fresh login must always re-prompt for the vault PIN, even if a prior
+    // session left a still-valid unlock in this tab's sessionStorage.
+    if (typeof window !== "undefined") {
+      sessionStorage.removeItem("vault:pin-expiry");
+      sessionStorage.removeItem("vault:screen");
+      sessionStorage.removeItem("vault:selected-category");
+    }
+
     // Get user and check their type from profiles table (source of truth)
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {

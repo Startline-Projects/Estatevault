@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { updateClient } from "@/lib/api-client/partner";
+import LoadingScreen from "@/components/ui/LoadingScreen";
 
 interface ClientDetail { id: string; created_at: string; profiles: { full_name: string; email: string; phone: string } | null }
 interface Order { id: string; product_type: string; status: string; amount_total: number; partner_cut: number; attorney_review_requested: boolean; complexity_flag: boolean; complexity_flag_reason: string; created_at: string }
@@ -55,7 +56,7 @@ export default function ClientDetailPage() {
     setNewNote("");
   }
 
-  if (!client) return <div className="py-20 text-center text-charcoal/50">Loading...</div>;
+  if (!client) return <LoadingScreen message="Loading client…" />;
 
   const order = orders[0];
   const name = client.profiles?.full_name || client.profiles?.email || "Client";

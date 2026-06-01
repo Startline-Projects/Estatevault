@@ -294,9 +294,13 @@ export default function WillCheckoutPage() {
                   setVerifiedEmail("");
                 }
               }}
-              onVerifiedChange={({ verified, email }) => {
+              onVerifiedChange={({ verified, token, email }) => {
                 setEmailVerified(verified);
                 setVerifiedEmail(verified ? email : "");
+                // Carry the email-ownership token to the post-payment success
+                // page so PasswordSetup can call set-password (which requires it).
+                if (verified && token) sessionStorage.setItem("evVerifiedToken", token);
+                else sessionStorage.removeItem("evVerifiedToken");
               }}
               placeholder="your@email.com"
               partnerId={partnerId || null}

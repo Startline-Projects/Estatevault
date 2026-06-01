@@ -19,8 +19,8 @@ function SetupPinForm() {
     e.preventDefault();
     setError("");
 
-    if (pin.length !== 4) {
-      setError("PIN must be 4 digits.");
+    if (pin.length !== 6) {
+      setError("PIN must be 6 digits.");
       return;
     }
     if (pin !== confirmPin) {
@@ -59,7 +59,7 @@ function SetupPinForm() {
           <div className="text-4xl mb-3">🔐</div>
           <h1 className="text-2xl font-bold text-white">Set Your Vault PIN</h1>
           <p className="mt-2 text-sm text-white/60">
-            Your vault is protected by a separate 4-digit PIN. Keep it safe.
+            Your vault is protected by a separate 6-digit PIN. Keep it safe.
           </p>
         </div>
 
@@ -79,13 +79,13 @@ function SetupPinForm() {
                 id="pin"
                 type="password"
                 inputMode="numeric"
-                pattern="[0-9]{4}"
-                maxLength={4}
+                pattern="[0-9]{6}"
+                maxLength={6}
                 required
                 value={pin}
                 onChange={(e) => setPin(e.target.value.replace(/\D/g, ""))}
-                className="min-h-[44px] w-full rounded-xl border-2 border-gray-200 px-4 py-3 text-center text-2xl tracking-[0.75em] font-mono text-charcoal focus:border-gold focus:outline-none focus:ring-1 focus:ring-gold/30"
-                placeholder="••••"
+                className="min-h-[44px] w-full rounded-xl border-2 border-gray-200 px-4 py-3 text-center text-2xl tracking-[0.5em] font-mono text-charcoal focus:border-gold focus:outline-none focus:ring-1 focus:ring-gold/30"
+                placeholder="••••••"
                 autoFocus
               />
             </div>
@@ -98,19 +98,19 @@ function SetupPinForm() {
                 id="confirmPin"
                 type="password"
                 inputMode="numeric"
-                pattern="[0-9]{4}"
-                maxLength={4}
+                pattern="[0-9]{6}"
+                maxLength={6}
                 required
                 value={confirmPin}
                 onChange={(e) => setConfirmPin(e.target.value.replace(/\D/g, ""))}
-                className="min-h-[44px] w-full rounded-xl border-2 border-gray-200 px-4 py-3 text-center text-2xl tracking-[0.75em] font-mono text-charcoal focus:border-gold focus:outline-none focus:ring-1 focus:ring-gold/30"
-                placeholder="••••"
+                className="min-h-[44px] w-full rounded-xl border-2 border-gray-200 px-4 py-3 text-center text-2xl tracking-[0.5em] font-mono text-charcoal focus:border-gold focus:outline-none focus:ring-1 focus:ring-gold/30"
+                placeholder="••••••"
               />
             </div>
 
             <button
               type="submit"
-              disabled={loading || pin.length !== 4 || confirmPin.length !== 4}
+              disabled={loading || pin.length !== 6 || confirmPin.length !== 6}
               className="w-full min-h-[44px] rounded-full bg-gold py-3.5 text-sm font-semibold text-white hover:bg-gold/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? "Setting PIN..." : "Set PIN & Enter Vault"}

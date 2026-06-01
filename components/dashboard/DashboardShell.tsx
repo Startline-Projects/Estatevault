@@ -57,6 +57,12 @@ export default function DashboardShell({
       const { getKeySession } = await import("@/lib/crypto/keySession");
       await getKeySession().destroy();
     } catch { /* best-effort */ }
+    // Drop the vault PIN unlock so a subsequent login (same tab) must re-enter the PIN.
+    if (typeof window !== "undefined") {
+      sessionStorage.removeItem("vault:pin-expiry");
+      sessionStorage.removeItem("vault:screen");
+      sessionStorage.removeItem("vault:selected-category");
+    }
     await supabase.auth.signOut();
     router.replace("/");
     router.refresh();

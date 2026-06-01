@@ -8,7 +8,7 @@ import { downloadDocument } from "@/lib/repos/documentRepo";
 import { listFarewellMessages } from "@/lib/repos/videoRepo";
 import { PRICES, formatPrice } from "@/lib/orders/pricing";
 import { pinAction, downloadDocument as downloadVaultDocument } from "@/lib/api-client/vault";
-import { getStatus as getSubStatus, sync as syncSub } from "@/lib/api-client/subscription";
+import { getStatus as getSubStatus, sync as syncSub, type SubscriptionStatus } from "@/lib/api-client/subscription";
 import { checkoutVaultSubscription } from "@/lib/api-client/checkout";
 
 import VaultPinScreen from "@/components/vault/VaultPinScreen";
@@ -24,6 +24,8 @@ import {
   type Screen,
 } from "@/components/vault/vault-constants";
 
+// How long a PIN unlock stays valid (same-tab) before the vault re-prompts.
+const PIN_UNLOCK_MS = 2 * 60 * 1000;
 const SCREEN_STORAGE_KEY = "vault:screen";
 const CATEGORY_STORAGE_KEY = "vault:selected-category";
 const RESTORABLE_SCREENS = new Set<Screen>(["vault", "category", "add-item", "upload-doc"]);
@@ -35,6 +37,7 @@ export default function VaultPage() {
   const [pin, setPin] = useState("");
   const [confirmPin, setConfirmPin] = useState("");
   const [pinError, setPinError] = useState("");
+  const [verifying, setVerifying] = useState(false);
   const [items, setItems] = useState<VaultItem[]>([]);
   const [farewellCount, setFarewellCount] = useState(0);
   const [selectedCategory, setSelectedCategory] = useState("");
@@ -42,6 +45,7 @@ export default function VaultPage() {
   const [saving, setSaving] = useState(false);
   const [pinExpiry, setPinExpiry] = useState(0);
   const [isSubscribed, setIsSubscribed] = useState(false);
+  const [subData, setSubData] = useState<SubscriptionStatus | null>(null);
   const [showUpgradePrompt, setShowUpgradePrompt] = useState(false);
 
   const [uploadFile, setUploadFile] = useState<File | null>(null);
@@ -53,29 +57,21 @@ export default function VaultPage() {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [viewItem, setViewItem] = useState<VaultItem | null>(null);
 
-  // -- Init: check PIN + subscription status --
+  // -- Init: PIN gate decides the screen; subscription loads in the background --
   useEffect(() => {
     if (initRef.current) return;
     initRef.current = true;
-    async function check() {
-      const justSubscribed = typeof window !== "undefined" && new URLSearchParams(window.location.search).get("subscribed") === "true";
-      const [pinResult, subResult] = await Promise.all([
-        pinAction({ action: "check" }),
-        getSubStatus(),
-      ]);
-      const pinData = pinResult.data as Record<string, unknown> | undefined;
-      let subStatus = subResult.data?.status;
-      if (justSubscribed || subStatus !== "active") {
-        try {
-          const { data: syncData } = await syncSub();
-          if (syncData?.status === "active") subStatus = "active";
-        } catch { /* ignore */ }
-      }
-      setIsSubscribed(subStatus === "active");
+
+    const justSubscribed = typeof window !== "undefined" && new URLSearchParams(window.location.search).get("subscribed") === "true";
+
+    // 1. PIN check is the ONLY thing that gates the screen. Items load via the
+    //    screen-change effect below, so we don't await them here.
+    (async () => {
+      const { data: pinRaw } = await pinAction({ action: "check" });
+      const pinData = pinRaw as Record<string, unknown> | undefined;
       const cachedExpiry = typeof window !== "undefined" ? Number(sessionStorage.getItem("vault:pin-expiry") || 0) : 0;
       if (pinData?.hasPin && cachedExpiry > Date.now()) {
         setPinExpiry(cachedExpiry);
-        await loadItems();
         const savedScreen = typeof window !== "undefined" ? sessionStorage.getItem(SCREEN_STORAGE_KEY) : null;
         const savedCategory = typeof window !== "undefined" ? sessionStorage.getItem(CATEGORY_STORAGE_KEY) : null;
         if (savedScreen && RESTORABLE_SCREENS.has(savedScreen as Screen)) {
@@ -86,10 +82,22 @@ export default function VaultPage() {
         if (typeof window !== "undefined") { sessionStorage.removeItem("vault:pin-expiry"); sessionStorage.removeItem(SCREEN_STORAGE_KEY); sessionStorage.removeItem(CATEGORY_STORAGE_KEY); }
         setScreen(pinData?.hasPin ? "pin-enter" : "pin-create");
       }
-      if (justSubscribed && typeof window !== "undefined") { const url = new URL(window.location.href); url.searchParams.delete("subscribed"); window.history.replaceState({}, "", url.toString()); }
-    }
-    check();
-  }, [router]);
+    })();
+
+    // 2. Subscription status — off the critical path. Trust the DB (kept fresh by
+    //    webhook); only reconcile with Stripe right after returning from checkout.
+    (async () => {
+      const { data } = await getSubStatus();
+      let status: SubscriptionStatus | null = data ?? null;
+      if (justSubscribed && status?.status !== "active") {
+        try { const { data: syncData } = await syncSub(); if (syncData?.status === "active") status = { ...(status ?? { status: "active" }), status: "active" }; } catch { /* ignore */ }
+      }
+      setSubData(status);
+      setIsSubscribed(status?.status === "active");
+    })();
+
+    if (justSubscribed && typeof window !== "undefined") { const url = new URL(window.location.href); url.searchParams.delete("subscribed"); window.history.replaceState({}, "", url.toString()); }
+  }, []);
 
   // -- Persist screen + category for tab restore --
   useEffect(() => {
@@ -101,7 +109,7 @@ export default function VaultPage() {
     }
   }, [screen, selectedCategory]);
 
-  // -- Auto-lock after 10 min --
+  // -- Auto-lock once the PIN unlock window expires --
   useEffect(() => {
     if (screen !== "vault" && screen !== "category" && screen !== "add-item" && screen !== "upload-doc") return;
     if (pinExpiry === 0) return;
@@ -117,12 +125,13 @@ export default function VaultPage() {
   const handleSubStatusLoaded = useCallback((s: { status: string }) => setIsSubscribed(s.status === "active"), []);
 
   const loadItems = useCallback(async () => {
-    try {
-      const list = await listItems();
-      const uploadedOnly = list.filter((i) => !(i.data as Record<string, unknown>)?.order_id);
+    const [listRes, fwRes] = await Promise.allSettled([listItems(), listFarewellMessages()]);
+    if (listRes.status === "fulfilled") {
+      const uploadedOnly = listRes.value.filter((i) => !(i.data as Record<string, unknown>)?.order_id);
       setItems(uploadedOnly.map((i) => ({ id: i.id, category: i.category, label: i.label, data: i.storagePath ? { ...i.data, storage_path: i.storagePath } : i.data, created_at: i.createdAt, encrypted: i.encrypted, storage_path: i.storagePath })));
-    } catch (e) { console.error("vault list failed:", (e as Error).message); }
-    try { const fw = await listFarewellMessages(); setFarewellCount(fw.length); } catch (e) { console.error("farewell list failed:", (e as Error).message); }
+    } else { console.error("vault list failed:", (listRes.reason as Error)?.message); }
+    if (fwRes.status === "fulfilled") { setFarewellCount(fwRes.value.length); }
+    else { console.error("farewell list failed:", (fwRes.reason as Error)?.message); }
   }, []);
 
   useEffect(() => { if (screen !== "vault" && screen !== "category") return; void loadItems(); }, [screen, loadItems]);
@@ -131,19 +140,23 @@ export default function VaultPage() {
   async function handleCreatePin() {
     if (pin.length !== 6 || !/^\d{6}$/.test(pin)) { setPinError("PIN must be exactly 6 digits"); return; }
     if (pin !== confirmPin) { setPinError("PINs do not match"); return; }
+    setVerifying(true);
     const { error: err } = await pinAction({ action: "create", pin });
-    if (err) { setPinError("Failed to create PIN"); return; }
-    const expiry = Date.now() + 10 * 60 * 1000; setPinExpiry(expiry);
+    if (err) { setPinError("Failed to create PIN"); setVerifying(false); return; }
+    const expiry = Date.now() + PIN_UNLOCK_MS; setPinExpiry(expiry);
     if (typeof window !== "undefined") sessionStorage.setItem("vault:pin-expiry", String(expiry));
-    await loadItems(); setScreen("vault");
+    // Show the grid immediately; the screen-change effect loads items in the background.
+    setScreen("vault"); setVerifying(false);
   }
 
   async function handleVerifyPin() {
+    setVerifying(true);
     const { error: err } = await pinAction({ action: "verify", pin });
-    if (err) { setPinError("Incorrect PIN"); setPin(""); return; }
-    const expiry = Date.now() + 10 * 60 * 1000; setPinExpiry(expiry);
+    if (err) { setPinError("Incorrect PIN"); setPin(""); setVerifying(false); return; }
+    const expiry = Date.now() + PIN_UNLOCK_MS; setPinExpiry(expiry);
     if (typeof window !== "undefined") sessionStorage.setItem("vault:pin-expiry", String(expiry));
-    await loadItems(); setScreen("vault");
+    // Show the grid immediately; the screen-change effect loads items in the background.
+    setScreen("vault"); setVerifying(false);
   }
 
   async function handleAddItem() {
@@ -193,7 +206,7 @@ export default function VaultPage() {
 
   // -- Render --
   if (screen === "pin-check" || screen === "pin-create" || screen === "pin-enter") {
-    return <VaultPinScreen screen={screen} pin={pin} confirmPin={confirmPin} pinError={pinError} onPinChange={setPin} onConfirmPinChange={setConfirmPin} onPinErrorClear={() => setPinError("")} onCreatePin={handleCreatePin} onVerifyPin={handleVerifyPin} />;
+    return <VaultPinScreen screen={screen} pin={pin} confirmPin={confirmPin} pinError={pinError} submitting={verifying} onPinChange={setPin} onConfirmPinChange={setConfirmPin} onPinErrorClear={() => setPinError("")} onCreatePin={handleCreatePin} onVerifyPin={handleVerifyPin} />;
   }
 
   if (screen === "upload-doc") {
@@ -221,7 +234,7 @@ export default function VaultPage() {
       showUpgradePrompt={showUpgradePrompt}
       formattedPrice={formatPrice(PRICES.vaultSubscriptionYear)}
       categories={CATEGORIES}
-      subscriptionBanner={<SubscriptionBanner onStatusLoaded={handleSubStatusLoaded} />}
+      subscriptionBanner={<SubscriptionBanner status={subData} onStatusLoaded={handleSubStatusLoaded} />}
       onManageAccess={() => { if (!isSubscribed) { setShowUpgradePrompt(true); return; } router.push("/dashboard/vault/trustees"); }}
       onShowUpgrade={() => setShowUpgradePrompt(true)}
       onDismissUpgrade={() => setShowUpgradePrompt(false)}

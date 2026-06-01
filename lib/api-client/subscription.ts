@@ -2,6 +2,7 @@ import { get, post, type ApiResult } from "./client";
 
 export type SubscriptionStatus = {
   status: string;
+  expiry?: string | null;
   canAmendFree?: boolean;
   canUseFarewell?: boolean;
   subscriptionId?: string;

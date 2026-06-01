@@ -94,18 +94,18 @@ const intakeAnswersSchema = z
 
 // POST /api/checkout/will
 export const willCheckoutSchema = z.object({
-  userId: z.string().optional(),
+  userId: z.string().nullable().optional(),
   attorneyReview: z.boolean().optional().default(false),
   intakeAnswers: intakeAnswersSchema,
   promoCode: z.string().max(64).optional(),
   email: z.string().email().optional(),
-  partnerId: z.string().optional(),
+  partnerId: z.string().nullable().optional(),
   customerEmail: z.string().email().optional(),
 });
 
 // POST /api/checkout/trust — adds trust-specific fields
 export const trustCheckoutSchema = z.object({
-  userId: z.string().optional(),
+  userId: z.string().nullable().optional(),
   attorneyReview: z.boolean().optional().default(false),
   intakeAnswers: intakeAnswersSchema,
   complexityFlag: z.boolean().optional(),
@@ -113,7 +113,7 @@ export const trustCheckoutSchema = z.object({
   declinedAttorneyReview: z.boolean().optional(),
   promoCode: z.string().max(64).optional(),
   email: z.string().email().optional(),
-  partnerId: z.string().optional(),
+  partnerId: z.string().nullable().optional(),
   customerEmail: z.string().email().optional(),
   confirmOverride: z.boolean().optional(),
 });
@@ -318,7 +318,7 @@ export const partnerVaultClientCheckoutSchema = z.object({
   clientEmail: z.string().email(),
   clientName: z.string().min(1),
   tempPassword: z.string().min(1),
-  pin: z.string().regex(/^\d{4}$/),
+  pin: z.string().regex(/^\d{6}$/),
 });
 
 export const partnerVaultSubdomainSchema = z.object({

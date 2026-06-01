@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EstateVault — Unified Production Readiness Plan</title>
+<style>
+  :root{
+    --navy:#1C3557; --gold:#C9A84C; --charcoal:#2D2D2D; --white:#FFFFFF;
+    --bg:#F7F8FA; --line:#E3E7ED; --muted:#5b6573;
+    --crit:#B3261E; --high:#C9740A; --med:#0B6E99; --low:#5b6573; --fe:#7A3FA0;
+    --done:#1a8f4a; --defer:#C9740A; --skip:#8a93a3;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    margin:0; font-family:'Inter',-apple-system,Segoe UI,Roboto,sans-serif;
+    color:var(--charcoal); background:var(--bg); line-height:1.6; font-size:16px;
+  }
+  .wrap{display:grid; grid-template-columns:280px 1fr; max-width:1400px; margin:0 auto;}
+  nav{
+    position:sticky; top:0; align-self:start; height:100vh; overflow-y:auto;
+    background:var(--navy); color:#cdd6e4; padding:28px 20px;
+  }
+  nav h2{color:var(--gold); font-size:13px; letter-spacing:.08em; text-transform:uppercase; margin:0 0 14px;}
+  nav a{display:block; color:#cdd6e4; text-decoration:none; padding:6px 10px; border-radius:6px; font-size:14px; margin-bottom:2px;}
+  nav a:hover{background:rgba(255,255,255,.08); color:#fff;}
+  nav a.sub{padding-left:22px; font-size:13px; color:#9fb0c9;}
+  nav .done-dot{color:var(--done); font-weight:700;}
+  main{padding:48px 56px; max-width:1100px;}
+  header.title{border-left:5px solid var(--gold); padding:6px 0 6px 22px; margin-bottom:24px;}
+  header.title h1{margin:0 0 6px; color:var(--navy); font-size:30px; line-height:1.25;}
+  header.title p{margin:0; color:var(--muted);}
+  .statusbar{
+    background:linear-gradient(90deg,#eafaf0,#f3fbf6); border:1px solid #bfe6cd; border-radius:12px;
+    padding:18px 22px; margin-bottom:28px; display:flex; gap:26px; flex-wrap:wrap; align-items:center;
+  }
+  .statusbar .big{font-size:18px; font-weight:700; color:var(--done);}
+  .statusbar .item{font-size:14px;}
+  .statusbar .item b{color:var(--navy);}
+  h2.sec{color:var(--navy); font-size:24px; margin:48px 0 14px; padding-bottom:8px; border-bottom:2px solid var(--line);}
+  h3{color:var(--navy); font-size:19px; margin:30px 0 10px;}
+  h4{color:var(--charcoal); font-size:16px; margin:20px 0 8px;}
+  p{margin:10px 0;}
+  blockquote{
+    background:#fff; border-left:4px solid var(--gold); margin:16px 0; padding:14px 20px;
+    color:var(--charcoal); border-radius:0 8px 8px 0; box-shadow:0 1px 3px rgba(0,0,0,.04);
+  }
+  blockquote p{margin:6px 0;}
+  code{background:#eef1f6; padding:2px 6px; border-radius:4px; font-family:'SF Mono',Menlo,Consolas,monospace; font-size:13px; color:#234;}
+  pre{background:var(--navy); color:#e8edf5; padding:16px 20px; border-radius:10px; overflow-x:auto;}
+  pre code{background:none; color:inherit; padding:0;}
+  table{border-collapse:collapse; width:100%; margin:16px 0; background:#fff; border-radius:10px; overflow:hidden; box-shadow:0 1px 3px rgba(0,0,0,.05); font-size:14px;}
+  th{background:var(--navy); color:#fff; text-align:left; padding:11px 12px; font-weight:600;}
+  td{padding:10px 12px; border-top:1px solid var(--line); vertical-align:top;}
+  tr:nth-child(even) td{background:#fafbfc;}
+  tr.row-done td:first-child{box-shadow:inset 3px 0 0 var(--done);}
+  tr.row-defer td:first-child{box-shadow:inset 3px 0 0 var(--defer);}
+  tr.row-skip td:first-child{box-shadow:inset 3px 0 0 var(--skip);}
+  .badge{display:inline-block; padding:2px 9px; border-radius:999px; font-size:11px; font-weight:700; color:#fff; letter-spacing:.03em;}
+  .b-crit{background:var(--crit);} .b-high{background:var(--high);} .b-med{background:var(--med);} .b-low{background:var(--low);} .b-fe{background:var(--fe);}
+  .st{display:inline-block; padding:2px 9px; border-radius:6px; font-size:11px; font-weight:700; white-space:nowrap;}
+  .st-done{background:#e2f5e9; color:var(--done); border:1px solid #b6e3c6;}
+  .st-defer{background:#fcefd9; color:var(--defer); border:1px solid #f0d199;}
+  .st-skip{background:#eef0f3; color:var(--skip); border:1px solid #d6dae0;}
+  .id{font-weight:700; color:var(--navy); white-space:nowrap;}
+  ul,ol{margin:10px 0; padding-left:24px;}
+  li{margin:4px 0;}
+  hr{border:none; border-top:1px solid var(--line); margin:40px 0;}
+  .pillrow{display:flex; gap:8px; flex-wrap:wrap; margin:18px 0;}
+  .pill{background:#fff; border:1px solid var(--line); border-radius:8px; padding:10px 14px; font-size:13px;}
+  .pill b{color:var(--navy);}
+  .ascii{font-size:12px; line-height:1.4;}
+  .check{color:var(--done); font-weight:700;}
+  .donetag{color:var(--done); font-weight:700; font-size:14px; margin-left:8px;}
+  .defertag{color:var(--defer); font-weight:700; font-size:14px; margin-left:8px;}
+  footer{margin-top:48px; padding-top:18px; border-top:1px solid var(--line); color:var(--muted); font-size:13px; font-style:italic;}
+  @media(max-width:900px){.wrap{grid-template-columns:1fr;} nav{position:static; height:auto;} main{padding:28px 20px;}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<nav>
+  <h2>Contents</h2>
+  <a href="#top">Overview</a>
+  <a href="#state">Current State</a>
+  <a href="#registry">Master Issue Registry</a>
+  <a href="#reg-crit" class="sub">Critical</a>
+  <a href="#reg-high" class="sub">High</a>
+  <a href="#reg-med" class="sub">Medium</a>
+  <a href="#reg-fe" class="sub">Frontend</a>
+  <a href="#reg-low" class="sub">Low / Nit</a>
+  <a href="#phases">Phased Plan</a>
+  <a href="#p0" class="sub"><span class="done-dot">✓</span> Phase 0 — Security</a>
+  <a href="#p1" class="sub"><span class="done-dot">✓</span> Phase 1 — Foundation</a>
+  <a href="#p2" class="sub"><span class="done-dot">✓</span> Phase 2 — Refactor</a>
+  <a href="#p3" class="sub"><span class="done-dot">✓</span> Phase 3 — Validation</a>
+  <a href="#p4" class="sub"><span class="done-dot">✓</span> Phase 4 — Reliability</a>
+  <a href="#p5" class="sub"><span class="done-dot">✓</span> Phase 5 — Types/Config</a>
+  <a href="#p6" class="sub"><span class="done-dot">✓</span> Phase 6 — Frontend</a>
+  <a href="#p7" class="sub"><span class="done-dot">✓</span> Phase 7 — Lock In</a>
+  <a href="#summary">Summary Table</a>
+  <a href="#guardrails">Guardrails</a>
+  <a href="#arch">Target Architecture</a>
+  <a href="#done">Already Done</a>
+  <a href="#collision">Collision Rules</a>
+</nav>
+<main>
+
+<header class="title" id="top">
+  <h1>EstateVault — Unified Production Readiness Plan</h1>
+  <p>Merged security/quality/architecture/frontend audit + structural refactor phases</p>
+</header>
+
+<div class="statusbar">
+  <span class="big">✅ All 7 phases shipped</span>
+  <span class="item"><b>43/45</b> findings done</span>
+  <span class="item"><span class="st st-defer">DEFERRED</span> S-11 (DEK AAD binding)</span>
+  <span class="item"><span class="st st-skip">SKIPPED</span> F-01 (server-component conversion — low ROI, user call)</span>
+  <span class="item"><b>Branch:</b> Yahia-Dev · <b>Tests:</b> 193/193 · <b>TSC:</b> clean</span>
+</div>
+
+<p style="font-size:13px;color:var(--muted)">Status legend: <span class="st st-done">DONE</span> shipped &amp; gate-green &nbsp; <span class="st st-defer">DEFERRED</span> intentionally postponed &nbsp; <span class="st st-skip">SKIPPED</span> dropped after audit. Status sourced from <code>WHAT_HAS_BEEN_FIXED.md</code> + git history (commits <code>fb44780</code> → <code>ebddfb3</code>).</p>
+
+<blockquote>
+  <p><b>This plan merges two sources:</b></p>
+  <ol>
+    <li><b>Fresh 4-agent audit (2026-05-27)</b> — Security Engineer, Code Reviewer, Software Architect, Frontend Developer. Independent full-codebase scan.</li>
+    <li><b>Existing CODE_REFACTOR_PLAN.md</b> — Structural refactoring phases (architecture layers, DRY, server repos, typed client).</li>
+  </ol>
+  <p><b>Key change from the original plan:</b> Security and reliability fixes come FIRST as ship-blockers. Structural refactoring follows. Frontend quality is added as a new phase. The original plan folded security fixes into structural group sweeps — this plan treats them as prerequisites.</p>
+</blockquote>
+
+<h2 class="sec" id="state">Current State <span style="font-size:14px;color:var(--muted)">(plan written 2026-05-27 · execution complete 2026-05-29)</span></h2>
+<div class="pillrow">
+  <div class="pill"><b>Branch:</b> <code>Yahia-Dev</code></div>
+  <div class="pill"><b>Shipped:</b> all route groups on kernel + repos + Zod</div>
+  <div class="pill"><b>Tests:</b> 193/193 unit passing</div>
+  <div class="pill"><b>Gate:</b> tsc clean · lint warnings-only · CI gate live</div>
+  <div class="pill"><b>DB types:</b> generated · migrations applied to prod</div>
+</div>
+
+<h2 class="sec" id="registry">Master Issue Registry</h2>
+<p>Every finding from both audits, deduplicated, with a single ID, the phase that fixes it, and current status.</p>
+
+<h3 id="reg-crit"><span class="badge b-crit">CRITICAL</span> Ship-Blockers</h3>
+<table>
+<thead><tr><th>ID</th><th>Finding</th><th>File(s)</th><th>Phase</th><th>Status</th></tr></thead>
+<tbody>
+<tr class="row-done"><td class="id">S-01</td><td><code>/api/documents/process</code> — zero auth, triggers Claude API + purges intake data</td><td><code>documents/process/route.ts</code></td><td>Phase 0</td><td><span class="st st-done">DONE</span></td></tr>
+<tr class="row-done"><td class="id">S-02</td><td><code>/api/documents/process-now</code> — zero auth, processes any order by UUID</td><td><code>documents/process-now/route.ts</code></td><td>Phase 0</td><td><span class="st st-done">DONE</span></td></tr>
+<tr class="row-done"><td class="id">S-03</td><td><code>/api/documents/cleanup-test-orders</code> — zero auth, deletes orders+docs+storage</td><td><code>cleanup-test-orders/route.ts</code></td><td>Phase 0</td><td><span class="st st-done">DONE</span></td></tr>
+<tr class="row-done"><td class="id">S-04</td><td><code>/api/documents/check-status</code> — zero auth IDOR, leaks order metadata</td><td><code>check-status/route.ts</code></td><td>Phase 0</td><td><span class="st st-done">DONE</span></td></tr>
+<tr class="row-done"><td class="id">S-05</td><td><code>/api/partner/clients</code> — any auth user creates accounts under any partner</td><td><code>partner/clients/route.ts</code></td><td>Phase 0</td><td><span class="st st-done">DONE</span></td></tr>
+<tr class="row-done"><td class="id">S-06</td><td><code>/api/sales/partner-notes</code> — any auth user reads/writes all partner notes</td><td><code>sales/partner-notes/route.ts</code></td><td>Phase 0</td><td><span class="st st-done">DONE</span></td></tr>
+<tr class="row-done"><td class="id">S-07</td><td><code>/api/auth/set-password</code> — no verified token, account takeover</td><td><code>auth/set-password/route.ts</code></td><td>Phase 0</td><td><span class="st st-done">DONE</span></td></tr>
+<tr class="row-done"><td class="id">S-08</td><td>Hostname injection in middleware — raw hostname in PostgREST <code>.or()</code> filter</td><td><code>supabase/middleware.ts</code></td><td>Phase 0</td><td><span class="st st-done">DONE</span></td></tr>
+<tr class="row-done"><td class="id">S-09</td><td>Stripe webhook no idempotency — duplicate orders + payouts on replay</td><td><code>webhooks/stripe/route.ts</code></td><td>Phase 0</td><td><span class="st st-done">DONE</span></td></tr>
+<tr class="row-done"><td class="id">S-10</td><td>DEK write race condition — concurrent bootstrap loses encryption key permanently</td><td><code>lib/api/dek.ts</code></td><td>Phase 0</td><td><span class="st st-done">DONE</span></td></tr>
+<tr class="row-defer"><td class="id">S-11</td><td>DEK missing AAD binding — swapped wrapped keys decrypt wrong tenant</td><td><code>lib/api/dek.ts</code> + vault routes</td><td>Phase 0/4</td><td><span class="st st-defer">DEFERRED</span></td></tr>
+</tbody>
+</table>
+<p style="font-size:13px;color:var(--muted)"><b>S-11 note:</b> deferred — requires a migration to re-wrap all existing DEKs with AAD. Only open critical item.</p>
+
+<h3 id="reg-high"><span class="badge b-high">HIGH</span></h3>
+<table>
+<thead><tr><th>ID</th><th>Finding</th><th>File(s)</th><th>Phase</th><th>Status</th></tr></thead>
+<tbody>
+<tr class="row-done"><td class="id">H-01</td><td><code>listUsers()</code> fetches ALL users into memory — 7 call sites</td><td>webhooks/stripe, checkout/*, set-password, create-review-attorney</td><td>Phase 0</td><td><span class="st st-done">DONE</span></td></tr>
+<tr class="row-done"><td class="id">H-02</td><td>In-memory rate limiter useless on Vercel serverless</td><td><code>lib/api/auth.ts</code></td><td>Phase 0</td><td><span class="st st-done">DONE</span></td></tr>
+<tr class="row-done"><td class="id">H-03</td><td>Cron routes fail-open when CRON_SECRET unset</td><td>All 4 cron routes</td><td>Phase 0</td><td><span class="st st-done">DONE</span></td></tr>
+<tr class="row-done"><td class="id">H-04</td><td>create-partner + create-rep return tempPassword in JSON response</td><td><code>sales/create-partner</code>, <code>create-rep</code></td><td>Phase 0</td><td><span class="st st-done">DONE</span></td></tr>
+<tr class="row-done"><td class="id">H-05</td><td><code>Math.random()</code> for temp password generation</td><td><code>sales/create-partner/route.ts</code></td><td>Phase 0</td><td><span class="st st-done">DONE</span></td></tr>
+<tr class="row-done"><td class="id">H-06</td><td>Hardcoded fallback secrets (<code>"sk_test_placeholder"</code>) — silent fail in prod</td><td><code>stripe.ts</code>, <code>claude.ts</code>, <code>email.ts</code></td><td>Phase 1</td><td><span class="st st-done">DONE</span></td></tr>
+<tr class="row-done"><td class="id">H-07</td><td>Two Stripe clients with different API versions</td><td><code>stripe.ts</code>, <code>stripe-payouts.ts</code></td><td>Phase 1</td><td><span class="st st-done">DONE</span></td></tr>
+<tr class="row-done"><td class="id">H-08</td><td><code>createAdminClient</code> copy-pasted into 51 route files</td><td>51 API route files</td><td>Phase 2</td><td><span class="st st-done">DONE</span></td></tr>
+<tr class="row-done"><td class="id">H-09</td><td>51/120 API routes lack <code>withRoute</code> error wrapper</td><td>51 route files</td><td>Phase 2</td><td><span class="st st-done">DONE</span></td></tr>
+<tr class="row-done"><td class="id">H-10</td><td>Will/Trust checkout routes ~90% identical (800+ lines duplicated)</td><td><code>checkout/will</code>, <code>trust</code></td><td>Phase 2</td><td><span class="st st-done">DONE</span></td></tr>
+<tr class="row-done"><td class="id">H-11</td><td>8 test files for 120 API routes — critical paths untested</td><td><code>tests/</code></td><td>Phase 1</td><td><span class="st st-done">DONE</span></td></tr>
+<tr class="row-done"><td class="id">H-12</td><td>No migration files in source control — schema not reproducible</td><td><code>supabase/migrations/</code></td><td>Phase 5</td><td><span class="st st-done">DONE</span></td></tr>
+</tbody>
+</table>
+
+<h3 id="reg-med"><span class="badge b-med">MEDIUM</span></h3>
+<table>
+<thead><tr><th>ID</th><th>Finding</th><th>File(s)</th><th>Phase</th><th>Status</th></tr></thead>
+<tbody>
+<tr class="row-done"><td class="id">M-01</td><td><code>/api/farewell/verify</code> — unauthenticated file upload</td><td><code>farewell/verify/route.ts</code></td><td>Phase 0</td><td><span class="st st-done">DONE</span></td></tr>
+<tr class="row-done"><td class="id">M-02</td><td><code>/api/farewell/access</code> — no rate limit, email bombing</td><td><code>farewell/access/route.ts</code></td><td>Phase 0</td><td><span class="st st-done">DONE</span></td></tr>
+<tr class="row-done"><td class="id">M-03</td><td><code>/api/documents/download-by-session</code> — IDOR via order_id fallback</td><td><code>download-by-session/route.ts</code></td><td>Phase 0</td><td><span class="st st-done">DONE</span></td></tr>
+<tr class="row-done"><td class="id">M-04</td><td><code>dangerouslySetInnerHTML</code> in partner CSS — XSS if partner injects script tags</td><td><code>PartnerThemedShell.tsx</code></td><td>Phase 0</td><td><span class="st st-done">DONE</span></td></tr>
+<tr class="row-done"><td class="id">M-05</td><td>partner-activated role check uses <code>"sales"</code> not <code>"sales_rep"</code></td><td><code>email/partner-activated/route.ts</code></td><td>Phase 0</td><td><span class="st st-done">DONE</span></td></tr>
+<tr class="row-done"><td class="id">M-06</td><td>No Zod validation on ~10 API route inputs</td><td>partner/clients, sales/partner-notes, etc.</td><td>Phase 3</td><td><span class="st st-done">DONE</span></td></tr>
+<tr class="row-done"><td class="id">M-07</td><td>Email fire-and-forget — no retry, no dead-letter, silent failures</td><td><code>lib/email.ts</code></td><td>Phase 4</td><td><span class="st st-done">DONE</span></td></tr>
+<tr class="row-done"><td class="id">M-08</td><td>Document pipeline no per-document status — partial failure = stuck order</td><td><code>documents/process/route.ts</code></td><td>Phase 4</td><td><span class="st st-done">DONE</span></td></tr>
+<tr class="row-done"><td class="id">M-09</td><td>Cron jobs fetch ALL qualifying orders, no pagination</td><td><code>app/api/cron/*</code></td><td>Phase 4</td><td><span class="st st-done">DONE</span></td></tr>
+<tr class="row-done"><td class="id">M-10</td><td>Redis queue no TTL, no dead-letter, no max-retry</td><td><code>lib/queue/document-queue.ts</code></td><td>Phase 4</td><td><span class="st st-done">DONE</span></td></tr>
+<tr class="row-done"><td class="id">M-11</td><td>KEK cached indefinitely — rotation requires redeploy</td><td><code>lib/api/dek.ts</code></td><td>Phase 4</td><td><span class="st st-done">DONE</span></td></tr>
+<tr class="row-done"><td class="id">M-12</td><td><code>images.remotePatterns: '**'</code> defeats image optimization allowlist</td><td><code>next.config.mjs</code></td><td>Phase 1</td><td><span class="st st-done">DONE</span></td></tr>
+<tr class="row-done"><td class="id">M-13</td><td>Webhook handler missing <code>maxDuration</code> in vercel.json</td><td><code>vercel.json</code></td><td>Phase 1</td><td><span class="st st-done">DONE</span></td></tr>
+<tr class="row-done"><td class="id">M-14</td><td>Stripe error messages leak internal state</td><td><code>webhooks/stripe/route.ts</code></td><td>Phase 0</td><td><span class="st st-done">DONE</span></td></tr>
+</tbody>
+</table>
+
+<h3 id="reg-fe"><span class="badge b-fe">FRONTEND</span></h3>
+<table>
+<thead><tr><th>ID</th><th>Finding</th><th>File(s)</th><th>Phase</th><th>Status</th></tr></thead>
+<tbody>
+<tr class="row-skip"><td class="id">F-01</td><td>84/100 pages use <code>"use client"</code> unnecessarily — kills SSR</td><td>All <code>app/</code> page files</td><td>Phase 6</td><td><span class="st st-skip">SKIPPED</span></td></tr>
+<tr class="row-done"><td class="id">F-02</td><td>837-line vault god component → split into 7 modules</td><td><code>app/dashboard/vault/page.tsx</code></td><td>Phase 6</td><td><span class="st st-done">DONE</span></td></tr>
+<tr class="row-done"><td class="id">F-03</td><td>Only 3 <code>loading.tsx</code> files — blank screens during navigation</td><td><code>app/</code> segments</td><td>Phase 6</td><td><span class="st st-done">DONE</span></td></tr>
+<tr class="row-done"><td class="id">F-04</td><td>No route-level <code>error.tsx</code> — all crashes bubble to root</td><td><code>app/</code> segments</td><td>Phase 6</td><td><span class="st st-done">DONE</span></td></tr>
+<tr class="row-done"><td class="id">F-05</td><td>10 total <code>aria-</code> attributes — vault modal no role/focus-trap</td><td>Components throughout</td><td>Phase 6</td><td><span class="st st-done">DONE</span></td></tr>
+<tr class="row-done"><td class="id">F-06</td><td>No sitemap.ts, robots.ts, per-page metadata, OG images</td><td><code>app/</code></td><td>Phase 6</td><td><span class="st st-done">DONE</span></td></tr>
+<tr class="row-done"><td class="id">F-07</td><td>ScrollReveal forces entire homepage to client-render</td><td>Landing page sections</td><td>Phase 6</td><td><span class="st st-done">DONE</span></td></tr>
+<tr class="row-done"><td class="id">F-08</td><td>Partner logos use raw <code>&lt;img&gt;</code> not <code>next/image</code></td><td>Partner components</td><td>Phase 6</td><td><span class="st st-done">DONE</span></td></tr>
+</tbody>
+</table>
+<p style="font-size:13px;color:var(--muted)"><b>F-01 note:</b> skipped by user decision — audit of all 89 components found only 3 server-conversion candidates, all low ROI.</p>
+
+<h3 id="reg-low"><span class="badge b-low">LOW / NIT</span></h3>
+<table>
+<thead><tr><th>ID</th><th>Finding</th><th>Phase</th><th>Status</th></tr></thead>
+<tbody>
+<tr class="row-done"><td class="id">L-01</td><td>7 <code>as any</code> casts, 1 <code>@ts-ignore</code> (remaining Supabase casts cleared once DB types generated)</td><td>Phase 5</td><td><span class="st st-done">DONE</span></td></tr>
+<tr class="row-done"><td class="id">L-02</td><td><code>void validateEnvelope</code> dead import in share/route.ts</td><td>Phase 2</td><td><span class="st st-done">DONE</span></td></tr>
+<tr class="row-done"><td class="id">L-03</td><td><code>app/CLAUDE.md</code> says "Phase 1" and references <code>/lib/db</code></td><td>Phase 7</td><td><span class="st st-done">DONE</span></td></tr>
+<tr class="row-done"><td class="id">L-04</td><td>Stale scaffolding skills reference old patterns</td><td>Phase 7</td><td><span class="st st-done">DONE</span></td></tr>
+<tr class="row-done"><td class="id">L-05</td><td>Audit log inserts fire-and-forget with swallowed errors</td><td>Phase 4</td><td><span class="st st-done">DONE</span></td></tr>
+<tr class="row-done"><td class="id">L-06</td><td><code>b64/bytea</code> helpers duplicated 7 times</td><td>Phase 1</td><td><span class="st st-done">DONE</span></td></tr>
+</tbody>
+</table>
+
+<hr>
+
+<h2 class="sec" id="phases">Phased Plan</h2>
+<h4>Verify gate (every phase, every step)</h4>
+<pre><code>npx tsc --noEmit &amp;&amp; npm run lint &amp;&amp; npm test</code></pre>
+<p>Red = stop. No exceptions. <span class="check">✅ Gate green across all phases (193/193 tests).</span></p>
+
+<h3 id="p0"><span class="badge b-crit">Phase 0</span> Security Lockdown <span class="donetag">✅ DONE</span></h3>
+<blockquote><p><b>Nothing else ships until this phase is done.</b> These are active vulnerabilities that can be exploited by anyone on the internet right now.</p></blockquote>
+
+<h4>0.1 — Auth guards on public destructive endpoints (S-01 → S-06) <span class="donetag">✅</span></h4>
+<ul>
+<li><code>documents/process</code> — CRON_SECRET check (S-01)</li>
+<li><code>documents/process-now</code> — <code>requireAuth(["admin"])</code> (S-02)</li>
+<li><code>documents/cleanup-test-orders</code> — CRON_SECRET check (S-03)</li>
+<li><code>documents/check-status</code> — <code>requireAuth()</code> + <code>assertOrderAccess()</code> (S-04)</li>
+<li><code>partner/clients</code> — <code>requireAuth(["partner"])</code> + ownership verify (S-05)</li>
+<li><code>sales/partner-notes</code> — <code>requireAuth(["sales_rep", "admin"])</code> (S-06)</li>
+</ul>
+
+<h4>0.2 — Account takeover fix (S-07) <span class="donetag">✅</span></h4>
+<p><code>/api/auth/set-password</code> — now requires verified <code>verifiedToken</code> (one-time-use, matches signup), no caller-supplied userId, Upstash rate limit, generic errors.</p>
+
+<h4>0.3 — Hostname injection (S-08) <span class="donetag">✅</span></h4>
+<p><code>middleware.ts</code> — regex strip <code>/[^a-zA-Z0-9.\-]/g</code>, bail if changed, removed quotes from <code>.or()</code> filter.</p>
+
+<h4>0.4 — Stripe webhook idempotency (S-09) + error masking (M-14) <span class="donetag">✅</span></h4>
+<p><code>stripe_webhook_events</code> table (PK <code>event_id</code>). Insert-on-conflict guard → duplicate replay returns 200 early. Raw error message replaced with generic text.</p>
+
+<h4>0.5 — DEK race condition (S-10) <span class="donetag">✅</span> · AAD binding (S-11) <span class="defertag">⏸ DEFERRED</span></h4>
+<ul>
+<li><b>S-10 (done):</b> conditional <code>UPDATE ... WHERE wrapped_dek IS NULL</code> — concurrent bootstraps converge, no data loss.</li>
+<li><b>S-11 (deferred):</b> AAD binding requires re-wrapping all existing DEKs via migration. <b>Still open.</b></li>
+</ul>
+
+<h4>0.6 — Replace <code>listUsers()</code> bomb (H-01) <span class="donetag">✅</span></h4>
+<p>New <code>find_auth_user_by_email()</code> RPC (indexed, LIMIT 1, SECURITY DEFINER). All 7 call sites migrated. <code>grep listUsers</code> → 0.</p>
+
+<h4>0.7 — Replace in-memory rate limiter (H-02) <span class="donetag">✅</span></h4>
+<p>Deleted <code>Map</code>-based <code>rateLimit()</code>. 3 callers moved to Upstash <code>apiRateLimit</code>.</p>
+
+<h4>0.8 — Cron fail-closed (H-03) <span class="donetag">✅</span></h4>
+<p>All 4 cron routes: <code>if (!secret || auth !== ...)</code>. Missing secret = deny.</p>
+
+<h4>0.9 — Password generation + exposure (H-04, H-05) <span class="donetag">✅</span></h4>
+<p><code>crypto.randomBytes(12)</code> replaces <code>Math.random()</code>. <code>tempPassword</code> removed from create-partner/create-rep JSON (still emailed).</p>
+
+<h4>0.10 — Medium security fixes (M-01 → M-05, M-14) <span class="donetag">✅</span></h4>
+<ul>
+<li>M-01/M-02: Upstash rate limiting on farewell verify + access</li>
+<li>M-03: order_id fallback restricted to test orders only</li>
+<li>M-04: hex-color validation in <code>PartnerThemedShell</code></li>
+<li>M-05: role <code>"sales"</code> → <code>"sales_rep"</code></li>
+<li>M-14: generic webhook error message</li>
+</ul>
+
+<h3 id="p1"><span class="badge b-high">Phase 1</span> Foundation Hardening <span class="donetag">✅ DONE</span></h3>
+<blockquote><p>Config safety, test coverage for critical paths, deployment fixes. Gate GREEN (193 tests).</p></blockquote>
+
+<h4>1.1 — Fail-fast on missing secrets (H-06) <span class="donetag">✅</span></h4>
+<p>Lazy-init Proxy for Stripe/Claude/Resend (no more placeholder fallbacks). New <code>instrumentation.ts</code> runs <code>validateEnv()</code> at startup — prod throws on missing vars.</p>
+
+<h4>1.2 — Unify Stripe client (H-07) <span class="donetag">✅</span></h4>
+<p>Deleted standalone client in <code>stripe-payouts.ts</code>; imports shared <code>stripe</code>. Single API version <code>2026-03-25.dahlia</code>, removed <code>as any</code>.</p>
+
+<h4>1.3 — Deployment config fixes (M-12, M-13) <span class="donetag">✅</span></h4>
+<p>Removed <code>hostname: '**'</code> (only <code>*.supabase.co</code> allowed). Added webhook <code>maxDuration: 300</code> in vercel.json.</p>
+
+<h4>1.4 — Characterization tests (H-11) <span class="donetag">✅</span></h4>
+<p>+76 tests across 6 new files (encoding, email-helpers, env-validation, security-guards, stripe-idempotency, auth-patterns). 117 → <b>193 tests</b>.</p>
+
+<h4>1.5 — Shared kernel + encoding consolidation (L-06) <span class="donetag">✅</span></h4>
+<p>Kernel confirmed (<code>withRoute</code>, <code>ok/fail</code>, <code>requireAuth</code>, pricing). New <code>lib/crypto/encoding.ts</code> — 7 duplicate b64/bytea copies consolidated.</p>
+
+<h3 id="p2"><span class="badge b-high">Phase 2</span> Structural Refactor: Server Repos + Thin Routes <span class="donetag">✅ DONE</span></h3>
+<blockquote><p>All 9 route groups + checkout dedup migrated onto kernel. Every route: <code>withRoute</code> + <code>ok/fail</code> + shared <code>createAdminClient</code> + repo layer + Zod.</p></blockquote>
+
+<h4>Group order (risk-first) — all complete:</h4>
+<table>
+<thead><tr><th>Order</th><th>Group</th><th>Routes</th><th>Status</th></tr></thead>
+<tbody>
+<tr class="row-done"><td>1</td><td><b>cron</b></td><td>4</td><td><span class="st st-done">DONE</span></td></tr>
+<tr class="row-done"><td>2</td><td><b>webhooks</b></td><td>~6</td><td><span class="st st-done">DONE</span></td></tr>
+<tr class="row-done"><td>3</td><td><b>documents</b></td><td>~12</td><td><span class="st st-done">DONE</span></td></tr>
+<tr class="row-done"><td>4</td><td><b>partner / sales</b></td><td>19</td><td><span class="st st-done">DONE</span></td></tr>
+<tr class="row-done"><td>5</td><td><b>attorney</b></td><td>6</td><td><span class="st st-done">DONE</span></td></tr>
+<tr class="row-done"><td>6</td><td><b>crypto</b></td><td>7</td><td><span class="st st-done">DONE</span></td></tr>
+<tr class="row-done"><td>7</td><td><b>admin</b></td><td>6</td><td><span class="st st-done">DONE</span></td></tr>
+<tr class="row-done"><td>8</td><td><b>trustee</b></td><td>6</td><td><span class="st st-done">DONE</span></td></tr>
+<tr class="row-done"><td>9</td><td><b>auth + farewell</b></td><td>15</td><td><span class="st st-done">DONE</span> <span style="color:var(--muted)">(auth/verify-link skipped — returns HTML)</span></td></tr>
+</tbody>
+</table>
+
+<h4>Special: checkout dedup (H-10) <span class="donetag">✅</span></h4>
+<p>Shared <code>lib/checkout/createCheckoutSession.ts</code> extracted. Will route 424→32 lines, Trust route 394→32 lines. Behavioral parity preserved.</p>
+
+<h3 id="p3"><span class="badge b-med">Phase 3</span> Validation at Every Boundary <span class="donetag">✅ DONE</span></h3>
+<blockquote><p>Audited all 79 POST/PUT/PATCH routes. 40+ new Zod schemas added; 43 routes wired with <code>safeParse</code>. Total schemas: <b>63</b>.</p></blockquote>
+<ul>
+<li>4 inline <code>z.object()</code> schemas consolidated into <code>lib/validation/schemas.ts</code></li>
+<li>3 dead schemas + 3 dead type exports removed (willIntake/trustIntake/quizAnswers)</li>
+<li>18 routes intentionally not validated (no body / FormData / Stripe-signed / HTML) — documented</li>
+</ul>
+
+<h3 id="p4"><span class="badge b-med">Phase 4</span> Reliability &amp; Scalability <span class="donetag">✅ DONE</span></h3>
+<ul>
+<li><b>4.1 (M-07):</b> <code>sendEmail()</code> wrapper — 3 attempts, exponential backoff; all 14 send functions migrated.</li>
+<li><b>4.2 (M-08):</b> per-document status (<code>generating</code>/<code>generated</code>/<code>failed</code>); partial failure leaves order un-promoted; retry path.</li>
+<li><b>4.3 (M-09):</b> cron pagination <code>.limit(50)</code> FIFO; idempotency via <code>stamp*</code> timestamps.</li>
+<li><b>4.4 (M-10):</b> Redis queue TTL 24h, max-retry 3, <code>doc_dead_letter</code> queue, fail-loud when unconfigured.</li>
+<li><b>4.5 (M-11):</b> KEK 5-minute TTL — rotation no longer needs redeploy.</li>
+<li><b>4.6 (L-05):</b> audit-log insert now awaited + retry-once on failure.</li>
+</ul>
+
+<h3 id="p5"><span class="badge b-med">Phase 5</span> Type System + Config Hardening <span class="donetag">✅ DONE</span></h3>
+<ul>
+<li><b>5.1 (H-12):</b> <code>types/db.generated.ts</code> generated (2098 lines); wired into all Supabase client factories.</li>
+<li><b>5.2 (H-12):</b> 6 migrations applied to production; combined <code>APPLY_TO_PRODUCTION.sql</code> reference.</li>
+<li><b>5.3 SSOT:</b> ~42 files swept — zero hardcoded dollar amounts in routes/lib. Added PARTNER_SPLITS, AFFILIATE_SPLITS, PRODUCT_NAMES, <code>formatPrice()</code>.</li>
+<li><b>5.4 (L-01):</b> all <code>as any</code>/<code>@ts-ignore</code> removed; <b>223 type errors → 0</b> across 70 files after DB types landed.</li>
+</ul>
+
+<h3 id="p6"><span class="badge b-fe">Phase 6</span> Frontend Production Quality <span class="donetag">✅ DONE</span></h3>
+<ul>
+<li><b>6.1 (F-01):</b> <span class="st st-skip">SKIPPED</span> — only 3 low-ROI conversion candidates found.</li>
+<li><b>6.2 (F-02):</b> vault 838-line monolith → 7 focused modules; parent down to 231 lines.</li>
+<li><b>6.3 (F-03):</b> branded <code>loading.tsx</code> added to dashboard, pro, sales, attorney, auth.</li>
+<li><b>6.4 (F-04):</b> <code>error.tsx</code> with retry added to dashboard, pro, sales, attorney, quiz.</li>
+<li><b>6.5 (F-05):</b> dialog roles + focus trap + Escape, accordion aria, decorative SVG <code>aria-hidden</code>, form <code>aria-invalid</code>/<code>describedby</code>.</li>
+<li><b>6.6 (F-06):</b> <code>sitemap.ts</code> (8 URLs), <code>robots.ts</code>, per-page metadata via layouts.</li>
+<li><b>6.7 (F-07/F-08):</b> ScrollReveal → CSS <code>animation-timeline: view()</code>; raw <code>&lt;img&gt;</code> → <code>next/image</code> across components.</li>
+<li><b>6.8:</b> bonus — client-side validation on contact, signup, forgot/reset password, amendment forms.</li>
+</ul>
+
+<h3 id="p7"><span class="badge b-low">Phase 7</span> Lock It In <span class="donetag">✅ DONE</span></h3>
+<ul>
+<li><b>7.1 ESLint:</b> rules promoted to <code>error</code> — ban raw <code>fetch("/api/...")</code>, inline <code>createAdminClient</code>, <code>vault_*</code> <code>.from()</code> outside repos, <code>Math.random()</code> in routes, key-material logging. 10 routes fixed to comply.</li>
+<li><b>7.2 CI gate:</b> <code>.github/workflows/ci.yml</code> — tsc + lint + test on every PR/push to master.</li>
+<li><b>7.3 Docs (L-03/L-04):</b> <code>app/CLAUDE.md</code> rewritten — removed stale Phase 1 + <code>/lib/db</code> refs.</li>
+<li><b>7.4 Typed API client:</b> <code>lib/api-client/</code> (11 files, 52 typed fns). <b>61 UI files migrated, 121 raw fetch calls removed</b> — zero <code>fetch("/api/...")</code> left in app/components.</li>
+</ul>
+
+<hr>
+
+<h2 class="sec" id="summary">Summary: Phase → Status</h2>
+<table>
+<thead><tr><th>Phase</th><th>Theme</th><th>Days</th><th>Findings</th><th>Status</th></tr></thead>
+<tbody>
+<tr class="row-done"><td><b>0</b></td><td>Security Lockdown</td><td>1-3</td><td>S-01→S-11, H-01→H-05, M-01→M-05, M-14</td><td><span class="st st-done">DONE</span> <span style="color:var(--defer)">(S-11 deferred)</span></td></tr>
+<tr class="row-done"><td><b>1</b></td><td>Foundation Hardening</td><td>4-6</td><td>H-06, H-07, H-11, M-12, M-13, L-06</td><td><span class="st st-done">DONE</span></td></tr>
+<tr class="row-done"><td><b>2</b></td><td>Structural Refactor</td><td>7-18</td><td>H-08→H-10, L-02</td><td><span class="st st-done">DONE</span></td></tr>
+<tr class="row-done"><td><b>3</b></td><td>Validation at Boundary</td><td>19-21</td><td>M-06</td><td><span class="st st-done">DONE</span></td></tr>
+<tr class="row-done"><td><b>4</b></td><td>Reliability &amp; Scalability</td><td>22-27</td><td>M-07→M-11, L-05</td><td><span class="st st-done">DONE</span></td></tr>
+<tr class="row-done"><td><b>5</b></td><td>Type System + Config</td><td>28-30</td><td>H-12, L-01</td><td><span class="st st-done">DONE</span></td></tr>
+<tr class="row-done"><td><b>6</b></td><td>Frontend Production Quality</td><td>31-40</td><td>F-01→F-08</td><td><span class="st st-done">DONE</span> <span style="color:var(--skip)">(F-01 skipped)</span></td></tr>
+<tr class="row-done"><td><b>7</b></td><td>Lock It In</td><td>41-43</td><td>L-03, L-04</td><td><span class="st st-done">DONE</span></td></tr>
+</tbody>
+</table>
+<p><b>Result: 43/45 findings shipped. Open: S-11 (deferred). Dropped: F-01 (skipped).</b></p>
+
+<hr>
+
+<h2 class="sec" id="guardrails">Guardrails <span style="font-size:14px;color:var(--muted)">(every phase, every step)</span></h2>
+<ol>
+<li><b>Never alter pricing, revenue-split, or hard-stop values</b> — relocate, don't change (<code>CLAUDE.md</code> law).</li>
+<li><b>No <code>any</code> / <code>@ts-ignore</code> / <code>as</code></b> to make the gate pass.</li>
+<li><b>Gate green before moving to next step.</b> <code>npx tsc --noEmit &amp;&amp; npm run lint &amp;&amp; npm test</code>.</li>
+<li><b>One group at a time.</b> Finish a route group before starting the next.</li>
+<li><b>No public-shape change</b> (route response, exported type, DB column) without updating every caller in the same step.</li>
+<li><b>Crypto/DEK and money paths are the danger zone</b> — silent data loss, not loud crash. Most test coverage, most manual verification.</li>
+<li><b>Small, reviewable commits per group.</b> Never a 50-file commit.</li>
+</ol>
+
+<h2 class="sec" id="arch">Target Architecture <span style="font-size:14px;color:var(--muted)">(unchanged from original plan)</span></h2>
+<pre class="ascii"><code>                          ┌──────────────────────────────────────────┐
+  Browser / Mobile  ──&gt;   │  Typed API client  (lib/api-client/*)      │   &lt;- one fetch wrapper,
+                          │  authedFetch + typed endpoints + envelope  │     typed responses,
+                          └───────────────────┬──────────────────────┘     401 refresh, 1 error shape
+                                              │
+                          ┌───────────────────▼──────────────────────┐
+  app/api/**/route.ts ──&gt; │  Route handler (THIN)                      │
+                          │  withRoute(): auth -&gt; validate -&gt; call svc  │   &lt;- no inline admin client,
+                          │  -&gt; shape response. Promise&lt;NextResponse&gt;.  │     no inline query, no z inline
+                          └───────────────────┬──────────────────────┘
+                          ┌───────────────────▼──────────────────────┐
+                          │  Service / domain layer (lib/&lt;domain&gt;)     │   &lt;- business rules:
+                          │  vault, checkout, trustee, partner, ...    │     pricing, splits, hard stops
+                          └───────────────────┬──────────────────────┘
+                          ┌───────────────────▼──────────────────────┐
+                          │  Server repos (lib/repos/server/*)         │   &lt;- the ONLY place that
+                          │  all .from("table") lives here             │     touches Supabase tables
+                          └───────────────────┬──────────────────────┘
+                          ┌───────────────────▼──────────────────────┐
+                          │  Supabase (Postgres + RLS)                 │
+                          └────────────────────────────────────────────┘
+
+  Shared kernel: lib/api/auth.ts (requireAuth, createAdminClient),
+  lib/validation/schemas.ts (Zod registry), lib/crypto/encoding.ts,
+  lib/orders/pricing.ts (prices + promo SSOT), types/db.generated.ts.</code></pre>
+
+<h4>Design Principles</h4>
+<ol>
+<li><b>One way to do each thing.</b> Route never re-declares auth, admin client, validation, or query.</li>
+<li><b>Thin routes, fat services, single data layer.</b> Tables touched only in <code>lib/repos</code>.</li>
+<li><b>Validate at the boundary, type through the stack.</b> Every body/query parsed by named Zod schema.</li>
+<li><b>One client transport.</b> Components call typed API client, never raw <code>fetch</code>.</li>
+<li><b>Single source of truth for money and config.</b> Prices, promos, splits in one module.</li>
+<li><b>Make wrong code not compile.</b> ESLint-error rules + CI enforcement.</li>
+<li><b>Never touch business values under cleanup</b> — relocate, don't change.</li>
+</ol>
+
+<h2 class="sec" id="done">What's Already Done <span style="font-size:14px;color:var(--muted)">(baseline before this plan)</span></h2>
+<table>
+<thead><tr><th>Item</th><th>Commit</th><th>Status</th></tr></thead>
+<tbody>
+<tr><td>Vault group (14 routes) — kernel + repos + Zod</td><td><code>90e75d0</code></td><td><span class="check">✅ Shipped</span></td></tr>
+<tr><td>Checkout group (9 routes) — kernel + repos + Zod</td><td><code>51fdca1</code> + <code>0d108df</code></td><td><span class="check">✅ Shipped</span></td></tr>
+<tr><td>C-8 attorney-verify data bug fixed</td><td><code>0d108df</code></td><td><span class="check">✅ Fixed</span></td></tr>
+<tr><td>Profile sibling bug (full_name) fixed</td><td><code>0d108df</code></td><td><span class="check">✅ Fixed</span></td></tr>
+<tr><td><code>withRoute</code>, <code>ok()</code>, <code>fail()</code> — shared kernel</td><td><code>90e75d0</code></td><td><span class="check">✅ Exists</span></td></tr>
+<tr><td>Server repos (vaultItem, trustee, farewell, order, partner, …)</td><td>Various</td><td><span class="check">✅ Exist</span></td></tr>
+<tr><td>Pricing module: <code>PRICES</code>, <code>PROMO_CODES</code></td><td><code>51fdca1</code></td><td><span class="check">✅ Exists</span></td></tr>
+</tbody>
+</table>
+
+<h2 class="sec" id="collision">Collision Rules <span style="font-size:14px;color:var(--muted)">(multi-dev)</span></h2>
+<ol>
+<li><b>One owner per repo file.</b> Creator owns it. Others import, never recreate.</li>
+<li><b>Schemas append-only.</b> Add new Zod schemas at the bottom of <code>lib/validation/schemas.ts</code>. Never reorder.</li>
+<li><b>Never edit a money value during refactor.</b> Relocate, don't change.</li>
+<li><b>Verify gate green after every step.</b> Red = stop.</li>
+<li><b>Update <code>CODE_REFACTOR_HANDOFF.md</code> when you wrap a group</b> so the next person sees current state.</li>
+</ol>
+
+<footer>Plan generated 2026-05-27. Execution completed 2026-05-29 (commits fb44780 → ebddfb3). Status overlay sourced from WHAT_HAS_BEEN_FIXED.md. Open item: S-11 (DEK AAD binding, deferred). Dropped: F-01 (server-component conversion, skipped).</footer>
+
+</main>
+</div>
+</body>
+</html>

@@ -48,7 +48,7 @@ export const POST = withRoute(async (request: NextRequest) => {
     const { data: profile } = await admin.from("profiles").select("vault_pin_hash").eq("id", user.id).single();
     if (!profile?.vault_pin_hash) return fail("No PIN set", 400);
     const valid = await bcrypt.compare(pin, profile.vault_pin_hash);
-    if (!valid) return fail("Incorrect PIN", 401);
+    if (!valid) return fail("Incorrect PIN", 422);
     await admin.from("audit_log").insert({ actor_id: user.id, action: "vault.accessed", resource_type: "profile", resource_id: user.id });
     return ok({ success: true });
   }
@@ -58,7 +58,7 @@ export const POST = withRoute(async (request: NextRequest) => {
     const { data: profile } = await admin.from("profiles").select("vault_pin_hash").eq("id", user.id).single();
     if (!profile?.vault_pin_hash) return fail("No PIN set", 400);
     const valid = await bcrypt.compare(pin, profile.vault_pin_hash);
-    if (!valid) return fail("Current PIN incorrect", 401);
+    if (!valid) return fail("Current PIN incorrect", 422);
     const hash = await bcrypt.hash(newPin, 10);
     await admin.from("profiles").update({ vault_pin_hash: hash }).eq("id", user.id);
     await admin.from("audit_log").insert({ actor_id: user.id, action: "vault.pin_changed", resource_type: "profile", resource_id: user.id });

@@ -39,6 +39,12 @@ function SuccessContent() {
   const [documents, setDocuments] = useState<DocumentRecord[]>([]);
   const [docsReady, setDocsReady] = useState(false);
   const [hasExistingAccount, setHasExistingAccount] = useState(false);
+  const [verifiedToken, setVerifiedToken] = useState("");
+
+  // Email-ownership token captured at checkout; required by set-password.
+  useEffect(() => {
+    setVerifiedToken(sessionStorage.getItem("evVerifiedToken") || "");
+  }, []);
 
   const pollDocuments = useCallback(async (oid: string) => {
     try {
@@ -353,7 +359,7 @@ function SuccessContent() {
                     <p className="mt-1 text-xs text-blue-100/60">Your documents will be unlocked and available to download once the attorney approves them, up to 4 days.</p>
                   </div>
                 )}
-                <PasswordSetup email={email} userId={userId} defaultName={clientName} />
+                <PasswordSetup email={email} userId={userId} defaultName={clientName} verifiedToken={verifiedToken} />
               </div>
             )}
           </div>

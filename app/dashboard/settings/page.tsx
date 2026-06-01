@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { recovery } from "@/lib/api-client/auth";
 import { pinAction } from "@/lib/api-client/vault";
+import LoadingScreen from "@/components/ui/LoadingScreen";
 
 interface Profile {
   full_name: string;
@@ -42,6 +43,8 @@ export default function SettingsPage() {
   const [newPin, setNewPin] = useState("");
   const [confirmNewPin, setConfirmNewPin] = useState("");
   const [pinMsg, setPinMsg] = useState("");
+  const [pinSaving, setPinSaving] = useState(false);
+  const [pwSaving, setPwSaving] = useState(false);
 
   // Advisor
   const [advisorName, setAdvisorName] = useState("");
@@ -101,14 +104,18 @@ export default function SettingsPage() {
   }
 
   async function changePassword() {
+    setPwSaving(true);
     await recovery(email);
+    setPwSaving(false);
     alert("Password reset email sent. Check your inbox.");
   }
 
   async function changePin() {
-    if (newPin.length !== 4 || !/^\d{4}$/.test(newPin)) { setPinMsg("PIN must be 4 digits"); return; }
+    if (newPin.length !== 6 || !/^\d{6}$/.test(newPin)) { setPinMsg("PIN must be 6 digits"); return; }
     if (newPin !== confirmNewPin) { setPinMsg("PINs do not match"); return; }
+    setPinSaving(true);
     const { error: pinErr } = await pinAction({ action: "change", pin: currentPin, newPin });
+    setPinSaving(false);
     if (pinErr) { setPinMsg(pinErr); return; }
     setPinMsg("PIN changed successfully"); setCurrentPin(""); setNewPin(""); setConfirmNewPin("");
   }
@@ -121,7 +128,7 @@ export default function SettingsPage() {
     setSaved(true); setTimeout(() => setSaved(false), 2000);
   }
 
-  if (loading) return <div className="py-20 text-center text-charcoal/50">Loading...</div>;
+  if (loading) return <LoadingScreen message="Loading your settings…" />;
 
   return (
     <div className="max-w-2xl">
@@ -145,7 +152,7 @@ export default function SettingsPage() {
             </div>
             <div className="flex gap-3">
               <button onClick={saveProfile} disabled={saving} className="rounded-full bg-gold px-6 py-2 text-sm font-semibold text-white hover:bg-gold/90 disabled:opacity-50">Save</button>
-              <button onClick={changePassword} className="rounded-full border border-navy px-6 py-2 text-sm font-medium text-navy hover:bg-navy hover:text-white transition-colors">Change Password</button>
+              <button onClick={changePassword} disabled={pwSaving} className="rounded-full border border-navy px-6 py-2 text-sm font-medium text-navy hover:bg-navy hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed">{pwSaving ? "Sending…" : "Change Password"}</button>
             </div>
           </div>
         </Section>
@@ -154,10 +161,10 @@ export default function SettingsPage() {
           <Section id="pin" title="Vault PIN" openSection={openSection} setOpenSection={setOpenSection}>
             <div className="space-y-3">
               {pinMsg && <p id="pin-change-msg" role="alert" className={`text-sm ${pinMsg.includes("success") ? "text-green-600" : "text-red-600"}`}>{pinMsg}</p>}
-              <input type="password" maxLength={4} inputMode="numeric" value={currentPin} onChange={(e) => setCurrentPin(e.target.value.replace(/\D/g, ""))} placeholder="Current PIN" aria-label="Current PIN" aria-invalid={!!pinMsg && !pinMsg.includes("success")} aria-describedby={pinMsg ? "pin-change-msg" : undefined} className="w-full min-h-[44px] rounded-xl border-2 border-gray-200 px-4 py-3 text-sm focus:border-gold focus:outline-none" />
-              <input type="password" maxLength={4} inputMode="numeric" value={newPin} onChange={(e) => setNewPin(e.target.value.replace(/\D/g, ""))} placeholder="New PIN" aria-label="New PIN" className="w-full min-h-[44px] rounded-xl border-2 border-gray-200 px-4 py-3 text-sm focus:border-gold focus:outline-none" />
-              <input type="password" maxLength={4} inputMode="numeric" value={confirmNewPin} onChange={(e) => setConfirmNewPin(e.target.value.replace(/\D/g, ""))} placeholder="Confirm new PIN" aria-label="Confirm new PIN" className="w-full min-h-[44px] rounded-xl border-2 border-gray-200 px-4 py-3 text-sm focus:border-gold focus:outline-none" />
-              <button onClick={changePin} className="rounded-full bg-gold px-6 py-2 text-sm font-semibold text-white hover:bg-gold/90">Change PIN</button>
+              <input type="password" maxLength={6} inputMode="numeric" value={currentPin} onChange={(e) => setCurrentPin(e.target.value.replace(/\D/g, ""))} placeholder="Current PIN" aria-label="Current PIN" aria-invalid={!!pinMsg && !pinMsg.includes("success")} aria-describedby={pinMsg ? "pin-change-msg" : undefined} className="w-full min-h-[44px] rounded-xl border-2 border-gray-200 px-4 py-3 text-sm focus:border-gold focus:outline-none" />
+              <input type="password" maxLength={6} inputMode="numeric" value={newPin} onChange={(e) => setNewPin(e.target.value.replace(/\D/g, ""))} placeholder="New PIN" aria-label="New PIN" className="w-full min-h-[44px] rounded-xl border-2 border-gray-200 px-4 py-3 text-sm focus:border-gold focus:outline-none" />
+              <input type="password" maxLength={6} inputMode="numeric" value={confirmNewPin} onChange={(e) => setConfirmNewPin(e.target.value.replace(/\D/g, ""))} placeholder="Confirm new PIN" aria-label="Confirm new PIN" className="w-full min-h-[44px] rounded-xl border-2 border-gray-200 px-4 py-3 text-sm focus:border-gold focus:outline-none" />
+              <button onClick={changePin} disabled={pinSaving} className="rounded-full bg-gold px-6 py-2 text-sm font-semibold text-white hover:bg-gold/90 disabled:opacity-50 disabled:cursor-not-allowed">{pinSaving ? "Changing…" : "Change PIN"}</button>
             </div>
           </Section>
         )}

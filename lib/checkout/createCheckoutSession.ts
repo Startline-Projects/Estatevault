@@ -33,12 +33,12 @@ export type ProductConfig = {
 };
 
 export type CheckoutInput = {
-  userId?: string;
+  userId?: string | null;
   attorneyReview: boolean;
   intakeAnswers: Record<string, unknown>;
   promoCode?: string;
   email?: string;
-  partnerId?: string;
+  partnerId?: string | null;
   customerEmail?: string;
   complexityFlag?: boolean;
   complexityReasons?: string[];

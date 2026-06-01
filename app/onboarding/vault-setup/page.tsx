@@ -36,8 +36,8 @@ export default function VaultSetupPage() {
   async function handlePin(e: React.FormEvent) {
     e.preventDefault();
     setErr(null);
-    if (!/^\d{4}$/.test(pin)) {
-      setErr("PIN must be 4 digits.");
+    if (!/^\d{6}$/.test(pin)) {
+      setErr("PIN must be 6 digits.");
       return;
     }
     if (pin !== pinConfirm) {
@@ -108,7 +108,7 @@ export default function VaultSetupPage() {
         <h1 className="text-2xl font-semibold text-[#1C3557] mb-1">Set up your vault</h1>
         <p className="text-sm text-[#2D2D2D] mb-6">
           {step === "loading" && " "}
-          {step === "pin" && "Create a 4-digit PIN. You'll use this each time you access your vault."}
+          {step === "pin" && "Create a 6-digit PIN. You'll use this each time you access your vault."}
           {step === "passphrase" && "Choose a passphrase. Only you will know it."}
           {step === "show" && "Save your 24-word recovery phrase."}
           {step === "confirm" && "Confirm your recovery phrase."}
@@ -130,12 +130,12 @@ export default function VaultSetupPage() {
         {step === "pin" && (
           <form onSubmit={handlePin} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-[#2D2D2D] mb-1">PIN (4 digits)</label>
+              <label className="block text-sm font-medium text-[#2D2D2D] mb-1">PIN (6 digits)</label>
               <input
                 type="password"
                 inputMode="numeric"
-                pattern="\d{4}"
-                maxLength={4}
+                pattern="\d{6}"
+                maxLength={6}
                 autoFocus
                 value={pin}
                 onChange={(e) => setPin(e.target.value.replace(/\D/g, ""))}
@@ -148,8 +148,8 @@ export default function VaultSetupPage() {
               <input
                 type="password"
                 inputMode="numeric"
-                pattern="\d{4}"
-                maxLength={4}
+                pattern="\d{6}"
+                maxLength={6}
                 value={pinConfirm}
                 onChange={(e) => setPinConfirm(e.target.value.replace(/\D/g, ""))}
                 className="w-full rounded border border-gray-300 px-3 py-2 focus:outline-none focus:border-[#1C3557]"
@@ -158,7 +158,7 @@ export default function VaultSetupPage() {
             </div>
             <button
               type="submit"
-              disabled={busy || pin.length !== 4 || pinConfirm.length !== 4}
+              disabled={busy || pin.length !== 6 || pinConfirm.length !== 6}
               className="w-full bg-[#1C3557] text-white rounded py-2 font-medium disabled:opacity-50"
             >
               {busy ? "Saving…" : "Continue"}
