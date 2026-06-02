@@ -20,6 +20,17 @@ export function getByProfileId(admin: Admin, profileId: string) {
   return admin.from("partners").select("*").eq("profile_id", profileId).maybeSingle();
 }
 
+// Partners a sales rep manages (B2: backs GET /api/sales/partners). When
+// `repId` is null (admin/attorney view) all partners are returned.
+export function listManaged(admin: Admin, repId: string | null) {
+  let q = admin
+    .from("partners")
+    .select("id, company_name, tier, status, onboarding_step, onboarding_completed, created_at, updated_at, profiles!profile_id(full_name, email)")
+    .order("created_at", { ascending: false });
+  if (repId) q = q.eq("created_by", repId);
+  return q;
+}
+
 // Stripe Connect info + revenue percent, looked up by the public partner slug.
 export function findStripeInfoBySlug(admin: Admin, partnerSlug: string) {
   return admin

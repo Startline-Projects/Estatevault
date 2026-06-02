@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/client";
+import { getPartners } from "@/lib/api-client/sales";
 import { usePortalBase } from "@/lib/portal-base";
 
 type PartnerStatus = "onboarding" | "active" | "suspended" | "cancelled";
@@ -45,60 +45,22 @@ export default function PartnersListPage() {
 
   useEffect(() => {
     async function load() {
-      const supabase = createClient();
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) { setLoading(false); return; }
-
-      const { data: profileData } = await supabase
-        .from("profiles")
-        .select("user_type")
-        .eq("id", user.id)
-        .single();
-      const isAdmin = profileData?.user_type === "admin" || profileData?.user_type === "review_attorney";
-
-      let partnersQuery = supabase
-        .from("partners")
-        .select("id, company_name, tier, status, onboarding_step, onboarding_completed, created_at, updated_at, profiles!profile_id(full_name, email)")
-        .order("created_at", { ascending: false });
-      if (!isAdmin) partnersQuery = partnersQuery.eq("created_by", user.id);
-      const { data } = await partnersQuery;
-
-      if (data) {
-        // Fetch MTD stats for each partner
-        const now = new Date();
-        const mtdStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
-        const enriched: Partner[] = await Promise.all(
-          data.map(async (p) => {
-            const { count: docCount } = await supabase
-              .from("orders")
-              .select("*", { count: "exact", head: true })
-              .eq("partner_id", p.id)
-              .gte("created_at", mtdStart);
-            const { data: revData } = await supabase
-              .from("orders")
-              .select("partner_cut")
-              .eq("partner_id", p.id)
-              .gte("created_at", mtdStart);
-            const mtdRev = (revData || []).reduce((sum, o) => sum + (o.partner_cut || 0), 0);
-            const profile = (p as unknown as Record<string, unknown>).profiles as { full_name: string; email: string } | null;
-            return {
-              id: p.id,
-              company_name: p.company_name,
-              owner_name: profile?.full_name || "",
-              email: profile?.email || "",
-              plan_tier: (p.tier || "standard") as PlanTier,
-              status: (p.status || "onboarding") as PartnerStatus,
-              onboarding_step: p.onboarding_step || 1,
-              certification_completed: p.onboarding_completed || false,
-              created_at: p.created_at,
-              updated_at: p.updated_at,
-              mtd_docs: docCount || 0,
-              mtd_revenue: mtdRev,
-            };
-          })
-        );
-        setPartners(enriched);
-      }
+      const { data } = await getPartners();
+      const enriched: Partner[] = (data?.partners ?? []).map((p) => ({
+        id: p.id,
+        company_name: p.company_name || "",
+        owner_name: p.profiles?.full_name || "",
+        email: p.profiles?.email || "",
+        plan_tier: (p.tier || "standard") as PlanTier,
+        status: (p.status || "onboarding") as PartnerStatus,
+        onboarding_step: p.onboarding_step || 1,
+        certification_completed: p.onboarding_completed || false,
+        created_at: p.created_at,
+        updated_at: p.updated_at,
+        mtd_docs: p.mtd_docs,
+        mtd_revenue: p.mtd_revenue,
+      }));
+      setPartners(enriched);
       setLoading(false);
     }
     load();

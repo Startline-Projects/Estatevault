@@ -19,6 +19,7 @@ const PARTNER_GET_ENDPOINTS = [
   "/api/partner/vault-clients",
   "/api/partner/documents",
   "/api/partner/referrals",
+  "/api/sales/partners",
 ];
 
 const BLOCKED = [301, 302, 307, 401, 403];
@@ -75,6 +76,16 @@ test.describe("B2 partner endpoints — authenticated partner", () => {
       const body = await res.json();
       expect(Array.isArray(body[key]), `${url} -> ${key} is array`).toBe(true);
     }
+  });
+});
+
+test.describe("B2 sales endpoints — authenticated sales rep", () => {
+  test("GET /api/sales/partners returns managed partners", { tag: "@sales" }, async ({ page }) => {
+    await loginAs(page, TEST_USERS.salesRep.email, TEST_USERS.salesRep.password);
+    const res = await page.request.get("/api/sales/partners");
+    expect(res.ok()).toBeTruthy();
+    const body = await res.json();
+    expect(Array.isArray(body.partners)).toBe(true);
   });
 });
 

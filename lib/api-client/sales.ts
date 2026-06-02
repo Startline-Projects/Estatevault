@@ -1,5 +1,24 @@
 import { post, get, patch, del, type ApiResult } from "./client";
 
+export type ManagedPartner = {
+  id: string;
+  company_name: string | null;
+  tier: string | null;
+  status: string | null;
+  onboarding_step: number | null;
+  onboarding_completed: boolean | null;
+  created_at: string | null;
+  updated_at: string | null;
+  profiles: { full_name: string | null; email: string } | null;
+  mtd_docs: number;
+  mtd_revenue: number;
+};
+
+// The sales rep's managed partners with MTD stats (B2).
+export function getPartners(): Promise<ApiResult<{ partners: ManagedPartner[] }>> {
+  return get("/api/sales/partners");
+}
+
 export function createPartner(body: Record<string, unknown>): Promise<ApiResult<{ partnerId: string; tempPassword?: string }>> {
   return post("/api/sales/create-partner", body);
 }
