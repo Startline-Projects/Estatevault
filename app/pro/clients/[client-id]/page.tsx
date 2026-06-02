@@ -2,8 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
-import { updateClient } from "@/lib/api-client/partner";
+import { getMe, getClientDetail, updateClient } from "@/lib/api-client/partner";
 import LoadingScreen from "@/components/ui/LoadingScreen";
 
 interface ClientDetail { id: string; created_at: string; profiles: { full_name: string; email: string; phone: string } | null }
@@ -24,34 +23,23 @@ export default function ClientDetailPage() {
 
   useEffect(() => {
     async function load() {
-      const supabase = createClient();
-      const { data: c } = await supabase.from("clients").select("id, created_at, profiles(full_name, email, phone)").eq("id", clientId).single();
-      if (c) setClient(c as unknown as ClientDetail);
-
-      const { data: o } = await supabase.from("orders").select("*").eq("client_id", clientId).order("created_at", { ascending: false });
-      setOrders((o || []) as Order[]);
-
-      const { data: d } = await supabase.from("documents").select("id, document_type, status, created_at").eq("client_id", clientId);
-      setDocs((d || []) as Doc[]);
-
-      const { data: n } = await supabase.from("client_notes").select("id, note, created_at").eq("client_id", clientId).order("created_at", { ascending: false });
-      setNotes((n || []) as Note[]);
-
-      const { data: a } = await supabase.from("audit_log").select("action, created_at").eq("resource_id", clientId).order("created_at", { ascending: false }).limit(20);
-      setActivity(a || []);
+      const { data } = await getClientDetail(clientId);
+      if (!data) return;
+      setClient(data.client as unknown as ClientDetail);
+      setOrders((data.orders || []) as unknown as Order[]);
+      setDocs((data.docs || []) as Doc[]);
+      setNotes((data.notes || []) as Note[]);
+      setActivity(data.activity || []);
     }
     load();
   }, [clientId]);
 
   async function addNote() {
     if (!newNote.trim()) return;
-    const supabase = createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
-    const { data: partner } = await supabase.from("partners").select("id").eq("profile_id", user.id).single();
-    if (!partner) return;
+    const { data: me } = await getMe();
+    if (!me?.partner) return;
 
-    await updateClient({ clientId, partnerId: partner.id, note: newNote });
+    await updateClient({ clientId, partnerId: me.partner.id, note: newNote });
     setNotes((prev) => [{ id: Date.now().toString(), note: newNote, created_at: new Date().toISOString() }, ...prev]);
     setNewNote("");
   }

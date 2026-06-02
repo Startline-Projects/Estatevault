@@ -33,3 +33,11 @@ export function countByStatus(admin: Admin, orderId: string, status: string) {
     .eq("order_id", orderId)
     .eq("status", status);
 }
+
+// A client's documents (B2 client detail).
+export function listByClient(admin: Admin, clientId: string) {
+  return admin
+    .from("documents")
+    .select("id, document_type, status, created_at")
+    .eq("client_id", clientId);
+}

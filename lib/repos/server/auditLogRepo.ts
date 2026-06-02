@@ -35,3 +35,13 @@ export function listRecent(admin: Admin, limit = 10) {
     .order("created_at", { ascending: false })
     .limit(limit);
 }
+
+// Recent audit entries for a specific resource (B2 client detail activity).
+export function listByResource(admin: Admin, resourceId: string, limit = 20) {
+  return admin
+    .from("audit_log")
+    .select("action, created_at")
+    .eq("resource_id", resourceId)
+    .order("created_at", { ascending: false })
+    .limit(limit);
+}

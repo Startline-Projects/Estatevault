@@ -82,6 +82,19 @@ export function getDashboard(): Promise<ApiResult<DashboardData>> {
   return get("/api/partner/dashboard");
 }
 
+export type ClientDetailData = {
+  client: { id: string; created_at: string; profiles: { full_name: string | null; email: string; phone: string | null } | null };
+  orders: Array<Record<string, unknown>>;
+  docs: Array<{ id: string; document_type: string; status: string; created_at: string | null }>;
+  notes: Array<{ id: string; note: string; created_at: string | null }>;
+  activity: Array<{ action: string; created_at: string | null }>;
+};
+
+// A single client's detail for the partner (B2, with ownership check server-side).
+export function getClientDetail(clientId: string): Promise<ApiResult<ClientDetailData>> {
+  return get(`/api/partner/clients/${clientId}`);
+}
+
 export type BrandingResult = {
   id?: string;
   company_name?: string;

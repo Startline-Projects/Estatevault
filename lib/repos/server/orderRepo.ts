@@ -55,3 +55,12 @@ export function listSinceByPartner(admin: Admin, partnerId: string, sinceIso: st
     .eq("partner_id", partnerId)
     .gte("created_at", sinceIso);
 }
+
+// All orders for a client, newest first (B2 client detail).
+export function listByClient(admin: Admin, clientId: string) {
+  return admin
+    .from("orders")
+    .select("*")
+    .eq("client_id", clientId)
+    .order("created_at", { ascending: false });
+}

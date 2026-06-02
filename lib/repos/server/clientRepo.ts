@@ -199,3 +199,22 @@ export function listVaultClientsByPartner(admin: Admin, partnerId: string) {
     .eq("partner_id", partnerId)
     .order("created_at", { ascending: false });
 }
+
+// Single client detail (id + owning partner + profile) for the pro client
+// detail page (B2). The route verifies partner ownership against partner_id.
+export function getDetailById(admin: Admin, clientId: string) {
+  return admin
+    .from("clients")
+    .select("id, partner_id, created_at, profiles(full_name, email, phone)")
+    .eq("id", clientId)
+    .single();
+}
+
+// A client's CRM notes, newest first (B2).
+export function listNotes(admin: Admin, clientId: string) {
+  return admin
+    .from("client_notes")
+    .select("id, note, created_at")
+    .eq("client_id", clientId)
+    .order("created_at", { ascending: false });
+}
