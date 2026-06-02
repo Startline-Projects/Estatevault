@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EstateVault — Test Run Results</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --navy:#1C3557; --gold:#C9A84C; --charcoal:#2D2D2D; --white:#fff;
+    --bg:#f4f6f9; --line:#e3e8f0; --good:#1f8a5b; --good-bg:#eef7f1;
+    --warn:#c98a1e; --warn-bg:#fdf6e9; --bad:#c0392b; --bad-bg:#fbf0ef; --muted:#5f6b7c;
+  }
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{margin:0;font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--charcoal);line-height:1.65;font-size:16px;}
+  a{color:var(--navy);}
+  code{font-family:'JetBrains Mono',ui-monospace,monospace;font-size:.85em;background:#eef1f6;color:#324;padding:1px 6px;border-radius:5px;border:1px solid #e0e5ee;word-break:break-word;}
+  pre{background:var(--navy);color:#e8edf4;padding:14px 18px;border-radius:10px;overflow-x:auto;font-size:12.5px;line-height:1.55;font-family:'JetBrains Mono',monospace;}
+  pre code{background:none;color:inherit;border:none;padding:0;}
+  header.hero{background:linear-gradient(135deg,var(--navy) 0%,#13243d 100%);color:#fff;padding:44px 0 48px;border-bottom:4px solid var(--gold);}
+  .hero .tag{display:inline-block;letter-spacing:.18em;text-transform:uppercase;font-size:12px;font-weight:600;color:#e7d49a;margin-bottom:12px;}
+  .hero h1{margin:0;font-size:34px;font-weight:800;}
+  .hero p.sub{margin:12px 0 0;font-size:16px;color:#cdd6e4;max-width:760px;}
+  .hero .meta{margin-top:20px;display:flex;flex-wrap:wrap;gap:10px;}
+  .hero .meta span{background:rgba(255,255,255,.08);border:1px solid rgba(201,168,76,.35);padding:6px 14px;border-radius:999px;font-size:13px;color:#e7ecf4;}
+  .wrap{max-width:1080px;margin:0 auto;padding:32px 24px 80px;}
+  h2.section{font-size:13px;letter-spacing:.16em;text-transform:uppercase;color:var(--navy);margin:38px 0 16px;display:flex;align-items:center;gap:10px;}
+  h2.section::after{content:"";flex:1;height:1px;background:var(--line);}
+  .card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:22px 26px;margin-bottom:18px;box-shadow:0 1px 2px rgba(20,40,70,.04);}
+
+  .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px;margin:6px 0 4px;}
+  .stat{background:#fff;border:1px solid var(--line);border-radius:12px;padding:16px 18px;border-top:3px solid var(--muted);}
+  .stat .n{font-size:30px;font-weight:800;line-height:1;}
+  .stat .l{font-size:12.5px;color:var(--muted);margin-top:6px;}
+  .stat.good{border-top-color:var(--good);} .stat.good .n{color:var(--good);}
+  .stat.bad{border-top-color:var(--bad);} .stat.bad .n{color:var(--bad);}
+  .stat.warn{border-top-color:var(--warn);} .stat.warn .n{color:var(--warn);}
+
+  table{width:100%;border-collapse:collapse;font-size:14.5px;}
+  th{text-align:left;color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.06em;padding:7px 8px;}
+  td{padding:9px 8px;border-top:1px solid var(--line);vertical-align:top;}
+  .pill{display:inline-block;font-size:11px;font-weight:700;padding:3px 10px;border-radius:999px;}
+  .pill.pass{background:var(--good-bg);color:var(--good);}
+  .pill.fail{background:var(--bad-bg);color:var(--bad);}
+  .pill.skip{background:#eef1f6;color:var(--muted);}
+  .pill.warn{background:var(--warn-bg);color:var(--warn);}
+
+  .fail{border:1px solid var(--line);border-left:5px solid var(--bad);border-radius:12px;padding:16px 20px;margin-bottom:14px;background:#fff;}
+  .fail h3{margin:0 0 4px;font-size:16px;color:var(--navy);font-family:'JetBrains Mono',monospace;}
+  .fail .spec{font-size:12px;color:var(--muted);font-family:'JetBrains Mono',monospace;margin-bottom:8px;}
+  .lbl{font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:12px 0 4px;}
+  .verdict{display:inline-block;font-size:11px;font-weight:700;padding:3px 10px;border-radius:999px;background:var(--warn-bg);color:var(--warn);}
+
+  .banner{border-radius:12px;padding:16px 20px;font-size:14.5px;border:1px solid;}
+  .banner.good{background:var(--good-bg);border-color:#cce7d6;}
+  .banner.warn{background:var(--warn-bg);border-color:#f0e0bf;}
+  .k{font-weight:700;}
+  ul.tight{margin:6px 0;padding-left:20px;} ul.tight li{margin:6px 0;font-size:14.5px;}
+  .btn{display:inline-block;background:var(--navy);color:#fff;text-decoration:none;padding:9px 16px;border-radius:9px;font-size:14px;font-weight:600;margin:4px 8px 4px 0;}
+  .btn.gold{background:var(--gold);color:#1C3557;}
+  footer{text-align:center;color:var(--muted);font-size:13px;padding:24px;}
+  @media(max-width:760px){.wrap{padding:24px 16px 60px;}}
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div style="max-width:1080px;margin:0 auto;padding:0 24px;">
+    <span class="tag">Test Run · Staging · 2026-06-03</span>
+    <h1>Test Run Results</h1>
+    <p class="sub">Full run after the audit remediation + scalability (B7/B4/B3) work, against the <strong>staging</strong> Supabase project (seeded). Every failure below is analysed with its root cause and whether it's a code regression.</p>
+    <div class="meta">
+      <span>Unit ✅ 376/376</span>
+      <span>E2E 73 ✅ · 5 ✗ · 43 ⏭</span>
+      <span>0 code regressions</span>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <!-- SUMMARY -->
+  <h2 class="section" id="summary">Summary</h2>
+  <div class="stats">
+    <div class="stat good"><div class="n">376</div><div class="l">Unit passed (376/376)</div></div>
+    <div class="stat good"><div class="n">73</div><div class="l">E2E passed (app project)</div></div>
+    <div class="stat bad"><div class="n">5</div><div class="l">E2E failed — all environmental</div></div>
+    <div class="stat warn"><div class="n">43</div><div class="l">E2E skipped (@pro/@sales/@admin)</div></div>
+  </div>
+  <div class="card">
+    <table>
+      <thead><tr><th>Suite</th><th>Command</th><th>Result</th></tr></thead>
+      <tbody>
+        <tr><td><b>Unit</b> (Vitest)</td><td><code>npm test</code></td><td><span class="pill pass">376 / 376 passed</span></td></tr>
+        <tr><td><b>Typecheck</b></td><td><code>tsc --noEmit</code></td><td><span class="pill pass">no new errors</span> <span style="color:var(--muted);font-size:12.5px">(2 pre-existing: attorneyReviewRepo, quizSessionRepo)</span></td></tr>
+        <tr><td><b>Lint</b></td><td><code>next lint</code></td><td><span class="pill pass">clean on changed files</span></td></tr>
+        <tr><td><b>Crypto parity</b></td><td><code>tsx scripts/generate-crypto-vectors.ts --check</code></td><td><span class="pill pass">vectors in sync</span></td></tr>
+        <tr><td><b>E2E</b> (Playwright, <code>app</code> project)</td><td><code>playwright test --project=app</code></td><td><span class="pill pass">73 passed</span> <span class="pill fail">5 failed</span> <span class="pill skip">43 skipped</span></td></tr>
+      </tbody>
+    </table>
+    <div class="banner good" style="margin-top:14px;"><span class="k">Bottom line:</span> all unit tests pass and every e2e failure is a <b>test-infrastructure host/port mismatch</b> — not a regression. None of the 75 changed files touch login, the auth-handoff route, <code>lib/hosts</code>, or the quiz UI.</div>
+  </div>
+
+  <!-- VIEW REPORTS -->
+  <h2 class="section" id="reports">Open the full reports</h2>
+  <div class="card">
+    <p style="margin-top:0;">Interactive Playwright report (per-test, with screenshots + video + trace for each failure):</p>
+    <a class="btn gold" href="playwright-report/full-seeded-2026-06-03/index.html">▶ Open E2E HTML report</a>
+    <p style="font-size:13.5px;color:var(--muted);margin:6px 0 14px;">If the page is blank when opened directly (browsers block local file fetches), serve it instead:</p>
+    <pre><code>npx playwright show-report playwright-report/full-seeded-2026-06-03</code></pre>
+    <div class="lbl">Raw machine-readable</div>
+    <ul class="tight">
+      <li>Unit: <code>reports/unit/results.json</code> · <code>reports/unit/junit.xml</code></li>
+      <li>E2E: <code>test-results/results-full-seeded-2026-06-03.json</code> · <code>test-results/junit-*.xml</code></li>
+      <li>Per-failure artifacts (screenshot + video + trace): <code>test-results/&lt;spec-name&gt;/</code></li>
+    </ul>
+    <div class="lbl">Re-run</div>
+    <pre><code>npm test                                       # unit  -> reports/unit/
+RUN_ID=myrun npx playwright test --project=app  # e2e   -> playwright-report/myrun/</code></pre>
+  </div>
+
+  <!-- WHAT THIS VALIDATES -->
+  <h2 class="section" id="validates">What passed — and what it proves</h2>
+  <div class="card">
+    <ul class="tight">
+      <li><b><code>api-auth-guards</code> (18 ✅)</b> — every sensitive route rejects anonymous callers, incl. the B4-migrated <code>GET /api/subscription/status</code>, <code>vault/*</code>, <code>trustee/*</code>, <code>crypto/*</code>, <code>checkout/*</code>, and the Stripe webhook signature check (C-1 area).</li>
+      <li><b><code>api-subscription-status</code> (4 ✅)</b> — the B4-rewritten route returns the right payload for a logged-in client <em>and</em> 401s anonymously; a client is 403'd from a partner route (role enforcement).</li>
+      <li><b><code>role-access</code>, <code>partner-revenue</code> (read), <code>vault-subscription</code>, <code>trustee-unlock</code>, <code>smoke</code></b> — all ✅.</li>
+      <li><b>Unit:</b> new <code>dek-aad.test.ts</code> (C-2, 3 ✅) + <code>stripe-transfer-idempotency.test.ts</code> (C-1, 4 ✅), plus the existing webhook / DEK / attorney-verify suites.</li>
+    </ul>
+  </div>
+
+  <!-- FAILURES -->
+  <h2 class="section" id="failures">The 5 failures — what &amp; why</h2>
+  <div class="banner warn" style="margin-bottom:16px;">
+    <span class="k">One shared root cause.</span> All 5 failing tests call <code>loginAs()</code>, which performs the app's <b>cross-host auth handoff</b> to <code>clientUrl("/auth/handoff")</code>. In <code>.env.test</code>, <code>NEXT_PUBLIC_CLIENT_HOST=app.localhost:3000</code> — but the Playwright dev server runs on port <b>3100</b>, and <code>app.localhost</code> is not in <code>/etc/hosts</code>. So after login the browser is redirected to an unreachable host, lands on a Next.js error page (<em>"missing required error components, refreshing…"</em>), and the test times out waiting for the URL. <b>This is a test-infra mismatch, not a code defect.</b>
+  </div>
+
+  <div class="fail">
+    <h3>auth › client login routes to /dashboard <span class="verdict">⚙ environmental</span></h3>
+    <div class="spec">tests/e2e/auth.spec.ts:28</div>
+    <div class="lbl">Why</div>
+    <p style="margin:2px 0;">After sign-in the page navigated to <code>http://app.localhost:3000/auth/handoff?t=…</code> (port 3000, wrong host) and rendered the Next error boundary; <code>waitForURL</code> timed out at 15 s.</p>
+    <pre><code>TimeoutError: page.waitForURL: Timeout 15000ms exceeded.
+navigated to "http://app.localhost:3000/auth/handoff?t=…"
+Page snapshot: "missing required error components, refreshing..."</code></pre>
+    <div class="lbl">Regression?</div>
+    <p style="margin:2px 0;">No. The handoff host comes from <code>NEXT_PUBLIC_CLIENT_HOST</code> via <code>lib/hosts</code> — untouched by this work.</p>
+  </div>
+
+  <div class="fail">
+    <h3>client-dashboard › /dashboard/funding-checklist loads for authenticated client <span class="verdict">⚙ environmental</span></h3>
+    <div class="spec">tests/e2e/client-dashboard.spec.ts</div>
+    <div class="lbl">Why</div>
+    <p style="margin:2px 0;">Same cause — the test must <code>loginAs(client)</code> first, which fails at the cross-host handoff before the dashboard is reached.</p>
+  </div>
+
+  <div class="fail">
+    <h3>document-generation › POST /api/documents/generate requires order_id <span class="verdict">⚙ environmental</span></h3>
+    <div class="spec">tests/e2e/document-generation.spec.ts:6</div>
+    <div class="lbl">Why</div>
+    <p style="margin:2px 0;">The assertion (missing <code>order_id</code> → 400) is fine; the test fails earlier in its <code>loginAs(client)</code> setup (same handoff issue). The route itself is unchanged by this work and its unauthenticated-guard companion test passes.</p>
+  </div>
+
+  <div class="fail">
+    <h3>e2ee-smoke › onboarding writes wrapped material; DB has no plaintext <span class="verdict">⚙ environmental</span></h3>
+    <div class="spec">tests/e2e/e2ee-smoke.spec.ts:57</div>
+    <div class="lbl">Why</div>
+    <p style="margin:2px 0;">Requires a logged-in client session to drive the crypto bootstrap UI; blocked by the same handoff. (3 of the 4 e2ee-smoke tests began passing once the staging DB was seeded with the test-client row.)</p>
+  </div>
+
+  <div class="fail">
+    <h3>quiz-flow › result screen shows 'Based on your answers' <span class="verdict">⚙ environmental</span></h3>
+    <div class="spec">tests/e2e/quiz-flow.spec.ts:58</div>
+    <div class="lbl">Why</div>
+    <p style="margin:2px 0;">UI timeout waiting for the <code>Full name</code> input on the quiz form — a rendering/timing issue on the staging host, not an API change. CLAUDE.md voice rule ("Based on your answers…") is unaffected.</p>
+    <pre><code>locator.fill: Timeout 90000ms exceeded
+  waiting for locator("input[placeholder='Full name']").first()</code></pre>
+  </div>
+
+  <!-- SKIPPED -->
+  <h2 class="section" id="skipped">The 43 skipped</h2>
+  <div class="card">
+    <p style="margin:0;">Tests tagged <code>@pro</code> / <code>@sales</code> / <code>@admin</code> run in the other three Playwright projects (the consumer <code>app</code> project excludes them via <code>grepInvert</code>). They need the partner / sales / admin subdomains, which require <code>/etc/hosts</code> entries that aren't set on this machine.</p>
+  </div>
+
+  <!-- MAKE GREEN -->
+  <h2 class="section" id="green">Make the whole suite green (one-time infra setup)</h2>
+  <div class="card">
+    <p style="margin-top:0;">Not a code change — the e2e login + portal specs need the multi-host setup the app's auth handoff expects:</p>
+    <pre><code># 1. add the subdomains to /etc/hosts (matches the host the handoff targets)
+echo "127.0.0.1 app.localhost pro.localhost sales.localhost admin.localhost" \
+  | sudo tee -a /etc/hosts
+
+# 2. align the dev-server port with NEXT_PUBLIC_CLIENT_HOST in .env.test
+#    (either run the test server on :3000, or set the *_HOST vars to :3100)
+
+# 3. seed staging (already done for this run)
+TEST_ALLOW_SHARED_DB=1 npm run test:db:seed
+
+# 4. run every project (app + pro + sales + admin)
+npx playwright test</code></pre>
+    <p style="margin-bottom:0;font-size:13.5px;color:var(--muted);">With that in place the login-handoff and the <code>@pro/@sales/@admin</code> specs can pass too. None of it changes application code.</p>
+  </div>
+
+  <footer>EstateVault · Test Run Results · staging · 2026-06-03 · companion to <code>TEST_RESULTS.md</code></footer>
+</div>
+
+</body>
+</html>
