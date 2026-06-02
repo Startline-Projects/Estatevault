@@ -16,14 +16,14 @@ _Run 2026-06-03 against the **staging** Supabase project, after `npm run test:db
 
 Generated artifacts (gitignored — local to this machine):
 
-- **Unit:** `test-results/unit/results.json`, `test-results/unit/junit.xml`
+- **Unit:** `reports/unit/results.json`, `reports/unit/junit.xml`
 - **E2E HTML report:** `playwright-report/full-seeded-2026-06-03/index.html`
   - open it: `npx playwright show-report playwright-report/full-seeded-2026-06-03`
 - **E2E JSON/JUnit:** `test-results/results-full-seeded-2026-06-03.json`, `test-results/junit-*.xml`
 
 Re-run anytime:
 ```bash
-npm test            # unit -> writes test-results/unit/
+npm test            # unit -> writes reports/unit/
 RUN_ID=myrun npx playwright test --project=app   # e2e -> playwright-report/myrun/
 ```
 
