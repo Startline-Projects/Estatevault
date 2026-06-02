@@ -41,3 +41,21 @@ export function regenerateMissing(orderId: string): Promise<ApiResult<unknown>> 
 export function sendEmail(): Promise<ApiResult<{ success: boolean }>> {
   return post("/api/documents/send-email");
 }
+
+export type MyDocumentsResult = {
+  clientId: string | null;
+  latestOrder: { id: string; product_type: string; status: string; attorney_review_requested: boolean | null } | null;
+  documents: Array<{
+    id: string;
+    document_type: string;
+    status: string;
+    storage_path: string | null;
+    generated_at: string | null;
+    delivered_at: string | null;
+  }>;
+};
+
+// The signed-in client's own documents + latest order (B2).
+export function getMyDocuments(): Promise<ApiResult<MyDocumentsResult>> {
+  return get("/api/client/documents");
+}

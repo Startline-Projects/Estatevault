@@ -41,3 +41,12 @@ export function listByClient(admin: Admin, clientId: string) {
     .select("id, document_type, status, created_at")
     .eq("client_id", clientId);
 }
+
+// A client's documents with file/status fields (B2 client documents view).
+export function listByClientWithFiles(admin: Admin, clientId: string) {
+  return admin
+    .from("documents")
+    .select("id, document_type, status, storage_path, generated_at, delivered_at")
+    .eq("client_id", clientId)
+    .order("created_at", { ascending: true });
+}

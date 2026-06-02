@@ -64,3 +64,13 @@ export function listByClient(admin: Admin, clientId: string) {
     .eq("client_id", clientId)
     .order("created_at", { ascending: false });
 }
+
+// A client's latest order (B2 client documents view).
+export function latestByClient(admin: Admin, clientId: string) {
+  return admin
+    .from("orders")
+    .select("id, product_type, status, attorney_review_requested")
+    .eq("client_id", clientId)
+    .order("created_at", { ascending: false })
+    .limit(1);
+}

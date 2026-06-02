@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
+import { getMyDocuments } from "@/lib/api-client/documents";
 import { PRICES, formatPrice } from "@/lib/orders/pricing";
 
 const EXECUTION_GUIDES: Record<string, { title: string; steps: string[] }> = {
@@ -85,31 +86,14 @@ export default function DocumentsPage() {
   const [clientId, setClientId] = useState<string | null>(null);
 
   const fetchData = useCallback(async () => {
-    const supabase = createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return "idle";
+    const { data } = await getMyDocuments();
+    if (!data || !data.clientId) { setLoading(false); return "idle"; }
+    setClientId(data.clientId);
 
-    const { data: client } = await supabase.from("clients").select("id").eq("profile_id", user.id).single();
-    if (!client) { setLoading(false); return "idle"; }
-    setClientId(client.id);
-
-    const { data: orders } = await supabase
-      .from("orders")
-      .select("id, product_type, status, attorney_review_requested")
-      .eq("client_id", client.id)
-      .order("created_at", { ascending: false })
-      .limit(1);
-
-    const order = orders?.[0] || null;
+    const order = data.latestOrder;
     setLatestOrder(order);
 
-    const { data: docs } = await supabase
-      .from("documents")
-      .select("id, document_type, status, storage_path, generated_at, delivered_at")
-      .eq("client_id", client.id)
-      .order("created_at", { ascending: true });
-
-    const docList = docs || [];
+    const docList = data.documents;
     setDocuments(docList);
     setLoading(false);
 

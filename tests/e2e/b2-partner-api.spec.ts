@@ -20,6 +20,7 @@ const PARTNER_GET_ENDPOINTS = [
   "/api/partner/documents",
   "/api/partner/referrals",
   "/api/sales/partners",
+  "/api/client/documents",
 ];
 
 const BLOCKED = [301, 302, 307, 401, 403];
@@ -86,6 +87,17 @@ test.describe("B2 sales endpoints — authenticated sales rep", () => {
     expect(res.ok()).toBeTruthy();
     const body = await res.json();
     expect(Array.isArray(body.partners)).toBe(true);
+  });
+});
+
+test.describe("B2 client endpoints — authenticated client", () => {
+  test("GET /api/client/documents returns the client's documents", async ({ page }) => {
+    await loginAs(page, TEST_USERS.client.email, TEST_USERS.client.password);
+    const res = await page.request.get("/api/client/documents");
+    expect(res.ok()).toBeTruthy();
+    const body = await res.json();
+    expect(body).toHaveProperty("documents");
+    expect(Array.isArray(body.documents)).toBe(true);
   });
 });
 
