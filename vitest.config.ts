@@ -8,6 +8,12 @@ export default defineConfig({
     environment: "jsdom",
     globals: true,
     setupFiles: ["./tests/setup.ts"],
+    // Persist unit results to disk (alongside Playwright's test-results/).
+    reporters: [
+      "default",
+      ["json", { outputFile: "test-results/unit/results.json" }],
+      ["junit", { outputFile: "test-results/unit/junit.xml" }],
+    ],
     include: [
       "tests/unit/**/*.test.{ts,tsx}",
       "tests/api/**/*.test.{ts,tsx}",
