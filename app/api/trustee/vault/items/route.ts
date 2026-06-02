@@ -8,6 +8,7 @@ import {
   SESSION_COOKIE,
   SESSION_TTL_SECONDS,
 } from "@/lib/security/trusteeSession";
+import { resolveTrusteeScope } from "@/lib/security/trusteeScope";
 import { byteaToBytes } from "@/lib/api/crypto";
 import { getOrCreateUserDek } from "@/lib/api/dek";
 import { deriveSubKey, INFO, zero } from "@/lib/crypto/keyManager";
@@ -52,11 +53,9 @@ export const GET = withRoute(async (req: NextRequest) => {
     .select("access_scope")
     .eq("id", sess.trusteeId)
     .maybeSingle();
-  const scope = trusteeRow?.access_scope as { categories?: string[]; documents?: boolean; farewell?: boolean } | null;
-  const allowAll = !scope;
-  const allowCategories = allowAll ? null : (scope.categories ?? []);
-  const allowDocuments = allowAll ? true : !!scope.documents;
-  const allowFarewell = allowAll ? true : !!scope.farewell;
+  const { allowCategories, allowDocuments, allowFarewell } = resolveTrusteeScope(
+    trusteeRow?.access_scope,
+  );
 
   const { data: ownerClient } = await admin
     .from("clients")

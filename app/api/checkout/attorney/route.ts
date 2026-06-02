@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { getResend } from "@/lib/email";
 import { stripe } from "@/lib/stripe";
 import { createAdminClient } from "@/lib/api/auth";
 import { withRoute } from "@/lib/api/route";
@@ -103,8 +104,7 @@ export const POST = withRoute(async (request: Request) => {
 
       // Send notification email (don't block on failure)
       try {
-        const { Resend } = await import("resend");
-        const resend = new Resend(process.env.RESEND_API_KEY);
+        const resend = getResend();
         const salesEmail = process.env.SALES_NOTIFICATION_EMAIL || "info@estatevault.us";
 
         await resend.emails.send({

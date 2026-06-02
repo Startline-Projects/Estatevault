@@ -12,7 +12,7 @@ import * as fvRepo from "@/lib/repos/server/farewellVerificationRepo";
 import { trusteeUnlockVerifySchema } from "@/lib/validation/schemas";
 
 export const runtime = "nodejs";
-const MAX_OTP_ATTEMPTS = 5;
+const MAX_OTP_ATTEMPTS = 10;
 
 export const POST = withRoute(async (req: NextRequest) => {
   const rawBody = await req.json().catch(() => null);
@@ -35,10 +35,12 @@ export const POST = withRoute(async (req: NextRequest) => {
 
   const expected = hashOtp(code, r.id);
   if (expected !== r.otp_email_hash) {
-    await fvRepo.incrementOtpAttempts(admin, r.id, r.otp_email_attempts ?? 0);
+    // Atomic increment-and-cap (H-4): null = the cap was already reached.
+    const newCount = await fvRepo.incrementOtpAttempts(admin, r.id, MAX_OTP_ATTEMPTS);
     await fvRepo.insertTrusteeAudit(admin, {
       trustee_id: r.trustee_id ?? "", client_id: r.client_id, request_id: r.id, action: "otp_failed",
     });
+    if (newCount === null) return fail("too many attempts", 429);
     return fail("wrong code", 401);
   }
 

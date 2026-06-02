@@ -1,4 +1,5 @@
 import { NextRequest } from "next/server";
+import { getAppUrl } from "@/lib/config/appUrl";
 import { requireAuth } from "@/lib/api/auth";
 import { withRoute } from "@/lib/api/route";
 import { ok, fail } from "@/lib/api/response";
@@ -26,7 +27,7 @@ export const POST = withRoute(async (req: NextRequest) => {
 
   if (!email) return fail("Client email not found", 404);
 
-  const dashboardUrl = `${process.env.NEXT_PUBLIC_SITE_URL || "https://www.estatevault.us"}/dashboard/documents`;
+  const dashboardUrl = `${getAppUrl()}/dashboard/documents`;
   const partnerId = (order?.partner_id as string | null) || null;
   await sendApprovalEmail({ to: email, productType, dashboardUrl, partnerId });
 

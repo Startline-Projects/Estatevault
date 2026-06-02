@@ -52,7 +52,7 @@ export const POST = withRoute(async (req: NextRequest) => {
   if (!success) return fail("Too many attempts. Please wait a minute and try again.", 429);
 
   const code = generateCode();
-  storeCode(normalizedEmail, code);
+  await storeCode(normalizedEmail, code);
 
   const sender = await resolveSenderForEmail({
     email: normalizedEmail,

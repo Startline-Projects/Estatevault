@@ -9,6 +9,7 @@ import {
   hashOtp,
 } from "@/lib/security/trusteeToken";
 import { sendTrusteeOtpEmail } from "@/lib/email";
+import { trusteeOtpResendRateLimit } from "@/lib/rate-limit";
 import * as fvRepo from "@/lib/repos/server/farewellVerificationRepo";
 import { trusteeUnlockOtpSchema } from "@/lib/validation/schemas";
 
@@ -23,6 +24,11 @@ export const POST = withRoute(async (req: NextRequest) => {
 
   const v = verifyTrusteeToken(token);
   if (!v.ok) return fail(v.error, 400);
+
+  // H-4: cap resends per request — a new code resets the attempt counter, so
+  // unlimited resends would defeat the per-code cap.
+  const { success } = await trusteeOtpResendRateLimit.limit(`otp-resend:${v.requestId}`);
+  if (!success) return fail("too many code requests, try again later", 429);
 
   const admin = createAdminClient();
   const { data: r } = await fvRepo.getByIdForOtp(admin, v.requestId);

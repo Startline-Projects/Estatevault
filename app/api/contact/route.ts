@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { Resend } from "resend";
+import { getResend } from "@/lib/email";
 import { contactSchema } from "@/lib/validation/schemas";
 
-const resend = new Resend(process.env.RESEND_API_KEY || "re_placeholder");
+const resend = getResend();
 
 export async function POST(req: NextRequest) {
   try {

@@ -118,7 +118,7 @@ export async function POST(request: Request) {
       });
     }
 
-    const result = redeemLink(email, token);
+    const result = await redeemLink(email, token);
     if (!result.ok) {
       const msgMap = {
         expired: "This link has expired. Request a new one from the signup page.",

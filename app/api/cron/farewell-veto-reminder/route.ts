@@ -1,4 +1,5 @@
 import { type NextRequest } from "next/server";
+import { getAppUrl } from "@/lib/config/appUrl";
 import { createHash } from "crypto";
 import { withRoute } from "@/lib/api/route";
 import { ok, fail } from "@/lib/api/response";
@@ -45,7 +46,7 @@ export const GET = withRoute(async (req: NextRequest) => {
     const { data: profile } = await profileRepo.getEmailAndNameById(admin, client.profile_id);
     if (!profile?.email) continue;
 
-    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.estatevault.us";
+    const baseUrl = getAppUrl();
     const vetoUrl = `${baseUrl}/farewell/owner-veto?token=${token}`;
 
     try {

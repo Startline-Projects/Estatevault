@@ -3,6 +3,8 @@ import Stripe from "stripe";
 import { withRoute } from "@/lib/api/route";
 import { ok, fail } from "@/lib/api/response";
 import { createAdminClient } from "@/lib/api/auth";
+import { createClient } from "@/lib/supabase/server";
+import * as clientRepo from "@/lib/repos/server/clientRepo";
 import { getDocumentDownloadUrl } from "@/lib/documents/storage";
 
 export const GET = withRoute(async (request: NextRequest) => {
@@ -32,13 +34,25 @@ export const GET = withRoute(async (request: NextRequest) => {
     if (sessionOrderId && sessionOrderId === doc.order_id) authorized = true;
   }
 
+  // H-12: the order_id fallback is only for test orders AND requires the caller
+  // to be the authenticated owner of that order. A documentId+orderId pair seen
+  // on a success page is no longer enough on its own.
   if (!authorized && orderId && orderId === doc.order_id) {
     const { data: order } = await admin
       .from("orders")
-      .select("id, order_type")
+      .select("id, order_type, client_id")
       .eq("id", orderId)
       .single();
-    if (order && order.order_type === "test") authorized = true;
+
+    if (order && order.order_type === "test" && order.client_id) {
+      const {
+        data: { user },
+      } = await createClient().auth.getUser();
+      if (user) {
+        const { data: callerClient } = await clientRepo.getIdByProfile(admin, user.id);
+        if (callerClient?.id === order.client_id) authorized = true;
+      }
+    }
   }
 
   if (!authorized) return fail("Access denied", 403);

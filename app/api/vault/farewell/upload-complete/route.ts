@@ -1,6 +1,5 @@
 import { type NextRequest } from "next/server";
-import { createClient } from "@/lib/supabase/server";
-import { createAdminClient } from "@/lib/api/auth";
+import { requireAuth } from "@/lib/api/auth";
 import { withRoute } from "@/lib/api/route";
 import { ok, fail } from "@/lib/api/response";
 import { farewellUploadCompleteSchema } from "@/lib/validation/schemas";
@@ -8,11 +7,11 @@ import * as farewellRepo from "@/lib/repos/server/farewellRepo";
 import * as clientRepo from "@/lib/repos/server/clientRepo";
 
 export const POST = withRoute(async (request: NextRequest) => {
-  const supabase = createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return fail("Unauthorized", 401);
+  const auth = await requireAuth(undefined, request);
+  if ("error" in auth) return auth.error;
+  const user = auth.user;
 
-  const admin = createAdminClient();
+  const admin = auth.admin;
   const { data: client } = await clientRepo.getIdByProfile(admin, user.id);
   if (!client) return fail("No client record", 400);
 

@@ -1,34 +1,31 @@
-import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
-import { createServerClient } from "@supabase/ssr";
+import { NextRequest } from "next/server";
+import { requireAuth } from "@/lib/api/auth";
+import { withRoute } from "@/lib/api/route";
+import { ok } from "@/lib/api/response";
 import { stripe } from "@/lib/stripe";
 import { PRICES } from "@/lib/orders/pricing";
 
-function admin() {
-  return createServerClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, { cookies: { getAll: () => [], setAll: () => {} } });
-}
-
 // Reconciles clients.vault_subscription_status with Stripe.
 // Called when webhook may have been missed (localhost dev, Stripe outage, etc).
-export async function POST() {
-  const supa = createClient();
-  const { data: { user } } = await supa.auth.getUser();
-  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+export const POST = withRoute(async (req: NextRequest) => {
+  const auth = await requireAuth(undefined, req);
+  if ("error" in auth) return auth.error;
+  const user = auth.user;
 
-  const db = admin();
+  const db = auth.admin;
   const { data: client } = await db
     .from("clients")
     .select("id, vault_subscription_status, vault_subscription_stripe_id")
     .eq("profile_id", user.id)
     .single();
-  if (!client) return NextResponse.json({ status: "none" });
+  if (!client) return ok({ status: "none" });
 
   if (client.vault_subscription_status === "active") {
-    return NextResponse.json({ status: "active", source: "db" });
+    return ok({ status: "active", source: "db" });
   }
 
   const email = user.email;
-  if (!email) return NextResponse.json({ status: client.vault_subscription_status || "none" });
+  if (!email) return ok({ status: client.vault_subscription_status || "none" });
 
   // Look up Stripe customer(s) by email, find active vault subscription
   const customers = await stripe.customers.list({ email, limit: 5 });
@@ -53,9 +50,9 @@ export async function POST() {
         resource_id: client.id,
         metadata: { subscription_id: vaultSub.id },
       });
-      return NextResponse.json({ status: "active", source: "stripe" });
+      return ok({ status: "active", source: "stripe" });
     }
   }
 
-  return NextResponse.json({ status: client.vault_subscription_status || "none" });
-}
+  return ok({ status: client.vault_subscription_status || "none" });
+});

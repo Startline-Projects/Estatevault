@@ -136,9 +136,27 @@ export async function updateSession(request: NextRequest) {
   );
 
   // Refresh the session, important for Server Components
-  const {
+  let {
     data: { user },
   } = await supabase.auth.getUser();
+
+  // Bearer fallback for mobile clients (no cookies). If the cookie session is
+  // absent but the request carries an `Authorization: Bearer <jwt>` header,
+  // validate the token via the admin client and treat as authenticated. The
+  // per-route requireAuth() does the role check downstream.
+  if (!user) {
+    const authz = request.headers.get("authorization");
+    if (authz?.startsWith("Bearer ")) {
+      const token = authz.slice("Bearer ".length).trim();
+      const admin = createServerClient<Database>(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!,
+        { cookies: { getAll: () => [], setAll: () => {} } }
+      );
+      const { data, error } = await admin.auth.getUser(token);
+      if (!error && data.user) user = data.user;
+    }
+  }
 
   // Public routes, no auth required
   const publicPaths = ["/", "/quiz", "/will", "/trust", "/auth", "/attorney-referral", "/pro-partners", "/partners", "/professionals", "/farewell", "/khan-lawgroup", "/api/webhooks", "/api/documents/process", "/api/documents/cleanup-test-orders", "/api/documents/process-now", "/api/documents/regenerate-missing", "/api/documents/check-status", "/api/attorney/check-sla", "/api/checkout", "/api/quiz", "/api/professionals", "/api/farewell", "/api/admin/test-promo", "/api/documents/download-zip", "/api/auth/set-password", "/api/auth/handoff", "/api/auth/signup", "/api/auth/recovery", "/api/auth/resend-verification", "/api/auth/check-email", "/api/auth/send-verify-code", "/api/auth/verify-code", "/api/auth/send-verify-link", "/api/auth/verify-link", "/api/auth/check-verification", "/a", "/affiliate-signup", "/api/affiliate", "/vault/trustee-confirm", "/api/vault/trustees", "/api/partners/branding", "/trustee", "/api/trustee"];

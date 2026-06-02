@@ -1,4 +1,5 @@
 import { type NextRequest } from "next/server";
+import { getAppUrl } from "@/lib/config/appUrl";
 import { withRoute } from "@/lib/api/route";
 import { ok, fail } from "@/lib/api/response";
 import { createAdminClient } from "@/lib/api/auth";
@@ -23,7 +24,7 @@ export const GET = withRoute(async (req: NextRequest) => {
   const admin = createAdminClient();
   const now = Date.now();
   const cutoff = new Date(now - 365 * DAY).toISOString();
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.estatevault.us";
+  const baseUrl = getAppUrl();
 
   const { data: orders } = await orderRepo.findDeliveredBefore(admin, cutoff);
 

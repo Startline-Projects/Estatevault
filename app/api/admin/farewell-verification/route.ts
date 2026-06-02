@@ -1,4 +1,5 @@
 import { NextRequest } from "next/server";
+import { getAppUrl } from "@/lib/config/appUrl";
 import { createHash } from "crypto";
 import { requireAuth } from "@/lib/api/auth";
 import { withRoute } from "@/lib/api/route";
@@ -76,7 +77,7 @@ export const POST = withRoute(async (request: NextRequest) => {
     try {
       const ownerProfile = await fvRepo.getClientOwnerProfile(auth.admin, verReq.client_id);
       if (ownerProfile?.email) {
-        const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.estatevault.us";
+        const baseUrl = getAppUrl();
         const vetoUrl = `${baseUrl}/farewell/owner-veto?token=${vetoToken}`;
         await sendOwnerVetoEmail({
           to: ownerProfile.email,
@@ -124,7 +125,7 @@ export const POST = withRoute(async (request: NextRequest) => {
           trustee_email_notified_at: now.toISOString(),
         });
 
-        const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+        const baseUrl = getAppUrl();
         await sendTrusteeUnlockEmail({
           to: verReq.trustee_email,
           unlockUrl: `${baseUrl}/trustee/unlock?token=${trusteeToken}`,

@@ -1,4 +1,5 @@
 import { type NextRequest } from "next/server";
+import { getResend } from "@/lib/email";
 import { withRoute } from "@/lib/api/route";
 import { ok, fail } from "@/lib/api/response";
 import { requireAuth } from "@/lib/api/auth";
@@ -67,8 +68,7 @@ export const POST = withRoute(async (_request: NextRequest) => {
     )
     .join("");
 
-  const { Resend } = await import("resend");
-  const resend = new Resend(process.env.RESEND_API_KEY);
+  const resend = getResend();
 
   await resend.emails.send({
     from: "EstateVault <info@estatevault.us>",

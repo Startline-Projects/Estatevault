@@ -3,6 +3,7 @@ import { createAdminClient } from "@/lib/api/auth";
 import { withRoute } from "@/lib/api/route";
 import { ok, fail } from "@/lib/api/response";
 import { requireTrusteeSession, SESSION_COOKIE } from "@/lib/security/trusteeSession";
+import { resolveTrusteeScope, categoryAllowed } from "@/lib/security/trusteeScope";
 import * as fvRepo from "@/lib/repos/server/farewellVerificationRepo";
 
 export const runtime = "nodejs";
@@ -29,18 +30,29 @@ export const GET = withRoute(async (req: NextRequest) => {
     return res;
   }
 
+  // M-9: enforce the same access_scope the list route uses, before signing.
+  const { data: trusteeRow } = await admin
+    .from("vault_trustees")
+    .select("access_scope")
+    .eq("id", sess.trusteeId)
+    .maybeSingle();
+  const scope = resolveTrusteeScope(trusteeRow?.access_scope);
+
   let bucket: string, storagePath: string | null = null;
   if (type === "document") {
+    if (!scope.allowDocuments) return fail("not found", 404);
     const { data } = await admin.from("documents").select("storage_path, client_id").eq("id", id).single();
     if (!data || data.client_id !== sess.clientId) return fail("not found", 404);
     bucket = "documents";
     storagePath = data.storage_path;
   } else if (type === "vault_item") {
-    const { data } = await admin.from("vault_items").select("storage_path, client_id").eq("id", id).single();
+    const { data } = await admin.from("vault_items").select("storage_path, client_id, category").eq("id", id).single();
     if (!data || data.client_id !== sess.clientId) return fail("not found", 404);
+    if (!categoryAllowed(scope, data.category)) return fail("not found", 404);
     bucket = "documents";
     storagePath = data.storage_path;
   } else {
+    if (!scope.allowFarewell) return fail("not found", 404);
     const { data } = await admin.from("farewell_messages").select("storage_path, client_id").eq("id", id).single();
     if (!data || data.client_id !== sess.clientId) return fail("not found", 404);
     bucket = "farewell-videos";

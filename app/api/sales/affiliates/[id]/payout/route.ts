@@ -1,6 +1,7 @@
 export const dynamic = "force-dynamic";
 
 import { NextRequest } from "next/server";
+import { createHash } from "crypto";
 import { requireAuth } from "@/lib/api/auth";
 import { withRoute } from "@/lib/api/route";
 import { ok, fail } from "@/lib/api/response";
@@ -37,11 +38,18 @@ export const POST = withRoute(async (
 
   const orderIds = (orders ?? []).map((o) => o.id);
 
+  // H-5: deterministic idempotency key over the exact balance + order set, so
+  // two concurrent admin clicks collapse to a single Stripe transfer. A later
+  // genuine payout includes new orders → different key → not blocked.
+  const keyMaterial = `${affiliateId}:${unpaid}:${[...orderIds].sort().join(",")}`;
+  const idempotencyKey = `affpay_${createHash("sha256").update(keyMaterial).digest("hex").slice(0, 40)}`;
+
   const transfer = await transferToAffiliateBatch(
     affiliate.stripe_account_id,
     unpaid,
     affiliateId,
-    orderIds
+    orderIds,
+    idempotencyKey
   );
   if (!transfer) return fail("Stripe transfer failed", 500);
 

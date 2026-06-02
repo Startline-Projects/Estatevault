@@ -1,4 +1,5 @@
 import { Resend } from "resend";
+import { getAppUrl } from "@/lib/config/appUrl";
 import { createServerClient } from "@supabase/ssr";
 import { PRICES, formatPrice } from "@/lib/orders/pricing";
 
@@ -34,7 +35,7 @@ export async function sendEmail(params: Parameters<Resend["emails"]["send"]>[0])
 }
 const ESTATEVAULT_LOGO_URL =
   process.env.NEXT_PUBLIC_ESTATEVAULT_EMAIL_LOGO ||
-  `${process.env.NEXT_PUBLIC_SITE_URL || "https://www.estatevault.us"}/logo.png`;
+  `${getAppUrl()}/logo.png`;
 
 export type EmailBrand = {
   companyName: string;

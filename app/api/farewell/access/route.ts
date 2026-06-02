@@ -1,4 +1,5 @@
 import { NextRequest } from "next/server";
+import { getAppUrl } from "@/lib/config/appUrl";
 import { createAdminClient } from "@/lib/api/auth";
 import { withRoute } from "@/lib/api/route";
 import { ok, fail } from "@/lib/api/response";
@@ -92,7 +93,7 @@ export const POST = withRoute(async (req: NextRequest) => {
     trustee_email_notified_at: new Date(now).toISOString(),
   }).eq("id", fvReq.id);
 
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+  const baseUrl = getAppUrl();
   const unlockUrl = `${baseUrl}/trustee/unlock?token=${token}`;
 
   try {

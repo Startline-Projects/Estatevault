@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
+import { getResend } from "@/lib/email";
 import { professionalRequestAccessSchema } from "@/lib/validation/schemas";
 import { createClient } from "@supabase/supabase-js";
-import { Resend } from "resend";
 
 /* ------------------------------------------------------------------ */
 /*  Supabase admin client (bypasses RLS)                              */
@@ -75,7 +75,7 @@ export async function POST(request: Request) {
       const notifyEmail = process.env.SALES_NOTIFICATION_EMAIL;
 
       if (resendKey && notifyEmail) {
-        const resend = new Resend(resendKey);
+        const resend = getResend();
 
         await resend.emails.send({
           from: "EstateVault <info@estatevault.us>",
@@ -104,7 +104,7 @@ export async function POST(request: Request) {
       const resendKey = process.env.RESEND_API_KEY;
 
       if (resendKey && email) {
-        const resend = new Resend(resendKey);
+        const resend = getResend();
 
         await resend.emails.send({
           from: "EstateVault <info@estatevault.us>",

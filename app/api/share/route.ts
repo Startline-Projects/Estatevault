@@ -23,7 +23,7 @@ async function getMyClient(admin: ReturnType<typeof createAdminClient>, profileI
 // ?direction=out  → shares I created (default, scoped to my client_id)
 // optional ?itemId for owner-side filter
 
-export async function GET(req: NextRequest) {
+export async function GET(req: NextRequest): Promise<NextResponse> {
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -79,7 +79,7 @@ export async function GET(req: NextRequest) {
 
 // --- POST ---  create a share
 
-export async function POST(req: NextRequest) {
+export async function POST(req: NextRequest): Promise<NextResponse> {
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -148,7 +148,10 @@ export async function POST(req: NextRequest) {
       revoked_at: null,
     }, { onConflict: "item_id,recipient_user_id" });
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) {
+    console.error("[share POST]", error);
+    return NextResponse.json({ error: "could not create share" }, { status: 500 });
+  }
 
   await admin.from("audit_log").insert({
     actor_id: user.id,
@@ -163,7 +166,7 @@ export async function POST(req: NextRequest) {
 
 // --- DELETE ---  revoke (owner only)
 
-export async function DELETE(req: NextRequest) {
+export async function DELETE(req: NextRequest): Promise<NextResponse> {
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -195,7 +198,10 @@ export async function DELETE(req: NextRequest) {
     .from("item_shares")
     .update({ revoked_at: new Date().toISOString() })
     .eq("id", id);
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) {
+    console.error("[share DELETE]", error);
+    return NextResponse.json({ error: "could not revoke share" }, { status: 500 });
+  }
 
   await admin.from("audit_log").insert({
     actor_id: user.id,

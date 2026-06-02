@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { Resend } from "resend";
+import { getResend } from "@/lib/email";
 import { requireAuth } from "@/lib/api/auth";
 import { withRoute } from "@/lib/api/route";
 import { ok, fail } from "@/lib/api/response";
@@ -18,7 +18,7 @@ export const POST = withRoute(async (_req: NextRequest) => {
   if (!partner.email_verified || !partner.sender_email) return fail("domain not verified", 400);
   if (!auth.user.email) return fail("no recipient", 400);
 
-  const resend = new Resend(process.env.RESEND_API_KEY!);
+  const resend = getResend();
   const from = `${partner.sender_name || partner.company_name} <${partner.sender_email}>`;
   const sent = await resend.emails.send({
     from,

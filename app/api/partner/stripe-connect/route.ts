@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { requireAuth } from "@/lib/api/auth";
 import { withRoute } from "@/lib/api/route";
 import { ok, fail } from "@/lib/api/response";
+import { getAppUrl } from "@/lib/config/appUrl";
 import {
   createStripeConnectAccount,
   createAccountLink,
@@ -16,10 +17,9 @@ export const POST = withRoute(async (req: NextRequest) => {
   const { data: partner } = await partnerRepo.getStripeByProfileId(auth.admin, auth.profile.id);
   if (!partner) return fail("Partner profile not found", 404);
 
-  const baseUrl =
-    process.env.NEXT_PUBLIC_APP_URL ||
-    req.headers.get("origin") ||
-    "https://pro.estatevault.com";
+  // Partner portal: prefer the request origin (pro.estatevault.com), else the
+  // configured app URL.
+  const baseUrl = req.headers.get("origin") || getAppUrl();
 
   if (partner.stripe_account_id) {
     const accountLink = await createAccountLink(partner.stripe_account_id, baseUrl);

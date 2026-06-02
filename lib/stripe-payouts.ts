@@ -25,13 +25,19 @@ export async function transferToPartner(
   productType: string
 ) {
   if (!partnerStripeAccountId || amount <= 0) return null
-  const transfer = await stripe.transfers.create({
-    amount,
-    currency: 'usd',
-    destination: partnerStripeAccountId,
-    transfer_group: orderId,
-    metadata: { order_id: orderId, partner_id: partnerId, product_type: productType },
-  })
+  // Idempotency key keyed on the order + role: a Stripe webhook retry that
+  // re-runs this handler reuses the same key, so Stripe refuses the duplicate
+  // transfer instead of paying the partner twice (C-1).
+  const transfer = await stripe.transfers.create(
+    {
+      amount,
+      currency: 'usd',
+      destination: partnerStripeAccountId,
+      transfer_group: orderId,
+      metadata: { order_id: orderId, partner_id: partnerId, product_type: productType },
+    },
+    { idempotencyKey: `transfer_partner_${orderId}` }
+  )
   return transfer
 }
 
@@ -43,13 +49,16 @@ export async function transferToAffiliate(
   productType: string
 ) {
   if (!affiliateStripeAccountId || amount <= 0) return null
-  const transfer = await stripe.transfers.create({
-    amount,
-    currency: 'usd',
-    destination: affiliateStripeAccountId,
-    transfer_group: orderId,
-    metadata: { order_id: orderId, affiliate_id: affiliateId, product_type: productType },
-  })
+  const transfer = await stripe.transfers.create(
+    {
+      amount,
+      currency: 'usd',
+      destination: affiliateStripeAccountId,
+      transfer_group: orderId,
+      metadata: { order_id: orderId, affiliate_id: affiliateId, product_type: productType },
+    },
+    { idempotencyKey: `transfer_affiliate_${orderId}` }
+  )
   return transfer
 }
 
@@ -57,19 +66,29 @@ export async function transferToAffiliateBatch(
   affiliateStripeAccountId: string,
   amount: number,
   affiliateId: string,
-  orderIds: string[]
+  orderIds: string[],
+  idempotencyKey?: string
 ) {
   if (!affiliateStripeAccountId || amount <= 0) return null
-  const transfer = await stripe.transfers.create({
-    amount,
-    currency: 'usd',
-    destination: affiliateStripeAccountId,
-    metadata: {
-      affiliate_id: affiliateId,
-      payout_type: 'affiliate_batch',
-      order_count: String(orderIds.length),
+  // Caller (the payout route) supplies a key derived from the reserved balance
+  // so two concurrent admin clicks collapse to one transfer (C-1 / H-5).
+  // Fallback: deterministic from the order set.
+  const key =
+    idempotencyKey ??
+    `transfer_affiliate_batch_${affiliateId}_${[...orderIds].sort().join('-')}`
+  const transfer = await stripe.transfers.create(
+    {
+      amount,
+      currency: 'usd',
+      destination: affiliateStripeAccountId,
+      metadata: {
+        affiliate_id: affiliateId,
+        payout_type: 'affiliate_batch',
+        order_count: String(orderIds.length),
+      },
     },
-  })
+    { idempotencyKey: key }
+  )
   return transfer
 }
 

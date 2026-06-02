@@ -51,7 +51,7 @@ export const POST = withRoute(async (req: NextRequest) => {
   if (!success) return fail("Too many attempts. Wait a minute.", 429);
 
   const linkToken = generateUrlToken();
-  storeLink(normalizedEmail, linkToken, session);
+  await storeLink(normalizedEmail, linkToken, session);
 
   const { origin } = new URL(req.url);
   const verifyLink = `${origin}/api/auth/verify-link?token=${encodeURIComponent(

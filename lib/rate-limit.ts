@@ -27,5 +27,13 @@ export const apiRateLimit = makeLimiter('rl:api', Ratelimit.slidingWindow(100, '
 // E2EE crypto endpoints — slow brute force on wrapped MK material.
 export const cryptoBundleRateLimit = makeLimiter('rl:crypto:bundle', Ratelimit.slidingWindow(10, '1 m'))
 export const cryptoRecoveryRateLimit = makeLimiter('rl:crypto:recovery', Ratelimit.slidingWindow(3, '1 m'))
-export const cryptoBootstrapRateLimit = makeLimiter('rl:crypto:bootstrap', Ratelimit.slidingWindow(1, '1 h'))
+// M-5: 1/hour hard-locked a new user out of vault setup if their single attempt
+// failed (bad payload, transient error). 5/hour leaves brute-force protection
+// intact (bootstrap is auth-gated + the route 409s once crypto_setup_at is set)
+// while letting a genuine retry through.
+export const cryptoBootstrapRateLimit = makeLimiter('rl:crypto:bootstrap', Ratelimit.slidingWindow(5, '1 h'))
 export const cryptoRotateRateLimit = makeLimiter('rl:crypto:rotate', Ratelimit.slidingWindow(5, '1 h'))
+
+// Trustee OTP resend — a new code resets the per-code attempt counter, so cap
+// resends to stop unlimited fresh guess batches (H-4). Keyed per request id.
+export const trusteeOtpResendRateLimit = makeLimiter('rl:trustee:otp', Ratelimit.slidingWindow(3, '1 h'))

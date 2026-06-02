@@ -1,37 +1,27 @@
-import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { NextRequest } from "next/server";
+import { requireAuth } from "@/lib/api/auth";
+import { withRoute } from "@/lib/api/route";
+import { ok } from "@/lib/api/response";
 
-export async function GET() {
-  try {
-    const supabase = createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+export const GET = withRoute(async (req: NextRequest) => {
+  const auth = await requireAuth(undefined, req);
+  if ("error" in auth) return auth.error;
 
-    const { data: client } = await supabase
-      .from("clients")
-      .select("vault_subscription_status, vault_subscription_expiry")
-      .eq("profile_id", user.id)
-      .single();
+  const { data: client } = await auth.admin
+    .from("clients")
+    .select("vault_subscription_status, vault_subscription_expiry")
+    .eq("profile_id", auth.user.id)
+    .single();
 
-    if (!client) {
-      return NextResponse.json({
-        status: "none",
-        expiry: null,
-        canAmendFree: false,
-        canUseFarewell: false,
-      });
-    }
-
-    const isActive = client.vault_subscription_status === "active";
-
-    return NextResponse.json({
-      status: client.vault_subscription_status || "none",
-      expiry: client.vault_subscription_expiry,
-      canAmendFree: isActive,
-      canUseFarewell: isActive,
-    });
-  } catch (error) {
-    console.error("Subscription status error:", error);
-    return NextResponse.json({ error: "Failed to check status" }, { status: 500 });
+  if (!client) {
+    return ok({ status: "none", expiry: null, canAmendFree: false, canUseFarewell: false });
   }
-}
+
+  const isActive = client.vault_subscription_status === "active";
+  return ok({
+    status: client.vault_subscription_status || "none",
+    expiry: client.vault_subscription_expiry,
+    canAmendFree: isActive,
+    canUseFarewell: isActive,
+  });
+});

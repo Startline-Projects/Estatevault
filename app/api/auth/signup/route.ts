@@ -15,7 +15,7 @@ export const POST = withRoute(async (req: NextRequest) => {
 
   if (!normalizedEmail || !password) return fail("Email and password are required.", 400);
   if (password.length < 8) return fail("Password must be at least 8 characters.", 400);
-  if (!verifiedToken || !consumeVerifiedToken(normalizedEmail, verifiedToken)) {
+  if (!verifiedToken || !(await consumeVerifiedToken(normalizedEmail, verifiedToken))) {
     return fail("Please verify your email first.", 403);
   }
 

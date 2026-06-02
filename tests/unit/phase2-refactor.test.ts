@@ -46,9 +46,10 @@ describe("H-08 no inline createAdminClient definitions", () => {
 });
 
 // ---------------------------------------------------------------------------
-// H-09 — withRoute coverage. KNOWN GAP: 20 routes are still unwrapped.
+// H-09 — withRoute coverage. KNOWN GAP: 14 routes are still unwrapped.
 //   6 legitimately return non-JSON (HTML / PDF / 204) and never should wrap.
-//   14 are JSON routes not yet folded into a Phase 2 group.
+//   8 are JSON routes not yet folded into a Phase 2 group.
+//   (2026-06-02 B4: subscription/*, client/mark-executed, stripe/connect/* migrated.)
 // Snapshot pins the current set: wrapping one (good) or adding a new unwrapped
 // route (bad) both fail this test, forcing a conscious update.
 // ---------------------------------------------------------------------------
@@ -67,17 +68,11 @@ describe("H-09 withRoute coverage (pinned — partial)", () => {
     "app/api/affiliate/onboarding/callback/route.ts",
     "app/api/affiliate/onboarding/route.ts",
     "app/api/affiliate/signup/route.ts",
-    "app/api/client/mark-executed/route.ts",
     "app/api/contact/route.ts",
     "app/api/email/partner-activated/route.ts",
     "app/api/professionals/request-access/route.ts",
     "app/api/quiz/personalize/route.ts",
     "app/api/share/route.ts",
-    "app/api/stripe/connect/onboard/route.ts",
-    "app/api/stripe/connect/status/route.ts",
-    "app/api/subscription/cancel/route.ts",
-    "app/api/subscription/status/route.ts",
-    "app/api/subscription/sync/route.ts",
   ];
 
   const unwrapped = ROUTES.filter((f) => !/withRoute/.test(src(f))).sort();

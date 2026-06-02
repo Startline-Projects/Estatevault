@@ -22,7 +22,7 @@ export const POST = withRoute(async (req: NextRequest) => {
   const { success } = await authRateLimit.limit(normalizedEmail);
   if (!success) return fail("Too many attempts. Please wait and try again.", 429);
 
-  if (!verifiedToken || !consumeVerifiedToken(normalizedEmail, verifiedToken)) {
+  if (!verifiedToken || !(await consumeVerifiedToken(normalizedEmail, verifiedToken))) {
     return fail("Please verify your email first.", 403);
   }
 

@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { Resend } from "resend";
+import { getResend } from "@/lib/email";
 import { requireAuth } from "@/lib/api/auth";
 import { withRoute } from "@/lib/api/route";
 import { ok, fail } from "@/lib/api/response";
@@ -22,7 +22,7 @@ export const POST = withRoute(async (req: NextRequest) => {
   const { data: partner } = await partnerRepo.getEmailSettingsByProfileId(auth.admin, auth.profile.id);
   if (!partner) return fail("partner not found", 404);
 
-  const resend = new Resend(process.env.RESEND_API_KEY!);
+  const resend = getResend();
   let domainId = partner.resend_domain_id as string | null;
   let dnsRecords: Json = null;
 
@@ -34,7 +34,8 @@ export const POST = withRoute(async (req: NextRequest) => {
   if (!domainId) {
     const created = await resend.domains.create({ name: domain });
     if (created.error || !created.data) {
-      return fail(created.error?.message || "domain create failed", 400);
+      console.error("[partner/email/setup] domain create failed:", created.error);
+      return fail("domain create failed", 400);
     }
     domainId = created.data.id;
     dnsRecords = ((created.data as { records?: unknown }).records ?? null) as Json;

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
+import { getResend } from "@/lib/email";
 import { stripe } from "@/lib/stripe";
-import { Resend } from "resend";
 import { withRoute } from "@/lib/api/route";
 import { createAdminClient } from "@/lib/api/auth";
 import * as profileRepo from "@/lib/repos/server/profileRepo";
@@ -137,7 +137,7 @@ export const POST = withRoute(async (request: Request) => {
     try {
       const resendKey = process.env.RESEND_API_KEY;
       if (resendKey && email) {
-        const resend = new Resend(resendKey);
+        const resend = getResend();
         await resend.emails.send({
           from: "EstateVault <info@estatevault.us>",
           to: email,
@@ -188,7 +188,7 @@ export const POST = withRoute(async (request: Request) => {
       const notifyEmail = process.env.SALES_NOTIFICATION_EMAIL;
 
       if (resendKey && notifyEmail) {
-        const resend = new Resend(resendKey);
+        const resend = getResend();
         await resend.emails.send({
           from: "EstateVault <info@estatevault.us>",
           to: notifyEmail,

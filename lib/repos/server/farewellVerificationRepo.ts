@@ -201,8 +201,17 @@ export function burnOtp(admin: Admin, requestId: string) {
   }).eq("id", requestId);
 }
 
-export function incrementOtpAttempts(admin: Admin, requestId: string, current: number) {
-  return admin.from("farewell_verification_requests")
-    .update({ otp_email_attempts: current + 1 })
-    .eq("id", requestId);
+// H-4: atomic increment-and-check. Returns the new attempt count, or null when
+// already at/over the cap (the conditional UPDATE matched no row). Two
+// concurrent wrong guesses can no longer both slip past the cap.
+export async function incrementOtpAttempts(
+  admin: Admin,
+  requestId: string,
+  max: number,
+): Promise<number | null> {
+  const { data } = await admin.rpc("increment_otp_attempt", {
+    p_request_id: requestId,
+    p_max: max,
+  });
+  return typeof data === "number" ? data : null;
 }

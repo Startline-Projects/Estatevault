@@ -1,19 +1,23 @@
-import { NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { stripeConnectOnboardSchema } from "@/lib/validation/schemas";
 import { stripe } from "@/lib/stripe";
-import { createClient } from "@/lib/supabase/server";
-import { createAdminClient } from "@/lib/api/auth";
+import { requireAuth } from "@/lib/api/auth";
+import { withRoute } from "@/lib/api/route";
+import { ok, fail } from "@/lib/api/response";
+import { getAppUrl } from "@/lib/config/appUrl";
 
-export async function POST(request: Request) {
-  const supabase = createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+export const POST = withRoute(async (request: NextRequest) => {
+  const auth = await requireAuth(undefined, request);
+  if ("error" in auth) return auth.error;
 
-  const admin = createAdminClient();
-  const { data: partner } = await admin.from("partners").select("id, stripe_account_id").eq("profile_id", user.id).single();
-  if (!partner) return NextResponse.json({ error: "Partner not found" }, { status: 404 });
+  const { data: partner } = await auth.admin
+    .from("partners")
+    .select("id, stripe_account_id")
+    .eq("profile_id", auth.user.id)
+    .single();
+  if (!partner) return fail("Partner not found", 404);
 
-  const origin = request.headers.get("origin") || "https://www.estatevault.us";
+  const origin = request.headers.get("origin") || getAppUrl();
   const rawBody = await request.json().catch(() => ({}));
   const bodyParsed = stripeConnectOnboardSchema.safeParse(rawBody);
   const returnPath: string = bodyParsed.success ? (bodyParsed.data.returnPath ?? "/pro/settings") : "/pro/settings";
@@ -30,7 +34,7 @@ export async function POST(request: Request) {
         },
       });
       accountId = account.id;
-      await admin.from("partners").update({ stripe_account_id: accountId }).eq("id", partner.id);
+      await auth.admin.from("partners").update({ stripe_account_id: accountId }).eq("id", partner.id);
     }
 
     const accountLink = await stripe.accountLinks.create({
@@ -40,10 +44,9 @@ export async function POST(request: Request) {
       type: "account_onboarding",
     });
 
-    return NextResponse.json({ url: accountLink.url });
+    return ok({ url: accountLink.url });
   } catch (err) {
-    const msg = err instanceof Error ? err.message : "Stripe error";
-    console.error("Stripe Connect onboard error:", msg);
-    return NextResponse.json({ error: msg }, { status: 500 });
+    console.error("Stripe Connect onboard error:", err);
+    return fail("Could not start Stripe onboarding", 500);
   }
-}
+});

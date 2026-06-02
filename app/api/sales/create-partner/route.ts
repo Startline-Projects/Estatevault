@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { Resend } from "resend";
+import { getResend } from "@/lib/email";
 import { randomBytes } from "crypto";
 import { requireAuth } from "@/lib/api/auth";
 import { withRoute } from "@/lib/api/route";
@@ -92,7 +92,7 @@ export const POST = withRoute(async (req: NextRequest) => {
   });
 
   try {
-    const resend = new Resend(process.env.RESEND_API_KEY!);
+    const resend = getResend();
     const isBasic = tier === "basic";
     await resend.emails.send({
       from: "EstateVault <info@estatevault.us>",

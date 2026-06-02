@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { Resend } from "resend";
+import { getResend } from "@/lib/email";
 import { requireAuth } from "@/lib/api/auth";
 import { withRoute } from "@/lib/api/route";
 import { ok, fail } from "@/lib/api/response";
@@ -13,7 +13,7 @@ export const POST = withRoute(async (_req: NextRequest) => {
   if (!partner) return fail("partner not found", 404);
 
   if (partner.resend_domain_id) {
-    const resend = new Resend(process.env.RESEND_API_KEY!);
+    const resend = getResend();
     try { await resend.domains.remove(partner.resend_domain_id); } catch {}
   }
 

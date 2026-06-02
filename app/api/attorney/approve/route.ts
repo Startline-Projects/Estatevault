@@ -1,4 +1,5 @@
 import { NextRequest } from "next/server";
+import { getAppUrl } from "@/lib/config/appUrl";
 import { requireAuth } from "@/lib/api/auth";
 import { withRoute } from "@/lib/api/route";
 import { ok, fail } from "@/lib/api/response";
@@ -82,7 +83,7 @@ export const POST = withRoute(async (req: NextRequest) => {
       ? await wantsNotification(auth.admin, clientProfileId, "documents_delivered")
       : false;
     if (clientEmail && wantsDelivery) {
-      const origin = process.env.NEXT_PUBLIC_SITE_URL || "https://www.estatevault.us";
+      const origin = getAppUrl();
       await sendDocumentEmail({
         to: clientEmail,
         productType,

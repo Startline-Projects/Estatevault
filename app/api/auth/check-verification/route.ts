@@ -16,7 +16,7 @@ export const POST = withRoute(async (req: NextRequest) => {
 
   if (!normalizedEmail || !session) return ok({ verified: false });
 
-  const token = pollLink(normalizedEmail, session);
+  const token = await pollLink(normalizedEmail, session);
   if (!token) return ok({ verified: false });
 
   return ok({ verified: true, token });

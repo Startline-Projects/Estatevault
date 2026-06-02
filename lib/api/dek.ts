@@ -38,6 +38,40 @@ export async function getKek(admin?: Admin): Promise<Uint8Array> {
   return kek;
 }
 
+// AAD that binds a client's wrapped_dek to its identity. A blob copied onto
+// another client's row fails the AEAD tag check on unwrap (C-2).
+function dekAad(clientId: string): Uint8Array {
+  return new TextEncoder().encode(`dek:${clientId}`);
+}
+
+// Unwrap a stored wrapped_dek, self-healing legacy (no-aad) blobs.
+// Tries aad-bound first; on tag failure falls back to legacy no-aad, then
+// re-wraps with aad and persists so the next read is bound (best-effort).
+async function unwrapStoredDek(
+  admin: Admin,
+  clientId: string,
+  wrappedBytes: Uint8Array,
+  kek: Uint8Array,
+): Promise<Uint8Array> {
+  const aad = dekAad(clientId);
+  try {
+    return await unwrapKey(wrappedBytes, kek, aad);
+  } catch {
+    // Legacy blob wrapped before AAD binding — unwrap without aad, then migrate.
+    const dek = await unwrapKey(wrappedBytes, kek);
+    try {
+      const rewrapped = await wrapKey(dek, kek, aad);
+      await admin
+        .from("clients")
+        .update({ wrapped_dek: bytesToBytea(rewrapped.bytes), dek_aad_version: 1 })
+        .eq("id", clientId);
+    } catch {
+      // Migration write is best-effort; returning the DEK is what matters.
+    }
+    return dek;
+  }
+}
+
 // Return the raw per-user DEK, provisioning + persisting one on first use.
 // Uses conditional UPDATE to prevent TOCTOU race: only writes if wrapped_dek IS NULL.
 export async function getOrCreateUserDek(
@@ -48,16 +82,20 @@ export async function getOrCreateUserDek(
 
   const existing = client.wrapped_dek ? byteaToBytes(client.wrapped_dek) : null;
   if (existing && existing.length > 0) {
-    return unwrapKey(existing, kek);
+    return unwrapStoredDek(admin, client.id, existing, kek);
   }
 
   const dek = await generateMasterKey();
-  const wrapped = await wrapKey(dek, kek);
+  const wrapped = await wrapKey(dek, kek, dekAad(client.id));
 
   // Conditional write: only succeeds if no other request wrote first
   const { data: updated } = await admin
     .from("clients")
-    .update({ wrapped_dek: bytesToBytea(wrapped.bytes), dek_setup_at: new Date().toISOString() })
+    .update({
+      wrapped_dek: bytesToBytea(wrapped.bytes),
+      dek_setup_at: new Date().toISOString(),
+      dek_aad_version: 1,
+    })
     .eq("id", client.id)
     .is("wrapped_dek", null)
     .select("wrapped_dek")
@@ -77,7 +115,7 @@ export async function getOrCreateUserDek(
   if (readErr || !freshClient?.wrapped_dek) {
     throw new Error("DEK write race: unable to read winning DEK");
   }
-  return unwrapKey(byteaToBytes(freshClient.wrapped_dek), kek);
+  return unwrapStoredDek(admin, client.id, byteaToBytes(freshClient.wrapped_dek), kek);
 }
 
 // Test/rotation helper — clears the cached KEK.

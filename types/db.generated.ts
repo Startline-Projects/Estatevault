@@ -384,6 +384,7 @@ export type Database = {
           created_at: string | null
           crypto_backfill_complete_at: string | null
           crypto_setup_at: string | null
+          dek_aad_version: number | null
           dek_setup_at: string | null
           documents_executed: boolean | null
           documents_executed_at: string | null
@@ -423,6 +424,7 @@ export type Database = {
           created_at?: string | null
           crypto_backfill_complete_at?: string | null
           crypto_setup_at?: string | null
+          dek_aad_version?: number | null
           dek_setup_at?: string | null
           documents_executed?: boolean | null
           documents_executed_at?: string | null
@@ -462,6 +464,7 @@ export type Database = {
           created_at?: string | null
           crypto_backfill_complete_at?: string | null
           crypto_setup_at?: string | null
+          dek_aad_version?: number | null
           dek_setup_at?: string | null
           documents_executed?: boolean | null
           documents_executed_at?: string | null
@@ -2023,6 +2026,10 @@ export type Database = {
         }[]
       }
       get_affiliate_id: { Args: never; Returns: string }
+      increment_otp_attempt: {
+        Args: { p_request_id: string; p_max: number }
+        Returns: number
+      }
       get_client_id: { Args: never; Returns: string }
       get_partner_id: { Args: never; Returns: string }
       get_partner_login_target: {

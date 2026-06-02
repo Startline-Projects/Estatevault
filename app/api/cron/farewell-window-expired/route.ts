@@ -1,4 +1,5 @@
 import { type NextRequest } from "next/server";
+import { getAppUrl } from "@/lib/config/appUrl";
 import { withRoute } from "@/lib/api/route";
 import { ok, fail } from "@/lib/api/response";
 import { createAdminClient } from "@/lib/api/auth";
@@ -44,7 +45,7 @@ export const GET = withRoute(async (req: NextRequest) => {
       continue;
     }
 
-    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.estatevault.us";
+    const baseUrl = getAppUrl();
     const unlockUrl = `${baseUrl}/trustee/unlock?token=${token}`;
 
     try {

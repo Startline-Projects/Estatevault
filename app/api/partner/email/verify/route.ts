@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { Resend } from "resend";
+import { getResend } from "@/lib/email";
 import { requireAuth } from "@/lib/api/auth";
 import { withRoute } from "@/lib/api/route";
 import { ok, fail } from "@/lib/api/response";
@@ -17,7 +17,7 @@ export const POST = withRoute(async (_req: NextRequest) => {
   const { data: partner } = await partnerRepo.getEmailSettingsByProfileId(auth.admin, auth.profile.id);
   if (!partner?.resend_domain_id) return fail("no domain configured", 400);
 
-  const resend = new Resend(process.env.RESEND_API_KEY!);
+  const resend = getResend();
   try { await resend.domains.verify(partner.resend_domain_id); } catch {}
   const got = await resend.domains.get(partner.resend_domain_id);
   if (got.error || !got.data) return fail("lookup failed", 400);

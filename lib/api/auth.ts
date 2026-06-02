@@ -25,10 +25,12 @@ export async function requireAuth(allowed?: UserType[], req?: NextRequest): Prom
 
   let user: { id: string; email?: string } | null = null;
   const authz = req?.headers.get("authorization");
+  console.log("[requireAuth] authz header:", authz ? `Bearer (len=${authz.length})` : "none");
   if (authz?.startsWith("Bearer ")) {
     // Mobile clients send the Supabase access token as a Bearer header.
     const token = authz.slice("Bearer ".length).trim();
     const { data, error } = await admin.auth.getUser(token);
+    console.log("[requireAuth] getUser:", { hasUser: !!data?.user, err: error?.message });
     if (!error && data.user) {
       user = { id: data.user.id, email: data.user.email };
     }

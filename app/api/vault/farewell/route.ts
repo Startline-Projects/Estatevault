@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { Resend } from "resend";
+import { getResend } from "@/lib/email";
 import { requireClientUser, bytesToBytea, byteaToBytes } from "@/lib/api/crypto";
 import { getOrCreateUserDek } from "@/lib/api/dek";
 import { deriveSubKey, INFO, zero } from "@/lib/crypto/keyManager";
@@ -17,7 +17,7 @@ type FarewellUpdate = Database["public"]["Tables"]["farewell_messages"]["Update"
 
 export const runtime = "nodejs";
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+const resend = getResend();
 
 // Option A: clients send/receive PLAINTEXT title + recipient. The server encrypts
 // them at rest (EV01) and can decrypt (recoverable). The video stream key is

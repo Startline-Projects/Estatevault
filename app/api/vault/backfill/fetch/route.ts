@@ -1,6 +1,5 @@
 import { NextRequest } from "next/server";
-import { createClient } from "@/lib/supabase/server";
-import { createAdminClient } from "@/lib/api/auth";
+import { requireAuth } from "@/lib/api/auth";
 import { apiRateLimit } from "@/lib/rate-limit";
 import { withRoute } from "@/lib/api/route";
 import { ok, fail } from "@/lib/api/response";
@@ -13,9 +12,9 @@ import { backfillFetchQuerySchema } from "@/lib/validation/schemas";
 export const runtime = "nodejs";
 
 export const GET = withRoute(async (req: NextRequest) => {
-  const supabase = createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return fail("Unauthorized", 401);
+  const auth = await requireAuth(undefined, req);
+  if ("error" in auth) return auth.error;
+  const user = auth.user;
 
   const rl = await apiRateLimit.limit(`backfill-fetch:${user.id}`);
   if (!rl.success) return fail("rate limited", 429);
@@ -27,7 +26,7 @@ export const GET = withRoute(async (req: NextRequest) => {
   });
   if (!parsed.success) return fail("invalid query", 400);
 
-  const admin = createAdminClient();
+  const admin = auth.admin;
   const { data: client } = await clientRepo.getIdByProfile(admin, user.id);
   if (!client) return ok({ rows: [] });
 

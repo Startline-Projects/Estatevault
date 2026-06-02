@@ -1,5 +1,4 @@
-import { createClient } from "@/lib/supabase/server";
-import { createAdminClient } from "@/lib/api/auth";
+import { requireAuth } from "@/lib/api/auth";
 import { withRoute } from "@/lib/api/route";
 import { ok, fail } from "@/lib/api/response";
 import * as clientRepo from "@/lib/repos/server/clientRepo";
@@ -10,11 +9,11 @@ import * as farewellRepo from "@/lib/repos/server/farewellRepo";
 export const runtime = "nodejs";
 
 export const GET = withRoute(async () => {
-  const supabase = createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return fail("Unauthorized", 401);
+  const auth = await requireAuth();
+  if ("error" in auth) return auth.error;
+  const user = auth.user;
 
-  const admin = createAdminClient();
+  const admin = auth.admin;
   const { data: client } = await clientRepo.getBackfillStateByProfile(admin, user.id);
   if (!client) return fail("no client", 404);
 

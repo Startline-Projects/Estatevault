@@ -1,22 +1,25 @@
-import { NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { stripe } from "@/lib/stripe";
-import { createClient } from "@/lib/supabase/server";
-import { createAdminClient } from "@/lib/api/auth";
+import { requireAuth } from "@/lib/api/auth";
+import { withRoute } from "@/lib/api/route";
+import { ok } from "@/lib/api/response";
 
-export async function GET() {
-  const supabase = createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+export const GET = withRoute(async (req: NextRequest) => {
+  const auth = await requireAuth(undefined, req);
+  if ("error" in auth) return auth.error;
 
-  const admin = createAdminClient();
-  const { data: partner } = await admin.from("partners").select("stripe_account_id").eq("profile_id", user.id).single();
-  if (!partner?.stripe_account_id) return NextResponse.json({ connected: false });
+  const { data: partner } = await auth.admin
+    .from("partners")
+    .select("stripe_account_id")
+    .eq("profile_id", auth.user.id)
+    .single();
+  if (!partner?.stripe_account_id) return ok({ connected: false });
 
   try {
     const account = await stripe.accounts.retrieve(partner.stripe_account_id);
     const ready = account.details_submitted && account.charges_enabled;
-    return NextResponse.json({ connected: true, ready, account_id: partner.stripe_account_id });
+    return ok({ connected: true, ready, account_id: partner.stripe_account_id });
   } catch {
-    return NextResponse.json({ connected: false });
+    return ok({ connected: false });
   }
-}
+});

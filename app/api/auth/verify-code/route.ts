@@ -16,7 +16,7 @@ export const POST = withRoute(async (req: NextRequest) => {
 
   if (!normalizedEmail || !normalizedCode) return fail("Email and code are required.", 400);
 
-  const result = verifyCode(normalizedEmail, normalizedCode);
+  const result = await verifyCode(normalizedEmail, normalizedCode);
 
   if (!result.ok) {
     const reasonMap: Record<typeof result.reason, string> = {

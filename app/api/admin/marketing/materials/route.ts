@@ -26,7 +26,10 @@ export const GET = withRoute(async (req: NextRequest) => {
   else if (partnerSlug) q = q.eq("partner_slug", partnerSlug);
 
   const { data, error } = await q;
-  if (error) return fail(error.message, 500);
+  if (error) {
+    console.error("[admin/marketing/materials GET]", error);
+    return fail("could not load materials", 500);
+  }
 
   const rows = (data || []).map((r) => {
     const { data: pub } = auth.admin.storage.from(BUCKET).getPublicUrl(r.storage_path);
@@ -64,7 +67,10 @@ export const POST = withRoute(async (req: NextRequest) => {
     contentType: file.type,
     upsert: false,
   });
-  if (upErr) return fail(upErr.message, 500);
+  if (upErr) {
+    console.error("[admin/marketing/materials upload]", upErr);
+    return fail("could not upload file", 500);
+  }
 
   const { data, error } = await auth.admin
     .from("marketing_materials")
@@ -86,7 +92,8 @@ export const POST = withRoute(async (req: NextRequest) => {
 
   if (error) {
     await auth.admin.storage.from(BUCKET).remove([path]);
-    return fail(error.message, 500);
+    console.error("[admin/marketing/materials insert]", error);
+    return fail("could not save material", 500);
   }
   return ok({ material: data });
 });

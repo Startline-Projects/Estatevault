@@ -1,5 +1,6 @@
 import { NextRequest } from "next/server";
-import { Resend } from "resend";
+import { getResend } from "@/lib/email";
+import { getAppUrl } from "@/lib/config/appUrl";
 import { randomUUID } from "crypto";
 import { requireClientUser, bytesToBytea, byteaToBytes } from "@/lib/api/crypto";
 import { createAdminClient } from "@/lib/api/auth";
@@ -18,7 +19,7 @@ type TrusteeInsert = Database["public"]["Tables"]["vault_trustees"]["Insert"];
 
 export const runtime = "nodejs";
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+const resend = getResend();
 
 // Option A: trustee name/email/relationship are encrypted at rest (server holds
 // the key, can decrypt — e.g. to send the acceptance email). No Shamir gate;
@@ -226,7 +227,7 @@ export const DELETE = withRoute(async (req: NextRequest) => {
 });
 
 async function sendInviteEmail(trustee_name: string, trustee_email: string, ownerName: string, token: string, clientId: string) {
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+  const baseUrl = getAppUrl();
   const confirmUrl = `${baseUrl}/vault/trustee-confirm?token=${token}`;
   const emergencyUrl = `${baseUrl}/farewell/${clientId}`;
   const result = await resend.emails.send({
@@ -261,7 +262,7 @@ async function sendInviteEmail(trustee_name: string, trustee_email: string, owne
 }
 
 async function sendAcceptanceConfirmation(opts: { trustee_name: string; trustee_email: string; ownerName: string; clientId: string }) {
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+  const baseUrl = getAppUrl();
   const emergencyUrl = `${baseUrl}/farewell/${opts.clientId}`;
   const result = await resend.emails.send({
     from: "EstateVault <info@estatevault.us>",

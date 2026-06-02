@@ -20,7 +20,10 @@ export const GET = withRoute(async (_req: NextRequest) => {
     .order("created_at", { ascending: false })
     .limit(200);
 
-  if (ordersErr) return fail(ordersErr.message, 500);
+  if (ordersErr) {
+    console.error("[admin/orders-missing-docs]", ordersErr);
+    return fail("could not load orders", 500);
+  }
   if (!orders?.length) return ok({ orders: [] });
 
   const orderIds = orders.map((o) => o.id);

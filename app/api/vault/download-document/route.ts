@@ -1,21 +1,20 @@
 import { type NextRequest } from "next/server";
-import { createClient } from "@/lib/supabase/server";
-import { createAdminClient } from "@/lib/api/auth";
+import { requireAuth } from "@/lib/api/auth";
 import { withRoute } from "@/lib/api/route";
 import { ok, fail } from "@/lib/api/response";
 import * as vaultItemRepo from "@/lib/repos/server/vaultItemRepo";
 import * as clientRepo from "@/lib/repos/server/clientRepo";
 
 export const GET = withRoute(async (request: NextRequest) => {
-  const supabase = createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return fail("Unauthorized", 401);
+  const auth = await requireAuth(undefined, request);
+  if ("error" in auth) return auth.error;
+  const user = auth.user;
 
   const { searchParams } = new URL(request.url);
   const itemId = searchParams.get("item_id");
   if (!itemId) return fail("Missing item_id", 400);
 
-  const admin = createAdminClient();
+  const admin = auth.admin;
 
   // Verify ownership
   const { data: client } = await clientRepo.findIdAndSubByProfile(admin, user.id);

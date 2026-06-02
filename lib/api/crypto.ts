@@ -139,9 +139,12 @@ export async function logAudit(
   args: { actor_id: string; action: string; meta?: Record<string, unknown> },
 ) {
   // audit_log schema: actor_id, action, resource_type?, resource_id?, metadata.
-  await admin.from("audit_log").insert({
+  // Non-blocking, but log failures (L-3) — a silently dropped security event is
+  // worse than a noisy one.
+  const { error } = await admin.from("audit_log").insert({
     actor_id: args.actor_id,
     action: args.action,
     metadata: (args.meta ?? {}) as import("@/types/db.generated").Json,
-  }).then(() => undefined, () => undefined);
+  });
+  if (error) console.error("[crypto audit] failed to record", args.action, error);
 }

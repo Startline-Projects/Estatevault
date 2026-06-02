@@ -22,12 +22,23 @@ export async function generateMasterKey(): Promise<Uint8Array> {
   return s.randombytes_buf(MK_LEN);
 }
 
-export async function wrapKey(mk: Uint8Array, kek: Uint8Array): Promise<Envelope> {
-  return encryptBytes(kek, mk);
+// `aad` (associated data) binds the wrapped key to a context — e.g. the owning
+// client id — so a wrapped blob copied onto another row fails the Poly1305 tag
+// check on unwrap. Optional for backward compatibility with legacy blobs.
+export async function wrapKey(
+  mk: Uint8Array,
+  kek: Uint8Array,
+  aad: Uint8Array | null = null,
+): Promise<Envelope> {
+  return encryptBytes(kek, mk, aad);
 }
 
-export async function unwrapKey(envelope: Uint8Array | Envelope, kek: Uint8Array): Promise<Uint8Array> {
-  return decryptBytes(kek, envelope);
+export async function unwrapKey(
+  envelope: Uint8Array | Envelope,
+  kek: Uint8Array,
+  aad: Uint8Array | null = null,
+): Promise<Uint8Array> {
+  return decryptBytes(kek, envelope, aad);
 }
 
 // HKDF-SHA256 expand step (extract step = identity since MK already pseudorandom).

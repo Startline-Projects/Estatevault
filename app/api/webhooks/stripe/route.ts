@@ -1,6 +1,7 @@
 export const dynamic = "force-dynamic";
 
 import { type NextRequest } from "next/server";
+import { getAppUrl } from "@/lib/config/appUrl";
 import { headers } from "next/headers";
 import Stripe from "stripe";
 import { stripe } from "@/lib/stripe";
@@ -122,10 +123,16 @@ export const POST = withRoute(async (request: NextRequest) => {
     if (metadata.type === "partner_platform_fee") {
       const partnerId = metadata.partner_id;
       if (partnerId) {
+        // H-6: apply the tier upgrade here, only after payment confirms.
+        const paidTier =
+          metadata.tier === "enterprise" || metadata.tier === "standard" || metadata.tier === "basic"
+            ? metadata.tier
+            : undefined;
         await partnerRepo.update(supabase, partnerId, {
           one_time_fee_paid: true,
           onboarding_step: 2,
           platform_fee_amount: session.amount_total || 0,
+          ...(paidTier ? { tier: paidTier } : {}),
         });
         await auditLogRepo.insertEntry(supabase, {
           action: "partner.platform_fee_paid",
@@ -264,7 +271,7 @@ async function handleDocumentCheckout(
 ) {
   const orderId = metadata.order_id;
   const clientId = metadata.client_id;
-  const productType = metadata.product_type as "will" | "trust";
+  const rawProductType = metadata.product_type;
   const attorneyReview = metadata.attorney_review === "true";
   const customerEmail = session.customer_details?.email;
 
@@ -272,6 +279,17 @@ async function handleDocumentCheckout(
     console.error("No order_id in session metadata");
     return;
   }
+
+  // ── AMENDMENT (H-1) ─────────────────────────────────────────
+  // A paid amendment must NOT fall through to the will/trust path (which would
+  // generate a full document set). Mark it paid/generating only — mirrors the
+  // free subscriber path in checkout/amendment/route.ts.
+  if (rawProductType === "amendment") {
+    await handleAmendmentCheckout(supabase, session, orderId);
+    return;
+  }
+
+  const productType = rawProductType as "will" | "trust";
 
   // ── 1. Ensure user account exists ──────────────────────────
   let profileId: string | null = null;
@@ -324,7 +342,7 @@ async function handleDocumentCheckout(
             await supabase.from("profiles").update({ full_name: clientFullName }).eq("id", profileId);
           }
 
-          const origin = process.env.NEXT_PUBLIC_SITE_URL || "https://www.estatevault.us";
+          const origin = getAppUrl();
           await sendWelcomeEmail({
             to: customerEmail,
             fullName: clientFullName || null,
@@ -564,6 +582,72 @@ async function handleDocumentCheckout(
   });
 }
 
+// ── AMENDMENT CHECKOUT (H-1) ────────────────────────────────
+// Paid amendments mark the order paid/generating and pay any partner cut, but
+// never create a will/trust document set or queue a will generation job.
+async function handleAmendmentCheckout(
+  supabase: ReturnType<typeof createAdminClient>,
+  session: Stripe.Checkout.Session,
+  orderId: string,
+) {
+  await orderRepo.update(supabase, orderId, {
+    status: "generating",
+    stripe_payment_intent_id:
+      typeof session.payment_intent === "string" ? session.payment_intent : null,
+  });
+
+  // Partner payout (amendment splits exist in PARTNER_SPLITS). The order row's
+  // partner_cut was computed at checkout; transfer it if the partner is connected.
+  const { data: order } = await supabase
+    .from("orders")
+    .select("partner_id, partner_cut")
+    .eq("id", orderId)
+    .single();
+
+  const partnerId = order?.partner_id ?? null;
+  const partnerCut = order?.partner_cut ?? 0;
+
+  if (partnerId && partnerCut > 0) {
+    try {
+      const { data: partner } = await partnerRepo.getStripeAndTier(supabase, partnerId);
+      if (partner?.stripe_account_id) {
+        const transfer = await transferToPartner(
+          partner.stripe_account_id,
+          partnerCut,
+          orderId,
+          partnerId,
+          "amendment",
+        );
+        if (transfer) {
+          await payoutRepo.insertPartnerPayout(supabase, {
+            partner_id: partnerId,
+            amount: partnerCut,
+            status: "sent",
+            stripe_transfer_id: transfer.id,
+            orders_included: [orderId],
+          });
+        }
+      } else {
+        await payoutRepo.insertPartnerPayout(supabase, {
+          partner_id: partnerId,
+          amount: partnerCut,
+          status: "pending",
+          orders_included: [orderId],
+        });
+      }
+    } catch (payoutError) {
+      console.error("Amendment partner payout failed:", payoutError);
+    }
+  }
+
+  await auditLogRepo.insertEntry(supabase, {
+    action: "order.paid",
+    resource_type: "order",
+    resource_id: orderId,
+    metadata: { product_type: "amendment", amount: session.amount_total },
+  });
+}
+
 // ── ATTORNEY REVIEW ROUTING ──────────────────────────────────
 async function handleAttorneyReview(
   supabase: ReturnType<typeof createAdminClient>,
@@ -688,7 +772,7 @@ async function resolveOrCreateGuestClient(
           user_type: "client",
         });
 
-        const originUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.estatevault.us";
+        const originUrl = getAppUrl();
         await sendWelcomeEmail({
           to: guestEmail,
           fullName: guestName || null,

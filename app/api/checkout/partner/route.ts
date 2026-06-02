@@ -1,9 +1,7 @@
 import { NextResponse } from "next/server";
 import { stripe } from "@/lib/stripe";
 import { createClient } from "@/lib/supabase/server";
-import { createAdminClient } from "@/lib/api/auth";
 import { withRoute } from "@/lib/api/route";
-import * as partnerRepo from "@/lib/repos/server/partnerRepo";
 import { partnerCheckoutSchema } from "@/lib/validation/schemas";
 import { PARTNER_PLATFORM_FEE } from "@/lib/orders/pricing";
 
@@ -37,9 +35,9 @@ export const POST = withRoute(async (request: Request) => {
       metadata: { partner_id: partnerId, tier, type: "partner_platform_fee" },
     });
 
-    // Update tier immediately
-    const admin = createAdminClient();
-    await partnerRepo.update(admin, partnerId, { tier });
+    // H-6: tier is applied only after payment confirms (in the webhook
+    // partner_platform_fee branch) — an abandoned checkout must not grant a
+    // free tier upgrade. The target tier rides along in session metadata.
 
     return NextResponse.json({ url: session.url });
   } catch (error) {

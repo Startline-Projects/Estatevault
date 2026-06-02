@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { Resend } from "resend";
+import { getResend } from "@/lib/email";
 import { requireAuth } from "@/lib/api/auth";
 import { withRoute } from "@/lib/api/route";
 import { ok, fail } from "@/lib/api/response";
@@ -17,7 +17,7 @@ export const POST = withRoute(async (req: NextRequest) => {
   if (!parsed.success) return fail("invalid payload", 400);
   const { email, tempPassword, ownerName, companyName } = parsed.data;
 
-  const resend = new Resend(process.env.RESEND_API_KEY!);
+  const resend = getResend();
   const sent = await resend.emails.send({
     from: "EstateVault <info@estatevault.us>",
     to: email,
