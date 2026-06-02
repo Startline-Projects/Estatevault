@@ -174,6 +174,23 @@ export function listByPartnerWithOrders(admin: Admin, partnerId: string) {
     .order("created_at", { ascending: false });
 }
 
+// Count of a partner's clients (B2 dashboard). head:true = count only, no rows.
+export function countByPartner(admin: Admin, partnerId: string) {
+  return admin
+    .from("clients")
+    .select("id", { count: "exact", head: true })
+    .eq("partner_id", partnerId);
+}
+
+// Count of a partner's clients with an active vault subscription (B2 dashboard).
+export function countActiveVaultByPartner(admin: Admin, partnerId: string) {
+  return admin
+    .from("clients")
+    .select("id", { count: "exact", head: true })
+    .eq("partner_id", partnerId)
+    .eq("vault_subscription_status", "active");
+}
+
 // A partner's vault-subscription clients (B2: backs GET /api/partner/vault-clients).
 export function listVaultClientsByPartner(admin: Admin, partnerId: string) {
   return admin

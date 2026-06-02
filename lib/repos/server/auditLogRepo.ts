@@ -26,3 +26,12 @@ export async function insertEntry(admin: Admin, row: AuditRow) {
     console.error("[audit_log] insert failed after retry:", retryErr.message, row);
   }
 }
+
+// Most-recent audit entries (B2 dashboard "recent activity").
+export function listRecent(admin: Admin, limit = 10) {
+  return admin
+    .from("audit_log")
+    .select("action, created_at")
+    .order("created_at", { ascending: false })
+    .limit(limit);
+}

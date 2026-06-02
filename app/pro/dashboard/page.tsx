@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/client";
+import { getDashboard } from "@/lib/api-client/partner";
 
 const TIPS = [
   "Financial advisors who introduce estate planning in client review meetings see 3x higher conversion. Try leading with: 'Have you thought about what happens to your assets?'",
@@ -39,17 +39,8 @@ export default function ProDashboardPage() {
     setDismissed(!!localStorage.getItem("ev_welcome_dismissed"));
 
     async function load() {
-      const supabase = createClient();
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      const { data: partnerRows } = await supabase
-        .from("partners")
-        .select("id, company_name, business_url, certification_completed, tier, vault_subdomain, accent_color, created_at")
-        .eq("profile_id", user.id)
-        .order("created_at", { ascending: false })
-        .limit(1);
-      const partner = partnerRows?.[0];
+      const { data } = await getDashboard();
+      const partner = data?.partner;
       if (!partner) { setLoading(false); return; }
 
       setPartnerId(partner.id);
@@ -60,62 +51,11 @@ export default function ProDashboardPage() {
       setVaultSubdomain(partner.vault_subdomain || "");
       setAccentColor(partner.accent_color || "#C9A84C");
 
-      const isBasic = partner.tier === "basic";
-
-      if (isBasic) {
-        // Vault-only stats
-        const { count: vaultClientCount } = await supabase
-          .from("clients")
-          .select("id", { count: "exact", head: true })
-          .eq("partner_id", partner.id);
-
-        const { count: activeSubs } = await supabase
-          .from("clients")
-          .select("id", { count: "exact", head: true })
-          .eq("partner_id", partner.id)
-          .eq("vault_subscription_status", "active");
-
-        setVaultStats({
-          vaultClients: vaultClientCount || 0,
-          activeSubscriptions: activeSubs || 0,
-        });
-      } else {
-        // Standard/Enterprise stats
-        const { count: clientCount } = await supabase
-          .from("clients")
-          .select("id", { count: "exact", head: true })
-          .eq("partner_id", partner.id);
-
-        const now = new Date();
-        const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
-
-        const { data: monthOrders } = await supabase
-          .from("orders")
-          .select("partner_cut, status")
-          .eq("partner_id", partner.id)
-          .gte("created_at", monthStart)
-          .in("status", ["paid", "delivered", "generating", "review"]);
-
-        const docsThisMonth = monthOrders?.length || 0;
-        const mtdEarnings = monthOrders?.reduce((sum, o) => sum + (o.partner_cut || 0), 0) || 0;
-
-        const { data: refs } = await supabase
-          .from("referrals")
-          .select("referral_fee")
-          .eq("partner_id", partner.id)
-          .eq("referral_fee_paid", true)
-          .gte("created_at", monthStart);
-        const referralFees = refs?.reduce((sum, r) => sum + (r.referral_fee || 0), 0) || 0;
-
-        setStats({ clients: clientCount || 0, docsThisMonth, mtdEarnings: mtdEarnings / 100, referralFees: referralFees / 100 });
+      if (data) {
+        setStats(data.stats);
+        setVaultStats(data.vaultStats);
+        setRecentActivity(data.recentActivity);
       }
-
-      const { data: activity } = await supabase
-        .from("audit_log")
-        .select("action, created_at")
-        .order("created_at", { ascending: false })
-        .limit(10);
-      setRecentActivity(activity || []);
       setLoading(false);
     }
     load();

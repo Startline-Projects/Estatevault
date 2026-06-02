@@ -45,3 +45,13 @@ export function listByPartnerWithClient(admin: Admin, partnerId: string) {
     .eq("partner_id", partnerId)
     .order("created_at", { ascending: false });
 }
+
+// A partner's orders since a date (partner_cut + status) for month-to-date
+// dashboard math (B2).
+export function listSinceByPartner(admin: Admin, partnerId: string, sinceIso: string) {
+  return admin
+    .from("orders")
+    .select("partner_cut, status, created_at")
+    .eq("partner_id", partnerId)
+    .gte("created_at", sinceIso);
+}

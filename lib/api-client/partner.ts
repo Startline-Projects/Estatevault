@@ -62,6 +62,26 @@ export function listDocuments(): Promise<ApiResult<{ orders: PartnerOrder[] }>> 
   return get("/api/partner/documents");
 }
 
+export type DashboardData = {
+  partner: {
+    id: string;
+    company_name: string | null;
+    business_url: string | null;
+    certification_completed: boolean | null;
+    tier: string | null;
+    vault_subdomain: string | null;
+    accent_color: string | null;
+  } | null;
+  stats: { clients: number; docsThisMonth: number; mtdEarnings: number; referralFees: number };
+  vaultStats: { vaultClients: number; activeSubscriptions: number };
+  recentActivity: Array<{ action: string; created_at: string | null }>;
+};
+
+// The signed-in partner's dashboard summary (B2).
+export function getDashboard(): Promise<ApiResult<DashboardData>> {
+  return get("/api/partner/dashboard");
+}
+
 export type BrandingResult = {
   id?: string;
   company_name?: string;

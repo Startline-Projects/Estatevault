@@ -12,3 +12,13 @@ export function listByPartner(admin: Admin, partnerId: string) {
     .eq("partner_id", partnerId)
     .order("created_at", { ascending: false });
 }
+
+// A partner's PAID referral fees since a date (B2 dashboard).
+export function listPaidSince(admin: Admin, partnerId: string, sinceIso: string) {
+  return admin
+    .from("referrals")
+    .select("referral_fee")
+    .eq("partner_id", partnerId)
+    .eq("referral_fee_paid", true)
+    .gte("created_at", sinceIso);
+}
