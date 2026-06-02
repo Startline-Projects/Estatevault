@@ -3,6 +3,21 @@ import { requireAuth } from "@/lib/api/auth";
 import { ok, fail } from "@/lib/api/response";
 import { partnerClientsCreateSchema, partnerClientsUpdateSchema } from "@/lib/validation/schemas";
 import { withRoute } from "@/lib/api/route";
+import * as partnerRepo from "@/lib/repos/server/partnerRepo";
+import * as clientRepo from "@/lib/repos/server/clientRepo";
+
+// B2: the signed-in partner's clients (with profile + order summaries). Was a
+// direct client-side supabase read in app/pro/clients.
+export const GET = withRoute(async (req: NextRequest) => {
+  const auth = await requireAuth(["partner"], req);
+  if ("error" in auth) return auth.error;
+
+  const { data: partner } = await partnerRepo.getByProfileId(auth.admin, auth.profile.id);
+  if (!partner) return ok({ clients: [] });
+
+  const { data: clients } = await clientRepo.listByPartnerWithOrders(auth.admin, partner.id);
+  return ok({ clients: clients ?? [] });
+});
 
 async function verifyPartnerOwnership(
   admin: ReturnType<typeof import("@/lib/api/auth").createAdminClient>,

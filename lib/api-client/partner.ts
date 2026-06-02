@@ -22,6 +22,19 @@ export function getReferrals(): Promise<ApiResult<{ referrals: Referral[] }>> {
   return get("/api/partner/referrals");
 }
 
+export type PartnerClient = {
+  id: string;
+  profile_id: string;
+  created_at: string;
+  profiles: { full_name: string; email: string } | null;
+  orders: Array<{ product_type: string; status: string; partner_cut: number }>;
+};
+
+// The signed-in partner's clients with order summaries (B2).
+export function listClients(): Promise<ApiResult<{ clients: PartnerClient[] }>> {
+  return get("/api/partner/clients");
+}
+
 export type BrandingResult = {
   id?: string;
   company_name?: string;

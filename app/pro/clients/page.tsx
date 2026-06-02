@@ -2,8 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/client";
-import { createClient as apiCreateClient } from "@/lib/api-client/partner";
+import { getMe, listClients, createClient as apiCreateClient } from "@/lib/api-client/partner";
 
 interface ClientRow { id: string; profile_id: string; created_at: string; profiles: { full_name: string; email: string } | null; orders: Array<{ product_type: string; status: string; partner_cut: number }> }
 
@@ -21,24 +20,12 @@ export default function ProClientsPage() {
 
   useEffect(() => {
     async function load() {
-      const supabase = createClient();
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      const { data: partner } = await supabase.from("partners").select("id, certification_completed").eq("profile_id", user.id).single();
-      if (!partner) return;
-      setPartnerId(partner.id);
-      setCertified(partner.certification_completed || false);
-
-      const { data } = await supabase.from("clients").select("id, profile_id, created_at, profiles(full_name, email)").eq("partner_id", partner.id).order("created_at", { ascending: false });
-
-      if (data) {
-        const withOrders = await Promise.all(data.map(async (c) => {
-          const { data: orders } = await supabase.from("orders").select("product_type, status, partner_cut").eq("client_id", c.id);
-          return { ...c, orders: orders || [] } as unknown as ClientRow;
-        }));
-        setClients(withOrders);
+      const [{ data: meRes }, { data: clientsRes }] = await Promise.all([getMe(), listClients()]);
+      if (meRes?.partner) {
+        setPartnerId(meRes.partner.id);
+        setCertified(meRes.partner.certification_completed || false);
       }
+      setClients((clientsRes?.clients ?? []) as unknown as ClientRow[]);
       setLoading(false);
     }
     load();
@@ -78,11 +65,7 @@ export default function ProClientsPage() {
   async function handleStartSession() {
     if (!form.firstName || !form.email) return;
     setSending(true);
-    const supabase = createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
-
-    // Create auth user for client
+    // Create auth user for client (the API route authorizes the partner).
     const { data, error } = await apiCreateClient({ ...form, partnerId, action: "start" });
     if (!error && data) {
       window.open(`/quiz?partner=${partnerId}&client=${data.clientId}`, "_blank");

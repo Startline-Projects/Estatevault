@@ -163,3 +163,13 @@ export function findByProfileId(admin: Admin, profileId: string) {
     .eq("profile_id", profileId)
     .single();
 }
+
+// A partner's clients with their profile + order summaries (B2: backs the
+// GET on /api/partner/clients, used by the pro/clients screen).
+export function listByPartnerWithOrders(admin: Admin, partnerId: string) {
+  return admin
+    .from("clients")
+    .select("id, profile_id, created_at, profiles(full_name, email), orders(product_type, status, partner_cut)")
+    .eq("partner_id", partnerId)
+    .order("created_at", { ascending: false });
+}
