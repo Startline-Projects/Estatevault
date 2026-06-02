@@ -19,7 +19,7 @@ _Created 2026-06-02. A plain-English plan to finish the **unfinished** and **par
 | 2 | B4 | Finish the shared login check | Quick | 🟡 **Mostly done** — 49 routes on `requireAuth`; ~10 left (intentional) |
 | 3 | B3 | Send all email through one place | Medium | 🟡 **Client centralized** (28→1 `getResend()`); from/branding left |
 | 4 | B5 | One shared "call the API" helper | Medium | ✅ **Done** — `lib/api-client/` adopted by ~50 screens; 0 raw internal fetch |
-| 5 | B2 | Stop screens talking to the DB directly | Big | ⛔ 53 files — the only remaining item |
+| 5 | B2 | Stop screens talking to the DB directly | Big | 🟡 **In progress** — pattern + `GET /api/partner/me` established; `pro/support`, `pro/preview`, `pro/training` done; **54 screens left** |
 
 > **Progress 2026-06-02:** B7 fully implemented; B4 advanced (14 routes migrated); B3 client centralized (all 15 inline `new Resend(...)` → shared `getResend()`, 28→1 init). Verified: `tsc` clean of new errors, 376 tests pass, lint clean. **B3 remaining (lower value, needs live email testing):** ~19 routes still hardcode the from-address and call `resend.emails.send()` directly instead of a branded `lib/email.ts` helper — that change alters retry/error semantics. **Left as intentional:** ~10 B4 routes (checkout `userId`-match, marketing PDFs, `auth/welcome` user-metadata). B2/B5 (53 screens) remain — needs browser testing, do it phased.
 
@@ -140,6 +140,8 @@ For each screen, the pattern is always the same three layers (copy how the vault
 - [ ] `tsc + lint + test` green; click through the screen in the browser.
 
 **Effort:** Big (weeks, phased). **Risk:** High if rushed — that's why it's split into small per-area PRs. This is the main remaining architecture + security work.
+
+> **In progress (2026-06-03).** Phase A started. The reusable pattern is proven: `partnerRepo.getByProfileId` → `GET /api/partner/me` (`requireAuth(["partner"])`) → `partnerApi.getMe()` → screen calls `getMe()`. Converted so far: `pro/support`, `pro/preview`, `pro/training` (pure partner-self reads). Verified (tsc/lint/376 tests). **54 screens remain** — the ones with writes (logo upload, onboarding-step updates), other tables (orders/clients/documents), and the onboarding/payment flows each need their own endpoints **and** a browser check before shipping.
 
 ---
 

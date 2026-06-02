@@ -67,7 +67,7 @@
       <span>5 items</span>
       <span>✅ B7 · B5 done</span>
       <span>🟡 B4 · B3 mostly done</span>
-      <span>B2 only remaining</span>
+      <span>🟡 B2 in progress (3/57)</span>
     </div>
   </div>
 </header>
@@ -106,7 +106,7 @@
           <tr><td><strong>2</strong></td><td>B4</td><td>Finish the shared login check</td><td>Quick</td><td>🟡 Mostly — 49 routes; ~10 left (intentional)</td></tr>
           <tr><td><strong>3</strong></td><td>B3</td><td>Send all email through one place</td><td>Medium</td><td>🟡 Client done (28→1); from/branding left</td></tr>
           <tr><td><strong>4</strong></td><td>B5</td><td>One shared "call the API" helper</td><td>Medium</td><td>✅ Done — api-client on ~50 screens</td></tr>
-          <tr><td><strong>5</strong></td><td>B2</td><td>Stop screens talking to the DB directly</td><td>Big</td><td>⛔ 53 files — the only one left</td></tr>
+          <tr><td><strong>5</strong></td><td>B2</td><td>Stop screens talking to the DB directly</td><td>Big</td><td>🟡 In progress — 3/57 done, 54 left</td></tr>
         </tbody>
       </table>
       <div class="note" style="margin:14px 0 0;border-color:#d8ebdd;background:#f3f8f4;"><span class="k" style="color:var(--good);">Progress 2026-06-02:</span> B7 fully done; B4 advanced — 14 routes migrated (subscription ×3, client/mark-executed, 6 vault, stripe/connect ×2, email/partner-activated, affiliate/onboarding). Verified: tsc clean of new errors, 376 tests pass, lint clean. The ~10 B4 routes left are <strong>intentional</strong> (checkout userId-match, marketing PDFs, auth/welcome user-metadata). B3 + B2/B5 remain — they need live email / browser testing.</div>
@@ -188,8 +188,9 @@
     <!-- B2 -->
     <h2 class="section" id="b2">5 · B2 — Stop screens talking to the database directly ⭐</h2>
     <div class="item big">
-      <h3>B2 <span class="num">53 files</span> <span class="chip big">Big · phased · the main job</span></h3>
-      <p><span class="k">What it is.</span> <strong>53 UI screens</strong> run database queries (<code>supabase.from(...).select/insert/update</code>) <strong>inside the screen itself</strong> — no API route in between. The only thing protecting the data is row-level security (RLS).</p>
+      <h3>B2 <span class="num">54 of 57 left</span> <span class="chip big">Big · in progress · phased</span></h3>
+      <div class="note" style="margin:0 0 10px;border-color:#f0e0bf;background:#fdf6e9;"><span class="k" style="color:var(--warn);">🟡 In progress (2026-06-03):</span> Phase A started. Pattern proven — <code>partnerRepo.getByProfileId</code> → <code>GET /api/partner/me</code> → <code>partnerApi.getMe()</code> → screen. Converted: <code>pro/support</code>, <code>pro/preview</code>, <code>pro/training</code>. Verified (tsc/lint/376 tests). <strong>54 screens remain</strong> — write/upload/onboarding/other-table flows each need their own endpoint + a browser check.</div>
+      <p><span class="k">What it is.</span> <strong>57 UI screens</strong> run database queries (<code>supabase.from(...).select/insert/update</code>) <strong>inside the screen itself</strong> — no API route in between. The only thing protecting the data is row-level security (RLS).</p>
       <p><span class="k">Why it matters.</span></p>
       <ul>
         <li>Business rules live inside screens — no single place to add logging, caching, validation, rate-limiting.</li>
