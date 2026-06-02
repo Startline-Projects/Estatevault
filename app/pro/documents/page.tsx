@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { createClient } from "@/lib/supabase/client";
+import { listDocuments } from "@/lib/api-client/partner";
 
 interface DocumentRow {
   id: string;
@@ -44,52 +44,19 @@ export default function ProDocumentsPage() {
 
   useEffect(() => {
     async function load() {
-      const supabase = createClient();
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (!user) return;
+      const { data } = await listDocuments();
+      const orders = data?.orders ?? [];
 
-      const { data: partner } = await supabase
-        .from("partners")
-        .select("id")
-        .eq("profile_id", user.id)
-        .single();
-      if (!partner) return;
-
-      const { data: orders } = await supabase
-        .from("orders")
-        .select("id, product_type, status, created_at, client_id")
-        .eq("partner_id", partner.id)
-        .order("created_at", { ascending: false });
-
-      if (!orders || orders.length === 0) {
-        setDocuments([]);
-        setLoading(false);
-        return;
-      }
-
-      const clientIds = Array.from(new Set(orders.map((o) => o.client_id).filter((x): x is string => x != null)));
-      const { data: clients } = await supabase
-        .from("clients")
-        .select("id, profiles(full_name, email)")
-        .in("id", clientIds);
-
-      const clientMap: Record<string, string> = {};
-      if (clients) {
-        for (const c of clients) {
-          const profile = c.profiles as unknown as { full_name: string; email: string } | null;
-          clientMap[c.id] = profile?.full_name || profile?.email || "Unknown";
-        }
-      }
-
-      const rows: DocumentRow[] = orders.map((o) => ({
-        id: o.id,
-        product_type: o.product_type,
-        status: o.status,
-        created_at: o.created_at,
-        client_name: (o.client_id != null ? clientMap[o.client_id] : undefined) || "Unknown",
-      }));
+      const rows: DocumentRow[] = orders.map((o) => {
+        const profile = o.clients?.profiles ?? null;
+        return {
+          id: o.id,
+          product_type: o.product_type,
+          status: o.status,
+          created_at: o.created_at,
+          client_name: profile?.full_name || profile?.email || "Unknown",
+        };
+      });
 
       setDocuments(rows);
       setLoading(false);

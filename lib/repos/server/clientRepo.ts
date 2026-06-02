@@ -173,3 +173,12 @@ export function listByPartnerWithOrders(admin: Admin, partnerId: string) {
     .eq("partner_id", partnerId)
     .order("created_at", { ascending: false });
 }
+
+// A partner's vault-subscription clients (B2: backs GET /api/partner/vault-clients).
+export function listVaultClientsByPartner(admin: Admin, partnerId: string) {
+  return admin
+    .from("clients")
+    .select("id, profile_id, created_at, vault_subscription_status, profiles(full_name, email)")
+    .eq("partner_id", partnerId)
+    .order("created_at", { ascending: false });
+}

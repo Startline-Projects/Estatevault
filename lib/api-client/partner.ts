@@ -35,6 +35,33 @@ export function listClients(): Promise<ApiResult<{ clients: PartnerClient[] }>> 
   return get("/api/partner/clients");
 }
 
+export type VaultClient = {
+  id: string;
+  profile_id: string;
+  created_at: string;
+  vault_subscription_status: string | null;
+  profiles: { full_name: string | null; email: string } | null;
+};
+
+// The signed-in partner's vault-subscription clients (B2).
+export function listVaultClients(): Promise<ApiResult<{ clients: VaultClient[] }>> {
+  return get("/api/partner/vault-clients");
+}
+
+export type PartnerOrder = {
+  id: string;
+  product_type: string;
+  status: string;
+  created_at: string | null;
+  client_id: string | null;
+  clients: { profiles: { full_name: string | null; email: string } | null } | null;
+};
+
+// The signed-in partner's document orders with client info (B2).
+export function listDocuments(): Promise<ApiResult<{ orders: PartnerOrder[] }>> {
+  return get("/api/partner/documents");
+}
+
 export type BrandingResult = {
   id?: string;
   company_name?: string;

@@ -35,3 +35,13 @@ export function findDeliveredBefore(admin: Admin, cutoff: string) {
     .order("delivered_at", { ascending: true })
     .limit(50);
 }
+
+// A partner's orders with the client's profile name/email (B2: backs
+// GET /api/partner/documents, used by the pro/documents screen).
+export function listByPartnerWithClient(admin: Admin, partnerId: string) {
+  return admin
+    .from("orders")
+    .select("id, product_type, status, created_at, client_id, clients(profiles(full_name, email))")
+    .eq("partner_id", partnerId)
+    .order("created_at", { ascending: false });
+}

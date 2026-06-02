@@ -2,16 +2,8 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/client";
+import { listVaultClients, type VaultClient } from "@/lib/api-client/partner";
 import { PRICES, formatPrice } from "@/lib/orders/pricing";
-
-interface VaultClient {
-  id: string;
-  profile_id: string;
-  created_at: string;
-  vault_subscription_status: string | null;
-  profiles: { full_name: string | null; email: string } | null;
-}
 
 export default function VaultClientsPage() {
   const [clients, setClients] = useState<VaultClient[]>([]);
@@ -19,24 +11,8 @@ export default function VaultClientsPage() {
 
   useEffect(() => {
     async function load() {
-      const supabase = createClient();
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      const { data: partner } = await supabase
-        .from("partners")
-        .select("id")
-        .eq("profile_id", user.id)
-        .single();
-      if (!partner) return;
-
-      const { data } = await supabase
-        .from("clients")
-        .select("id, profile_id, created_at, vault_subscription_status, profiles(full_name, email)")
-        .eq("partner_id", partner.id)
-        .order("created_at", { ascending: false });
-
-      setClients((data as unknown as VaultClient[]) || []);
+      const { data } = await listVaultClients();
+      setClients(data?.clients ?? []);
       setLoading(false);
     }
     load();
