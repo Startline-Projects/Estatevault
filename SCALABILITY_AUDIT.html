@@ -222,7 +222,7 @@
   <!-- Score band -->
   <div class="scoreband">
     <div class="scorecard"><div class="num">67 → 0</div><div class="lbl">Admin client copies (resolved)</div></div>
-    <div class="scorecard"><div class="num">54</div><div class="lbl">UI files hit DB direct (3 done, in progress)</div></div>
+    <div class="scorecard"><div class="num">54</div><div class="lbl">UI files hit DB direct (6 done, in progress)</div></div>
     <div class="scorecard"><div class="num">28 → 15</div><div class="lbl">Inline Resend inits (improved)</div></div>
     <div class="scorecard rate"><div class="num">~50</div><div class="lbl">Screens on api-client (resolved)</div></div>
   </div>
@@ -271,11 +271,11 @@
     <div class="blocker crit">
       <div class="blocker-head">
         <h3>2 · UI talks directly to the database</h3>
-        <span class="count-chip">54 of 57 left</span>
+        <span class="count-chip">51 of 57 left</span>
         <span class="sev crit">Critical</span>
         <span class="sev" style="background:#c98a1e;color:#fff">🟡 In progress (Phase A started)</span>
       </div>
-      <p>57 UI files import the browser Supabase client and run <code>.from().select/insert/update</code> queries inside the screen itself — no API route, no backend boundary. The only guard is RLS. <b>2026-06-03 — Phase A started:</b> established the repo→route→api-client pattern with a reusable <code>GET /api/partner/me</code> (<code>partnerApi.getMe()</code>); converted <code>pro/support</code>, <code>pro/preview</code>, <code>pro/training</code> (pure partner-self reads). <b>54 screens remain</b> — write/upload/onboarding flows need per-screen browser verification.</p>
+      <p>57 UI files import the browser Supabase client and run <code>.from().select/insert/update</code> queries inside the screen itself — no API route, no backend boundary. The only guard is RLS. <b>2026-06-03 — Phase A started:</b> established the repo→route→api-client pattern with a reusable <code>GET /api/partner/me</code> (<code>partnerApi.getMe()</code>); converted 6 screens (pro/support, preview, training, referrals, marketing, clients) via reusable endpoints (partner/me, profile/me, partner/referrals, partner/clients GET). <b>51 screens remain</b> — write/upload/onboarding flows need per-screen browser verification.</p>
       <div class="label">Worst zones</div>
       <div class="areagroup"><div class="area">All of app/pro/ — incl. 11 onboarding steps</div><div class="files"><span class="ft">dashboard</span><span class="ft">clients</span><span class="ft">clients/[id]</span><span class="ft">documents</span><span class="ft">revenue</span><span class="ft">referrals</span><span class="ft">vault-clients</span><span class="ft">marketing</span><span class="ft">preview</span><span class="ft">support</span><span class="ft">training</span><span class="ft">training/exam</span><span class="ft">settings</span><span class="ft">onboarding/step-1…7</span></div></div>
       <div class="areagroup"><div class="area">All of sales/ + pro/sales/</div><div class="files"><span class="ft">dashboard</span><span class="ft">pipeline</span><span class="ft">partners</span><span class="ft">partners/[id]</span><span class="ft">commission</span></div></div>
