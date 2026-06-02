@@ -6,6 +6,7 @@ export * as vaultApi from "./vault";
 export * as subscriptionApi from "./subscription";
 export * as documentsApi from "./documents";
 export * as partnerApi from "./partner";
+export * as profileApi from "./profile";
 export * as salesApi from "./sales";
 export * as trusteeApi from "./trustee";
 export * as farewellApi from "./farewell";

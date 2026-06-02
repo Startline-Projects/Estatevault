@@ -3,7 +3,8 @@
 import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/client";
+import { getMe } from "@/lib/api-client/partner";
+import { getMyProfile } from "@/lib/api-client/profile";
 import { substituteTokens, type PartnerData } from "@/lib/marketing/substitute";
 import { usePartnerAccent } from "@/lib/partner-accent-context";
 import { PRICES, formatPrice } from "@/lib/orders/pricing";
@@ -174,13 +175,11 @@ export default function MarketingPage() {
 
   useEffect(() => {
     async function load() {
-      const supabase = createClient();
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-      const { data: p } = await supabase.from("partners").select("company_name, product_name, business_url, accent_color, logo_url, certification_completed").eq("profile_id", user.id).single();
-      const { data: prof } = await supabase.from("profiles").select("full_name, email, phone").eq("id", user.id).single();
+      const [{ data: pRes }, { data: profRes }] = await Promise.all([getMe(), getMyProfile()]);
+      const p = pRes?.partner;
+      const prof = profRes?.profile;
       if (p && prof) {
-        setPartner({ companyName: p.company_name, productName: p.product_name || "Legacy Protection", partnerName: prof.full_name || "", phone: prof.phone || "", email: prof.email, city: "", state: "Michigan", businessUrl: p.business_url || "", logoUrl: p.logo_url || "", accentColor: p.accent_color || "#C9A84C" });
+        setPartner({ companyName: p.company_name, productName: p.product_name || "Legacy Protection", partnerName: prof.full_name || "", phone: prof.phone || "", email: prof.email || "", city: "", state: "Michigan", businessUrl: p.business_url || "", logoUrl: p.logo_url || "", accentColor: p.accent_color || "#C9A84C" });
         setCertified(p.certification_completed || false);
       }
     }

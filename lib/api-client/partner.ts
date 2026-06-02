@@ -8,6 +8,20 @@ export function getMe(): Promise<ApiResult<{ partner: MyPartner | null }>> {
   return get("/api/partner/me");
 }
 
+export type Referral = {
+  id: string;
+  reason: string | null;
+  status: string | null;
+  created_at: string | null;
+  referral_fee: number | null;
+  referral_fee_paid: boolean | null;
+};
+
+// The signed-in partner's attorney referrals (B2).
+export function getReferrals(): Promise<ApiResult<{ referrals: Referral[] }>> {
+  return get("/api/partner/referrals");
+}
+
 export type BrandingResult = {
   id?: string;
   company_name?: string;

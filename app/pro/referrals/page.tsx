@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { createClient } from "@/lib/supabase/client";
+import { getReferrals } from "@/lib/api-client/partner";
 
 interface ReferralRow {
   id: string;
@@ -33,24 +33,8 @@ export default function ProReferralsPage() {
 
   useEffect(() => {
     async function load() {
-      const supabase = createClient();
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (!user) return;
-
-      const { data: partner } = await supabase
-        .from("partners")
-        .select("id")
-        .eq("profile_id", user.id)
-        .single();
-      if (!partner) return;
-
-      const { data: refs } = await supabase
-        .from("referrals")
-        .select("id, reason, status, created_at, referral_fee, referral_fee_paid")
-        .eq("partner_id", partner.id)
-        .order("created_at", { ascending: false });
+      const { data } = await getReferrals();
+      const refs = data?.referrals ?? [];
 
       setReferrals(
         (refs || []).map((r) => ({

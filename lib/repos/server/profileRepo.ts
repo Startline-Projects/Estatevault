@@ -40,6 +40,15 @@ export function getEmailAndNameById(admin: Admin, profileId: string) {
     .maybeSingle();
 }
 
+// The signed-in user's own profile basics (B2: backs GET /api/profile/me).
+export function getMeById(admin: Admin, profileId: string) {
+  return admin
+    .from("profiles")
+    .select("id, full_name, email, phone")
+    .eq("id", profileId)
+    .maybeSingle();
+}
+
 // All sales rep profiles (for sales admin listing).
 export function findAllSalesReps(admin: Admin) {
   return admin
