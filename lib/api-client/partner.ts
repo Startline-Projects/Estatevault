@@ -1,4 +1,12 @@
 import { post, put, get, publicGet, type ApiResult } from "./client";
+import type { Database } from "@/types/db.generated";
+
+export type MyPartner = Database["public"]["Tables"]["partners"]["Row"];
+
+// The signed-in partner's own row (B2). null if the profile has no partner row.
+export function getMe(): Promise<ApiResult<{ partner: MyPartner | null }>> {
+  return get("/api/partner/me");
+}
 
 export type BrandingResult = {
   id?: string;

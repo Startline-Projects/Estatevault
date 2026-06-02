@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/client";
+import { getMe } from "@/lib/api-client/partner";
 
 const MODULES = [
   {
@@ -49,20 +49,9 @@ export default function ProTrainingPage() {
 
   useEffect(() => {
     async function load() {
-      const supabase = createClient();
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (!user) return;
-
-      const { data: partner } = await supabase
-        .from("partners")
-        .select("certification_completed")
-        .eq("profile_id", user.id)
-        .single();
-
-      if (partner) {
-        setCertified(partner.certification_completed || false);
+      const { data } = await getMe();
+      if (data?.partner) {
+        setCertified(data.partner.certification_completed || false);
       }
 
       // Load module completion from localStorage

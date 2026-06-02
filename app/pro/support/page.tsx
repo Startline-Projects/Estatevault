@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { createClient } from "@/lib/supabase/client";
+import { getMe } from "@/lib/api-client/partner";
 import { PRICES, PARTNER_SPLITS, formatPrice } from "@/lib/orders/pricing";
 
 const CONTACT_CARDS = [
@@ -95,11 +95,8 @@ export default function ProSupportPage() {
 
   useEffect(() => {
     async function loadTier() {
-      const supabase = createClient();
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-      const { data: partner } = await supabase.from("partners").select("tier").eq("profile_id", user.id).single();
-      if (partner) setTier(partner.tier || "standard");
+      const { data } = await getMe();
+      if (data?.partner) setTier(data.partner.tier || "standard");
     }
     loadTier();
   }, []);

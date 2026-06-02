@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
+import { getMe } from "@/lib/api-client/partner";
 import { PARTNER_SPLITS, formatPrice } from "@/lib/orders/pricing";
 
 export default function ProPreviewPage() {
@@ -13,18 +13,16 @@ export default function ProPreviewPage() {
 
   useEffect(() => {
     async function load() {
-      const supabase = createClient();
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) { router.push("/auth/login"); return; }
-      const { data: partner } = await supabase.from("partners").select("company_name, business_url, tier").eq("profile_id", user.id).single();
-      if (partner) {
-        setCompanyName(partner.company_name || "Your Company");
-        setBusinessUrl(partner.business_url || "yourcompany.com");
-        setTier(partner.tier || "standard");
+      // authedFetch redirects to login on an expired/absent session.
+      const { data } = await getMe();
+      if (data?.partner) {
+        setCompanyName(data.partner.company_name || "Your Company");
+        setBusinessUrl(data.partner.business_url || "yourcompany.com");
+        setTier(data.partner.tier || "standard");
       }
     }
     load();
-  }, [router]);
+  }, []);
 
   const splitKey = tier === "enterprise" ? "enterprise" : "standard";
   const willEarnings = formatPrice(PARTNER_SPLITS.will[splitKey].partner);

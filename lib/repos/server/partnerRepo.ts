@@ -14,6 +14,12 @@ export function getTier(admin: Admin, partnerId: string) {
   return admin.from("partners").select("tier").eq("id", partnerId).single();
 }
 
+// The signed-in partner's own row (B2: backs GET /api/partner/me). Reusable by
+// the pro/* screens that previously queried `partners` directly.
+export function getByProfileId(admin: Admin, profileId: string) {
+  return admin.from("partners").select("*").eq("profile_id", profileId).maybeSingle();
+}
+
 // Stripe Connect info + revenue percent, looked up by the public partner slug.
 export function findStripeInfoBySlug(admin: Admin, partnerSlug: string) {
   return admin
