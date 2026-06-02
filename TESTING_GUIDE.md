@@ -1,8 +1,8 @@
 # EstateVault — Complete Testing Guide
 
-> Covers all changes from Phases 0–7 + Phase 5.1/5.2.
-> **Branch:** Yahia-Dev
-> **Last Updated:** 2026-05-29
+> Covers all changes from Phases 0–7 + Phase 5.1/5.2, plus the **2026-06-02 audit remediation** (15 fixes — see §15).
+> **Branch:** Amir-Dev
+> **Last Updated:** 2026-06-02
 
 ---
 
@@ -22,6 +22,8 @@
 12. [Phase 7 — Lock It In Tests](#12-phase-7--lock-it-in-tests)
 13. [End-to-End User Flow Tests](#13-end-to-end-user-flow-tests)
 14. [Quick Regression Checklist](#14-quick-regression-checklist)
+15. [Audit Remediation Fixes — 2026-06-02](#15-audit-remediation-fixes--2026-06-02)
+16. [Scalability Refactor — 2026-06-02](#16-scalability-refactor--2026-06-02)
 
 ---
 
@@ -31,10 +33,12 @@
 
 ```bash
 npm install
-npx tsc --noEmit        # expect 0 errors
-npm run lint             # expect 0 errors (warnings OK)
-npm test                 # expect 193/193 passing
+npx tsc --noEmit        # 2 pre-existing errors only (attorneyReviewRepo, quizSessionRepo) — no new ones
+npm run lint             # expect 0 errors in changed files (pre-existing warnings OK)
+npm test                 # expect 376/376 passing
 ```
+
+> **Note (2026-06-02):** two pre-existing `tsc` errors live in `lib/repos/server/attorneyReviewRepo.ts` and `quizSessionRepo.ts` (un-narrowed `Record<string,unknown>` inserts). They predate this work and are unrelated tech debt — the remediation pass added no new type errors. After applying the 3 new migrations, regenerate `types/db.generated.ts` from the DB.
 
 ### Environment variables
 
@@ -1239,9 +1243,9 @@ Run before every deploy:
 ### Automated gate
 
 ```bash
-npx tsc --noEmit          # 0 errors
-npm run lint               # 0 errors
-npm test                   # 193/193 passing
+npx tsc --noEmit          # 2 pre-existing errors only (no new ones)
+npm run lint               # 0 errors in changed files
+npm test                   # 376/376 passing
 ```
 
 ### Critical path smoke tests (5 minutes)
@@ -1268,3 +1272,229 @@ npm test                   # 193/193 passing
 - [ ] `/api/webhooks/stripe` with bad signature → generic error (no leak)
 
 ### If all pass → ready to deploy.
+
+---
+
+## 15. Audit Remediation Fixes — 2026-06-02
+
+Manual tests for the 15 fixes implemented from `REMEDIATION_PLAN.md`. **Prereq:** apply the 3 new migrations first — `20260602_dek_aad_binding.sql`, `20260602_otp_attempts_atomic.sql`, `20260602_farewell_verif_indexes.sql` — then regenerate `types/db.generated.ts`.
+
+Automated coverage already added: `lib/crypto/__tests__/dek-aad.test.ts` (C-2) and `tests/unit/stripe-transfer-idempotency.test.ts` (C-1). Run `npm test` → 376 passing.
+
+### C-2 — DEK bound to client identity (AAD)
+
+```
+Unit: npm test lib/crypto/__tests__/dek-aad.test.ts → 3 passing
+  - wrap with client A's AAD → unwrap with A succeeds
+  - unwrap same blob with client B's AAD → throws (tag failure)
+  - legacy no-AAD blob still unwraps without AAD
+
+Legacy self-heal (manual, staging):
+  Step 1: pick a client whose wrapped_dek predates the migration
+          (clients.dek_aad_version IS NULL)
+  Step 2: load their vault once (any /api/vault/* read) as that user
+  Step 3: SELECT dek_aad_version FROM clients WHERE id = ... → now 1
+  Step 4: vault still decrypts correctly (no data loss)
+```
+
+### C-1 — Stripe transfer idempotency keys
+
+```
+Unit: tests/unit/stripe-transfer-idempotency.test.ts → 4 passing
+Manual (Stripe test mode):
+  Step 1: trigger a partner-attributed will purchase via webhook
+  Step 2: re-send the SAME checkout.session.completed event (Stripe CLI:
+          `stripe events resend <evt_id>`)
+  Step 3: Stripe Dashboard → Connect → Transfers: exactly ONE transfer
+          for that order (idempotency key transfer_partner_<orderId>)
+```
+
+### H-1 — Paid amendment does NOT generate a full Will set
+
+```
+Step 1: as a non-subscriber client, buy a $50 amendment (/dashboard/amendment)
+Step 2: complete Stripe test checkout (card 4242...)
+Step 3: DB check:
+  - orders row: product_type='amendment', status='generating'
+  - documents table: NO new will/poa/healthcare_directive rows for this order
+  - NO will generation job queued
+Step 4: partner-attributed amendment → partner_cut transferred (3500/4000)
+```
+
+### H-4 — Atomic OTP counter + resend cap
+
+```
+Cap (per code):
+  Step 1: trustee unlock flow → request OTP
+  Step 2: submit 10 wrong codes → 10th returns "wrong code"
+  Step 3: 11th wrong code → 429 "too many attempts"
+Race (atomicity):
+  Fire ~20 parallel POST /api/trustee/unlock-verify with wrong codes
+  (same request) → otp_email_attempts in DB never exceeds 10
+Resend cap:
+  Request a new code 4× within an hour (POST /api/trustee/unlock-otp)
+  → 4th returns 429 "too many code requests"
+```
+
+### H-5 — Affiliate payout idempotency
+
+```
+Step 1: admin opens an affiliate with an unpaid balance
+Step 2: double-click "Pay out" (or two admins simultaneously)
+Step 3: Stripe → only ONE batch transfer for that balance
+        (idempotency key affpay_<sha256...>)
+Step 4: a later payout after NEW attributed orders → succeeds (different key)
+```
+
+### H-6 — Partner tier applied only after payment
+
+```
+Step 1: partner starts an upgrade checkout (e.g. → enterprise) but CANCELS
+Step 2: DB: partners.tier is UNCHANGED (still previous tier)
+Step 3: complete a real upgrade checkout → webhook fires
+Step 4: DB: partners.tier = enterprise, one_time_fee_paid = true
+```
+
+### H-11 — No DB error leaks
+
+```
+Force a DB error (e.g. malformed query / RLS) on:
+  - GET /api/admin/orders-missing-docs
+  - GET+POST /api/admin/marketing/materials
+  - POST+DELETE /api/share
+Expect: generic message ("could not load ...", "something went wrong");
+        NO Supabase column/constraint text in the response body.
+Server logs DO contain the real error (console.error prefix).
+```
+
+### H-12 — download-by-session requires order ownership
+
+```
+Step 1: create a TEST order for client A; note its documentId + orderId
+Step 2: as client B (or logged out), GET
+        /api/documents/download-by-session?id=<doc>&order_id=<order>
+        → 403 Access denied
+Step 3: as client A (owner) → 200 with signed url
+Step 4: legitimate session_id flow (success page) still works
+```
+
+### M-5 — Bootstrap not hard-locked after one failure
+
+```
+Step 1: new user, POST /api/crypto/bootstrap with a BAD payload → fails
+Step 2: immediately retry with a VALID payload → succeeds
+        (no "rate limited" lock; limit is now 5/hour)
+Step 3: after success, POST again → 409 "crypto already bootstrapped"
+```
+
+### M-6 — Email verification on Redis (cross-instance)
+
+```
+Step 1: ensure UPSTASH_REDIS_* env vars set
+Step 2: POST /api/auth/send-verify-code → code emailed
+Step 3: check Redis: key emailverify:<email> exists with TTL
+Step 4: POST /api/auth/verify-code with the code → returns token
+        (works regardless of which serverless instance handles it)
+Local dev with no Upstash → falls back to in-memory Map (still works)
+```
+
+### M-9 — Trustee download-url enforces access_scope
+
+```
+Step 1: grant a trustee LIMITED scope (e.g. categories only, documents=false)
+Step 2: as that trustee, GET /api/trustee/vault/download-url?type=document&id=<docId>
+        → 404 (out of scope)
+Step 3: GET a vault_item in an ALLOWED category → 200 signed url
+Step 4: GET a vault_item in a DISALLOWED category → 404
+Step 5: list route (/items) and download-url agree on what's visible
+```
+
+### L-3 / L-7 / L-8 / L-10 (quick checks)
+
+```
+L-3: force an audit_log insert failure → server log shows
+     "[crypto audit] failed to record ..." (request still succeeds)
+L-7: \d farewell_verification_requests → indexes idx_farewell_verif_trustee_id
+     and idx_farewell_verif_client_id present
+L-8: tsc passes; share/route.ts handlers typed Promise<NextResponse>
+L-10: trigger a Resend domain-create error on /api/partner/email/setup
+      → generic "domain create failed" (no provider message leaked)
+```
+
+### Deferred — M-3 (migration squash)
+
+Not implemented (rebuild hygiene, not a live bug). When picked up: test the squash on a Supabase **preview branch** (`supabase db reset` + schema diff vs prod) before deleting `database.sql` + `migration-*.sql`. No runtime test needed today.
+
+### Remediation smoke checklist (add to pre-deploy)
+
+- [ ] 3 new migrations applied; `types/db.generated.ts` regenerated
+- [ ] Paid amendment → no will document set (H-1)
+- [ ] Trustee 11th wrong OTP → 429 (H-4)
+- [ ] download-by-session as non-owner → 403 (H-12)
+- [ ] Partner cancels upgrade → tier unchanged (H-6)
+- [ ] Admin/share DB error → generic message, no leak (H-11)
+- [ ] `npm test` → 376/376
+
+---
+
+## 16. Scalability Refactor — 2026-06-02
+
+Structural changes from `SCALABILITY_PLAN.md`. All behavior-preserving; verified with `tsc` (no new errors) + 376 tests + lint. These are mostly **smoke checks** — confirm nothing regressed.
+
+### B7 — single `getAppUrl()` for the app URL
+
+```
+Change: lib/config/appUrl.ts; 13 files no longer read NEXT_PUBLIC_SITE_URL/_APP_URL/_BASE_URL directly.
+Smoke:
+  Step 1: trigger a flow that emails a link (signup verify, trustee invite,
+          welcome email, password reset)
+  Step 2: the link domain matches NEXT_PUBLIC_SITE_URL (or the prod default)
+  Step 3: partner Stripe-connect onboarding still returns to pro.estatevault.com
+          (origin-based, unchanged)
+```
+
+### B4 — more routes on `requireAuth()` (14 migrated)
+
+```
+Affected: subscription status/sync/cancel, client/mark-executed, 6 vault routes
+  (download-document, farewell upload-complete + signed-url, backfill x3),
+  stripe/connect status+onboard, email/partner-activated, affiliate/onboarding.
+Smoke (per route, logged OUT): → 401 unauthorized
+Smoke (logged IN as the owning user): → works exactly as before
+Role check: POST /api/email/partner-activated as a CLIENT → 403 (admin/sales only)
+Mobile: these routes now also accept Authorization: Bearer <supabase jwt>
+NOT changed (intentional): checkout/* (still verify body userId), marketing/*
+  (PDF output), auth/welcome (needs user_metadata).
+```
+
+### B3 — one shared Resend client (`getResend()`)
+
+```
+Change: 15 routes no longer call `new Resend(...)`; all use getResend() from lib/email.ts.
+Smoke (send one of each, Resend test mode / dashboard):
+  - contact form  → email arrives
+  - sales create-partner / create-rep / send-welcome-email
+  - professionals/request-access
+  - checkout/attorney (+ verify) notification
+  - documents/send-email
+  - vault/trustees invite, vault/farewell
+  - partner/email test + setup + verify + reset (these manage Resend DOMAINS)
+Expect: identical content/sender as before — only the client construction changed.
+```
+
+### B5 — shared data-access layer (verified already done, no code change)
+
+```
+Already adopted in the Jun-2 refactor; nothing to test beyond normal screen use.
+Verify (optional): a screen left open past ~1h token expiry, then an action,
+  should silently refresh + retry (not hard-logout) — that's authedFetch via
+  the lib/api-client/ wrappers.
+```
+
+### Scalability smoke checklist (pre-deploy)
+
+- [ ] An emailed link points at the right domain (B7)
+- [ ] A migrated route 401s logged-out, works logged-in (B4)
+- [ ] `email/partner-activated` 403s for a client (B4 role)
+- [ ] Contact form email still arrives (B3)
+- [ ] `npm test` → 376/376, `tsc` clean of new errors

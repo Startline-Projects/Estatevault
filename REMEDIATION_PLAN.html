@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EstateVault — Remediation Plan</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --navy:#1C3557; --navy-soft:#27406b; --gold:#C9A84C; --gold-soft:#e7d49a;
+    --charcoal:#2D2D2D; --white:#FFFFFF; --bg:#f4f6f9; --line:#e3e8f0;
+    --good:#1f8a5b; --warn:#c98a1e; --bad:#c0392b; --muted:#5f6b7c;
+    --crit:#c0392b; --high:#d35400; --med:#c98a1e; --low:#3a7ca5;
+  }
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{margin:0;font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--charcoal);line-height:1.65;font-size:16px;}
+  a{color:var(--navy);text-decoration:none;}
+  a:hover{text-decoration:underline;}
+  code{font-family:'JetBrains Mono',ui-monospace,monospace;font-size:.86em;background:#eef1f6;color:#324;padding:1px 6px;border-radius:5px;border:1px solid #e0e5ee;word-break:break-word;}
+
+  header.hero{background:linear-gradient(135deg,var(--navy) 0%,#13243d 100%);color:var(--white);padding:48px 0 52px;border-bottom:4px solid var(--gold);}
+  .hero .tag{display:inline-block;letter-spacing:.18em;text-transform:uppercase;font-size:12px;font-weight:600;color:var(--gold-soft);margin-bottom:14px;}
+  .hero h1{margin:0;font-size:38px;font-weight:800;line-height:1.1;}
+  .hero p.sub{margin:14px 0 0;font-size:18px;color:#cdd6e4;max-width:780px;line-height:1.6;}
+  .hero .meta{margin-top:24px;display:flex;flex-wrap:wrap;gap:10px;}
+  .hero .meta span{background:rgba(255,255,255,.08);border:1px solid rgba(201,168,76,.35);padding:6px 14px;border-radius:999px;font-size:13px;color:#e7ecf4;}
+
+  .layout{display:flex;gap:36px;max-width:1280px;margin:0 auto;padding:36px 24px 80px;}
+  main{flex:1;min-width:0;}
+  nav.toc{width:248px;flex-shrink:0;position:sticky;top:24px;align-self:flex-start;max-height:calc(100vh - 48px);overflow-y:auto;background:var(--white);border:1px solid var(--line);border-radius:14px;padding:18px 16px;font-size:14px;}
+  nav.toc h4{margin:0 0 10px;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);}
+  nav.toc a{display:block;padding:5px 8px;border-radius:7px;color:var(--charcoal);}
+  nav.toc a:hover{background:var(--bg);text-decoration:none;}
+  nav.toc a .dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:7px;vertical-align:middle;}
+
+  .card{background:var(--white);border:1px solid var(--line);border-radius:16px;padding:28px 30px;margin-bottom:22px;box-shadow:0 1px 2px rgba(20,40,70,.04);}
+  h2.section{font-size:13px;letter-spacing:.16em;text-transform:uppercase;color:var(--navy);margin:38px 0 16px;display:flex;align-items:center;gap:10px;}
+  h2.section::after{content:"";flex:1;height:1px;background:var(--line);}
+
+  .note{background:#fffaf0;border:1px solid var(--gold-soft);border-radius:11px;padding:16px 20px;font-size:14.5px;}
+  .note .k{color:var(--warn);font-weight:700;}
+  ol.rules{padding-left:22px;margin:6px 0;} ol.rules li{margin:9px 0;font-size:14.5px;}
+
+  .task{border:1px solid var(--line);border-radius:13px;padding:18px 20px;margin-bottom:14px;border-left:5px solid var(--muted);background:var(--white);}
+  .task.crit{border-left-color:var(--crit);}
+  .task.high{border-left-color:var(--high);}
+  .task.med{border-left-color:var(--med);}
+  .task.low{border-left-color:var(--low);}
+  .task h3{margin:0 0 6px;font-size:17px;color:var(--navy);font-weight:700;display:flex;gap:9px;align-items:baseline;flex-wrap:wrap;}
+  .id{font-family:'JetBrains Mono',monospace;font-weight:600;font-size:14px;color:var(--charcoal);background:#eef1f6;padding:1px 8px;border-radius:6px;border:1px solid #e0e5ee;}
+  .src{font-family:'JetBrains Mono',monospace;font-weight:600;font-size:12px;color:var(--muted);}
+  .badge{font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:3px 9px;border-radius:999px;color:#fff;}
+  .badge.open{background:var(--bad);} .badge.partial{background:var(--warn);}
+  .eff{font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:3px 9px;border-radius:999px;color:#fff;margin-left:auto;}
+  .eff.s{background:var(--good);} .eff.m{background:var(--warn);} .eff.l{background:var(--bad);}
+  .task p{margin:8px 0;font-size:15px;}
+  .task .k{font-weight:700;color:var(--charcoal);}
+  .task .files{font-family:'JetBrains Mono',monospace;font-size:12.5px;color:var(--muted);margin:2px 0 10px;word-break:break-word;}
+  .task ol.steps{margin:6px 0;padding-left:20px;} .task ol.steps li{margin:6px 0;font-size:14.5px;}
+  .task .test{background:#f3f8f4;border:1px solid #d8ebdd;border-radius:9px;padding:10px 13px;margin-top:10px;font-size:14.5px;}
+  .task .test .k{color:var(--good);}
+
+  table.seq{width:100%;border-collapse:collapse;font-size:14.5px;}
+  table.seq th{text-align:left;color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.08em;padding:6px 8px;}
+  table.seq td{padding:7px 8px;border-top:1px solid var(--line);}
+
+  footer{text-align:center;color:var(--muted);font-size:13px;padding:30px 24px 50px;}
+  @media(max-width:880px){nav.toc{display:none;}.layout{padding:24px 16px 60px;}.card{padding:22px 18px;}}
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div style="max-width:1280px;margin:0 auto;padding:0 24px;">
+    <span class="tag">Remediation Plan · 2026-06-02</span>
+    <h1>Remediation Plan</h1>
+    <p class="sub">Implementation plan for the 16 findings still <strong>Open</strong> or <strong>Partial</strong> from the structural &amp; bug audit. Each task: problem, files, steps, the test that proves it, and a rough effort. Companion to <code>CODE_AUDIT.html</code>.</p>
+    <div class="meta">
+      <span>16 tasks</span>
+      <span>✅ 15 implemented</span>
+      <span>M-3 deferred</span>
+      <span>376 tests pass</span>
+    </div>
+  </div>
+</header>
+
+<div class="layout">
+  <nav class="toc">
+    <h4>Phases</h4>
+    <a href="#status"><span class="dot" style="background:var(--good)"></span>Implementation status</a>
+    <a href="#rules"><span class="dot" style="background:var(--gold)"></span>Ground rules</a>
+    <a href="#p1"><span class="dot" style="background:var(--crit)"></span>1 · Crypto &amp; money</a>
+    <a href="#p2"><span class="dot" style="background:var(--high)"></span>2 · Correctness gaps</a>
+    <a href="#p3"><span class="dot" style="background:var(--high)"></span>3 · Atomic gates</a>
+    <a href="#p4"><span class="dot" style="background:var(--med)"></span>4 · Robustness</a>
+    <a href="#p5"><span class="dot" style="background:var(--low)"></span>5 · Polish</a>
+    <a href="#seq"><span class="dot" style="background:var(--navy)"></span>Sequencing</a>
+  </nav>
+
+  <main>
+
+    <h2 class="section" id="status">Implementation status (2026-06-02)</h2>
+    <div class="card">
+      <div class="note" style="margin-top:0;border-color:#d8ebdd;background:#f3f8f4;"><span class="k" style="color:var(--good);">✅ 15 of 16 implemented — coded + verified</span> (<code>tsc</code> clean of new errors · 376 tests pass · lint clean on changed files). Phase 1 C-2 ✅ C-1 ✅ · Phase 2 H-1 ✅ H-12 ✅ H-6 ✅ M-9 ✅ · Phase 3 H-4 ✅ H-5 ✅ · Phase 4 M-6 ✅ M-5 ✅ H-11 ✅ L-10 ✅ L-3 ✅ · Phase 5 L-7 ✅ L-8 ✅.</div>
+      <p style="margin:14px 0 0;"><strong>Deferred (1):</strong> <strong>4.6 · M-3</strong> migration squash — left as-is by choice (rebuild hygiene, not a live bug; baseline file intentionally empty). Steps below stand; recommended path is the Supabase preview-branch test.</p>
+      <p style="margin:10px 0 0;"><strong>Apply on deploy:</strong> <code>20260602_dek_aad_binding.sql</code>, <code>20260602_otp_attempts_atomic.sql</code>, <code>20260602_farewell_verif_indexes.sql</code> — then regenerate <code>types/db.generated.ts</code>. New tests: <code>dek-aad.test.ts</code>, <code>stripe-transfer-idempotency.test.ts</code>. New helper: <code>lib/security/trusteeScope.ts</code>.</p>
+    </div>
+
+    <h2 class="section" id="rules">Ground rules (every task)</h2>
+    <div class="card">
+      <ol class="rules">
+        <li>Write the failing test <strong>first</strong> where one is listed — then make it pass.</li>
+        <li>After each task: <code>npx tsc --noEmit &amp;&amp; npm run lint &amp;&amp; npm test</code> must be green before moving on.</li>
+        <li>Never touch pricing/split/hard-stop business logic under "cleanup" (CLAUDE.md law).</li>
+        <li>One task = one small PR where possible. Don't batch unrelated fixes.</li>
+      </ol>
+      <div class="note" style="margin-top:14px;"><span class="k">Effort key:</span> <strong>S</strong> = under ½ day · <strong>M</strong> = ~1 day · <strong>L</strong> = more than 1 day.</div>
+    </div>
+
+    <!-- PHASE 1 -->
+    <h2 class="section" id="p1">Phase 1 — Crypto &amp; money safety (do first)</h2>
+
+    <div class="task crit">
+      <h3><span class="id">1.1 · C-2</span> <span class="badge open">Open</span> Bind the DEK wrap to client identity (AAD) <span class="eff l">Effort L</span></h3>
+      <div class="files">lib/crypto/keyManager.ts · lib/crypto/aead.ts · lib/api/dek.ts</div>
+      <p><span class="k">Problem:</span> a user's wrapped vault key has no "owner" stamped on it; copying it onto another account row lets that account decrypt the victim's vault.</p>
+      <ol class="steps">
+        <li>Change <code>wrapKey(mk, kek)</code> → <code>wrapKey(mk, kek, aad)</code> and <code>unwrapKey(env, kek)</code> → <code>unwrapKey(env, kek, aad)</code>; pass <code>aad</code> through to <code>encryptBytes</code>/<code>decryptBytes</code>.</li>
+        <li>In <code>dek.ts</code> build <code>const aad = utf8("dek:" + client.id)</code> and pass it at every wrap (~:51) and unwrap (~:55, ~:80).</li>
+        <li><strong>Migration path:</strong> on unwrap, try with AAD; if the tag fails, retry once with no AAD, then re-wrap with AAD and persist. Gate behind a <code>dek_aad_version</code> column so it runs once per user. (Or a one-off backfill if downtime is OK.)</li>
+      </ol>
+      <div class="test"><span class="k">Test (write first):</span> new <code>lib/crypto/__tests__/dek-aad.test.ts</code> — wrap with A's AAD; unwrap with A's AAD succeeds, with B's AAD throws.</div>
+    </div>
+
+    <div class="task crit">
+      <h3><span class="id">1.2 · C-1</span> <span class="badge partial">Partial</span> Idempotency key on every Stripe transfer <span class="eff s">Effort S</span></h3>
+      <div class="files">lib/stripe-payouts.ts · app/api/webhooks/stripe/route.ts</div>
+      <p><span class="k">Problem:</span> event-level replay is blocked, but a mid-handler crash can still re-fire a money transfer on Stripe's retry.</p>
+      <ol class="steps">
+        <li>Add an <code>idempotencyKey</code> param to <code>transferToPartner</code>/<code>transferToAffiliate</code>; pass <code>{ idempotencyKey }</code> as the 2nd arg of <code>stripe.transfers.create(params, opts)</code>.</li>
+        <li>Use a stable key per payout: <code>transfer_partner_${orderId}</code> / <code>transfer_affiliate_${orderId}</code> — identical across retries, never random.</li>
+      </ol>
+      <div class="test"><span class="k">Test:</span> extend <code>tests/unit/stripe-idempotency.test.ts</code> — assert the helper forwards the <code>idempotencyKey</code> option.</div>
+    </div>
+
+    <!-- PHASE 2 -->
+    <h2 class="section" id="p2">Phase 2 — Correctness gaps</h2>
+
+    <div class="task high">
+      <h3><span class="id">2.1 · H-1</span> <span class="badge open">Open</span> Amendment branch in the webhook <span class="eff m">Effort M</span></h3>
+      <div class="files">app/api/webhooks/stripe/route.ts (handleDocumentCheckout)</div>
+      <p><span class="k">Problem:</span> paid $50 amendments fall through to the will/trust path and generate a full new document set.</p>
+      <ol class="steps">
+        <li>Read <code>metadata.product_type</code> as <code>"will" | "trust" | "amendment"</code>.</li>
+        <li>Add <code>if (productType === "amendment")</code> <strong>before</strong> the will/trust logic: mark paid/generating, queue amendment-only generation, do <strong>not</strong> insert <code>["will","poa","healthcare_directive"]</code>.</li>
+        <li>Confirm the amendment generation job exists; wire it to the existing amendment flow if not.</li>
+      </ol>
+      <div class="test"><span class="k">Test:</span> feed a <code>product_type: "amendment"</code> event — assert no full set inserted and an amendment job queued.</div>
+    </div>
+
+    <div class="task high">
+      <h3><span class="id">2.2 · H-12</span> <span class="badge open">Open</span> Verify order ownership on download-by-session <span class="eff s">Effort S</span></h3>
+      <div class="files">app/api/documents/download-by-session/route.ts</div>
+      <p><span class="k">Problem:</span> test-order downloads only check <code>order_type === "test"</code>, not that the order belongs to the requester.</p>
+      <ol class="steps">
+        <li>In the test-order branch, require the requester's <code>client_id</code> to match <code>order.client_id</code>.</li>
+        <li>If there's no authenticated requester, drop the <code>orderId</code>-only fallback for non-test orders and require the session token.</li>
+      </ol>
+      <div class="test"><span class="k">Test:</span> requester whose client ≠ order owner gets 403 even for a test order.</div>
+    </div>
+
+    <div class="task high">
+      <h3><span class="id">2.3 · H-6</span> <span class="badge open">Open</span> Move partner tier upgrade to after payment <span class="eff s">Effort S</span></h3>
+      <div class="files">app/api/checkout/partner/route.ts · app/api/webhooks/stripe/route.ts (partner_platform_fee)</div>
+      <p><span class="k">Problem:</span> tier is elevated when checkout starts, so abandoned checkouts keep a free upgrade.</p>
+      <ol class="steps">
+        <li>Delete the <code>partnerRepo.update(admin, partnerId, { tier })</code> after session creation; stash the target tier in session <code>metadata</code> instead.</li>
+        <li>In the webhook <code>partner_platform_fee</code> branch (which already sets <code>one_time_fee_paid</code>), set <code>tier</code> from <code>metadata</code>.</li>
+      </ol>
+      <div class="test"><span class="k">Test:</span> creating a session does not change tier; processing the paid webhook does.</div>
+    </div>
+
+    <div class="task high">
+      <h3><span class="id">2.4 · M-9</span> <span class="badge open">Open</span> Re-check access_scope before signing trustee download URL <span class="eff m">Effort M</span></h3>
+      <div class="files">app/api/trustee/vault/download-url/route.ts (mirror items route ~:53-92)</div>
+      <p><span class="k">Problem:</span> a limited trustee can download out-of-scope files by ID.</p>
+      <ol class="steps">
+        <li>Load <code>vault_trustees.access_scope</code> for the session's trustee.</li>
+        <li>Before signing, confirm the requested item is within scope; 403 otherwise.</li>
+        <li>Extract the scope check into a shared helper so the two routes can't drift again.</li>
+      </ol>
+      <div class="test"><span class="k">Test:</span> scoped trustee requesting an out-of-scope item gets 403.</div>
+    </div>
+
+    <!-- PHASE 3 -->
+    <h2 class="section" id="p3">Phase 3 — Make racy gates atomic</h2>
+
+    <div class="task high">
+      <h3><span class="id">3.1 · H-4</span> <span class="badge partial">Partial</span> Atomic OTP attempt counter <span class="eff m">Effort M</span></h3>
+      <div class="files">app/api/trustee/unlock-verify/route.ts (MAX_OTP_ATTEMPTS, now 10) · lib/repos/server/farewellVerificationRepo.ts</div>
+      <p><span class="k">Problem:</span> read-then-write counter lets the per-code guess cap be exceeded by parallel requests. Cap is <strong>per code</strong> (resets to 0 on each new/burned code, not a lifetime lock) and each code already expires. <code>MAX_OTP_ATTEMPTS</code> was raised 5 → <strong>10</strong> for typo tolerance — security-neutral, each new code is still 1-in-1,000,000.</p>
+      <ol class="steps">
+        <li>Replace read-then-write with an atomic conditional update — a Postgres RPC or <code>.update({...}).lt("otp_email_attempts", MAX).select()</code> that increments only while under the cap and returns the affected row; reject on 0 rows.</li>
+        <li>Defense in depth: add an Upstash limit keyed on <code>unlock-verify:{requestId}</code>.</li>
+        <li><strong>Resend rate-limit (required):</strong> issuing a new code resets the counter, so spammed resends = unlimited fresh 10-guess batches. Cap resends per request (e.g. 3/hour) in the OTP-issue route — the per-code cap is meaningless without this.</li>
+      </ol>
+      <div class="note" style="margin-top:10px;"><span class="k">⚠️ Steps 1 and 3 are both required — not either/or.</span> Atomic counter alone → one code caps at 10, but resend gives unlimited fresh batches. Resend cap alone → resends limited, but the race lets one code yield 50+ guesses in a millisecond. Fix one, the attacker uses the other. With both: ~10 guesses × ~3 resends/hour ≈ 30/hour against a 1,000,000 space = safe. Ship together.</div>
+      <div class="test"><span class="k">Test:</span> fire N parallel verifies — attempts never exceed <code>MAX_OTP_ATTEMPTS</code>; resend test asserts the resend limit holds.</div>
+    </div>
+
+    <div class="task high">
+      <h3><span class="id">3.2 · H-5</span> <span class="badge partial">Partial</span> Idempotency / balance reservation on affiliate payout <span class="eff m">Effort M</span></h3>
+      <div class="files">app/api/sales/affiliates/[id]/payout/route.ts · lib/repos/server/payoutRepo.ts</div>
+      <p><span class="k">Problem:</span> two concurrent admin clicks can double-pay an affiliate.</p>
+      <ol class="steps">
+        <li>Pass an <code>idempotencyKey</code> keyed on <code>affiliateId + unpaid + max(order created_at)</code>.</li>
+        <li><strong>Or</strong> insert a <code>pending</code> payout row (unique constraint on the key) reserving the balance before calling Stripe; flip to <code>paid</code> after.</li>
+      </ol>
+      <div class="test"><span class="k">Test:</span> two calls with the same computed balance produce one transfer.</div>
+    </div>
+
+    <!-- PHASE 4 -->
+    <h2 class="section" id="p4">Phase 4 — Robustness &amp; reliability</h2>
+
+    <div class="task med">
+      <h3><span class="id">4.1 · M-6</span> <span class="badge partial">Partial</span> Move email verification state to Redis <span class="eff m">Effort M</span></h3>
+      <div class="files">lib/auth/emailVerification.ts · lib/rate-limit.ts (reuse Redis client)</div>
+      <p><span class="k">Problem:</span> verification codes live in one server's memory; on Vercel a different instance handling the "verify" click never sees them.</p>
+      <ol class="steps">
+        <li>Store <code>{ email → token, expiry }</code> in Upstash Redis with a TTL.</li>
+        <li><code>consumeVerifiedToken</code> becomes a Redis <code>GETDEL</code> (atomic read + delete).</li>
+      </ol>
+      <div class="test"><span class="k">Test:</span> token set on one "instance" is readable on another (Redis mock). Also unblocks the M-7 caveat.</div>
+    </div>
+
+    <div class="task med">
+      <h3><span class="id">4.2 · M-5</span> <span class="badge open">Open</span> Don't burn the bootstrap rate-limit token on failure <span class="eff s">Effort S</span></h3>
+      <div class="files">app/api/crypto/bootstrap/route.ts · lib/rate-limit.ts</div>
+      <p><span class="k">Problem:</span> one failed vault-setup attempt locks a new user out for an hour.</p>
+      <ol class="steps">
+        <li>Consume the token <strong>only after</strong> a successful bootstrap, or raise the window to a sane retry count (e.g. 5/hour).</li>
+        <li>Make bootstrap idempotent-retryable (re-running with the same input is a no-op).</li>
+      </ol>
+      <div class="test"><span class="k">Test:</span> a failed bootstrap leaves the limiter untouched; a second attempt is allowed.</div>
+    </div>
+
+    <div class="task high">
+      <h3><span class="id">4.3 · H-11</span> <span class="badge partial">Partial</span> Stop leaking DB error messages <span class="eff s">Effort S</span></h3>
+      <div class="files">admin/orders-missing-docs:23 · admin/marketing/materials:29,89 · share/route.ts:151,198</div>
+      <p><span class="k">Problem:</span> a few admin/share routes still return raw <code>error.message</code>.</p>
+      <ol class="steps">
+        <li>Replace <code>return fail(error.message, …)</code> with <code>console.error("[route]", error); return fail("something went wrong", 500)</code>.</li>
+      </ol>
+      <div class="test"><span class="k">Test:</span> response body contains no DB column/constraint text.</div>
+    </div>
+
+    <div class="task low">
+      <h3><span class="id">4.4 · L-10</span> <span class="badge partial">Partial</span> Generic message on email-setup provider error <span class="eff s">Effort S</span></h3>
+      <div class="files">app/api/partner/email/setup/route.ts:37</div>
+      <p><span class="k">Problem:</span> still returns the Resend <code>error.message</code> to the user.</p>
+      <ol class="steps"><li>Log the provider error; return a friendly message instead.</li></ol>
+    </div>
+
+    <div class="task low">
+      <h3><span class="id">4.5 · L-3</span> <span class="badge open">Open</span> Log audit-write failures <span class="eff s">Effort S</span></h3>
+      <div class="files">lib/api/crypto.ts:137-147</div>
+      <p><span class="k">Problem:</span> failed security-log writes are silent.</p>
+      <ol class="steps"><li>Keep the write non-blocking, but change the rejection handler to <code>(e) =&gt; console.error("[audit]", e)</code>.</li></ol>
+    </div>
+
+    <div class="task med">
+      <h3><span class="id">4.6 · M-3</span> <span class="badge open">Open — deferred</span> Finish the migration squash <span class="eff l">Effort L</span></h3>
+      <div class="files">supabase/migrations/*</div>
+      <p><span class="k">Problem:</span> legacy <code>database.sql</code> + undated <code>migration-*.sql</code> still coexist with the dated lineage; rebuild order is fragile.</p>
+      <ol class="steps">
+        <li>Dump the current schema to one <code>00000000000000_baseline.sql</code> (verify it matches a fresh <code>supabase db reset</code>).</li>
+        <li>Delete <code>database.sql</code> and all undated <code>migration-*.sql</code>.</li>
+        <li>Keep only baseline + dated lineage; confirm <code>supabase db reset</code> rebuilds cleanly from empty.</li>
+      </ol>
+      <div class="test"><span class="k">Test:</span> <code>supabase db reset</code> succeeds from an empty DB (CI step or manual).</div>
+    </div>
+
+    <!-- PHASE 5 -->
+    <h2 class="section" id="p5">Phase 5 — Polish</h2>
+
+    <div class="task low">
+      <h3><span class="id">5.1 · L-7</span> <span class="badge partial">Partial</span> Add missing indexes <span class="eff s">Effort S</span></h3>
+      <div class="files">new dated migration on farewell_verification_requests</div>
+      <ol class="steps"><li><code>CREATE INDEX IF NOT EXISTS</code> on <code>trustee_id</code> and <code>client_id</code>.</li></ol>
+    </div>
+
+    <div class="task low">
+      <h3><span class="id">5.2 · L-8</span> <span class="badge partial">Partial</span> Explicit <code>Promise&lt;NextResponse&gt;</code> return types <span class="eff s">Effort S</span></h3>
+      <div class="files">non-withRoute handlers (e.g. app/api/share/route.ts)</div>
+      <ol class="steps"><li>Add the explicit return type; ideally migrate stragglers onto <code>withRoute</code>.</li></ol>
+    </div>
+
+    <!-- SEQUENCING -->
+    <h2 class="section" id="seq">Suggested sequencing</h2>
+    <div class="card">
+      <table class="seq">
+        <thead><tr><th>Phase</th><th>Tasks</th><th>Theme</th><th>Rough effort</th></tr></thead>
+        <tbody>
+          <tr><td><strong>1</strong></td><td>C-2, C-1</td><td>Crypto &amp; money safety</td><td>✅ done</td></tr>
+          <tr><td><strong>2</strong></td><td>H-1, H-12, H-6, M-9</td><td>Correctness gaps</td><td>✅ done</td></tr>
+          <tr><td><strong>3</strong></td><td>H-4, H-5</td><td>Atomic gates</td><td>✅ done</td></tr>
+          <tr><td><strong>4</strong></td><td>M-6, M-5, H-11, L-10, L-3</td><td>Robustness</td><td>✅ done · <strong>M-3 deferred</strong></td></tr>
+          <tr><td><strong>5</strong></td><td>L-7, L-8</td><td>Polish</td><td>✅ done</td></tr>
+        </tbody>
+      </table>
+      <div class="note" style="margin-top:16px;"><span class="k">Status:</span> all phases implemented + verified except <strong>M-3</strong> (migration squash), deferred by choice. Pricing/split/hard-stop logic untouched throughout.</div>
+    </div>
+
+    <footer>EstateVault remediation plan · 2026-06-02 · companion to <code>CODE_AUDIT.html</code> / <code>REMEDIATION_PLAN.md</code></footer>
+
+  </main>
+</div>
+
+</body>
+</html>

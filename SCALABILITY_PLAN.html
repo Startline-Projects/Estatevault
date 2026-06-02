@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EstateVault — Scalability Fix Plan</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --navy:#1C3557; --gold:#C9A84C; --charcoal:#2D2D2D; --white:#fff;
+    --bg:#f4f6f9; --line:#e3e8f0; --good:#1f8a5b; --warn:#c98a1e; --bad:#c0392b; --muted:#5f6b7c;
+  }
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{margin:0;font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--charcoal);line-height:1.65;font-size:16px;}
+  a{color:var(--navy);}
+  code{font-family:'JetBrains Mono',ui-monospace,monospace;font-size:.86em;background:#eef1f6;color:#324;padding:1px 6px;border-radius:5px;border:1px solid #e0e5ee;word-break:break-word;}
+  pre{background:var(--navy);color:#e8edf4;padding:14px 18px;border-radius:10px;overflow-x:auto;font-size:13px;line-height:1.5;font-family:'JetBrains Mono',monospace;}
+  pre code{background:none;color:inherit;border:none;padding:0;}
+  header.hero{background:linear-gradient(135deg,var(--navy) 0%,#13243d 100%);color:#fff;padding:46px 0 50px;border-bottom:4px solid var(--gold);}
+  .hero .tag{display:inline-block;letter-spacing:.18em;text-transform:uppercase;font-size:12px;font-weight:600;color:#e7d49a;margin-bottom:12px;}
+  .hero h1{margin:0;font-size:36px;font-weight:800;line-height:1.1;}
+  .hero p.sub{margin:14px 0 0;font-size:17px;color:#cdd6e4;max-width:780px;}
+  .hero .meta{margin-top:22px;display:flex;flex-wrap:wrap;gap:10px;}
+  .hero .meta span{background:rgba(255,255,255,.08);border:1px solid rgba(201,168,76,.35);padding:6px 14px;border-radius:999px;font-size:13px;color:#e7ecf4;}
+  .layout{display:flex;gap:34px;max-width:1240px;margin:0 auto;padding:34px 24px 80px;}
+  main{flex:1;min-width:0;}
+  nav.toc{width:240px;flex-shrink:0;position:sticky;top:24px;align-self:flex-start;max-height:calc(100vh - 48px);overflow-y:auto;background:#fff;border:1px solid var(--line);border-radius:14px;padding:18px 16px;font-size:14px;}
+  nav.toc h4{margin:0 0 10px;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);}
+  nav.toc a{display:block;padding:5px 8px;border-radius:7px;color:var(--charcoal);text-decoration:none;}
+  nav.toc a:hover{background:var(--bg);}
+  nav.toc a .dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:7px;vertical-align:middle;}
+  h2.section{font-size:13px;letter-spacing:.16em;text-transform:uppercase;color:var(--navy);margin:36px 0 16px;display:flex;align-items:center;gap:10px;}
+  h2.section::after{content:"";flex:1;height:1px;background:var(--line);}
+  .card{background:#fff;border:1px solid var(--line);border-radius:16px;padding:24px 28px;margin-bottom:20px;box-shadow:0 1px 2px rgba(20,40,70,.04);}
+  table{width:100%;border-collapse:collapse;font-size:14.5px;}
+  th{text-align:left;color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.06em;padding:6px 8px;}
+  td{padding:8px;border-top:1px solid var(--line);vertical-align:top;}
+  .item{border:1px solid var(--line);border-radius:14px;padding:20px 22px;margin-bottom:16px;border-left:6px solid var(--muted);background:#fff;}
+  .item.quick{border-left-color:var(--good);}
+  .item.medium{border-left-color:var(--warn);}
+  .item.big{border-left-color:var(--bad);}
+  .item h3{margin:0 0 4px;font-size:18px;color:var(--navy);display:flex;gap:10px;align-items:baseline;flex-wrap:wrap;}
+  .num{font-family:'JetBrains Mono',monospace;background:#eef1f6;border:1px solid #e0e5ee;border-radius:6px;padding:1px 9px;font-size:14px;font-weight:600;}
+  .chip{font-size:10.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:3px 9px;border-radius:999px;color:#fff;margin-left:auto;}
+  .chip.quick{background:var(--good);} .chip.medium{background:var(--warn);} .chip.big{background:var(--bad);}
+  .k{font-weight:700;color:var(--charcoal);}
+  .lbl{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:14px 0 4px;}
+  .item ul{margin:6px 0;padding-left:20px;} .item li{margin:6px 0;font-size:14.5px;}
+  .note{background:#fffaf0;border:1px solid #e7d49a;border-radius:11px;padding:14px 18px;font-size:14.5px;}
+  .note .k{color:var(--warn);}
+  .bottom{background:#eef2f8;border:1px solid var(--line);border-left:6px solid var(--navy);border-radius:12px;padding:18px 22px;font-size:15px;}
+  footer{text-align:center;color:var(--muted);font-size:13px;padding:30px 24px 50px;}
+  @media(max-width:880px){nav.toc{display:none;}.layout{padding:24px 16px 60px;}}
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div style="max-width:1240px;margin:0 auto;padding:0 24px;">
+    <span class="tag">Scalability · Fix Plan · 2026-06-02</span>
+    <h1>Scalability Fix Plan</h1>
+    <p class="sub">A plain-English plan to finish the <strong>unfinished</strong> and <strong>partly-done</strong> items from the Scalability &amp; API Duplication Audit. The "✅ Done" items (admin client, pricing, types, serverless state) are left out — they're finished.</p>
+    <div class="meta">
+      <span>5 items</span>
+      <span>✅ B7 · B5 done</span>
+      <span>🟡 B4 · B3 mostly done</span>
+      <span>B2 only remaining</span>
+    </div>
+  </div>
+</header>
+
+<div class="layout">
+  <nav class="toc">
+    <h4>Plan</h4>
+    <a href="#how"><span class="dot" style="background:var(--gold)"></span>How to read this</a>
+    <a href="#table"><span class="dot" style="background:var(--navy)"></span>The 5 items</a>
+    <a href="#b7"><span class="dot" style="background:var(--good)"></span>1 · B7 app URL</a>
+    <a href="#b4"><span class="dot" style="background:var(--good)"></span>2 · B4 login check</a>
+    <a href="#b3"><span class="dot" style="background:var(--warn)"></span>3 · B3 email</a>
+    <a href="#b5"><span class="dot" style="background:var(--bad)"></span>4 · B5 API helper</a>
+    <a href="#b2"><span class="dot" style="background:var(--bad)"></span>5 · B2 screens→DB</a>
+    <a href="#order"><span class="dot" style="background:var(--navy)"></span>Order &amp; timeline</a>
+  </nav>
+
+  <main>
+
+    <h2 class="section" id="how">How to read this</h2>
+    <div class="card">
+      <ul style="margin:0;padding-left:20px;line-height:1.8;font-size:14.5px">
+        <li>Each item: <span class="k">what it is</span> · <span class="k">why it matters</span> · <span class="k">how to do it</span> · <span class="k">effort</span> · <span class="k">risk</span>.</li>
+        <li>Effort: <strong>Quick</strong> (an afternoon) · <strong>Medium</strong> (a few days) · <strong>Big</strong> (phased over weeks).</li>
+        <li>Do them in order — quick wins first, the big architecture job last.</li>
+        <li>After every change, run the gate: <code>npx tsc --noEmit &amp;&amp; npm run lint &amp;&amp; npm test</code>. Never touch pricing/split/hard-stop logic.</li>
+      </ul>
+    </div>
+
+    <h2 class="section" id="table">The 5 items, simplest first</h2>
+    <div class="card">
+      <table>
+        <thead><tr><th>Order</th><th>Item</th><th>What</th><th>Effort</th><th>Status today</th></tr></thead>
+        <tbody>
+          <tr><td><strong>1</strong></td><td>B7</td><td>One name for the app's URL</td><td>Quick</td><td>✅ Done — getAppUrl(), 13 usages</td></tr>
+          <tr><td><strong>2</strong></td><td>B4</td><td>Finish the shared login check</td><td>Quick</td><td>🟡 Mostly — 49 routes; ~10 left (intentional)</td></tr>
+          <tr><td><strong>3</strong></td><td>B3</td><td>Send all email through one place</td><td>Medium</td><td>🟡 Client done (28→1); from/branding left</td></tr>
+          <tr><td><strong>4</strong></td><td>B5</td><td>One shared "call the API" helper</td><td>Medium</td><td>✅ Done — api-client on ~50 screens</td></tr>
+          <tr><td><strong>5</strong></td><td>B2</td><td>Stop screens talking to the DB directly</td><td>Big</td><td>⛔ 53 files — the only one left</td></tr>
+        </tbody>
+      </table>
+      <div class="note" style="margin:14px 0 0;border-color:#d8ebdd;background:#f3f8f4;"><span class="k" style="color:var(--good);">Progress 2026-06-02:</span> B7 fully done; B4 advanced — 14 routes migrated (subscription ×3, client/mark-executed, 6 vault, stripe/connect ×2, email/partner-activated, affiliate/onboarding). Verified: tsc clean of new errors, 376 tests pass, lint clean. The ~10 B4 routes left are <strong>intentional</strong> (checkout userId-match, marketing PDFs, auth/welcome user-metadata). B3 + B2/B5 remain — they need live email / browser testing.</div>
+      <p style="margin:14px 0 0;font-size:14.5px">Items <strong>4 and 5 are best done together</strong>, area by area.</p>
+    </div>
+
+    <!-- B7 -->
+    <h2 class="section" id="b7">1 · B7 — Give the app's URL a single name</h2>
+    <div class="item quick">
+      <h3>B7 <span class="num">~12 files</span> <span class="chip quick">Quick · low risk</span></h3>
+      <p><span class="k">What it is.</span> The app's own web address is read from an environment variable, but the code uses <strong>three different names</strong>: <code>NEXT_PUBLIC_SITE_URL</code>, <code>NEXT_PUBLIC_APP_URL</code>, <code>NEXT_PUBLIC_BASE_URL</code>.</p>
+      <p><span class="k">Why it matters.</span> Not just messy — a real bug. A password-reset or verify link can be built from the <strong>wrong domain</strong> depending on which file runs, so a user could get a link that points nowhere.</p>
+      <div class="lbl">How to do it</div>
+      <ol class="steps" style="font-size:14.5px;line-height:1.7">
+        <li>Make one tiny helper <code>lib/config/appUrl.ts</code>:</li>
+      </ol>
+      <pre><code>export function getAppUrl(): string {
+  return (
+    process.env.NEXT_PUBLIC_SITE_URL ||
+    process.env.NEXT_PUBLIC_APP_URL ||
+    process.env.NEXT_PUBLIC_BASE_URL ||
+    "https://www.estatevault.us"
+  );
+}</code></pre>
+      <ul>
+        <li>Find every use: <code>grep -rn "NEXT_PUBLIC_SITE_URL\|NEXT_PUBLIC_APP_URL\|NEXT_PUBLIC_BASE_URL" app lib</code> (~12 files).</li>
+        <li>Replace each with <code>getAppUrl()</code>.</li>
+        <li>In <code>.env.example</code>, keep only <code>NEXT_PUBLIC_SITE_URL</code>; delete the other two.</li>
+      </ul>
+    </div>
+
+    <!-- B4 -->
+    <h2 class="section" id="b4">2 · B4 — Finish the shared login/permission check</h2>
+    <div class="item quick">
+      <h3>B4 <span class="num">7 → 35 routes</span> <span class="chip quick">Quick · low risk</span></h3>
+      <p><span class="k">What it is.</span> Routes that need a logged-in user used to each write their own "is this person allowed?" code. The shared helper <code>requireAuth()</code> now does this — <strong>35 routes use it</strong> — but a handful still hand-roll the check.</p>
+      <p><span class="k">Why it matters.</span> When the rule changes (add a role, an audit log, a lockout), you want to edit <strong>one</strong> place, not chase leftovers. Hand-rolled checks also return inconsistent error messages that confuse the frontend.</p>
+      <div class="lbl">How to do it</div>
+      <ul>
+        <li>List the stragglers: <code>grep -rln "auth.getUser()" app/api</code>, minus the ones already on <code>requireAuth</code>.</li>
+        <li>Replace the manual <code>getUser()</code> + <code>profiles.user_type</code> lookup with <code>const auth = await requireAuth(["partner","admin"], req); if ("error" in auth) return auth.error;</code></li>
+        <li>Use <code>auth.admin</code> / <code>auth.user</code> / <code>auth.profile</code> from the helper instead of re-creating them.</li>
+        <li>Make sure the route is wrapped in <code>withRoute(...)</code> like its neighbors.</li>
+      </ul>
+    </div>
+
+    <!-- B3 -->
+    <h2 class="section" id="b3">3 · B3 — Send all email through one place</h2>
+    <div class="item medium">
+      <h3>B3 <span class="num">28 → 1 init</span> <span class="chip medium">Step 1 done · branding left</span></h3>
+      <div class="note" style="margin:0 0 10px;border-color:#d8ebdd;background:#f3f8f4;"><span class="k" style="color:var(--good);">✅ Step 1 done (2026-06-02):</span> all 15 inline <code>new Resend(...)</code> replaced with the shared <code>getResend()</code> from <code>lib/email.ts</code> (28 → 1 client init). Verified green. <strong>Remaining:</strong> the from-address + branded-template step below — lower value, needs live email testing (it changes retry/error behavior).</div>
+      <p><span class="k">What it was.</span> <strong>15 routes</strong> created their own email client (<code>new Resend(...)</code>) and sent directly, instead of going through the shared <code>lib/email.ts</code>.</p>
+      <p><span class="k">Why it matters.</span> Change the sender domain or branding and today you edit ~15 files. <code>lib/email.ts</code> already has branded templates — the routes just bypass it.</p>
+      <div class="lbl">How to do it</div>
+      <ul>
+        <li>Find them: <code>grep -rln "new Resend(" app/api</code>.</li>
+        <li>For each email type, add/reuse a function in <code>lib/email.ts</code> (e.g. <code>sendPartnerWelcomeEmail({...})</code>).</li>
+        <li>Replace the inline <code>resend.emails.send(...)</code> with a call to that function; remove the inline <code>new Resend(...)</code> and hardcoded from-address.</li>
+        <li>Send a test of each email type (Resend test mode) before shipping.</li>
+      </ul>
+    </div>
+
+    <!-- B5 -->
+    <h2 class="section" id="b5">4 · B5 — One shared "call the API" helper</h2>
+    <div class="item quick">
+      <h3>B5 <span class="num">~50 screens on api-client</span> <span class="chip quick">✅ Done (verified)</span></h3>
+      <div class="note" style="margin:0 0 10px;border-color:#d8ebdd;background:#f3f8f4;"><span class="k" style="color:var(--good);">✅ Done (verified 2026-06-02):</span> already resolved by the Jun-2 refactor. The typed <code>lib/api-client/</code> layer (11 modules over <code>authedFetch</code>) is imported by ~50 screens; <strong>0 raw internal <code>/api/</code> fetches</strong> remain. The audit's "2 files use authedFetch" counted only direct calls — the wrappers route through it, so token-refresh reaches every screen. No code change needed; detail kept for reference.</div>
+      <p><span class="k">What it was.</span> Screens made ~122 raw <code>fetch("/api/...")</code> calls. The wrapper that <strong>refreshes an expired login and retries</strong> (<code>lib/api/authedFetch.ts</code>) was used in just <strong>2 files</strong>. Typed wrappers live in <code>lib/api-client/</code>.</p>
+      <p><span class="k">Why it matters.</span> With raw <code>fetch</code>, a user whose token quietly expired gets a <strong>random logout or silent failure</strong> instead of a smooth refresh-and-retry. No shared loading/error handling either, so every screen reinvents it.</p>
+      <div class="lbl">How to do it</div>
+      <ul>
+        <li>Standardise on <code>lib/api-client/*</code> typed wrappers (preferred — they add types too) built on <code>authedFetch</code>.</li>
+        <li>Per feature area, add small client functions, e.g. <code>lib/api-client/partners.ts</code> → <code>listPartners()</code>, <code>createPartner(...)</code>.</li>
+        <li>Replace the screen's raw <code>fetch("/api/partners")</code> with <code>listPartners()</code>.</li>
+        <li><strong>Do this alongside item 5 (B2)</strong> — when a screen gets an API route, give it a client function at the same time.</li>
+      </ul>
+    </div>
+
+    <!-- B2 -->
+    <h2 class="section" id="b2">5 · B2 — Stop screens talking to the database directly ⭐</h2>
+    <div class="item big">
+      <h3>B2 <span class="num">53 files</span> <span class="chip big">Big · phased · the main job</span></h3>
+      <p><span class="k">What it is.</span> <strong>53 UI screens</strong> run database queries (<code>supabase.from(...).select/insert/update</code>) <strong>inside the screen itself</strong> — no API route in between. The only thing protecting the data is row-level security (RLS).</p>
+      <p><span class="k">Why it matters.</span></p>
+      <ul>
+        <li>Business rules live inside screens — no single place to add logging, caching, validation, rate-limiting.</li>
+        <li>A second frontend (mobile app) couldn't reuse any of it — full rewrite.</li>
+        <li>One weak RLS policy = <strong>direct data exposure</strong> with no server-side backstop.</li>
+      </ul>
+      <div class="lbl">How to do it — phase it, NOT all 53 at once</div>
+      <p style="font-size:14.5px;margin:4px 0">For each screen, the same three layers (copy how the vault feature already does it):</p>
+      <ol style="font-size:14.5px;line-height:1.7">
+        <li><strong>Repo</strong> — put the query in <code>lib/repos/server/&lt;thing&gt;Repo.ts</code>.</li>
+        <li><strong>API route</strong> — add <code>app/api/&lt;thing&gt;/route.ts</code>: <code>requireAuth</code> → validate (Zod) → call repo → <code>ok(...)</code>.</li>
+        <li><strong>Client + screen</strong> — add a <code>lib/api-client/</code> function (this is B5), then change the screen to call it instead of touching <code>supabase</code>.</li>
+      </ol>
+      <div class="lbl">Suggested phases (one area per PR)</div>
+      <ul>
+        <li><strong>Phase A — <code>app/pro/*</code></strong> (biggest cluster: dashboard, clients, revenue, 11 onboarding steps). Highest payoff.</li>
+        <li><strong>Phase B — <code>app/sales/*</code> + <code>app/pro/sales/*</code></strong> (pipeline, partners, commission).</li>
+        <li><strong>Phase C — dashboard / attorney / checkout-success screens.</strong></li>
+        <li><strong>Phase D — the <code>components/*</code> that query the DB</strong> (DocumentActions, PackageStatusCard, …).</li>
+      </ul>
+      <div class="lbl">Per-phase checklist</div>
+      <ul>
+        <li>Move each query into a repo function.</li>
+        <li>Wrap it in an API route with <code>requireAuth</code> + Zod.</li>
+        <li>Add a client function; switch the screen to it.</li>
+        <li>Screen no longer imports the browser <code>supabase</code> client for data.</li>
+        <li><code>tsc + lint + test</code> green; click through the screen in the browser.</li>
+      </ul>
+    </div>
+
+    <!-- ORDER -->
+    <h2 class="section" id="order">Suggested order &amp; rough timeline</h2>
+    <div class="card">
+      <ol style="font-size:15px;line-height:1.8;padding-left:20px">
+        <li><strong>Week 1 (quick wins):</strong> B7 (app URL) → finish B4 (login check) → start B3 (email).</li>
+        <li><strong>Week 2:</strong> finish B3 → set up the <code>lib/api-client/</code> standard for B5.</li>
+        <li><strong>Weeks 3+:</strong> B2 phase by phase (A → B → C → D), bringing B5 client functions along with each phase.</li>
+      </ol>
+      <div class="bottom" style="margin-top:14px;">Quick wins (B7, B4, B3) are safe and give a fast, visible structural win. <strong>B2 + B5 is the real project</strong> — one area at a time, verifying each in the browser before moving on. None of these are live bugs today; they're scale &amp; security hardening.</div>
+      <div class="note" style="margin-top:14px;"><span class="k">Never under "cleanup":</span> don't change the fixed prices, the revenue-split math, or the hard-stop rules (special-needs dependent, irrevocable trust). Those are business law in <code>CLAUDE.md</code>.</div>
+    </div>
+
+    <footer>EstateVault · Scalability Fix Plan · 2026-06-02 · companion to <code>SCALABILITY_AUDIT.html</code> / <code>SCALABILITY_PLAN.md</code></footer>
+
+  </main>
+</div>
+
+</body>
+</html>

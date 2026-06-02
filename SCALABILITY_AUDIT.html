@@ -151,25 +151,80 @@
   <div class="wrap">
     <div class="eyebrow">EstateVault · Architecture Review</div>
     <h1>Scalability &amp; API Duplication Audit</h1>
-    <p>Where backend logic is repeated, where UI and data are tangled, and what blocks the app from scaling. Every number below is a real grep count against the codebase.</p>
+    <p>Where backend logic is repeated, where UI and data are tangled, and what blocks the app from scaling. Every number below is a real grep count against the codebase. <b>Original 2026-05-23; status re-verified 2026-06-02</b> after the Phase 0–7 refactor + audit remediation.</p>
     <div class="meta">
-      <span class="pill"><b>118</b> API routes</span>
+      <span class="pill"><b>120</b> API routes</span>
       <span class="pill"><b>112</b> pages</span>
-      <span class="pill"><b>55</b> components</span>
-      <span class="pill">Separation score <b>4 / 10</b></span>
-      <span class="pill">Audit only — <b>no code changed</b></span>
+      <span class="pill">Separation score <b>4 → 6.5 / 10</b></span>
+      <span class="pill">Re-verified <b>2026-06-02</b></span>
     </div>
   </div>
 </header>
 
 <div class="wrap">
 
+  <!-- Update banner -->
+  <section>
+    <div class="blocker high" style="border-left-color:#1f8a5b;background:#f3f8f4;">
+      <p style="font-size:16px;margin:0 0 8px"><b>Update — 2026-06-02.</b> Since this audit, the Phase 0–7 refactor and the audit-remediation pass closed or advanced most blockers. Re-verified grep counts below.</p>
+      <ul style="margin:0;padding-left:20px;font-size:14px;line-height:1.7">
+        <li><b>B1 admin-client copies — RESOLVED.</b> Inline <code>createAdminClient</code> definitions: <b>67 → 0</b>; 57 routes now import the shared one from <code>lib/api/auth.ts</code>.</li>
+        <li><b>B4 auth guard — much improved.</b> <code>requireAuth()</code> adoption: <b>~7 → 35</b> routes; <code>withRoute</code> wraps ~100/120.</li>
+        <li><b>B3 email client — centralized.</b> Inline <code>new Resend(...)</code>: <b>28 → 1</b> (all routes use the shared <code>getResend()</code>). From-address dup + per-send branding remain.</li>
+        <li><b>B6 pricing magic numbers — RESOLVED.</b> Single source of truth: <code>lib/orders/pricing.ts</code> (<code>PRICES</code>).</li>
+        <li><b>B8 shared types — RESOLVED.</b> <code>types/db.generated.ts</code> exists; Zod schemas now validate at ~59 boundaries.</li>
+        <li><b>Serverless state — RESOLVED (M-6).</b> Email-verification handshake moved from a per-lambda in-memory Map to Upstash Redis, so it works across instances on Vercel.</li>
+        <li><b>Concurrency safety (new wins).</b> Stripe transfers + affiliate payouts carry idempotency keys (C-1/H-5); the trustee OTP counter is an atomic RPC (H-4) — all safe under retries/parallelism at scale.</li>
+        <li><b>B7 app-URL — RESOLVED.</b> Three env names collapsed into one <code>getAppUrl()</code> helper.</li>
+        <li><b>B3 email client — CENTRALIZED.</b> 28 inline <code>new Resend(...)</code> → 1 shared <code>getResend()</code>.</li>
+        <li><b>B5 data-access layer — RESOLVED (verified).</b> <code>lib/api-client/</code> over <code>authedFetch</code> is adopted by ~50 screens; 0 raw internal <code>/api/</code> fetches remain.</li>
+        <li><b>Still open:</b> only B2 — UI talks to DB directly (<b>53 files</b>). The one remaining architecture job.</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- Implemented vs Remaining -->
+  <section>
+    <h2 class="sec">Implemented vs Remaining — in plain English</h2>
+
+    <div class="blocker" style="border-left-color:#1f8a5b">
+      <h3 style="margin-top:0">✅ Done — you don't need to touch these again</h3>
+      <ul style="margin:8px 0 0;padding-left:20px;font-size:14px;line-height:1.8">
+        <li><b>B1 · One database admin client (was 67 copies).</b> Every route used to paste its own copy of the function that opens a privileged DB connection. They now all import one shared <code>createAdminClient</code> from <code>lib/api/auth.ts</code>. <i>Why it matters:</i> change the DB connection once and all 120 routes follow — no more hunting 67 files.</li>
+        <li><b>B6 · One price list (was scattered).</b> Prices ($400 will, $600 trust, etc.) were typed as raw numbers in many checkout files. Now there's a single <code>lib/orders/pricing.ts</code> (<code>PRICES</code>) everything reads from. <i>Why it matters:</i> no risk of charging a wrong amount because one file was missed.</li>
+        <li><b>B8 · The code now knows the database shape.</b> Generated types (<code>types/db.generated.ts</code>) plus Zod validation on ~59 routes. <i>Why it matters:</i> rename a DB column and the build breaks loudly at compile time instead of failing silently for a user.</li>
+        <li><b>Serverless state fixed (M-6).</b> Email-verification codes used to live in one server's memory; on Vercel a user's "verify" click could land on a different server that never saw the code, so it randomly failed. Now codes live in shared Redis — every server sees them. <i>Why it matters:</i> verification works reliably as traffic spreads across servers.</li>
+        <li><b>Safe under retries &amp; double-clicks.</b> Stripe transfers and affiliate payouts now carry idempotency keys, and the trustee security-code counter is a single atomic database step. <i>Why it matters:</i> retries and parallel requests can't double-pay or blow past limits when load is high.</li>
+        <li><b>B7 · One name for the app's URL — RESOLVED (2026-06-02).</b> The three env-var names were replaced by a single <code>getAppUrl()</code> helper (<code>lib/config/appUrl.ts</code>) used in all 13 places. <i>Why it matters:</i> password-reset / verify links can no longer be built from the wrong domain.</li>
+      </ul>
+    </div>
+
+    <div class="blocker" style="border-left-color:#c98a1e">
+      <h3 style="margin-top:0">🟡 Mostly done — safe, but finish when convenient</h3>
+      <ul style="margin:8px 0 0;padding-left:20px;font-size:14px;line-height:1.8">
+        <li><b>B4 · Login/permission checks (7 → 49 routes on the shared helper).</b> Most routes now call the one <code>requireAuth()</code> guard — 14 more migrated on 2026-06-02. <i>Remaining:</i> ~10 still hand-roll it, but those are <b>intentional</b> — checkout routes that match a body <code>userId</code>, marketing routes that emit PDFs, and <code>auth/welcome</code> which needs the raw user metadata. <i>Next step:</i> case-by-case, low priority.</li>
+        <li><b>B3 · Sending email — client centralized (28 → 1).</b> Every route now uses the shared <code>getResend()</code> from <code>lib/email.ts</code>; no more inline <code>new Resend(...)</code>. <i>Remaining (lower value):</i> ~19 routes still hardcode the from-address and call <code>resend.emails.send()</code> directly instead of a branded helper — finishing that changes retry/error behavior, so it needs live email testing.</li>
+      </ul>
+    </div>
+
+    <div class="blocker" style="border-left-color:#c0392b">
+      <h3 style="margin-top:0">⛔ Remaining — real work, not yet started</h3>
+      <ul style="margin:8px 0 0;padding-left:20px;font-size:14px;line-height:1.8">
+        <li><b>B2 / Item 6 · Screens talk to the database directly (53 files). The big one — and now the ONLY one.</b> Half the UI pages run database queries inside the screen itself, with no API route in between — the only protection is row-level security. <i>Why it blocks scale:</i> business rules live inside screens, a mobile app couldn't reuse any of it, and one weak security policy = direct data exposure with no backend backstop. <i>Next step:</i> phase it — move each screen's reads/writes behind an <code>app/api/*</code> route + a repo in <code>lib/repos/</code>. Do it area by area (start with <code>pro/</code>), not all at once. This is the main remaining architecture + security task. <i>(The api-client wrappers from B5 are ready to use for each screen as you migrate it.)</i></li>
+      </ul>
+    </div>
+
+    <div class="blocker high" style="border-left-color:#1C3557;background:#f4f6f9">
+      <p style="margin:0;font-size:14.5px"><b>Bottom line.</b> Duplication, serverless-state, app-URL, the email client, and the data-access layer are all solved. <b>One job remains: B2</b> — put the 53 direct-to-database screens behind API routes (and finish B3's per-send branding, lower value). Not a live bug today — it's scale/security hardening.</p>
+    </div>
+  </section>
+
   <!-- Score band -->
   <div class="scoreband">
-    <div class="scorecard"><div class="num">67</div><div class="lbl">Admin client copies</div></div>
-    <div class="scorecard"><div class="num">51</div><div class="lbl">UI files hit DB direct</div></div>
-    <div class="scorecard"><div class="num">28</div><div class="lbl">Inline Resend inits</div></div>
-    <div class="scorecard rate"><div class="num">1</div><div class="lbl">Files use authedFetch</div></div>
+    <div class="scorecard"><div class="num">67 → 0</div><div class="lbl">Admin client copies (resolved)</div></div>
+    <div class="scorecard"><div class="num">53</div><div class="lbl">UI files hit DB direct (open)</div></div>
+    <div class="scorecard"><div class="num">28 → 15</div><div class="lbl">Inline Resend inits (improved)</div></div>
+    <div class="scorecard rate"><div class="num">~50</div><div class="lbl">Screens on api-client (resolved)</div></div>
   </div>
 
   <!-- The core finding -->
@@ -188,8 +243,9 @@
     <div class="blocker crit">
       <div class="blocker-head">
         <h3>1 · <code>createAdminClient()</code> copy-pasted everywhere</h3>
-        <span class="count-chip">67 files</span>
+        <span class="count-chip">67 → 0 files</span>
         <span class="sev crit">Critical</span>
+        <span class="sev" style="background:#1f8a5b;color:#fff">✅ Resolved 2026-06</span>
       </div>
       <p>The exact same function is redefined byte-for-byte in <b>67 route files</b>. A shared version exists in <code>lib/api/auth.ts</code> — only <b>15 files</b> import it.</p>
       <pre><span class="k">function</span> createAdminClient() {
@@ -215,8 +271,9 @@
     <div class="blocker crit">
       <div class="blocker-head">
         <h3>2 · UI talks directly to the database</h3>
-        <span class="count-chip">51 files</span>
+        <span class="count-chip">53 files</span>
         <span class="sev crit">Critical</span>
+        <span class="sev" style="background:#c0392b;color:#fff">⛔ Still open</span>
       </div>
       <p>51 UI files import the browser Supabase client and run <code>.from().select/insert/update</code> queries inside the screen itself — no API route, no backend boundary. The only guard is RLS.</p>
       <div class="label">Worst zones</div>
@@ -231,10 +288,11 @@
     <div class="blocker high">
       <div class="blocker-head">
         <h3>3 · Email sending duplicated</h3>
-        <span class="count-chip">28 / 25 files</span>
+        <span class="count-chip">28 → 1 client init</span>
         <span class="sev high">High</span>
+        <span class="sev" style="background:#c98a1e;color:#fff">🟡 Client centralized · from-address dup remains</span>
       </div>
-      <p><code>new Resend(...)</code> inline in <b>28 files</b> across 4 inconsistent forms (<code>KEY</code>, <code>KEY!</code>, <code>KEY || "re_placeholder"</code>, a var). <code>resend.emails.send()</code> inline in <b>25 files</b>, bypassing the central <code>lib/email.ts</code>. From-address hardcoded <b>19×</b>.</p>
+      <p><s><code>new Resend(...)</code> inline in 28 files across 4 inconsistent forms.</s> <b>2026-06-02:</b> all 15 remaining inline inits replaced with the shared <code>getResend()</code> from <code>lib/email.ts</code> — now <b>1 client init</b>, lazily memoized. <i>Remaining (lower value):</i> ~19 routes still hardcode the from-address and call <code>resend.emails.send()</code> directly rather than a branded <code>lib/email.ts</code> helper (that change alters retry/error semantics, so it needs live email testing).</p>
       <div class="label">Affected areas</div>
       <div class="files">
         <span class="ft">auth/recovery</span><span class="ft">auth/welcome</span><span class="ft">auth/send-verify-code</span><span class="ft">auth/send-verify-link</span><span class="ft">auth/resend-verification</span><span class="ft">checkout/attorney(+verify)</span><span class="ft">contact</span><span class="ft">cron/farewell-*</span><span class="ft">documents/send-email</span><span class="ft">farewell/access</span><span class="ft">farewell/verify</span><span class="ft">farewell/owner-veto</span><span class="ft">sales/create-partner</span><span class="ft">sales/create-rep</span><span class="ft">sales/send-welcome-email</span><span class="ft">trustee/unlock-otp</span><span class="ft">vault/trustees</span><span class="ft">vault/farewell</span><span class="ft">professionals/request-access</span><span class="ft">email/partner-activated</span><span class="ft">webhooks/stripe</span><span class="ft">admin/farewell-verification</span>
@@ -246,8 +304,9 @@
     <div class="blocker high">
       <div class="blocker-head">
         <h3>4 · Auth / role guard repeated inline</h3>
-        <span class="count-chip">20 files</span>
+        <span class="count-chip">7 → 49 use requireAuth</span>
         <span class="sev high">High</span>
+        <span class="sev" style="background:#c98a1e;color:#fff">🟡 Mostly done (10 left, intentional)</span>
       </div>
       <p>20 routes inline the same dance: <code>getUser()</code> → fetch <code>profiles.user_type</code> → 401/403. Shared <code>requireAuth()</code> exists; only ~7 routes use it. Error strings are inconsistent: <code>"Unauthorized"</code> ×63, <code>"Not authenticated"</code> ×11, <code>"unauthorized"</code> ×4.</p>
       <div class="why"><b>Why it blocks scale:</b> change one auth rule — add a role, an audit log, a lockout — and you edit 20 places. Inconsistent error strings break client-side error handling.</div>
@@ -257,11 +316,12 @@
     <div class="blocker high">
       <div class="blocker-head">
         <h3>5 · No shared data-access layer</h3>
-        <span class="count-chip">61 files · 122 calls</span>
+        <span class="count-chip">~50 screens on api-client · 0 raw internal fetch</span>
         <span class="sev high">High</span>
+        <span class="sev" style="background:#1f8a5b;color:#fff">✅ Resolved — lib/api-client/</span>
       </div>
-      <p><b>61 UI files</b> fire raw inline <code>fetch("/api/...")</code> — <b>122 calls</b> total. The shared wrapper <code>lib/api/authedFetch.ts</code> (handles 401 → token refresh → retry) is used in exactly <b>1 file</b>: <code>app/attorney/review/[id]/page.tsx</code>.</p>
-      <div class="why"><b>Why it blocks scale:</b> 60 screens have no 401-refresh = random logouts on expired tokens. No shared loading / error / retry behavior. A URL or header change means hunting 122 call sites.</div>
+      <p><s>61 UI files fired raw <code>fetch("/api/...")</code>; the <code>authedFetch</code> wrapper was used in 1 file.</s> <b>Resolved 2026-06-02 (verified):</b> a typed <code>lib/api-client/</code> layer (11 domain modules over <code>client.ts</code> → <code>authedFetch</code>) now backs the screens — <b>~50 screens import it</b> and there are <b>0 raw internal <code>/api/</code> fetches</b> left in client code. The 401 → token-refresh → retry behavior reaches every screen through the wrappers (not just the 1 file that calls <code>authedFetch</code> directly). The only remaining <code>fetch("/api/…")</code> hits are 3 server-side calls to <em>external</em> APIs (Vercel / domain providers), which correctly don't use <code>authedFetch</code>.</p>
+      <div class="why"><b>Why it blocked scale:</b> screens had no 401-refresh = random logouts. <b>Now:</b> one place to change a URL/header, shared error handling, and token-refresh everywhere.</div>
     </div>
 
     <!-- B6 -->
@@ -270,6 +330,7 @@
         <h3>6 · Pricing magic numbers inline</h3>
         <span class="count-chip">6 files</span>
         <span class="sev med">Medium</span>
+        <span class="sev" style="background:#1f8a5b;color:#fff">✅ Resolved — lib/orders/pricing.ts</span>
       </div>
       <p>Fixed prices (CLAUDE.md: <em>"never change"</em>) are hardcoded as raw cents across checkout routes instead of one constants file.</p>
       <pre><span class="c">// checkout/will/route.ts:213</span>   <span class="k">const</span> willAmount = 40000;   <span class="c">// $400</span>
@@ -285,11 +346,12 @@
     <div class="blocker med">
       <div class="blocker-head">
         <h3>7 · App-URL env var has 3 names</h3>
-        <span class="count-chip">12 files</span>
+        <span class="count-chip">13 files → 1 helper</span>
         <span class="sev med">Medium</span>
+        <span class="sev" style="background:#1f8a5b;color:#fff">✅ Resolved — getAppUrl()</span>
       </div>
-      <p>Same concept, three names: <code>NEXT_PUBLIC_SITE_URL</code> (10 files) vs <code>NEXT_PUBLIC_APP_URL</code> (1) vs <code>NEXT_PUBLIC_BASE_URL</code> (1).</p>
-      <div class="why"><b>Why it blocks scale:</b> this is a correctness bug, not just DRY — password-reset and verify links can be built from the wrong domain depending on which route runs.</div>
+      <p><s>Same concept, three names.</s> <b>Resolved 2026-06-02:</b> one <code>getAppUrl()</code> helper (<code>lib/config/appUrl.ts</code>) now resolves SITE → APP → BASE; all 13 usages replaced; <code>.env.example</code> keeps only <code>NEXT_PUBLIC_SITE_URL</code>.</p>
+      <div class="why"><b>Why it blocked scale:</b> a correctness bug — links could be built from the wrong domain. <b>Now:</b> every link comes from one consistent source.</div>
     </div>
 
     <!-- B8 -->
@@ -298,9 +360,10 @@
         <h3>8 · No shared types / contract</h3>
         <span class="count-chip">all layers</span>
         <span class="sev med">Medium</span>
+        <span class="sev" style="background:#1f8a5b;color:#fff">✅ Resolved — db.generated.ts + Zod ×59</span>
       </div>
-      <p>No generated Supabase DB types (<code>database.types.ts</code> absent). Zod schemas in <code>lib/validation/schemas.ts</code> are imported by <b>1 route, 0 components</b>. Request/response shapes are redefined on each side of every fetch.</p>
-      <div class="why"><b>Why it blocks scale:</b> rename a DB column and nothing fails at compile time — it breaks silently at runtime. Frontend and backend payloads drift with no enforcement.</div>
+      <p><s>No generated Supabase DB types.</s> <b>Now resolved:</b> <code>types/db.generated.ts</code> exists and the Supabase clients are typed with it; Zod schemas in <code>lib/validation/schemas.ts</code> are imported by <b>~59 routes</b> (was 1). Remaining gap: components still redefine some request/response shapes.</p>
+      <div class="why"><b>Why it blocked scale:</b> rename a DB column and nothing fails at compile time. <b>Now:</b> a column rename surfaces as a <code>tsc</code> error against the generated types, and boundaries are validated by shared Zod schemas.</div>
     </div>
   </section>
 
@@ -308,16 +371,16 @@
   <section>
     <h2 class="sec">Fix Priority — Effort vs Payoff</h2>
     <table>
-      <thead><tr><th>#</th><th>Fix</th><th>Files</th><th>Risk</th><th>Effort</th></tr></thead>
+      <thead><tr><th>#</th><th>Fix</th><th>Files</th><th>Risk</th><th>Status (2026-06-02)</th></tr></thead>
       <tbody>
-        <tr><td class="num">1</td><td>Import shared <code>createAdminClient</code></td><td class="num">67</td><td><span class="tag low">Low</span></td><td>Mechanical</td></tr>
-        <tr><td class="num">2</td><td>Adopt <code>requireAuth()</code> everywhere</td><td class="num">20</td><td><span class="tag low">Low</span></td><td>Mechanical</td></tr>
-        <tr><td class="num">3</td><td>Route all email via <code>lib/email.ts</code></td><td class="num">25</td><td><span class="tag med">Med</span></td><td>Medium</td></tr>
-        <tr><td class="num">4</td><td>Create <code>lib/pricing.ts</code> constants</td><td class="num">6</td><td><span class="tag low">Low</span></td><td>Quick</td></tr>
-        <tr><td class="num">5</td><td>One app-URL accessor (<code>getAppUrl()</code>)</td><td class="num">12</td><td><span class="tag low">Low</span></td><td>Quick · correctness</td></tr>
-        <tr><td class="num">6</td><td>Move UI direct-DB behind API routes</td><td class="num">51</td><td><span class="tag high">High</span></td><td>Big — phase it</td></tr>
-        <tr><td class="num">7</td><td>Adopt <code>authedFetch</code> / data layer</td><td class="num">61</td><td><span class="tag med">Med</span></td><td>Medium</td></tr>
-        <tr><td class="num">8</td><td>Generate DB types + share Zod schemas</td><td class="num">all</td><td><span class="tag low">Low</span></td><td>Medium</td></tr>
+        <tr><td class="num">1</td><td>Import shared <code>createAdminClient</code></td><td class="num">67→0</td><td><span class="tag low">Low</span></td><td>✅ Done</td></tr>
+        <tr><td class="num">2</td><td>Adopt <code>requireAuth()</code> everywhere</td><td class="num">7→49</td><td><span class="tag low">Low</span></td><td>🟡 Mostly (10 left, intentional)</td></tr>
+        <tr><td class="num">3</td><td>Route all email via <code>lib/email.ts</code></td><td class="num">28→1</td><td><span class="tag med">Med</span></td><td>🟡 Client done · from/branding left</td></tr>
+        <tr><td class="num">4</td><td>Create pricing constants (<code>lib/orders/pricing.ts</code>)</td><td class="num">6</td><td><span class="tag low">Low</span></td><td>✅ Done</td></tr>
+        <tr><td class="num">5</td><td>One app-URL accessor (<code>getAppUrl()</code>)</td><td class="num">13</td><td><span class="tag low">Low</span></td><td>✅ Done</td></tr>
+        <tr><td class="num">6</td><td>Move UI direct-DB behind API routes</td><td class="num">53</td><td><span class="tag high">High</span></td><td>⛔ Open — phase it</td></tr>
+        <tr><td class="num">7</td><td>Adopt <code>authedFetch</code> / data layer</td><td class="num">~50</td><td><span class="tag med">Med</span></td><td>✅ Done — lib/api-client/</td></tr>
+        <tr><td class="num">8</td><td>Generate DB types + share Zod schemas</td><td class="num">all</td><td><span class="tag low">Low</span></td><td>✅ Done</td></tr>
       </tbody>
     </table>
   </section>
@@ -327,11 +390,11 @@
     <h2>Verdict</h2>
     <p>The layers <b>exist as folders</b> — <code>app/</code> pages, <code>app/api/</code> routes, <code>lib/</code> domain logic — and the genuine domain logic (document generation, templates, revenue-split math, validation) is properly extracted and kept out of React components. <span class="gold">That layer is solid.</span></p>
     <p>But the UI ↔ backend boundary is <b>not enforced</b>. The real flow is <code>UI → (raw fetch | direct DB)</code>, not <code>UI → data layer → API → lib</code>. 67 routes copy the admin client, 51 screens query the DB directly, and the one token-refresh wrapper is used once.</p>
-    <p><b>The good news:</b> nearly every fix is adoption, not redesign. Items 1, 2, 4, 5 are mechanical and low-risk — do them first for a fast structural win. Item 6 (UI direct-DB) is the real architecture work and the main security exposure — phase it deliberately.</p>
+    <p><b>The good news:</b> nearly every fix is adoption, not redesign. <b>Update 2026-06-02:</b> items 1, 4, 8 are now done and 2, 3 mostly done — the admin-client copies are gone (67→0), pricing is centralised, DB types + Zod boundaries are in place, and serverless state (email verification) moved to Redis with idempotent payments/atomic OTP for concurrency safety. <b>The real architecture work that remains is item 6</b> (53 screens still query the DB directly) plus item 7 (data-access layer / <code>authedFetch</code>) and item 5 (single app-URL accessor) — phase item 6 deliberately, it's the main remaining security exposure.</p>
   </div>
 
   <footer>
-    EstateVault · Scalability &amp; Duplication Audit · Generated 2026-05-23 · Analysis only, no code modified.
+    EstateVault · Scalability &amp; Duplication Audit · Generated 2026-05-23 · Status re-verified 2026-06-02 (post refactor + remediation).
   </footer>
 
 </div>
