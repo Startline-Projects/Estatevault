@@ -1,15 +1,13 @@
-import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
-import { createAdminClient } from "@/lib/api/auth";
+import { NextResponse, type NextRequest } from "next/server";
+import { requireAuth } from "@/lib/api/auth";
 
-export async function GET() {
-  const supabase = createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+export async function GET(req: NextRequest) {
+  const auth = await requireAuth(undefined, req);
+  if ("error" in auth) return auth.error;
+  const admin = auth.admin;
 
-  const admin = createAdminClient();
-  const { data: partner } = await admin.from("partners").select("company_name, product_name, business_url, accent_color").eq("profile_id", user.id).single();
-  const { data: profile } = await admin.from("profiles").select("full_name, email, phone").eq("id", user.id).single();
+  const { data: partner } = await admin.from("partners").select("company_name, product_name, business_url, accent_color").eq("profile_id", auth.user.id).single();
+  const { data: profile } = await admin.from("profiles").select("full_name, email, phone").eq("id", auth.user.id).single();
 
   const c = partner?.company_name || "Your Company";
   const p = partner?.product_name || "Legacy Protection";
@@ -84,7 +82,7 @@ export async function GET() {
 </div>
 </body></html>`;
 
-  await admin.from("audit_log").insert({ actor_id: user.id, action: "marketing.download", metadata: { asset_type: "one_pager" } });
+  await admin.from("audit_log").insert({ actor_id: auth.user.id, action: "marketing.download", metadata: { asset_type: "one_pager" } });
 
   return new NextResponse(html, { headers: { "Content-Type": "text/html", "Content-Disposition": `inline; filename="client-one-pager.html"` } });
 }

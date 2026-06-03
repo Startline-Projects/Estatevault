@@ -1,6 +1,5 @@
-import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
-import { createAdminClient } from "@/lib/api/auth";
+import { NextResponse, type NextRequest } from "next/server";
+import { requireAuth } from "@/lib/api/auth";
 
 const BUCKET = "marketing-materials";
 
@@ -11,16 +10,15 @@ function deriveSlug(businessUrl: string | null | undefined, existingSlug: string
   return null;
 }
 
-export async function GET() {
-  const supabase = createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+export async function GET(req: NextRequest) {
+  const auth = await requireAuth(undefined, req);
+  if ("error" in auth) return auth.error;
+  const admin = auth.admin;
 
-  const admin = createAdminClient();
   const { data: partner } = await admin
     .from("partners")
     .select("marketing_slug, business_url")
-    .eq("profile_id", user.id)
+    .eq("profile_id", auth.user.id)
     .single();
 
   const slug = deriveSlug(partner?.business_url, partner?.marketing_slug);
