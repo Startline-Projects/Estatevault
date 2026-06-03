@@ -3,6 +3,9 @@ import { withRoute } from "@/lib/api/route";
 import { ok, fail } from "@/lib/api/response";
 import { requireAdmin, BUCKET } from "@/lib/marketing/admin-auth";
 import { ALLOWED_MIME, MAX_FILE_BYTES } from "@/lib/marketing/categories";
+import type { Database } from "@/types/db.generated";
+
+type MaterialUpdate = Database["public"]["Tables"]["marketing_materials"]["Update"];
 
 function safeName(name: string) {
   return name.replace(/[^a-zA-Z0-9._-]+/g, "-").replace(/-+/g, "-").toLowerCase();
@@ -13,7 +16,7 @@ export const PATCH = withRoute(async (req: NextRequest, { params }: { params: { 
   if (!auth.ok) return fail(auth.error, auth.status);
 
   const ctype = req.headers.get("content-type") || "";
-  const updates: Record<string, unknown> = {};
+  const updates: MaterialUpdate = {};
   let newFile: File | null = null;
   let newIsGlobal: boolean | undefined;
   let newPartnerSlug: string | null | undefined;

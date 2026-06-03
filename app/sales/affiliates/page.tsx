@@ -1,23 +1,16 @@
 export const dynamic = "force-dynamic";
 
 import { createClient } from "@/lib/supabase/server";
-import { createServerClient } from "@supabase/ssr";
+import { createAdminClient } from "@/lib/api/auth";
 import AffiliateAdminTabs, {
   type RosterRow,
   type OrderRow,
   type PayoutRow,
 } from "@/components/sales/AffiliateAdminTabs";
 
-// Service-role client: the affiliate program tables are admin-readable via RLS,
-// but `orders` has no admin-affiliate policy, so reads must bypass RLS. The
-// page itself is gated to user_type === 'admin' before any data is touched.
-function createAdminClient() {
-  return createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    { cookies: { getAll: () => [], setAll: () => {} } }
-  );
-}
+// Service-role reads (the affiliate program tables / `orders` have no
+// admin-affiliate RLS policy) use the shared admin client. The page itself is
+// gated to user_type === 'admin' before any data is touched.
 
 function fmtDollars(cents: number) {
   return `$${(cents / 100).toLocaleString(undefined, {
@@ -96,7 +89,7 @@ export default async function AffiliateAdminPage() {
       .filter((p) => p.status === "sent")
       .reduce((s, p) => s + (p.amount_cents || 0), 0);
     const coveredCents = theirPayouts
-      .filter((p) => COVERING_PAYOUT_STATUSES.includes(p.status))
+      .filter((p) => !!p.status && COVERING_PAYOUT_STATUSES.includes(p.status))
       .reduce((s, p) => s + (p.amount_cents || 0), 0);
 
     const clicks = a.total_clicks || 0;
@@ -107,8 +100,8 @@ export default async function AffiliateAdminPage() {
       code: a.code,
       full_name: a.full_name,
       email: a.email,
-      status: a.status,
-      created_at: a.created_at,
+      status: a.status ?? "",
+      created_at: a.created_at ?? "",
       stripeReady: !!a.stripe_account_id && !!a.stripe_onboarding_complete,
       clicks,
       conversions,
@@ -124,21 +117,21 @@ export default async function AffiliateAdminPage() {
     product_type: o.product_type,
     amount_total: o.amount_total,
     affiliate_cut: o.affiliate_cut || 0,
-    status: o.status,
-    created_at: o.created_at,
-    affiliate_id: o.affiliate_id,
-    affiliate_name: nameById.get(o.affiliate_id)?.name || "Unknown",
+    status: o.status ?? "",
+    created_at: o.created_at ?? "",
+    affiliate_id: o.affiliate_id ?? "",
+    affiliate_name: nameById.get(o.affiliate_id ?? "")?.name || "Unknown",
   }));
 
   const payoutsEnriched: PayoutRow[] = payoutList.map((p) => ({
     id: p.id,
-    affiliate_id: p.affiliate_id,
-    affiliate_name: nameById.get(p.affiliate_id)?.name || "Unknown",
+    affiliate_id: p.affiliate_id ?? "",
+    affiliate_name: nameById.get(p.affiliate_id ?? "")?.name || "Unknown",
     amount_cents: p.amount_cents,
-    status: p.status,
+    status: p.status ?? "",
     stripe_transfer_id: p.stripe_transfer_id,
     paid_at: p.paid_at,
-    created_at: p.created_at,
+    created_at: p.created_at ?? "",
   }));
 
   // ── Program-wide totals ────────────────────────────────────────────

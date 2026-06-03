@@ -1,16 +1,8 @@
 export const dynamic = "force-dynamic";
 
 import { NextResponse } from "next/server";
-import { createServerClient } from "@supabase/ssr";
+import { createAdminClient } from "@/lib/api/auth";
 import { AFFILIATE_COOKIE, AFFILIATE_COOKIE_MAX_AGE, hashIp } from "@/lib/affiliate";
-
-function createAdminClient() {
-  return createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    { cookies: { getAll: () => [], setAll: () => {} } }
-  );
-}
 
 export async function GET(
   request: Request,

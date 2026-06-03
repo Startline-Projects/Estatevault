@@ -1,17 +1,9 @@
 import { createClient } from "@/lib/supabase/server";
-import { createServerClient } from "@supabase/ssr";
+import { createAdminClient } from "@/lib/api/auth";
 import { redirect } from "next/navigation";
 import { headers } from "next/headers";
 import DashboardShell from "@/components/dashboard/DashboardShell";
 import PasswordChangeBanner from "@/components/dashboard/PasswordChangeBanner";
-
-function createAdminClient() {
-  return createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    { cookies: { getAll: () => [], setAll: () => {} } }
-  );
-}
 
 export default async function DashboardLayout({
   children,

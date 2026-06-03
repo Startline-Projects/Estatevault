@@ -2,17 +2,9 @@ export const dynamic = "force-dynamic";
 
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { createServerClient } from "@supabase/ssr";
+import { createAdminClient } from "@/lib/api/auth";
 import AffiliateStatusToggle from "@/components/sales/AffiliateStatusToggle";
 import AffiliatePayoutButton from "@/components/sales/AffiliatePayoutButton";
-
-function createAdminClient() {
-  return createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    { cookies: { getAll: () => [], setAll: () => {} } }
-  );
-}
 
 function fmtDollars(cents: number) {
   return `$${(cents / 100).toLocaleString(undefined, {
@@ -128,7 +120,7 @@ export default async function AffiliateDetailPage({
     .filter((p) => p.status === "sent")
     .reduce((s, p) => s + (p.amount_cents || 0), 0);
   const coveredCents = payoutList
-    .filter((p) => COVERING_PAYOUT_STATUSES.includes(p.status))
+    .filter((p) => !!p.status && COVERING_PAYOUT_STATUSES.includes(p.status))
     .reduce((s, p) => s + (p.amount_cents || 0), 0);
   const unpaidCents = Math.max(0, earnedCents - coveredCents);
 
@@ -140,7 +132,7 @@ export default async function AffiliateDetailPage({
     !!affiliate.stripe_account_id && !!affiliate.stripe_onboarding_complete;
 
   const sStatus =
-    AFFILIATE_STATUS_STYLES[affiliate.status] || "bg-gray-100 text-gray-500";
+    AFFILIATE_STATUS_STYLES[affiliate.status ?? ""] || "bg-gray-100 text-gray-500";
 
   return (
     <div className="max-w-5xl mx-auto">
@@ -190,7 +182,7 @@ export default async function AffiliateDetailPage({
               <span
                 className={`rounded-full px-2.5 py-0.5 text-xs font-medium capitalize ${sStatus}`}
               >
-                {affiliate.status.replace(/_/g, " ")}
+                {(affiliate.status ?? "").replace(/_/g, " ")}
               </span>
             </div>
             <div className="flex flex-wrap gap-x-6 gap-y-1 text-sm text-gray-500">
@@ -212,7 +204,7 @@ export default async function AffiliateDetailPage({
             />
             <AffiliateStatusToggle
               affiliateId={affiliate.id}
-              status={affiliate.status}
+              status={affiliate.status ?? ""}
             />
           </div>
         </div>
@@ -401,7 +393,7 @@ export default async function AffiliateDetailPage({
                     <td className="px-5 py-3">
                       <span
                         className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium capitalize ${
-                          PAYOUT_STATUS_STYLES[p.status] ||
+                          PAYOUT_STATUS_STYLES[p.status ?? ""] ||
                           "bg-gray-100 text-gray-500"
                         }`}
                       >

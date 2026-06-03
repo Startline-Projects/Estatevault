@@ -2,20 +2,14 @@ export const dynamic = "force-dynamic";
 
 import { headers } from "next/headers";
 import Link from "next/link";
-import { createServerClient } from "@supabase/ssr";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/api/auth";
 import AffiliateLinkCard from "@/components/AffiliateLinkCard";
 import AffiliateOnboardingResume from "@/components/AffiliateOnboardingResume";
 
-// Service-role client: the `orders` table has no RLS policy for affiliates,
-// so reads must bypass RLS. Scoped explicitly to the signed-in affiliate's id.
-function createAdminClient() {
-  return createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    { cookies: { getAll: () => [], setAll: () => {} } }
-  );
-}
+// Service-role reads (the `orders`/affiliate tables have no RLS policy for
+// affiliates) go through the shared admin client, scoped explicitly to the
+// signed-in affiliate's id.
 
 function fmtDollars(cents: number) {
   return `$${(cents / 100).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`;
@@ -26,7 +20,7 @@ const WINDOW_DAYS = 30;
 // Build an ordered list of the last `days` calendar days (oldest → newest),
 // each keyed by YYYY-MM-DD, summing values bucketed onto that day.
 function dailyBuckets(
-  rows: { created_at: string; value?: number }[],
+  rows: { created_at: string | null; value?: number }[],
   days: number
 ): { key: string; label: string; total: number }[] {
   const buckets: { key: string; label: string; total: number }[] = [];
@@ -44,6 +38,7 @@ function dailyBuckets(
     });
   }
   for (const r of rows) {
+    if (!r.created_at) continue;
     const key = new Date(r.created_at).toISOString().slice(0, 10);
     const i = index[key];
     if (i !== undefined) buckets[i].total += r.value ?? 1;
@@ -182,7 +177,7 @@ export default async function AffiliateDashboardPage({
   // admin payout route's covering statuses so the two views never disagree.
   const PAID_STATUSES = ["pending", "processing", "sent", "paid"];
   const paidCents = (payouts ?? [])
-    .filter((p) => PAID_STATUSES.includes(p.status))
+    .filter((p) => !!p.status && PAID_STATUSES.includes(p.status))
     .reduce((sum, p) => sum + (p.amount_cents || 0), 0);
   const pendingCents = Math.max(0, earnedCents - paidCents);
 
@@ -198,7 +193,7 @@ export default async function AffiliateDashboardPage({
     WINDOW_DAYS
   );
   const recentAttributed = (attributedOrders ?? []).filter(
-    (o) => new Date(o.created_at) >= since
+    (o) => !!o.created_at && new Date(o.created_at) >= since
   );
   const conversionSeries = dailyBuckets(
     recentAttributed.map((o) => ({ created_at: o.created_at })),
@@ -291,7 +286,7 @@ export default async function AffiliateDashboardPage({
                         <td className="py-3 px-3 text-right text-charcoal">{fmtDollars(o.amount_total)}</td>
                         <td className="py-3 px-3 text-right font-bold text-gold">{fmtDollars(o.affiliate_cut || 0)}</td>
                         <td className="py-3 px-3 text-charcoal/60 text-xs">
-                          {new Date(o.created_at).toLocaleDateString()}
+                          {o.created_at ? new Date(o.created_at).toLocaleDateString() : "—"}
                         </td>
                       </tr>
                     ))}
@@ -401,7 +396,7 @@ export default async function AffiliateDashboardPage({
                           {p.stripe_transfer_id || "—"}
                         </td>
                         <td className="py-3 px-3 text-charcoal/60 text-xs">
-                          {new Date(p.paid_at || p.created_at).toLocaleDateString()}
+                          {(() => { const d = p.paid_at || p.created_at; return d ? new Date(d).toLocaleDateString() : "—"; })()}
                         </td>
                       </tr>
                     ))}

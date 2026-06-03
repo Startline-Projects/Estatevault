@@ -1,13 +1,8 @@
 import { createClient } from "@/lib/supabase/server";
-import { createServerClient } from "@supabase/ssr";
+import { createAdminClient } from "@/lib/api/auth";
 
-export function createAdminClient() {
-  return createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    { cookies: { getAll: () => [], setAll: () => {} } }
-  );
-}
+// Re-exported so existing marketing callers keep importing it from here.
+export { createAdminClient };
 
 export async function requireAdmin(): Promise<
   | { ok: true; userId: string; admin: ReturnType<typeof createAdminClient> }

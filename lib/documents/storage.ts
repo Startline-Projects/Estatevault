@@ -1,10 +1,6 @@
-import { createServerClient } from "@supabase/ssr";
 import { sealForRecipient } from "./seal";
 import { byteaToBytes } from "@/lib/api/crypto";
-
-function createAdminClient() {
-  return createServerClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, { cookies: { getAll: () => [], setAll: () => {} } });
-}
+import { createAdminClient } from "@/lib/api/auth";
 
 // Hybrid E2EE upload:
 // - If client has pubkey_x25519 (crypto bootstrap done) → seal PDF, upload .bin

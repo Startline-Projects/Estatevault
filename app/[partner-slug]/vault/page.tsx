@@ -1,16 +1,8 @@
-import { createServerClient } from "@supabase/ssr";
+import { createAdminClient } from "@/lib/api/auth";
 import { redirect } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { PRICES, formatPrice } from "@/lib/orders/pricing";
-
-function createAdminClient() {
-  return createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    { cookies: { getAll: () => [], setAll: () => {} } }
-  );
-}
 
 const VAULT_FEATURES = [
   { icon: "📄", title: "Estate Documents", desc: "Store wills, trusts, and legal documents securely." },

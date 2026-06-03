@@ -1,22 +1,7 @@
 import { NextResponse } from "next/server";
 import { getResend } from "@/lib/email";
 import { professionalRequestAccessSchema } from "@/lib/validation/schemas";
-import { createClient } from "@supabase/supabase-js";
-
-/* ------------------------------------------------------------------ */
-/*  Supabase admin client (bypasses RLS)                              */
-/* ------------------------------------------------------------------ */
-
-function getSupabaseAdmin() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-  if (!url || !serviceKey) {
-    throw new Error("Missing Supabase environment variables");
-  }
-
-  return createClient(url, serviceKey);
-}
+import { createAdminClient } from "@/lib/api/auth";
 
 /* ------------------------------------------------------------------ */
 /*  POST /api/professionals/request-access                            */
@@ -42,7 +27,7 @@ export async function POST(request: Request) {
     } = parsed.data;
 
     // Save to Supabase
-    const supabase = getSupabaseAdmin();
+    const supabase = createAdminClient();
 
     const { error: dbError } = await supabase
       .from("professional_leads")
@@ -53,11 +38,13 @@ export async function POST(request: Request) {
         phone: phone || null,
         company_name: companyName || null,
         professional_type: professionalType,
-        client_count: clientCount || null,
+        client_count: clientCount != null ? String(clientCount) : null,
         referral_source: referralSource || null,
         bar_number: bar_number || null,
-        practice_areas: practice_areas || null,
-        desired_review_fee: desired_review_fee || null,
+        practice_areas: Array.isArray(practice_areas)
+          ? practice_areas.join(", ")
+          : practice_areas || null,
+        desired_review_fee: desired_review_fee != null ? String(desired_review_fee) : null,
         status: "new",
       });
 
