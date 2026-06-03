@@ -207,8 +207,8 @@
       </ul>
     </div>
 
-    <div class="blocker" style="border-left-color:#c0392b">
-      <h3 style="margin-top:0">⛔ Remaining — real work, not yet started</h3>
+    <div class="blocker" style="border-left-color:#2e7d4f">
+      <h3 style="margin-top:0">✅ Was the last remaining item — now resolved (2026-06-03)</h3>
       <ul style="margin:8px 0 0;padding-left:20px;font-size:14px;line-height:1.8">
         <li><b>✅ B2 / Item 6 · Screens talk to the database directly — DONE (2026-06-03, commit 9a0d97a).</b> Every browser-side UI screen now goes repo → <code>app/api/*</code> route (<code>requireAuth</code> + Zod) → <code>lib/api-client/*</code> → screen; nothing queries <code>supabase</code> from the browser. ~30+ screens converted across pro/onboarding (steps 1-7 + 3 vault variants), pro/settings, pro/revenue, sales + pro/sales partner-detail twins, sales/commission, client dashboard, and the portal layouts — backed by ~25 new endpoints. <i>Security hardened in the move:</i> promo fee-waiver (<code>one_time_fee_paid</code>) re-validated server-side on both partner-self and sales-rep paths; financial fields excluded from the partner self-update whitelist; logo upload server-side; sales partner-detail ownership via <code>created_by</code> (foreign id → 404). <i>Left by design:</i> <code>pro/layout</code> + <code>dashboard/page</code> — server components on the RLS-scoped server client (admin repos would bypass RLS). Verified: tsc clean, 376 unit, lint clean, e2e anon guards added.</li>
       </ul>
@@ -378,7 +378,7 @@
         <tr><td class="num">3</td><td>Route all email via <code>lib/email.ts</code></td><td class="num">28→1</td><td><span class="tag med">Med</span></td><td>🟡 Client done · from/branding left</td></tr>
         <tr><td class="num">4</td><td>Create pricing constants (<code>lib/orders/pricing.ts</code>)</td><td class="num">6</td><td><span class="tag low">Low</span></td><td>✅ Done</td></tr>
         <tr><td class="num">5</td><td>One app-URL accessor (<code>getAppUrl()</code>)</td><td class="num">13</td><td><span class="tag low">Low</span></td><td>✅ Done</td></tr>
-        <tr><td class="num">6</td><td>Move UI direct-DB behind API routes</td><td class="num">53</td><td><span class="tag high">High</span></td><td>⛔ Open — phase it</td></tr>
+        <tr><td class="num">6</td><td>Move UI direct-DB behind API routes</td><td class="num">0</td><td><span class="tag high">High</span></td><td>✅ Done 2026-06-03 (9a0d97a) — 2 server-side RLS gates left by design</td></tr>
         <tr><td class="num">7</td><td>Adopt <code>authedFetch</code> / data layer</td><td class="num">~50</td><td><span class="tag med">Med</span></td><td>✅ Done — lib/api-client/</td></tr>
         <tr><td class="num">8</td><td>Generate DB types + share Zod schemas</td><td class="num">all</td><td><span class="tag low">Low</span></td><td>✅ Done</td></tr>
       </tbody>
