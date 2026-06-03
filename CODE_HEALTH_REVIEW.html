@@ -176,9 +176,10 @@
       <p><span class="k">Recommended follow-up (not blocking):</span> add event-simulation characterization tests per handler (mock a <code>checkout.session.completed</code> → assert the order/split/documents/payout writes). Cheap now that the handlers are isolated; was impractical as one 805-line function.</p>
     </div>
 
-    <div class="item med">
-      <h3>3.6 · <code>custom_review_fee</code> is partner-editable <span class="sev med">Medium</span></h3>
-      <p>It's in the partner self-update whitelist (<code>partnerSelfUpdateSchema</code>). It's the attorney-partner's own in-house review fee (they keep 100%), so it's arguably theirs to set — but it sits next to the fixed-pricing rule. Decide explicitly: lock it server-side, or document it as intentionally partner-owned.</p>
+    <div class="item good">
+      <h3>3.6 · <code>custom_review_fee</code> reviewed — NOT a pricing violation <span class="sev good">✅ Decided · keep as-is</span></h3>
+      <p>Flagged because a partner-editable review fee looked like it broke the "$300 attorney review, partners can't change it" rule. Tracing <code>lib/attorney-review/routing.ts</code> shows it doesn't: every review is charged the fixed <code>DEFAULT_REVIEW_FEE_CENTS</code> ($300) <b>except</b> when the partner is a law firm reviewing with its <b>own in-house attorney</b> — there the fee is <code>custom_review_fee || $300</code> and that firm keeps 100%. That's the firm pricing its own legal service, not EstateVault's $300 product. The fixed-pricing rule holds.</p>
+      <p><span class="k">Decision (product owner, 2026-06-03):</span> leave as-is — the $300 rule is correct and intact; <code>custom_review_fee</code> is the legitimately separate in-house-attorney fee. The only residual is a minor least-privilege nicety (any partner can write the field, but routing ignores it for non-attorney partners, so no pricing effect). Accepted as harmless.</p>
     </div>
 
     <h2 class="section" id="scale">4 · Is it scalable?</h2>
@@ -208,10 +209,10 @@
         <li>✅ <b>Marketing routes onto <code>requireAuth</code></b> (3.3) — commit <code>e2e4938</code>; the rest left as intentional non-drift.</li>
         <li>✅ <b><code>quizSessionRepo</code> tsc error fixed</b> (3.4) — commit <code>475ef72</code>; <code>tsc --noEmit</code> is now fully green.</li>
         <li>✅ <b><code>webhooks/stripe</code> decomposed</b> (3.5) — commit <code>98368ae</code>; 805 → 156-line router + isolated handlers.</li>
-        <li><b>Decide <code>custom_review_fee</code> policy</b> (3.6) — one-line call: lock server-side or keep partner-editable? <i>Last open item.</i></li>
+        <li>✅ <b><code>custom_review_fee</code> reviewed</b> (3.6) — keep as-is; not a fixed-pricing violation (routing gates it).</li>
         <li>Optional: event-simulation characterization tests for the stripe handlers (3.5 follow-up); settle <code>share</code>'s guard (3.3).</li>
       </ol>
-      <p style="font-size:14px;color:var(--muted);margin-bottom:0">None of these are live bugs today. They're drift-cleanup.</p>
+      <p style="margin:14px 0 0;font-size:15px"><b>All six findings closed.</b> 3.1–3.5 fixed; 3.6 reviewed and accepted as-is. The two optional items are nice-to-haves, not risks.</p>
     </div>
 
     <h2 class="section" id="correction">6 · Correction to prior docs</h2>
