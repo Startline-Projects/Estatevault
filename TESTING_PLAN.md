@@ -174,6 +174,27 @@ The 52 **skipped** are env-gated `test.skip` (Stripe-CLI webhooks, trustee OTP, 
 
 ---
 
+## 5c. Stage 3 — money-path & rule-guard tests (run 2026-06-03)
+
+The Stripe-webhook / attorney-review / trustee-unlock e2e specs were `test.fixme()` **stubs — never written** (that's what the "52 skipped" really were). Stage 3 began filling the highest-value gap. The 3.5 handler extraction made the money logic unit-testable in isolation (mock repos, no Stripe CLI).
+
+**Added 16 tests (378 → 394, all green):**
+
+| File | Proves |
+|---|---|
+| `webhook-amendment-checkout.test.ts` (5) | **H-1** — a paid amendment marks the order generating + pays partner cut but **never creates a document set**; transfer vs pending payout vs no-cut paths |
+| `webhook-document-checkout.test.ts` (6) | correct **doc set per product** (will=3, trust=4), **revenue split** applied from the real `calculateSplit`, connected partner → transfer + `sent` payout / unconnected → `pending` / no partner → none, order `generating` + job queued |
+| `security-rule-guards.test.ts` (5) | **forged partner self-update drops financial flags** (`one_time_fee_paid`, `platform_fee_amount`, `tier`, `partner_revenue_pct`); the **$300 attorney-review invariant (3.6)** — `custom_review_fee` ignored unless the partner is an attorney *with* an in-house reviewer |
+
+**Still open in Stage 3 (documented, not yet written):**
+- **Signed-event route test** — POST a `stripe.webhooks.generateTestHeaderString`-signed `checkout.session.completed` to `/api/webhooks/stripe`; assert order update + **idempotency** (dup event → single row) + **bad signature → 400**. The webhook secret is in `.env.test`, but this writes to the **shared staging DB**, so it's gated like Stage 2 seeding. (Bad-signature 400 is already covered by `api-auth-guards`; transfer idempotency by `stripe-transfer-idempotency` unit.)
+- **Attorney-review + trustee-unlock fixmes** (10 stubs) — need the seeded users + the harness fixes (`/etc/hosts`, ports).
+- **Hard-stop end-to-end** — assert no order/document row on special-needs / irrevocable-trust answers.
+
+**Net after Stage 3:** the core "money is never wrong" rules (splits, doc sets, payouts, the amendment double-generate guard) and the two security invariants (forged flags, fixed $300) are now locked by fast deterministic tests.
+
+---
+
 ## 6. Gaps to add (highest value first)
 1. **Per-handler webhook characterization tests** for `lib/webhooks/stripe/*` (3.5 made this cheap; biggest money-safety win).
 2. **Forged-financial-flag test**: PATCH `partner/me` with `one_time_fee_paid:true` / `platform_fee_amount` → asserted ignored (whitelist), and `apply-promo` with a bad code → not comped.

@@ -67,7 +67,7 @@
     <h1>EstateVault — Testing Plan</h1>
     <p class="sub">Derived from a full-code review (153 API routes, 112 screens, the B2 refactor + the 3.2–3.5 cleanups). Maps every surface area → concrete cases → priority → how it runs in the existing Playwright harness, with the live Stage 0/1/2 results.</p>
     <div class="meta">
-      <span>378 unit · 203 e2e</span>
+      <span>394 unit · 203 e2e</span>
       <span>Stage 1: anon boundary 100% green</span>
       <span>Stage 2: 139 pass · 0 app bugs</span>
     </div>
@@ -111,7 +111,7 @@
       <ul class="clean">
         <li><b>Playwright</b> — <code>playwright.config.ts</code>, <b>203 e2e in 24 specs</b>. Multi-portal projects on <code>*.localhost:3100</code>: <code>app</code> (consumer), <code>pro</code>, <code>sales</code>, <code>admin</code>. Tag a test <code>@pro</code>/<code>@sales</code>/<code>@admin</code> to route it; untagged → consumer.</li>
         <li>Dev server auto-starts (<code>next dev --port 3100</code>) from <code>.env.test</code>. Auth helper <code>loginAs()</code> + <code>adminClient()</code>; fixtures one user per role.</li>
-        <li><b>Vitest</b> unit suite — <b>378 tests</b> (split math, crypto, idempotency, Zod boundaries, phase0 security guards).</li>
+        <li><b>Vitest</b> unit suite — <b>394 tests</b> (incl. 16 Stage-3 money-path + rule-guard tests) (split math, crypto, idempotency, Zod boundaries, phase0 security guards).</li>
       </ul>
       <div class="note" style="margin-top:6px"><span class="k">⚠ Environment caveat:</span> <code>.env.test</code> and <code>.env.local</code> point at the <b>same Supabase project</b> — a shared DB. Reset/seed scripts hard-guard to only touch <code>@estatevault.test</code> users and require <code>TEST_ALLOW_SHARED_DB=1</code>. Non-destructive tests run with no seeding; authenticated tests need seeding first (deliberate).</div>
     </div>
@@ -194,7 +194,7 @@
 
     <div class="card">
       <div class="pillrow">
-        <div class="pill good"><div class="n">378</div><div class="l">unit pass</div></div>
+        <div class="pill good"><div class="n">394</div><div class="l">unit pass</div></div>
         <div class="pill good"><div class="n">139</div><div class="l">e2e pass (auth)</div></div>
         <div class="pill bad"><div class="n">11</div><div class="l">e2e fail (0 app bugs)</div></div>
         <div class="pill warn"><div class="n">1</div><div class="l">flaky</div></div>
@@ -205,7 +205,7 @@
       <table>
         <thead><tr><th>Suite</th><th class="c">Result</th></tr></thead>
         <tbody>
-          <tr><td>Unit (<code>npm test</code>)</td><td class="c"><span class="tag ok">378 pass</span></td></tr>
+          <tr><td>Unit (<code>npm test</code>)</td><td class="c"><span class="tag ok">394 pass</span></td></tr>
           <tr><td>B2 API guards — every endpoint rejects anonymous (33)</td><td class="c"><span class="tag ok">33 pass</span></td></tr>
           <tr><td>api-auth-guards + public smoke</td><td class="c"><span class="tag ok">23 pass</span></td></tr>
         </tbody>
@@ -234,12 +234,26 @@
           <li>Heavy flows — bump <code>timeout</code> for <code>quiz-flow</code>/<code>e2ee-smoke</code>, or run against <code>next build &amp;&amp; next start</code> (no cold compiles).</li>
         </ul>
       </div>
+
+      <h3 class="sub">Stage 3 — money-path &amp; rule-guard tests <span class="tag ok">+16 · all green</span></h3>
+      <p style="font-size:14.5px">The Stripe-webhook / attorney / trustee e2e specs were <code>test.fixme()</code> <b>stubs — never written</b> (that's what the "52 skipped" really were). The 3.5 handler extraction made the money logic unit-testable in isolation (mock repos, no Stripe CLI). <b>Added 16 tests, 378 → 394:</b></p>
+      <table>
+        <thead><tr><th>File</th><th>Proves</th></tr></thead>
+        <tbody>
+          <tr><td><code>webhook-amendment-checkout</code> (5)</td><td><b>H-1</b> — a paid amendment marks the order generating + pays partner cut but <b>never creates a document set</b>; transfer / pending / no-cut paths</td></tr>
+          <tr><td><code>webhook-document-checkout</code> (6)</td><td>correct <b>doc set per product</b> (will=3, trust=4); <b>revenue split</b> from the real <code>calculateSplit</code>; connected → transfer + <code>sent</code> payout / unconnected → <code>pending</code> / none; order <code>generating</code> + job queued</td></tr>
+          <tr><td><code>security-rule-guards</code> (5)</td><td><b>forged self-update drops financial flags</b> (<code>one_time_fee_paid</code>, <code>platform_fee_amount</code>, <code>tier</code>, <code>partner_revenue_pct</code>); the <b>$300 attorney-review invariant (3.6)</b> — <code>custom_review_fee</code> ignored unless the partner is an attorney with an in-house reviewer</td></tr>
+        </tbody>
+      </table>
+      <div class="note" style="border-color:#cfe8d8;background:#f3f8f4;">
+        <span class="k" style="color:var(--good)">Net:</span> the core "money is never wrong" rules (splits, doc sets, payouts, the amendment double-generate guard) and the two security invariants are now locked by fast deterministic tests. <b>Still open (documented):</b> the signed-event route test (idempotency + bad-sig — writes shared DB, so gated), the attorney/trustee fixmes, and hard-stop end-to-end.
+      </div>
     </div>
 
     <h2 class="section" id="strategy">6 · Execution strategy</h2>
     <div class="card">
       <ul class="clean">
-        <li><b>Stage 0 — unit gate (no DB):</b> <code>npm test</code> → 378 pass. Run first/always.</li>
+        <li><b>Stage 0 — unit gate (no DB):</b> <code>npm test</code> → 394 pass. Run first/always.</li>
         <li><b>Stage 1 — non-destructive e2e (no seeding):</b> anonymous guards + public smoke. Proves the harness + boundary.</li>
         <li><b>Stage 2 — authenticated e2e:</b> <code>npm run test:db:seed:shared</code> then <code>npm run test:e2e</code> (with the harness fixes above).</li>
         <li><b>Stage 3 — money-path focus (Stripe test mode):</b> <code>stripe-webhooks</code>, <code>partner-revenue</code>, <code>vault-subscription</code>, <code>attorney-review</code>; verify amounts/splits/payouts against <code>calculateSplit</code>.</li>
