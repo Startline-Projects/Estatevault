@@ -57,21 +57,12 @@ The first version of this review found ~8 client screens still hitting the DB in
 
 **Result:** no client-component screen runs `supabase.from()`/`.storage`/`.rpc()` in the browser. The only remaining browser Supabase usage is the **realtime channel** in `app/dashboard/documents/page.tsx` (Supabase realtime has no REST equivalent — correct to keep) and `supabase.auth.*` calls (sign-in/out/session — not DB). Verified: tsc clean, 376 unit, lint clean, e2e anon guards for all 5 new endpoints.
 
-### 🟠 3.2 — Inline admin clients re-duplicated in ~8 places (B1 "67→0" has exceptions)
-These define their **own** `createAdminClient()` with `SUPABASE_SERVICE_ROLE_KEY` and query the DB directly, bypassing the shared `lib/api/auth.ts` client and the repo layer:
+### ✅ 3.2 — Inline admin clients converged (fixed 2026-06-03, commit `4218d94`)
+Ten files used to define their **own** `createAdminClient()` with `SUPABASE_SERVICE_ROLE_KEY`, bypassing the shared `lib/api/auth.ts` client. **All now import the shared one** — single source of truth, and it's typed `<Database>`.
 
-```
-app/affiliate/page.tsx
-app/sales/affiliates/page.tsx
-app/sales/affiliates/[id]/page.tsx
-app/[partner-slug]/page.tsx
-app/[partner-slug]/vault/page.tsx
-app/dashboard/layout.tsx
-app/a/[code]/route.ts
-lib/documents/storage.ts · lib/marketing/admin-auth.ts (lib-level, more defensible)
-```
+Files converged: `app/affiliate`, `app/sales/affiliates` (+`[id]`), `app/a/[code]`, `app/dashboard/layout`, `app/[partner-slug]` (+`/vault`), `app/api/professionals/request-access`, `lib/documents/storage`, `lib/marketing/admin-auth` (re-exports for its callers).
 
-These are **server** components/routes (no browser key leak), so it's a consistency/maintainability issue, not an exposure. But it's the exact "same concept implemented N ways" drift the architecture was trying to kill — change the admin-client setup once and these 8 don't follow.
+**Bonus:** the typed shared client surfaced several **latent null-safety bugs** the untyped copies were hiding — all fixed properly (no casts): `request-access` was inserting number/array values into string columns (`client_count`, `practice_areas`, `desired_review_fee`); the affiliate admin pages mapped nullable `status`/`created_at`/`affiliate_id` into non-null component props; the marketing materials PATCH typed its update object. Verified: tsc clean, 376 unit, lint clean. **0 inline SERVICE_ROLE admin clients remain.**
 
 ### 🟠 3.3 — Auth drift: a few routes hand-roll `getUser()` instead of `requireAuth`
 e.g. `app/api/marketing/materials/route.ts` does raw `supabase.auth.getUser()` + manual 401 rather than `requireAuth`. Functionally fine today; it's drift from the canonical guard and won't pick up future changes to `requireAuth` (e.g. mobile Bearer support).
@@ -98,7 +89,7 @@ It's in the partner self-update whitelist (`partnerSelfUpdateSchema`). It's the 
 - **A second frontend (mobile) is now realistic** — `requireAuth` already does Bearer tokens and the api-client layer is the contract a mobile app would reuse. With B2 complete, every screen's data path is a reusable endpoint.
 
 **What would limit scale if left unattended:**
-- The inline admin clients (3.2) are *drift seeds* — each one is a template someone copies next time, re-spreading the old pattern. Converging them is what keeps the "one way to do it" property true. (The half-migrated screens that were here have since been finished — 3.1.)
+- Drift seeds (a template someone copies next time, re-spreading an old pattern) are what erode the "one way to do it" property. The two biggest pools — the half-migrated screens (3.1) and the inline admin clients (3.2) — have both since been converged.
 - 148 routes is a lot of surface; the discipline of thin-route/fat-repo is what keeps that surface cheap. It's holding — keep enforcing it (the no-inline-`z.object` and no-`as any` tests help).
 - The 805-line webhook is the one place where "scale" means "complexity that's hard to test." Worth decomposing before it grows.
 
@@ -108,9 +99,9 @@ It's in the partner self-update whitelist (`partnerSelfUpdateSchema`). It's the 
 
 ## 5. Recommended next steps (smallest-risk-removed first)
 
-1. ✅ **B2 finished** (3.1) — done in commit `3bbbbee`; all 8 remaining screens converted, browser-check pending on the consumer flow.
-2. **Fix the `quizSessionRepo` tsc error** (3.4) — makes the strict gate actually green. ~10 min. *Now the top open item.*
-3. **Converge the inline admin clients** (3.2) onto the shared `createAdminClient` + repos, one page at a time.
+1. ✅ **B2 finished** (3.1) — commit `3bbbbee`; all 8 remaining screens converted.
+2. ✅ **Inline admin clients converged** (3.2) — commit `4218d94`; 0 left, plus several null-safety bugs fixed.
+3. **Fix the `quizSessionRepo` tsc error** (3.4) — makes the strict gate actually green. ~10 min. *Now the top open item.*
 4. **Migrate the raw-`getUser` routes** onto `requireAuth` (3.3).
 5. Later: decompose `webhooks/stripe` behind characterization tests (3.5); decide `custom_review_fee` policy (3.6).
 

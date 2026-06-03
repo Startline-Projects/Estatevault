@@ -149,13 +149,13 @@
       <p style="margin-top:10px"><span class="k">Result:</span> no client-component screen runs <code>supabase.from()</code>/<code>.storage</code>/<code>.rpc()</code> in the browser. The only remaining browser Supabase usage is the <b>realtime channel</b> in <code>dashboard/documents</code> (no REST equivalent — correct to keep) and <code>supabase.auth.*</code> (sign-in/out, not DB). Verified: tsc clean, 376 unit, lint clean, e2e anon guards for all 5 new endpoints.</p>
     </div>
 
-    <div class="item high">
-      <h3>3.2 · Inline admin clients re-duplicated in ~8 places <span class="sev high">High</span></h3>
-      <p>These define their <b>own</b> <code>createAdminClient()</code> with <code>SUPABASE_SERVICE_ROLE_KEY</code> and query the DB directly, bypassing the shared <code>lib/api/auth.ts</code> client and the repo layer:</p>
+    <div class="item good">
+      <h3>3.2 · Inline admin clients converged <span class="sev good">✅ Fixed · 4218d94</span></h3>
+      <p>Ten files used to define their <b>own</b> <code>createAdminClient()</code> with <code>SUPABASE_SERVICE_ROLE_KEY</code>, bypassing the shared <code>lib/api/auth.ts</code> client. <b>All now import the shared one</b> — single source of truth, typed <code>&lt;Database&gt;</code>.</p>
       <p>
-        <span class="ft">app/affiliate/page.tsx</span><span class="ft">app/sales/affiliates/page.tsx</span><span class="ft">app/sales/affiliates/[id]/page.tsx</span><span class="ft">app/[partner-slug]/page.tsx</span><span class="ft">app/[partner-slug]/vault/page.tsx</span><span class="ft">app/dashboard/layout.tsx</span><span class="ft">app/a/[code]/route.ts</span><span class="ft">lib/documents/storage.ts</span><span class="ft">lib/marketing/admin-auth.ts</span>
+        <span class="ft">app/affiliate</span><span class="ft">app/sales/affiliates</span><span class="ft">…/[id]</span><span class="ft">app/a/[code]</span><span class="ft">app/dashboard/layout</span><span class="ft">app/[partner-slug]</span><span class="ft">…/vault</span><span class="ft">api/professionals/request-access</span><span class="ft">lib/documents/storage</span><span class="ft">lib/marketing/admin-auth</span>
       </p>
-      <p>These are <b>server</b> components/routes (no browser key leak), so it's a consistency/maintainability issue, not an exposure. But it's the exact "same concept implemented N ways" drift the architecture tried to kill — change the admin-client setup once and these 8 don't follow. (The B1 "67 → 0" claim has these exceptions.)</p>
+      <p><span class="k">Bonus:</span> the typed shared client surfaced several <b>latent null-safety bugs</b> the untyped copies were hiding — all fixed properly (no casts): <code>request-access</code> inserted number/array values into string columns (<code>client_count</code>, <code>practice_areas</code>, <code>desired_review_fee</code>); the affiliate admin pages mapped nullable <code>status</code>/<code>created_at</code>/<code>affiliate_id</code> into non-null component props; the marketing materials PATCH typed its update object. Verified: tsc clean, 376 unit, lint clean. <b>0 inline SERVICE_ROLE admin clients remain.</b></p>
     </div>
 
     <div class="item high">
@@ -190,7 +190,7 @@
       </ul>
       <p><span class="k">What would limit scale if left unattended:</span></p>
       <ul class="clean">
-        <li>The inline admin clients (3.2) are <i>drift seeds</i> — each one is a template someone copies next time, re-spreading the old pattern. Converging them keeps the "one way to do it" property true. (The half-migrated screens that were here have since been finished — 3.1.)</li>
+        <li>Drift seeds (a template someone copies next time) erode the "one way to do it" property. The two biggest pools — the half-migrated screens (3.1) and the inline admin clients (3.2) — have both since been converged.</li>
         <li>148 routes is a lot of surface; thin-route/fat-repo discipline is what keeps it cheap. It's holding — keep enforcing it (the no-inline-<code>z.object</code> and no-<code>as any</code> tests help).</li>
         <li>The 805-line webhook is the one place where "scale" means "complexity that's hard to test." Worth decomposing before it grows.</li>
       </ul>
@@ -200,9 +200,9 @@
     <h2 class="section" id="next">5 · Recommended next steps <span style="font-size:11px;color:var(--muted);text-transform:none;letter-spacing:0">(smallest-risk-removed first)</span></h2>
     <div class="card">
       <ol class="steps">
-        <li>✅ <b>B2 finished</b> (3.1) — done in commit <code>3bbbbee</code>; all 8 remaining screens converted (browser-check pending on the consumer flow).</li>
+        <li>✅ <b>B2 finished</b> (3.1) — commit <code>3bbbbee</code>; all 8 remaining screens converted.</li>
+        <li>✅ <b>Inline admin clients converged</b> (3.2) — commit <code>4218d94</code>; 0 left, plus several null-safety bugs fixed.</li>
         <li><b>Fix the <code>quizSessionRepo</code> tsc error</b> (3.4) — makes the strict gate actually green. ~10 min. <i>Now the top open item.</i></li>
-        <li><b>Converge the inline admin clients</b> (3.2) onto the shared <code>createAdminClient</code> + repos, one page at a time.</li>
         <li><b>Migrate the raw-<code>getUser</code> routes</b> onto <code>requireAuth</code> (3.3).</li>
         <li>Later: decompose <code>webhooks/stripe</code> behind characterization tests (3.5); decide <code>custom_review_fee</code> policy (3.6).</li>
       </ol>
