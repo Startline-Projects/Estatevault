@@ -19,11 +19,13 @@ _Created 2026-06-02. A plain-English plan to finish the **unfinished** and **par
 | 2 | B4 | Finish the shared login check | Quick | 🟡 **Mostly done** — 49 routes on `requireAuth`; ~10 left (intentional) |
 | 3 | B3 | Send all email through one place | Medium | 🟡 **Client centralized** (28→1 `getResend()`); from/branding left |
 | 4 | B5 | One shared "call the API" helper | Medium | ✅ **Done** — `lib/api-client/` adopted by ~50 screens; 0 raw internal fetch |
-| 5 | B2 | Stop screens talking to the DB directly | Big | 🟡 **In progress** — pattern + `GET /api/partner/me` established; `pro/support`, `pro/preview`, `pro/training` done; **45 screens left** |
+| 5 | B2 | Stop screens talking to the DB directly | Big | ✅ **Done** — every browser-side screen off direct `supabase.from()`; only 2 server-side RLS auth gates left by design |
 
-> **Progress 2026-06-02:** B7 fully implemented; B4 advanced (14 routes migrated); B3 client centralized (all 15 inline `new Resend(...)` → shared `getResend()`, 28→1 init). Verified: `tsc` clean of new errors, 376 tests pass, lint clean. **B3 remaining (lower value, needs live email testing):** ~19 routes still hardcode the from-address and call `resend.emails.send()` directly instead of a branded `lib/email.ts` helper — that change alters retry/error semantics. **Left as intentional:** ~10 B4 routes (checkout `userId`-match, marketing PDFs, `auth/welcome` user-metadata). B2/B5 (53 screens) remain — needs browser testing, do it phased.
+> **Progress 2026-06-02:** B7 fully implemented; B4 advanced (14 routes migrated); B3 client centralized (all 15 inline `new Resend(...)` → shared `getResend()`, 28→1 init). Verified: `tsc` clean of new errors, 376 tests pass, lint clean. **B3 remaining (lower value, needs live email testing):** ~19 routes still hardcode the from-address and call `resend.emails.send()` directly instead of a branded `lib/email.ts` helper — that change alters retry/error semantics. **Left as intentional:** ~10 B4 routes (checkout `userId`-match, marketing PDFs, `auth/welcome` user-metadata).
 
-B2 (item 5) is now the **only** remaining item; the B5 api-client wrappers are ready to use as you migrate each screen.
+> **Progress 2026-06-03 (B2 complete, commit `9a0d97a`):** All ~30+ browser-side screens converted to typed `lib/api-client/*` calls over `withRoute`/`requireAuth` endpoints — onboarding steps 1-7 + 3 vault variants, pro/settings, pro/revenue, both sales partner-detail twins, sales/commission, client dashboard (funding-checklist, settings), and the sales/pro-sales/attorney portal layouts. ~25 new API routes + matching repos. **Security hardened in the move:** promo fee-waiver (`one_time_fee_paid`) now server-validated on both the partner-self and sales-rep paths; financial fields excluded from the partner self-update whitelist; logo upload runs server-side; sales partner-detail enforces ownership via `created_by` (foreign id → 404). **e2e** anon-rejection guards added for every new endpoint. Verified: `tsc` clean (1 pre-existing `quizSessionRepo` error untouched), 376 unit pass, lint clean. **Left by design:** `app/pro/layout.tsx` and `app/dashboard/page.tsx` — server components that read via the RLS-scoped server client; routing them through admin repos would bypass RLS for no browser-leak benefit.
+
+**All 5 items now done or intentionally parked.** B2 — the big one — is complete: no client screen talks to the database directly.
 
 ---
 
@@ -141,7 +143,19 @@ For each screen, the pattern is always the same three layers (copy how the vault
 
 **Effort:** Big (weeks, phased). **Risk:** High if rushed — that's why it's split into small per-area PRs. This is the main remaining architecture + security work.
 
-> **In progress (2026-06-03).** Phase A started. The reusable pattern is proven: `partnerRepo.getByProfileId` → `GET /api/partner/me` (`requireAuth(["partner"])`) → `partnerApi.getMe()` → screen calls `getMe()`. Converted so far: `pro/support`, `pro/preview`, `pro/training` (pure partner-self reads). Verified (tsc/lint/376 tests). **45 screens remain** — the ones with writes (logo upload, onboarding-step updates), other tables (orders/clients/documents), and the onboarding/payment flows each need their own endpoints **and** a browser check before shipping.
+> **✅ Done (2026-06-03, commit `9a0d97a`).** All four phases complete — every browser-side screen now goes repo → API route → `lib/api-client/*` → screen, never `supabase` directly.
+>
+> **Converted (~30+ screens):** Phase A — pro/onboarding steps 1-7 + step-2/3/4-vault (incl. logo uploads + promo comp), pro/settings, pro/revenue, pro/{support,preview,training,clients,clients/[id],vault-clients,documents,dashboard}. Phase B — sales + pro/sales partner-detail (both twins), sales/commission, sales/partners, sales/dashboard, pipelines. Phase C — client dashboard (funding-checklist, settings), dashboard/documents, attorney reviews/pipeline. Layouts — sales, pro/sales, attorney portal gates via `getMyProfile()`.
+>
+> **New endpoints (~25):** `partner/{me PATCH, invite-client, apply-promo, logo}`, `profile/me PATCH` (+returns `user_type`), `sales/partners/[id]` GET+PATCH & `.../apply-promo`, `sales/my-platform-commission`, `client/{funding-checklist, settings}`, plus the earlier partner/sales/attorney read endpoints.
+>
+> **Security hardened in the move:** promo fee-waiver (`one_time_fee_paid`) re-validated server-side on **both** the partner-self and sales-rep paths — the screen can no longer flip the financial flag; financial fields excluded from the partner self-update whitelist; logo upload runs server-side under the partner's own id; sales partner-detail enforces ownership via `created_by` (foreign id → 404, a guard the old client page lacked).
+>
+> **Verified:** `tsc` clean (1 pre-existing `quizSessionRepo` error untouched), 376 unit pass, lint clean, e2e anon-rejection guards for every new endpoint.
+>
+> **Left by design (NOT browser DB calls):** `app/pro/layout.tsx` and `app/dashboard/page.tsx` — server components reading through the RLS-scoped server client. Routing them through admin repos would **bypass RLS** for no browser-leak benefit, so they stay as server-side auth gates.
+>
+> **Open flag for review:** `custom_review_fee` is in the partner self-update whitelist (partner-editable in-house review fee). Lock server-side if the fixed-pricing rule should cover it.
 
 ---
 

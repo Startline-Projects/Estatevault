@@ -178,7 +178,7 @@
         <li><b>B7 app-URL — RESOLVED.</b> Three env names collapsed into one <code>getAppUrl()</code> helper.</li>
         <li><b>B3 email client — CENTRALIZED.</b> 28 inline <code>new Resend(...)</code> → 1 shared <code>getResend()</code>.</li>
         <li><b>B5 data-access layer — RESOLVED (verified).</b> <code>lib/api-client/</code> over <code>authedFetch</code> is adopted by ~50 screens; 0 raw internal <code>/api/</code> fetches remain.</li>
-        <li><b>Still open:</b> only B2 — UI talks to DB directly (<b>53 files</b>). The one remaining architecture job.</li>
+        <li><b>✅ B2 done (2026-06-03, commit 9a0d97a):</b> every browser-side screen now goes through an API route — no UI talks to the DB directly. Only 2 server-side RLS auth gates remain by design (<code>pro/layout</code>, <code>dashboard/page</code>). All architecture items now done or intentionally parked.</li>
       </ul>
     </div>
   </section>
@@ -210,12 +210,12 @@
     <div class="blocker" style="border-left-color:#c0392b">
       <h3 style="margin-top:0">⛔ Remaining — real work, not yet started</h3>
       <ul style="margin:8px 0 0;padding-left:20px;font-size:14px;line-height:1.8">
-        <li><b>B2 / Item 6 · Screens talk to the database directly (53 files). The big one — and now the ONLY one.</b> Half the UI pages run database queries inside the screen itself, with no API route in between — the only protection is row-level security. <i>Why it blocks scale:</i> business rules live inside screens, a mobile app couldn't reuse any of it, and one weak security policy = direct data exposure with no backend backstop. <i>Next step:</i> phase it — move each screen's reads/writes behind an <code>app/api/*</code> route + a repo in <code>lib/repos/</code>. Do it area by area (start with <code>pro/</code>), not all at once. This is the main remaining architecture + security task. <i>(The api-client wrappers from B5 are ready to use for each screen as you migrate it.)</i></li>
+        <li><b>✅ B2 / Item 6 · Screens talk to the database directly — DONE (2026-06-03, commit 9a0d97a).</b> Every browser-side UI screen now goes repo → <code>app/api/*</code> route (<code>requireAuth</code> + Zod) → <code>lib/api-client/*</code> → screen; nothing queries <code>supabase</code> from the browser. ~30+ screens converted across pro/onboarding (steps 1-7 + 3 vault variants), pro/settings, pro/revenue, sales + pro/sales partner-detail twins, sales/commission, client dashboard, and the portal layouts — backed by ~25 new endpoints. <i>Security hardened in the move:</i> promo fee-waiver (<code>one_time_fee_paid</code>) re-validated server-side on both partner-self and sales-rep paths; financial fields excluded from the partner self-update whitelist; logo upload server-side; sales partner-detail ownership via <code>created_by</code> (foreign id → 404). <i>Left by design:</i> <code>pro/layout</code> + <code>dashboard/page</code> — server components on the RLS-scoped server client (admin repos would bypass RLS). Verified: tsc clean, 376 unit, lint clean, e2e anon guards added.</li>
       </ul>
     </div>
 
     <div class="blocker high" style="border-left-color:#1C3557;background:#f4f6f9">
-      <p style="margin:0;font-size:14.5px"><b>Bottom line.</b> Duplication, serverless-state, app-URL, the email client, and the data-access layer are all solved. <b>One job remains: B2</b> — put the 53 direct-to-database screens behind API routes (and finish B3's per-send branding, lower value). Not a live bug today — it's scale/security hardening.</p>
+      <p style="margin:0;font-size:14.5px"><b>Bottom line (updated 2026-06-03).</b> Duplication, serverless-state, app-URL, the email client, the data-access layer, <b>and now B2</b> are all solved — no browser screen talks to the DB directly. Only lower-value B3 per-send branding remains, plus 2 server-side RLS auth gates left by design. The architecture/security hardening track is effectively complete.</p>
     </div>
   </section>
 
@@ -271,11 +271,11 @@
     <div class="blocker crit">
       <div class="blocker-head">
         <h3>2 · UI talks directly to the database</h3>
-        <span class="count-chip">45 of 57 left</span>
-        <span class="sev crit">Critical</span>
-        <span class="sev" style="background:#c98a1e;color:#fff">🟡 In progress (Phase A started)</span>
+        <span class="count-chip">✅ done</span>
+        <span class="sev" style="background:#2e7d4f;color:#fff">Resolved</span>
+        <span class="sev" style="background:#2e7d4f;color:#fff">✅ Done 2026-06-03 (commit 9a0d97a)</span>
       </div>
-      <p>57 UI files import the browser Supabase client and run <code>.from().select/insert/update</code> queries inside the screen itself — no API route, no backend boundary. The only guard is RLS. <b>2026-06-03 — Phase A started:</b> established the repo→route→api-client pattern with a reusable <code>GET /api/partner/me</code> (<code>partnerApi.getMe()</code>); converted 6 screens (pro/support, preview, training, referrals, marketing, clients) via reusable endpoints (partner/me, profile/me, partner/referrals, partner/clients GET). <b>45 screens remain</b> — write/upload/onboarding flows need per-screen browser verification.</p>
+      <p>Previously 57 UI files imported the browser Supabase client and ran <code>.from().select/insert/update</code> inside the screen — no API route, only RLS. <b>Now resolved:</b> every browser-side screen goes repo → <code>app/api/*</code> route (<code>requireAuth</code> + Zod) → <code>lib/api-client/*</code> → screen. ~30+ screens converted across all of pro/ (incl. onboarding steps 1-7 + 3 vault variants, settings, revenue, logo uploads), sales/ + pro/sales/ (partner-detail twins, commission, pipelines), client dashboard (funding-checklist, settings), attorney reviews/pipeline, and the portal layouts — backed by ~25 new endpoints. <i>Security hardened:</i> promo fee-waiver server-validated on both partner-self and sales-rep paths; financial fields excluded from the self-update whitelist; logo upload server-side; sales partner-detail ownership via <code>created_by</code> (foreign id → 404). <b>Left by design (NOT browser DB calls):</b> <code>app/pro/layout.tsx</code> + <code>app/dashboard/page.tsx</code> — server components on the RLS-scoped server client; admin repos would bypass RLS. Verified: tsc clean (1 pre-existing quizSessionRepo error untouched), 376 unit, lint clean, e2e anon guards for every new endpoint.</p>
       <div class="label">Worst zones</div>
       <div class="areagroup"><div class="area">All of app/pro/ — incl. 11 onboarding steps</div><div class="files"><span class="ft">dashboard</span><span class="ft">clients</span><span class="ft">clients/[id]</span><span class="ft">documents</span><span class="ft">revenue</span><span class="ft">referrals</span><span class="ft">vault-clients</span><span class="ft">marketing</span><span class="ft">preview</span><span class="ft">support</span><span class="ft">training</span><span class="ft">training/exam</span><span class="ft">settings</span><span class="ft">onboarding/step-1…7</span></div></div>
       <div class="areagroup"><div class="area">All of sales/ + pro/sales/</div><div class="files"><span class="ft">dashboard</span><span class="ft">pipeline</span><span class="ft">partners</span><span class="ft">partners/[id]</span><span class="ft">commission</span></div></div>
@@ -390,7 +390,7 @@
     <h2>Verdict</h2>
     <p>The layers <b>exist as folders</b> — <code>app/</code> pages, <code>app/api/</code> routes, <code>lib/</code> domain logic — and the genuine domain logic (document generation, templates, revenue-split math, validation) is properly extracted and kept out of React components. <span class="gold">That layer is solid.</span></p>
     <p>But the UI ↔ backend boundary is <b>not enforced</b>. The real flow is <code>UI → (raw fetch | direct DB)</code>, not <code>UI → data layer → API → lib</code>. 67 routes copy the admin client, 51 screens query the DB directly, and the one token-refresh wrapper is used once.</p>
-    <p><b>The good news:</b> nearly every fix is adoption, not redesign. <b>Update 2026-06-02:</b> items 1, 4, 8 are now done and 2, 3 mostly done — the admin-client copies are gone (67→0), pricing is centralised, DB types + Zod boundaries are in place, and serverless state (email verification) moved to Redis with idempotent payments/atomic OTP for concurrency safety. <b>The real architecture work that remains is item 6</b> (53 screens still query the DB directly) plus item 7 (data-access layer / <code>authedFetch</code>) and item 5 (single app-URL accessor) — phase item 6 deliberately, it's the main remaining security exposure.</p>
+    <p><b>The good news:</b> nearly every fix is adoption, not redesign. <b>Update 2026-06-02:</b> items 1, 4, 8 are now done and 2, 3 mostly done — the admin-client copies are gone (67→0), pricing is centralised, DB types + Zod boundaries are in place, and serverless state (email verification) moved to Redis with idempotent payments/atomic OTP for concurrency safety. <b>Update 2026-06-03 (commit 9a0d97a):</b> item 6 (B2) is now <b>done</b> — every browser-side screen runs through an API route; the UI ↔ backend boundary is enforced (<code>UI → api-client → API → repo → DB</code>). Only 2 server-side RLS auth gates remain by design. The architecture/security track is effectively complete; lower-value B3 per-send email branding is the only optional item left.</p>
   </div>
 
   <footer>
