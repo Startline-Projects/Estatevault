@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EstateVault — Code Health Review</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --navy:#1C3557; --gold:#C9A84C; --charcoal:#2D2D2D; --white:#fff;
+    --bg:#f4f6f9; --line:#e3e8f0; --good:#1f8a5b; --warn:#c98a1e; --bad:#c0392b; --muted:#5f6b7c;
+  }
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{margin:0;font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--charcoal);line-height:1.65;font-size:16px;}
+  a{color:var(--navy);}
+  code{font-family:'JetBrains Mono',ui-monospace,monospace;font-size:.86em;background:#eef1f6;color:#324;padding:1px 6px;border-radius:5px;border:1px solid #e0e5ee;word-break:break-word;}
+  header.hero{background:linear-gradient(135deg,var(--navy) 0%,#13243d 100%);color:#fff;padding:46px 0 50px;border-bottom:4px solid var(--gold);}
+  .hero-inner{max-width:1240px;margin:0 auto;padding:0 24px;}
+  .hero .tag{display:inline-block;letter-spacing:.18em;text-transform:uppercase;font-size:12px;font-weight:600;color:#e7d49a;margin-bottom:12px;}
+  .hero h1{margin:0;font-size:36px;font-weight:800;line-height:1.1;}
+  .hero p.sub{margin:14px 0 0;font-size:17px;color:#cdd6e4;max-width:820px;}
+  .hero .meta{margin-top:22px;display:flex;flex-wrap:wrap;gap:10px;}
+  .hero .meta span{background:rgba(255,255,255,.08);border:1px solid rgba(201,168,76,.35);padding:6px 14px;border-radius:999px;font-size:13px;color:#e7ecf4;}
+  .layout{display:flex;gap:34px;max-width:1240px;margin:0 auto;padding:34px 24px 80px;}
+  main{flex:1;min-width:0;}
+  nav.toc{width:240px;flex-shrink:0;position:sticky;top:24px;align-self:flex-start;max-height:calc(100vh - 48px);overflow-y:auto;background:#fff;border:1px solid var(--line);border-radius:14px;padding:18px 16px;font-size:14px;}
+  nav.toc h4{margin:0 0 10px;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);}
+  nav.toc a{display:block;padding:5px 8px;border-radius:7px;color:var(--charcoal);text-decoration:none;}
+  nav.toc a:hover{background:var(--bg);}
+  nav.toc a .dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:7px;vertical-align:middle;}
+  h2.section{font-size:13px;letter-spacing:.16em;text-transform:uppercase;color:var(--navy);margin:38px 0 16px;display:flex;align-items:center;gap:10px;}
+  h2.section::after{content:"";flex:1;height:1px;background:var(--line);}
+  .card{background:#fff;border:1px solid var(--line);border-radius:16px;padding:24px 28px;margin-bottom:20px;box-shadow:0 1px 2px rgba(20,40,70,.04);}
+  table{width:100%;border-collapse:collapse;font-size:14.5px;}
+  th{text-align:left;color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.06em;padding:6px 8px;}
+  td{padding:8px;border-top:1px solid var(--line);vertical-align:top;}
+  td.num,th.num{text-align:right;font-family:'JetBrains Mono',monospace;white-space:nowrap;}
+  .verdict{background:linear-gradient(135deg,#eef8f1 0%,#f3f8f4 100%);border:1px solid #cfe8d8;border-left:6px solid var(--good);border-radius:14px;padding:18px 22px;font-size:15.5px;margin-bottom:8px;}
+  .verdict .k{color:var(--good);font-weight:800;}
+  .item{border:1px solid var(--line);border-radius:14px;padding:18px 22px;margin-bottom:14px;border-left:6px solid var(--muted);background:#fff;}
+  .item.crit{border-left-color:var(--bad);}
+  .item.high{border-left-color:#e0792e;}
+  .item.med{border-left-color:var(--warn);}
+  .item.good{border-left-color:var(--good);}
+  .item h3{margin:0 0 6px;font-size:16.5px;color:var(--navy);display:flex;gap:10px;align-items:baseline;flex-wrap:wrap;}
+  .sev{font-size:10.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:3px 9px;border-radius:999px;color:#fff;margin-left:auto;}
+  .sev.crit{background:var(--bad);} .sev.high{background:#e0792e;} .sev.med{background:var(--warn);} .sev.good{background:var(--good);}
+  .item p{margin:6px 0;font-size:14.5px;}
+  .k{font-weight:700;color:var(--charcoal);}
+  .pillrow{display:flex;flex-wrap:wrap;gap:10px;margin:6px 0 2px;}
+  .pill{background:#fff;border:1px solid var(--line);border-radius:12px;padding:12px 16px;flex:1;min-width:150px;}
+  .pill .n{font-size:24px;font-weight:800;color:var(--navy);font-family:'JetBrains Mono',monospace;}
+  .pill .l{font-size:12px;color:var(--muted);margin-top:2px;}
+  ul.clean{margin:6px 0;padding-left:20px;} ul.clean li{margin:7px 0;font-size:14.5px;}
+  .ft{display:inline-block;background:#eef1f6;border:1px solid #e0e5ee;border-radius:6px;padding:1px 8px;margin:2px 3px 0 0;font-size:12px;font-family:'JetBrains Mono',monospace;}
+  .note{background:#fffaf0;border:1px solid #e7d49a;border-radius:11px;padding:14px 18px;font-size:14.5px;}
+  .note .k{color:var(--warn);}
+  .bottom{background:#eef2f8;border:1px solid var(--line);border-left:6px solid var(--navy);border-radius:12px;padding:18px 22px;font-size:15px;}
+  ol.steps{counter-reset:s;list-style:none;padding-left:0;margin:6px 0;}
+  ol.steps li{position:relative;padding:10px 0 10px 42px;border-top:1px solid var(--line);font-size:14.5px;}
+  ol.steps li:first-child{border-top:none;}
+  ol.steps li::before{counter-increment:s;content:counter(s);position:absolute;left:0;top:9px;width:26px;height:26px;border-radius:50%;background:var(--navy);color:#fff;font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center;}
+  footer{text-align:center;color:var(--muted);font-size:13px;padding:30px 24px 50px;}
+  @media(max-width:880px){nav.toc{display:none;}.layout{padding:24px 16px 60px;}}
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="hero-inner">
+    <span class="tag">Senior-Engineer Audit · 2026-06-03</span>
+    <h1>Code Health Review</h1>
+    <p class="sub">A grep-based pass over the real code — routes, repos, the api-client layer, auth paths, type safety, tests. Numbers come from the actual tree, not from progress notes. Verdict, strengths, honest gaps, and whether it scales.</p>
+    <div class="meta">
+      <span>148 routes · 21 repos · 76 Zod schemas</span>
+      <span>7 any/as-any · 0 ts-ignore</span>
+      <span>376 unit · 24 e2e</span>
+      <span>Verdict: sound &amp; scalable</span>
+    </div>
+  </div>
+</header>
+
+<div class="layout">
+  <nav class="toc">
+    <h4>On this page</h4>
+    <a href="#verdict"><span class="dot" style="background:var(--good)"></span>Verdict</a>
+    <a href="#shape"><span class="dot" style="background:var(--navy)"></span>1 · The shape</a>
+    <a href="#strong"><span class="dot" style="background:var(--good)"></span>2 · What's strong</a>
+    <a href="#gaps"><span class="dot" style="background:var(--bad)"></span>3 · What's not done</a>
+    <a href="#scale"><span class="dot" style="background:var(--gold)"></span>4 · Is it scalable?</a>
+    <a href="#next"><span class="dot" style="background:var(--navy)"></span>5 · Next steps</a>
+    <a href="#correction"><span class="dot" style="background:var(--warn)"></span>6 · Doc correction</a>
+  </nav>
+
+  <main>
+    <section id="verdict">
+      <div class="verdict">
+        <span class="k">One-line verdict:</span> the architecture is sound and it scales. Clean layering, a typed UI→API→repo→DB boundary, near-zero <code>any</code>, real test coverage. The remaining work is <b>finishing</b> a migration that's ~85% done and cleaning up a few drift pockets — not redesign. Two earlier claims were over-stated and are corrected in §6.
+      </div>
+    </section>
+
+    <h2 class="section" id="shape">1 · The shape of the codebase</h2>
+    <div class="card">
+      <div class="pillrow">
+        <div class="pill"><div class="n">148</div><div class="l">API routes (thin)</div></div>
+        <div class="pill"><div class="n">21</div><div class="l">server repos (DB access)</div></div>
+        <div class="pill"><div class="n">15</div><div class="l">api-client modules</div></div>
+        <div class="pill"><div class="n">76</div><div class="l">Zod schemas</div></div>
+      </div>
+      <div class="pillrow">
+        <div class="pill"><div class="n">112</div><div class="l">page screens</div></div>
+        <div class="pill"><div class="n">60</div><div class="l">components</div></div>
+        <div class="pill"><div class="n">55</div><div class="l">migrations (RLS)</div></div>
+        <div class="pill"><div class="n">376</div><div class="l">unit tests (pass)</div></div>
+      </div>
+      <p style="margin-top:16px;font-size:14.5px">The intended layering — <b>UI → api-client → API route (auth + Zod) → repo → DB</b> — is real and followed by the large majority of the app. That single-path discipline is what makes a codebase scale: one place to change DB access, one place for auth, one place for validation.</p>
+    </div>
+
+    <h2 class="section" id="strong">2 · What's genuinely strong</h2>
+    <div class="card">
+      <ul class="clean">
+        <li><b>Type safety is excellent.</b> Across all of <code>lib/</code> + <code>app/</code>: <b>7</b> <code>any</code>/<code>as any</code> total, <b>0</b> <code>@ts-ignore</code>/<code>@ts-expect-error</code>. TypeScript strict is doing its job — runtime surprises have few places to hide.</li>
+        <li><b>Thin routes, fat repos</b> is the norm. A typical route reads top-to-bottom in ~15 lines: <code>requireAuth</code> → <code>safeParse</code> → call a repo → <code>ok()</code>. DB chains live in <code>lib/repos/server/*</code>, not inline.</li>
+        <li><b>Auth is layered and mostly intentional</b>, not ad-hoc: <code>requireAuth</code> (77 routes, cookie + mobile Bearer), <code>requireClientUser</code> (13, vault/crypto), <code>requireTrusteeSession</code> (trustee OTP identity), <code>CRON_SECRET</code> (6 cron), Stripe webhook signature. Most "no-<code>requireAuth</code>" routes are guarded by one of these or are legitimately public (pre-account checkout, signup, branding).</li>
+        <li><b>Money stays integer cents</b>, fixed prices/splits honored, hard stops present. Business law intact.</li>
+        <li><b>Validation at the boundary</b> — 76 central Zod schemas; a unit test forbids inline <code>z.object()</code> in routes.</li>
+        <li><b>Real test coverage</b> on the dangerous parts (crypto, splits, idempotency) plus 24 e2e specs including B2 endpoint guards.</li>
+      </ul>
+    </div>
+
+    <h2 class="section" id="gaps">3 · What's NOT done / fragile <span style="font-size:11px;color:var(--muted);text-transform:none;letter-spacing:0">(ranked by risk)</span></h2>
+
+    <div class="item crit">
+      <h3>3.1 · B2 ("screens off direct DB") is ~85% done, not 100% <span class="sev crit">Highest</span></h3>
+      <p>This review found <b>~8 client-component screens still query the database directly in the browser</b>. The earlier "B2 done" status was scoped to only four directories (<code>pro/</code>, <code>sales/</code>, <code>attorney/</code>, <code>dashboard/</code>) and missed the rest of <code>app/</code>.</p>
+      <table>
+        <thead><tr><th>Screen</th><th>Direct DB</th><th>Why it matters</th></tr></thead>
+        <tbody>
+          <tr><td><code>app/will/page.tsx</code></td><td>reads <code>clients</code>, <code>quiz_sessions</code></td><td><b>consumer money flow</b></td></tr>
+          <tr><td><code>app/trust/page.tsx</code></td><td>reads <code>clients</code>, <code>quiz_sessions</code></td><td><b>consumer money flow</b></td></tr>
+          <tr><td><code>app/will/success/page.tsx</code></td><td>reads <code>documents</code> + storage</td><td>post-checkout, sensitive</td></tr>
+          <tr><td><code>app/trust/success/page.tsx</code></td><td>reads <code>documents</code> + storage</td><td>post-checkout, sensitive</td></tr>
+          <tr><td><code>app/auth/login/page.tsx</code></td><td>reads <code>profiles</code>, <code>clients</code>, <code>partners</code></td><td>auth path (post-login routing)</td></tr>
+          <tr><td><code>app/pro/training/exam/page.tsx</code></td><td>reads/writes <code>partners</code></td><td>unlocks platform features</td></tr>
+          <tr><td><code>app/pro/sales/page.tsx</code></td><td><b>partial</b> — reads converted, write handlers still direct</td><td>half-migrated</td></tr>
+          <tr><td><code>app/sales/dashboard/page.tsx</code></td><td><b>partial</b> — same shape</td><td>half-migrated</td></tr>
+        </tbody>
+      </table>
+      <p style="margin-top:10px"><span class="k">Blast radius:</span> business rules in the screen, no server backstop beyond RLS, not reusable by a mobile app. The consumer will/trust flow is the most important left — it's the revenue path. <b>Half-migrated is the worst state</b>: <code>pro/sales/page</code> and <code>sales/dashboard</code> have converted reads but direct writes, so the pattern is inconsistent inside one file.</p>
+    </div>
+
+    <div class="item high">
+      <h3>3.2 · Inline admin clients re-duplicated in ~8 places <span class="sev high">High</span></h3>
+      <p>These define their <b>own</b> <code>createAdminClient()</code> with <code>SUPABASE_SERVICE_ROLE_KEY</code> and query the DB directly, bypassing the shared <code>lib/api/auth.ts</code> client and the repo layer:</p>
+      <p>
+        <span class="ft">app/affiliate/page.tsx</span><span class="ft">app/sales/affiliates/page.tsx</span><span class="ft">app/sales/affiliates/[id]/page.tsx</span><span class="ft">app/[partner-slug]/page.tsx</span><span class="ft">app/[partner-slug]/vault/page.tsx</span><span class="ft">app/dashboard/layout.tsx</span><span class="ft">app/a/[code]/route.ts</span><span class="ft">lib/documents/storage.ts</span><span class="ft">lib/marketing/admin-auth.ts</span>
+      </p>
+      <p>These are <b>server</b> components/routes (no browser key leak), so it's a consistency/maintainability issue, not an exposure. But it's the exact "same concept implemented N ways" drift the architecture tried to kill — change the admin-client setup once and these 8 don't follow. (The B1 "67 → 0" claim has these exceptions.)</p>
+    </div>
+
+    <div class="item high">
+      <h3>3.3 · Auth drift: a few routes hand-roll <code>getUser()</code> <span class="sev high">High</span></h3>
+      <p>e.g. <code>app/api/marketing/materials/route.ts</code> does raw <code>supabase.auth.getUser()</code> + manual 401 rather than <code>requireAuth</code>. Functionally fine today; it's drift from the canonical guard and won't pick up future changes to <code>requireAuth</code> (e.g. mobile Bearer support).</p>
+    </div>
+
+    <div class="item med">
+      <h3>3.4 · The strict typecheck gate is not actually green <span class="sev med">Medium</span></h3>
+      <p><code>lib/repos/server/quizSessionRepo.ts</code> has a pre-existing <code>tsc</code> error (<code>Record&lt;string, unknown&gt;</code> passed to a typed <code>.insert()</code>). It predates the B2 work and was left untouched, but it means <code>npx tsc --noEmit</code> is <b>not</b> clean — the bug gate the project relies on is one error short of green. Cheap to fix (type the insert like <code>attorneyReviewRepo</code> was).</p>
+    </div>
+
+    <div class="item med">
+      <h3>3.5 · <code>webhooks/stripe/route.ts</code> is 805 lines <span class="sev med">Medium</span></h3>
+      <p>The single biggest, highest-risk file (it moves money and provisions accounts). Not broken, but fat enough that a change is hard to reason about. Candidate for extracting per-event handlers into <code>lib/</code> — carefully, with characterization tests first.</p>
+    </div>
+
+    <div class="item med">
+      <h3>3.6 · <code>custom_review_fee</code> is partner-editable <span class="sev med">Medium</span></h3>
+      <p>It's in the partner self-update whitelist (<code>partnerSelfUpdateSchema</code>). It's the attorney-partner's own in-house review fee (they keep 100%), so it's arguably theirs to set — but it sits next to the fixed-pricing rule. Decide explicitly: lock it server-side, or document it as intentionally partner-owned.</p>
+    </div>
+
+    <h2 class="section" id="scale">4 · Is it scalable?</h2>
+    <div class="card">
+      <p style="margin-top:0"><b>Architecturally, yes.</b> The properties that let a codebase grow without getting more fragile are present:</p>
+      <ul class="clean">
+        <li><b>A single data-access layer.</b> 21 repos; the DB schema can change in one place. ✅</li>
+        <li><b>An enforced input boundary.</b> 76 Zod schemas; client input is parsed, not trusted. ✅</li>
+        <li><b>Centralized auth</b> with a clear (if multi-path) set of guards. ✅</li>
+        <li><b>Strong types</b> so refactors are caught at compile time, not in production. ✅</li>
+        <li><b>A mobile frontend is now realistic</b> — <code>requireAuth</code> already does Bearer tokens and the api-client layer is the contract a mobile app would reuse. The ~8 unconverted screens are the only piece that wouldn't port.</li>
+      </ul>
+      <p><span class="k">What would limit scale if left unattended:</span></p>
+      <ul class="clean">
+        <li>The half-migrated screens (3.1) and inline admin clients (3.2) are <i>drift seeds</i> — each one is a template someone copies next time, re-spreading the old pattern. Converging them keeps the "one way to do it" property true.</li>
+        <li>148 routes is a lot of surface; thin-route/fat-repo discipline is what keeps it cheap. It's holding — keep enforcing it (the no-inline-<code>z.object</code> and no-<code>as any</code> tests help).</li>
+        <li>The 805-line webhook is the one place where "scale" means "complexity that's hard to test." Worth decomposing before it grows.</li>
+      </ul>
+      <div class="bottom" style="margin-top:14px"><b>Net:</b> a mid-stage codebase that has done the hard structural work (layering, types, validation, repos) and is now in the <b>finish-and-converge</b> phase, not the redesign phase. That's a healthy place to be.</div>
+    </div>
+
+    <h2 class="section" id="next">5 · Recommended next steps <span style="font-size:11px;color:var(--muted);text-transform:none;letter-spacing:0">(smallest-risk-removed first)</span></h2>
+    <div class="card">
+      <ol class="steps">
+        <li><b>Fix the <code>quizSessionRepo</code> tsc error</b> (3.4) — makes the strict gate actually green. ~10 min.</li>
+        <li><b>Finish the partial screens</b> <code>pro/sales/page</code> + <code>sales/dashboard</code> (3.1) — convert lingering write handlers so no file is half-migrated. Highest consistency payoff.</li>
+        <li><b>Convert the consumer flow</b> <code>will/</code>, <code>trust/</code>, and their <code>success/</code> pages (3.1) — the revenue path; browser-check each.</li>
+        <li><b>Converge the inline admin clients</b> (3.2) onto the shared <code>createAdminClient</code> + repos, one page at a time.</li>
+        <li><b>Then</b> correct the B2 status in <code>SCALABILITY_PLAN</code>/<code>AUDIT</code> to "≈85% — N screens left" (see §6).</li>
+        <li>Later: decompose <code>webhooks/stripe</code> behind characterization tests (3.5); decide <code>custom_review_fee</code> policy (3.6); migrate raw-<code>getUser</code> routes onto <code>requireAuth</code> (3.3).</li>
+      </ol>
+      <p style="font-size:14px;color:var(--muted);margin-bottom:0">None of these are live bugs today. They're completion + drift-cleanup.</p>
+    </div>
+
+    <h2 class="section" id="correction">6 · Correction to prior docs</h2>
+    <div class="note">
+      <span class="k">⚠ Over-stated status:</span> the <code>SCALABILITY_PLAN.md/.html</code> and <code>SCALABILITY_AUDIT.html</code> updates from earlier today mark B2 as <b>fully done</b>. This review shows that's over-stated — true for the four portal directories audited, but ~8 client screens outside them (the consumer will/trust flow, auth/login, training exam, two half-migrated sales screens) still call the DB directly. Those docs should be corrected to <b>"≈85% complete — consumer flow + auth + exam remain."</b> Flagged rather than silently edited, since the prior status was committed.
+    </div>
+  </main>
+</div>
+
+<footer>EstateVault — Code Health Review · generated 2026-06-03 · numbers from the live tree</footer>
+
+</body>
+</html>
