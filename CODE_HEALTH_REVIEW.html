@@ -186,11 +186,11 @@
         <li><b>An enforced input boundary.</b> 76 Zod schemas; client input is parsed, not trusted. ✅</li>
         <li><b>Centralized auth</b> with a clear (if multi-path) set of guards. ✅</li>
         <li><b>Strong types</b> so refactors are caught at compile time, not in production. ✅</li>
-        <li><b>A mobile frontend is now realistic</b> — <code>requireAuth</code> already does Bearer tokens and the api-client layer is the contract a mobile app would reuse. The ~8 unconverted screens are the only piece that wouldn't port.</li>
+        <li><b>A mobile frontend is now realistic</b> — <code>requireAuth</code> already does Bearer tokens and the api-client layer is the contract a mobile app would reuse. With B2 complete, every screen's data path is a reusable endpoint.</li>
       </ul>
       <p><span class="k">What would limit scale if left unattended:</span></p>
       <ul class="clean">
-        <li>The half-migrated screens (3.1) and inline admin clients (3.2) are <i>drift seeds</i> — each one is a template someone copies next time, re-spreading the old pattern. Converging them keeps the "one way to do it" property true.</li>
+        <li>The inline admin clients (3.2) are <i>drift seeds</i> — each one is a template someone copies next time, re-spreading the old pattern. Converging them keeps the "one way to do it" property true. (The half-migrated screens that were here have since been finished — 3.1.)</li>
         <li>148 routes is a lot of surface; thin-route/fat-repo discipline is what keeps it cheap. It's holding — keep enforcing it (the no-inline-<code>z.object</code> and no-<code>as any</code> tests help).</li>
         <li>The 805-line webhook is the one place where "scale" means "complexity that's hard to test." Worth decomposing before it grows.</li>
       </ul>
