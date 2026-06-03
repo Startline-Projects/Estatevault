@@ -169,9 +169,11 @@
       <p><code>quizSessionRepo</code> took <code>row: Record&lt;string, unknown&gt;</code>, which the typed Supabase client rejected — the one error keeping <code>npx tsc --noEmit</code> red. Typed <code>row</code> as the table's Insert shape (same fix as <code>attorneyReviewRepo</code>). That surfaced a real caller hole in <code>createCheckoutSession</code> (an <code>answers</code> object the <code>Json</code> column couldn't accept), fixed with the existing <code>as Json</code> boundary convention. <b><code>tsc --noEmit</code> now reports zero errors</b> — the bug gate is trustworthy for the first time.</p>
     </div>
 
-    <div class="item med">
-      <h3>3.5 · <code>webhooks/stripe/route.ts</code> is 805 lines <span class="sev med">Medium</span></h3>
-      <p>The single biggest, highest-risk file (it moves money and provisions accounts). Not broken, but fat enough that a change is hard to reason about. Candidate for extracting per-event handlers into <code>lib/</code> — carefully, with characterization tests first.</p>
+    <div class="item good">
+      <h3>3.5 · <code>webhooks/stripe</code> split into a thin router + handlers <span class="sev good">✅ Fixed · 98368ae</span></h3>
+      <p>The webhook was an 805-line file that moved money and provisioned accounts (one handler ~320 lines). The per-product handlers were <b>extracted verbatim</b> into <code>lib/webhooks/stripe/*</code> (<code>resolveOrCreateGuestClient</code>, <code>handleAttorneyReview</code>, <code>handleAmendmentCheckout</code>, <code>handleVaultSubscriptionCheckout</code>, <code>handleDocumentCheckout</code>). Behaviour preserved by construction — byte-identical moves, proven by tsc + the full suite (no logic changed).</p>
+      <p>The route is now a <b>156-line router</b>: verify signature → idempotency guard → dispatch by <code>event.type</code> → call the lib handler. Each heavy handler is now independently importable + testable. The <code>phase0-security</code> guard was extended so the no-<code>listUsers()</code> check and the <code>find_auth_user_by_email</code> RPC assertion follow the code into the new handlers.</p>
+      <p><span class="k">Recommended follow-up (not blocking):</span> add event-simulation characterization tests per handler (mock a <code>checkout.session.completed</code> → assert the order/split/documents/payout writes). Cheap now that the handlers are isolated; was impractical as one 805-line function.</p>
     </div>
 
     <div class="item med">
@@ -193,7 +195,7 @@
       <ul class="clean">
         <li>Drift seeds (a template someone copies next time) erode the "one way to do it" property. The two biggest pools — the half-migrated screens (3.1) and the inline admin clients (3.2) — have both since been converged.</li>
         <li>148 routes is a lot of surface; thin-route/fat-repo discipline is what keeps it cheap. It's holding — keep enforcing it (the no-inline-<code>z.object</code> and no-<code>as any</code> tests help).</li>
-        <li>The 805-line webhook is the one place where "scale" means "complexity that's hard to test." Worth decomposing before it grows.</li>
+        <li>The Stripe webhook used to be the one place where "scale" meant "complexity that's hard to test" — now decomposed into a thin router + isolated handlers (3.5), so each piece is testable on its own.</li>
       </ul>
       <div class="bottom" style="margin-top:14px"><b>Net:</b> a mid-stage codebase that has done the hard structural work (layering, types, validation, repos) and is now in the <b>finish-and-converge</b> phase, not the redesign phase. That's a healthy place to be.</div>
     </div>
@@ -205,7 +207,9 @@
         <li>✅ <b>Inline admin clients converged</b> (3.2) — commit <code>4218d94</code>; 0 left, plus several null-safety bugs fixed.</li>
         <li>✅ <b>Marketing routes onto <code>requireAuth</code></b> (3.3) — commit <code>e2e4938</code>; the rest left as intentional non-drift.</li>
         <li>✅ <b><code>quizSessionRepo</code> tsc error fixed</b> (3.4) — commit <code>475ef72</code>; <code>tsc --noEmit</code> is now fully green.</li>
-        <li>Later: decompose <code>webhooks/stripe</code> behind characterization tests (3.5); decide <code>custom_review_fee</code> policy (3.6); optionally settle <code>share</code>'s guard (3.3).</li>
+        <li>✅ <b><code>webhooks/stripe</code> decomposed</b> (3.5) — commit <code>98368ae</code>; 805 → 156-line router + isolated handlers.</li>
+        <li><b>Decide <code>custom_review_fee</code> policy</b> (3.6) — one-line call: lock server-side or keep partner-editable? <i>Last open item.</i></li>
+        <li>Optional: event-simulation characterization tests for the stripe handlers (3.5 follow-up); settle <code>share</code>'s guard (3.3).</li>
       </ol>
       <p style="font-size:14px;color:var(--muted);margin-bottom:0">None of these are live bugs today. They're drift-cleanup.</p>
     </div>

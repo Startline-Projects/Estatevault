@@ -76,8 +76,12 @@ The 4 marketing asset routes (`materials`, `flyer`, `one-pager`, `script-card`) 
 ### ✅ 3.4 — The strict typecheck gate is now green (fixed 2026-06-03, commit `475ef72`)
 `lib/repos/server/quizSessionRepo.ts` took `row: Record<string, unknown>`, which the typed Supabase client rejected — the one error keeping `npx tsc --noEmit` red. Typed `row` as the table's Insert shape (same fix pattern as `attorneyReviewRepo`). That surfaced a real caller hole in `createCheckoutSession` (an `answers` object the `Json` column couldn't accept), fixed with the existing `as Json` boundary convention. **`tsc --noEmit` now reports zero errors** — the bug gate is trustworthy for the first time.
 
-### 🟡 3.5 — `webhooks/stripe/route.ts` is 805 lines
-The single biggest, highest-risk file (it moves money and provisions accounts). Not broken, but fat enough that a change is hard to reason about. Candidate for extracting per-event handlers into `lib/` — carefully, with characterization tests first.
+### ✅ 3.5 — `webhooks/stripe` split into a thin router + handlers (fixed 2026-06-03, commit `98368ae`)
+The webhook was an 805-line file that moved money and provisioned accounts (one handler ~320 lines). The per-product handlers were **extracted verbatim** into `lib/webhooks/stripe/*` (`resolveOrCreateGuestClient`, `handleAttorneyReview`, `handleAmendmentCheckout`, `handleVaultSubscriptionCheckout`, `handleDocumentCheckout` + a shared `Admin` type). Behaviour is preserved by construction — byte-identical moves, proven by tsc + the full suite (no logic changed).
+
+`app/api/webhooks/stripe/route.ts` is now a **156-line router**: verify signature → idempotency guard → dispatch by `event.type` → call the lib handler. The short inline events (`invoice.*`, `subscription.deleted`, `partner_platform_fee`) stay in the router. Each heavy handler is now independently importable + testable. The `phase0-security` guard was extended so the no-`listUsers()` check and the `find_auth_user_by_email` RPC assertion follow the code into the new handlers.
+
+**Recommended follow-up (not blocking):** now that the handlers are isolated, add event-simulation characterization tests (mock a `checkout.session.completed` → assert the order/split/documents/payout writes) for deeper safety on future changes. Cheap to do per-handler now; was impractical when it was one 805-line function.
 
 ### 🟡 3.6 — `custom_review_fee` is partner-editable
 It's in the partner self-update whitelist (`partnerSelfUpdateSchema`). It's the attorney-partner's own in-house review fee (they keep 100%), so it's arguably theirs to set — but it sits next to the fixed-pricing rule. Decide explicitly: lock it server-side, or document it as intentionally partner-owned.
@@ -97,7 +101,7 @@ It's in the partner self-update whitelist (`partnerSelfUpdateSchema`). It's the 
 **What would limit scale if left unattended:**
 - Drift seeds (a template someone copies next time, re-spreading an old pattern) are what erode the "one way to do it" property. The two biggest pools — the half-migrated screens (3.1) and the inline admin clients (3.2) — have both since been converged.
 - 148 routes is a lot of surface; the discipline of thin-route/fat-repo is what keeps that surface cheap. It's holding — keep enforcing it (the no-inline-`z.object` and no-`as any` tests help).
-- The 805-line webhook is the one place where "scale" means "complexity that's hard to test." Worth decomposing before it grows.
+- The Stripe webhook used to be the one place where "scale" meant "complexity that's hard to test" — now decomposed into a thin router + isolated handlers (3.5), so each piece is testable in isolation.
 
 **Net:** this is a mid-stage codebase that has done the hard structural work (layering, types, validation, repos) and is now in the **finish-and-converge** phase, not the redesign phase. That's a healthy place to be.
 
@@ -109,7 +113,9 @@ It's in the partner self-update whitelist (`partnerSelfUpdateSchema`). It's the 
 2. ✅ **Inline admin clients converged** (3.2) — commit `4218d94`; 0 left, plus several null-safety bugs fixed.
 3. ✅ **Marketing routes onto `requireAuth`** (3.3) — commit `e2e4938`; the rest left as intentional non-drift.
 4. ✅ **`quizSessionRepo` tsc error fixed** (3.4) — commit `475ef72`; `tsc --noEmit` is now fully green.
-5. Later: decompose `webhooks/stripe` behind characterization tests (3.5); decide `custom_review_fee` policy (3.6); optionally settle `share`'s guard (3.3).
+5. ✅ **`webhooks/stripe` decomposed** (3.5) — commit `98368ae`; 805 → 156-line router + isolated handlers.
+6. **Decide `custom_review_fee` policy** (3.6) — a one-line call: lock server-side, or keep partner-editable? *Last open item.*
+7. Optional: event-simulation characterization tests for the stripe handlers (3.5 follow-up); settle `share`'s guard (3.3).
 
 None of these are live bugs today. They're drift-cleanup.
 
