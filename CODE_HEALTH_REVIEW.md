@@ -73,8 +73,8 @@ The 4 marketing asset routes (`materials`, `flyer`, `one-pager`, `script-card`) 
 - `auth/welcome` — needs the raw `user.user_metadata`, which `requireAuth`'s profile shape doesn't expose.
 - `share` — an E2EE-vault feature (uses `getMyClient` + rate limiting). Convertible, but it's a `requireAuth` vs `requireClientUser` judgment call — parked as a small standalone decision rather than risk the crypto path.
 
-### 🟡 3.4 — The strict typecheck gate is not actually green
-`lib/repos/server/quizSessionRepo.ts` has a pre-existing `tsc` error (`Record<string, unknown>` passed to a typed `.insert()`). It predates the B2 work and was left untouched, but it means `npx tsc --noEmit` is **not** clean — the bug gate the project relies on is one error short of green. Cheap to fix (type the insert like `attorneyReviewRepo` was).
+### ✅ 3.4 — The strict typecheck gate is now green (fixed 2026-06-03, commit `475ef72`)
+`lib/repos/server/quizSessionRepo.ts` took `row: Record<string, unknown>`, which the typed Supabase client rejected — the one error keeping `npx tsc --noEmit` red. Typed `row` as the table's Insert shape (same fix pattern as `attorneyReviewRepo`). That surfaced a real caller hole in `createCheckoutSession` (an `answers` object the `Json` column couldn't accept), fixed with the existing `as Json` boundary convention. **`tsc --noEmit` now reports zero errors** — the bug gate is trustworthy for the first time.
 
 ### 🟡 3.5 — `webhooks/stripe/route.ts` is 805 lines
 The single biggest, highest-risk file (it moves money and provisions accounts). Not broken, but fat enough that a change is hard to reason about. Candidate for extracting per-event handlers into `lib/` — carefully, with characterization tests first.
@@ -108,7 +108,7 @@ It's in the partner self-update whitelist (`partnerSelfUpdateSchema`). It's the 
 1. ✅ **B2 finished** (3.1) — commit `3bbbbee`; all 8 remaining screens converted.
 2. ✅ **Inline admin clients converged** (3.2) — commit `4218d94`; 0 left, plus several null-safety bugs fixed.
 3. ✅ **Marketing routes onto `requireAuth`** (3.3) — commit `e2e4938`; the rest left as intentional non-drift.
-4. **Fix the `quizSessionRepo` tsc error** (3.4) — makes the strict gate actually green. ~10 min. *Now the top open item.*
+4. ✅ **`quizSessionRepo` tsc error fixed** (3.4) — commit `475ef72`; `tsc --noEmit` is now fully green.
 5. Later: decompose `webhooks/stripe` behind characterization tests (3.5); decide `custom_review_fee` policy (3.6); optionally settle `share`'s guard (3.3).
 
 None of these are live bugs today. They're drift-cleanup.

@@ -164,9 +164,9 @@
       <p><span class="k">The rest of the ~10 raw-<code>getUser</code> routes were deliberately left</span> (not drift): <code>checkout/*</code> (guest-capable purchase — <code>requireAuth</code> would block pre-account checkout), <code>documents/download-by-session</code> (Stripe-session-token auth, not a user), <code>auth/welcome</code> (needs raw <code>user.user_metadata</code>), and <code>share</code> (E2EE-vault feature; <code>requireAuth</code> vs <code>requireClientUser</code> is a separate small decision).</p>
     </div>
 
-    <div class="item med">
-      <h3>3.4 · The strict typecheck gate is not actually green <span class="sev med">Medium</span></h3>
-      <p><code>lib/repos/server/quizSessionRepo.ts</code> has a pre-existing <code>tsc</code> error (<code>Record&lt;string, unknown&gt;</code> passed to a typed <code>.insert()</code>). It predates the B2 work and was left untouched, but it means <code>npx tsc --noEmit</code> is <b>not</b> clean — the bug gate the project relies on is one error short of green. Cheap to fix (type the insert like <code>attorneyReviewRepo</code> was).</p>
+    <div class="item good">
+      <h3>3.4 · The strict typecheck gate is now green <span class="sev good">✅ Fixed · 475ef72</span></h3>
+      <p><code>quizSessionRepo</code> took <code>row: Record&lt;string, unknown&gt;</code>, which the typed Supabase client rejected — the one error keeping <code>npx tsc --noEmit</code> red. Typed <code>row</code> as the table's Insert shape (same fix as <code>attorneyReviewRepo</code>). That surfaced a real caller hole in <code>createCheckoutSession</code> (an <code>answers</code> object the <code>Json</code> column couldn't accept), fixed with the existing <code>as Json</code> boundary convention. <b><code>tsc --noEmit</code> now reports zero errors</b> — the bug gate is trustworthy for the first time.</p>
     </div>
 
     <div class="item med">
@@ -204,7 +204,7 @@
         <li>✅ <b>B2 finished</b> (3.1) — commit <code>3bbbbee</code>; all 8 remaining screens converted.</li>
         <li>✅ <b>Inline admin clients converged</b> (3.2) — commit <code>4218d94</code>; 0 left, plus several null-safety bugs fixed.</li>
         <li>✅ <b>Marketing routes onto <code>requireAuth</code></b> (3.3) — commit <code>e2e4938</code>; the rest left as intentional non-drift.</li>
-        <li><b>Fix the <code>quizSessionRepo</code> tsc error</b> (3.4) — makes the strict gate actually green. ~10 min. <i>Now the top open item.</i></li>
+        <li>✅ <b><code>quizSessionRepo</code> tsc error fixed</b> (3.4) — commit <code>475ef72</code>; <code>tsc --noEmit</code> is now fully green.</li>
         <li>Later: decompose <code>webhooks/stripe</code> behind characterization tests (3.5); decide <code>custom_review_fee</code> policy (3.6); optionally settle <code>share</code>'s guard (3.3).</li>
       </ol>
       <p style="font-size:14px;color:var(--muted);margin-bottom:0">None of these are live bugs today. They're drift-cleanup.</p>
