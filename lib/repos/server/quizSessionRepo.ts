@@ -2,16 +2,18 @@
 // queries it from the API layer.
 
 import { createAdminClient } from "@/lib/api/auth";
+import type { Database } from "@/types/db.generated";
 
 type Admin = ReturnType<typeof createAdminClient>;
+type QuizSessionInsert = Database["public"]["Tables"]["quiz_sessions"]["Insert"];
 
 // Insert a quiz/intake session row.
-export function insert(admin: Admin, row: Record<string, unknown>) {
+export function insert(admin: Admin, row: QuizSessionInsert) {
   return admin.from("quiz_sessions").insert(row);
 }
 
 // Insert and return the new row id (callers that link it to an order).
-export function insertReturningId(admin: Admin, row: Record<string, unknown>) {
+export function insertReturningId(admin: Admin, row: QuizSessionInsert) {
   return admin.from("quiz_sessions").insert(row).select("id").single();
 }
 

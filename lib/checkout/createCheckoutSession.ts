@@ -180,7 +180,7 @@ export async function createCheckoutSession(
 
   const { data: quizSession } = await quizSessionRepo.insertReturningId(supabase, {
     client_id: clientId,
-    answers: quizAnswers,
+    answers: quizAnswers as Json,
     recommendation: config.recommendation,
     completed: true,
   });
@@ -345,7 +345,7 @@ async function handleTestPromo(
     : intakeAnswers;
 
   const { data: quizSession } = await quizSessionRepo.insertReturningId(supabase, {
-    answers: quizAnswers,
+    answers: quizAnswers as Json,
     recommendation: config.recommendation,
     completed: true,
   });
