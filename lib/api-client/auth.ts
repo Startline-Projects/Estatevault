@@ -1,4 +1,15 @@
-import { post, publicPost, type ApiResult } from "./client";
+import { post, publicPost, get, type ApiResult } from "./client";
+
+export type LoginRouting = {
+  userType: string;
+  clientPartner: { company_name: string | null; subdomain: string | null; custom_domain: string | null; vault_subdomain: string | null } | null;
+  partnerOnboarding: { onboarding_completed: boolean | null; status: string | null } | null;
+};
+
+// Post-login routing data for the just-authenticated user (B2).
+export function getLoginRouting(): Promise<ApiResult<LoginRouting>> {
+  return get("/api/auth/login-routing");
+}
 
 export type CheckEmailResult = { exists: boolean; userId?: string; fullName?: string | null; hasWill?: boolean; hasTrust?: boolean; hasVault?: boolean };
 export type VerifyCodeResult = { token: string };

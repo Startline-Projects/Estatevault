@@ -164,6 +164,17 @@ export function findByProfileId(admin: Admin, profileId: string) {
     .single();
 }
 
+// Client id + owning partner for a profile (B2 login whitelabel lockout).
+export function getPartnerIdByProfile(admin: Admin, profileId: string) {
+  return admin
+    .from("clients")
+    .select("id, partner_id")
+    .eq("profile_id", profileId)
+    .not("partner_id", "is", null)
+    .limit(1)
+    .maybeSingle();
+}
+
 // Client id + funding checklist for a profile (B2 funding checklist screen).
 export function getFundingByProfile(admin: Admin, profileId: string) {
   return admin

@@ -2,48 +2,26 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
+import { getMe, certifyMe } from "@/lib/api-client/partner";
 
 export default function ProTrainingExamPage() {
   const router = useRouter();
-  const [partnerId, setPartnerId] = useState("");
   const [certified, setCertified] = useState(false);
   const [passing, setPassing] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function load() {
-      const supabase = createClient();
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (!user) return;
-
-      const { data: partner } = await supabase
-        .from("partners")
-        .select("id, certification_completed")
-        .eq("profile_id", user.id)
-        .single();
-
-      if (partner) {
-        setPartnerId(partner.id);
-        setCertified(partner.certification_completed || false);
-      }
+      const { data } = await getMe();
+      if (data?.partner) setCertified(data.partner.certification_completed || false);
       setLoading(false);
     }
     load();
   }, []);
 
   async function handlePassExam() {
-    if (!partnerId) return;
     setPassing(true);
-
-    const supabase = createClient();
-    await supabase
-      .from("partners")
-      .update({ certification_completed: true })
-      .eq("id", partnerId);
-
+    await certifyMe();
     setCertified(true);
     setPassing(false);
   }

@@ -13,3 +13,13 @@ export function listActive(admin: Admin, limit = 10) {
     .order("created_at", { ascending: false })
     .limit(limit);
 }
+
+// Update a lead's status (B2 sales — mark contacted).
+export function updateStatus(admin: Admin, leadId: string, status: string) {
+  return admin
+    .from("professional_leads")
+    .update({ status })
+    .eq("id", leadId)
+    .select("id")
+    .maybeSingle();
+}

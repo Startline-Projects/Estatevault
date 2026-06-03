@@ -1,8 +1,9 @@
 import { get, post, getRaw, publicGet, type ApiResult } from "./client";
 
 export type CheckStatusResult = {
-  status: string;
-  documents?: Array<{ id: string; document_type: string; status: string }>;
+  ready?: boolean;
+  status?: string;
+  documents?: Array<{ id: string; document_type: string; status: string; has_file?: boolean }>;
 };
 
 export type DownloadBySessionResult = { url: string };

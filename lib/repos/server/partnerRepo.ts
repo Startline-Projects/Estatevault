@@ -19,6 +19,16 @@ export function getById(admin: Admin, partnerId: string) {
   return admin.from("partners").select("*").eq("id", partnerId).maybeSingle();
 }
 
+// Whitelabel host fields for a partner (B2 login lockout — replaces the
+// get_partner_login_target security-definer RPC; admin client bypasses RLS).
+export function getLoginHostsById(admin: Admin, partnerId: string) {
+  return admin
+    .from("partners")
+    .select("company_name, subdomain, custom_domain, vault_subdomain")
+    .eq("id", partnerId)
+    .maybeSingle();
+}
+
 // A rep's managed partners with platform-fee fields (B2 rep commission view).
 export function listForRepCommission(admin: Admin, repId: string) {
   return admin

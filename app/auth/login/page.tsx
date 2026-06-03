@@ -7,7 +7,7 @@ import { createClient } from "@/lib/supabase/client";
 import { clientUrl, partnerUrl, adminUrl, salesUrl, isClientHost, isPartnerHost, isAdminHost, isSalesHost } from "@/lib/hosts";
 import { createClient as createBrowserSupabase } from "@/lib/supabase/client";
 import PartnerThemedShell, { usePartnerBranding } from "@/components/partner/PartnerThemedShell";
-import { createHandoff } from "@/lib/api-client/auth";
+import { createHandoff, getLoginRouting } from "@/lib/api-client/auth";
 
 function BrandedWordmark({ className = "" }: { className?: string }) {
   const branding = usePartnerBranding();
@@ -94,21 +94,16 @@ function LoginForm() {
       sessionStorage.removeItem("vault:selected-category");
     }
 
-    // Get user and check their type from profiles table (source of truth)
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
+    // Post-login routing data (role + whitelabel hosts + partner onboarding),
+    // resolved server-side behind the API boundary.
+    const { data: routing } = await getLoginRouting();
+    if (!routing) {
       setError("Failed to get user after login.");
       setLoading(false);
       return;
     }
 
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("user_type")
-      .eq("id", user.id)
-      .single();
-
-    const userType = profile?.user_type || "client";
+    const userType = routing.userType;
 
     // Restrict client host login to client-side roles only.
     // Admin/partner/sales must log in from their own subdomain.
@@ -144,24 +139,8 @@ function LoginForm() {
     // login on the generic estatevault.us host so partner clients can't
     // bypass the whitelabel.
     if (userType === "client") {
-      const { data: clientRow } = await supabase
-        .from("clients")
-        .select("partner_id")
-        .eq("profile_id", user.id)
-        .not("partner_id", "is", null)
-        .limit(1)
-        .maybeSingle();
-
-      if (clientRow?.partner_id) {
-        // RLS blocks clients from reading the partners table directly, so use a
-        // security-definer RPC that returns only the whitelabel host fields for
-        // the partner this client belongs to.
-        const { data: partnerRows } = await supabase.rpc(
-          "get_partner_login_target",
-          { p_partner_id: clientRow.partner_id }
-        );
-        const partner = Array.isArray(partnerRows) ? partnerRows[0] : partnerRows;
-
+      const partner = routing.clientPartner;
+      if (partner) {
         const allowedHosts = [
           partner?.subdomain,
           partner?.custom_domain,
@@ -193,13 +172,7 @@ function LoginForm() {
     }
 
     if (userType === "partner") {
-      // Check partner onboarding status
-      const { data: partner } = await supabase
-        .from("partners")
-        .select("onboarding_completed, status")
-        .eq("profile_id", user.id)
-        .single();
-
+      const partner = routing.partnerOnboarding;
       let path = "/pro/onboarding/step-1";
       if (partner?.status === "pending_verification") {
         path = "/partners/attorneys/welcome";

@@ -156,6 +156,16 @@ export function getMyPlatformCommission(): Promise<ApiResult<MyPlatformCommissio
   return get("/api/sales/my-platform-commission");
 }
 
+// Mark a professional lead's status (B2 sales dashboard).
+export function setLeadStatus(leadId: string, status: "new" | "contacted"): Promise<ApiResult<{ success: boolean }>> {
+  return patch(`/api/sales/leads/${leadId}`, { status });
+}
+
+// Activate or reject a pending attorney bar-verification (B2).
+export function attorneyVerification(partnerId: string, action: "activate" | "reject"): Promise<ApiResult<{ success: boolean }>> {
+  return post("/api/sales/attorney-verification", { partnerId, action });
+}
+
 export function getReps(): Promise<ApiResult<{ reps: unknown[] }>> {
   return get("/api/sales/reps");
 }

@@ -2,8 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/client";
-import { sendPartnerActivatedEmail, getOverview as getSalesOverview } from "@/lib/api-client/sales";
+import { sendPartnerActivatedEmail, getOverview as getSalesOverview, setLeadStatus, attorneyVerification } from "@/lib/api-client/sales";
 
 interface LeadRow {
   id: string;
@@ -134,11 +133,7 @@ export default function SalesDashboardPage() {
 
   async function handleMarkContacted(leadId: string) {
     setMarkingLeadId(leadId);
-    const supabase = createClient();
-    const { error } = await supabase
-      .from("professional_leads")
-      .update({ status: "contacted" })
-      .eq("id", leadId);
+    const { error } = await setLeadStatus(leadId, "contacted");
 
     if (!error) {
       setLeads((prev) =>
@@ -151,12 +146,8 @@ export default function SalesDashboardPage() {
   async function handleActivateAttorney(partnerId: string, email: string, name: string) {
     setActivatingId(partnerId);
     setBarVerificationMessage(null);
-    const supabase = createClient();
 
-    const { error } = await supabase
-      .from("partners")
-      .update({ status: "active" })
-      .eq("id", partnerId);
+    const { error } = await attorneyVerification(partnerId, "activate");
 
     if (error) {
       setBarVerificationMessage("Failed to activate account. Please try again.");
@@ -183,12 +174,8 @@ export default function SalesDashboardPage() {
 
     setRejectingId(partnerId);
     setBarVerificationMessage(null);
-    const supabase = createClient();
 
-    const { error } = await supabase
-      .from("partners")
-      .update({ status: "rejected" })
-      .eq("id", partnerId);
+    const { error } = await attorneyVerification(partnerId, "reject");
 
     if (error) {
       setBarVerificationMessage("Failed to reject account. Please try again.");

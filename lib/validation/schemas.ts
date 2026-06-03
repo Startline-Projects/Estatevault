@@ -550,6 +550,17 @@ export const salesApplyPromoSchema = z.object({
   promo_code: z.string().min(1).max(40),
 });
 
+// A sales rep marking a professional lead's status (B2 sales dashboard).
+export const salesLeadStatusSchema = z.object({
+  status: z.enum(["new", "contacted"]),
+});
+
+// A sales rep / admin acting on a pending attorney bar-verification (B2).
+export const attorneyVerificationSchema = z.object({
+  partnerId: z.string().uuid(),
+  action: z.enum(["activate", "reject"]),
+});
+
 // A client toggling their trust funding checklist (B2). Map of asset -> done.
 export const fundingChecklistSchema = z.object({
   checklist: z.record(z.string().max(200), z.boolean()),

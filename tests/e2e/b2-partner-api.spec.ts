@@ -29,6 +29,8 @@ const PARTNER_GET_ENDPOINTS = [
   "/api/client/documents",
   "/api/client/funding-checklist",
   "/api/client/settings",
+  "/api/client/quiz-latest",
+  "/api/auth/login-routing",
   "/api/sales/my-platform-commission",
   "/api/attorney/reviews",
   "/api/attorney/pipeline",
@@ -146,6 +148,27 @@ test.describe("B2 partner mutations — unauthenticated", () => {
       data: { promo_code: "TEST" },
       maxRedirects: 0,
     });
+    expect(BLOCKED).toContain(res.status());
+  });
+
+  test("PATCH /api/sales/leads/:id rejects anonymous", async ({ request }) => {
+    const res = await request.patch(`/api/sales/leads/${FOREIGN}`, {
+      data: { status: "contacted" },
+      maxRedirects: 0,
+    });
+    expect(BLOCKED).toContain(res.status());
+  });
+
+  test("POST /api/sales/attorney-verification rejects anonymous", async ({ request }) => {
+    const res = await request.post("/api/sales/attorney-verification", {
+      data: { partnerId: FOREIGN, action: "activate" },
+      maxRedirects: 0,
+    });
+    expect(BLOCKED).toContain(res.status());
+  });
+
+  test("POST /api/partner/certify rejects anonymous", async ({ request }) => {
+    const res = await request.post("/api/partner/certify", { maxRedirects: 0 });
     expect(BLOCKED).toContain(res.status());
   });
 });

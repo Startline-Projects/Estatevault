@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useRef, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/client";
+import { getLatestQuiz } from "@/lib/api-client/clientAccount";
 import { type TrustIntake, initialTrustIntake, checkComplexity } from "@/lib/trust-types";
 import AcknowledgmentCard from "@/components/intake/AcknowledgmentCard";
 import PartnerThemedShell, { BrandedLoadingWordmark } from "@/components/partner/PartnerThemedShell";
@@ -94,25 +94,18 @@ export default function TrustPage() {
   useEffect(() => {
     async function init() {
       setPartnerParam(new URLSearchParams(window.location.search).get("partner") || "");
-      const supabase = createClient();
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        setUserId(user.id);
-        try {
-          const { data: client } = await supabase.from("clients").select("id").eq("profile_id", user.id).single();
-          if (client) {
-            const { data: quiz } = await supabase.from("quiz_sessions").select("answers").eq("client_id", client.id).order("created_at", { ascending: false }).limit(1).single();
-            if (quiz?.answers) {
-              const a = quiz.answers as Record<string, string>;
-              if (a.financeManager) update({ poaAgentName: a.financeManager });
-              if (a.medicalDecisionMaker) update({ patientAdvocateName: a.medicalDecisionMaker });
-              if (a.childGuardian && a.childGuardian !== "N/A") {
-                update({ guardianName: a.childGuardian, hasMinorChildren: "Yes" });
-              }
-              if (a.hasChildren === "Yes") update({ hasMinorChildren: "Yes" });
-            }
+      const { data } = await getLatestQuiz();
+      if (data) {
+        setUserId(data.userId);
+        const a = data.answers;
+        if (a) {
+          if (a.financeManager) update({ poaAgentName: a.financeManager });
+          if (a.medicalDecisionMaker) update({ patientAdvocateName: a.medicalDecisionMaker });
+          if (a.childGuardian && a.childGuardian !== "N/A") {
+            update({ guardianName: a.childGuardian, hasMinorChildren: "Yes" });
           }
-        } catch { /* no quiz data */ }
+          if (a.hasChildren === "Yes") update({ hasMinorChildren: "Yes" });
+        }
       }
     }
     init();

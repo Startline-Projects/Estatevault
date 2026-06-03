@@ -5,7 +5,6 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import AnimatedCheckmark from "@/components/success/AnimatedCheckmark";
 import PasswordSetup from "@/components/success/PasswordSetup";
-import { createClient } from "@/lib/supabase/client";
 import PartnerThemedShell, { BrandedLoadingWordmark } from "@/components/partner/PartnerThemedShell";
 import { processNow, checkStatus, downloadBySession, downloadZip } from "@/lib/api-client/documents";
 import { verifySession } from "@/lib/api-client/checkout";
@@ -48,46 +47,22 @@ function SuccessContent() {
 
   const pollDocuments = useCallback(async (oid: string) => {
     try {
-      if (isTest) {
-        // Test mode: use server-side API (no auth, bypasses RLS)
-        const { data } = await checkStatus(oid);
-        if (data && (data as Record<string, unknown>).ready && ((data as Record<string, unknown>).documents as unknown[]).length > 0) {
-          const docs = (data as Record<string, unknown>).documents as Array<{ id: string; document_type: string; status: string; has_file: boolean }>;
-          setDocuments(docs.map((d) => ({
-            id: d.id, document_type: d.document_type, status: d.status, storage_path: d.has_file ? "exists" : null,
-          })));
-          setDocsReady(true);
-          setSteps([
-            { label: "Promo code applied", status: "done" },
-            { label: "Will Package generated", status: "done" },
-            { label: "Ready for download", status: "done" },
-            { label: "Test Mode, not saved", status: "done" },
-          ]);
-          return true;
-        }
-        return false;
-      }
-
-      // Normal flow: use client-side Supabase
-      const supabase = createClient();
-      const { data: docs } = await supabase
-        .from("documents")
-        .select("id, document_type, status, storage_path")
-        .eq("order_id", oid);
-
-      if (docs && docs.length > 0) {
-        setDocuments(docs as DocumentRecord[]);
-        const allReady = docs.every((d) => d.status === "generated" || d.status === "delivered");
-        if (allReady) {
-          setDocsReady(true);
-          setSteps([
-            { label: isPromo ? "Promo code applied" : "Payment confirmed", status: "done" },
-            { label: "Will Package generated", status: "done" },
-            { label: "Ready for download", status: "done" },
-            { label: "Saved to your account", status: "done" },
-          ]);
-          return true;
-        }
+      // Server-side readiness poll (no auth, bypasses RLS) — works for both the
+      // promo/test flow and the normal post-payment flow.
+      const { data } = await checkStatus(oid);
+      const docs = data?.documents ?? [];
+      if (data?.ready && docs.length > 0) {
+        setDocuments(docs.map((d) => ({
+          id: d.id, document_type: d.document_type, status: d.status, storage_path: d.has_file ? "exists" : null,
+        })));
+        setDocsReady(true);
+        setSteps([
+          { label: isPromo ? "Promo code applied" : "Payment confirmed", status: "done" },
+          { label: "Will Package generated", status: "done" },
+          { label: "Ready for download", status: "done" },
+          { label: isTest ? "Test Mode, not saved" : "Saved to your account", status: "done" },
+        ]);
+        return true;
       }
     } catch { /* ignore */ }
     return false;

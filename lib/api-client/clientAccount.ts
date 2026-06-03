@@ -1,5 +1,12 @@
 import { get, patch, type ApiResult } from "./client";
 
+// B2: signed-in user id + latest quiz answers, for will/trust intake prefill.
+export function getLatestQuiz(): Promise<
+  ApiResult<{ userId: string; answers: Record<string, string> | null }>
+> {
+  return get("/api/client/quiz-latest");
+}
+
 // B2: the signed-in client's funding checklist + trust asset types.
 export function getFundingChecklist(): Promise<
   ApiResult<{ checklist: Record<string, boolean>; assetTypes: string[] }>

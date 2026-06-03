@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useRef, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/client";
+import { getLatestQuiz } from "@/lib/api-client/clientAccount";
 import { type WillIntake, initialWillIntake } from "@/lib/will-types";
 import PartnerThemedShell, { BrandedLoadingWordmark } from "@/components/partner/PartnerThemedShell";
 import AcknowledgmentCard from "@/components/intake/AcknowledgmentCard";
@@ -69,34 +69,16 @@ export default function WillPage() {
   useEffect(() => {
     async function init() {
       setPartnerParam(new URLSearchParams(window.location.search).get("partner") || "");
-      const supabase = createClient();
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        setUserId(user.id);
-        // Try to pre-populate from quiz session
-        try {
-          const { data: client } = await supabase
-            .from("clients")
-            .select("id")
-            .eq("profile_id", user.id)
-            .single();
-          if (client) {
-            const { data: quiz } = await supabase
-              .from("quiz_sessions")
-              .select("answers")
-              .eq("client_id", client.id)
-              .order("created_at", { ascending: false })
-              .limit(1)
-              .single();
-            if (quiz?.answers) {
-              const a = quiz.answers as Record<string, string>;
-              if (a.financeManager) update({ executorName: a.financeManager });
-              if (a.childGuardian && a.childGuardian !== "N/A") {
-                update({ guardianName: a.childGuardian, hasMinorChildren: "Yes" });
-              }
-            }
+      const { data } = await getLatestQuiz();
+      if (data) {
+        setUserId(data.userId);
+        const a = data.answers;
+        if (a) {
+          if (a.financeManager) update({ executorName: a.financeManager });
+          if (a.childGuardian && a.childGuardian !== "N/A") {
+            update({ guardianName: a.childGuardian, hasMinorChildren: "Yes" });
           }
-        } catch {}
+        }
       }
     }
     init();

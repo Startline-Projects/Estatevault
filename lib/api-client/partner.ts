@@ -23,6 +23,11 @@ export function applyPromo(): Promise<ApiResult<{ applied: boolean }>> {
   return post("/api/partner/apply-promo");
 }
 
+// Mark the signed-in partner's certification complete (B2 training exam).
+export function certifyMe(): Promise<ApiResult<{ success: boolean }>> {
+  return post("/api/partner/certify");
+}
+
 // Upload the partner's logo (server-side storage + logo_url set). Returns URL.
 export function uploadLogo(file: File): Promise<ApiResult<{ url: string }>> {
   const form = new FormData();
