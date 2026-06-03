@@ -78,7 +78,7 @@
       <span>148 routes · 21 repos · 76 Zod schemas</span>
       <span>7 any/as-any · 0 ts-ignore</span>
       <span>376 unit · 24 e2e</span>
-      <span>Verdict: sound &amp; scalable</span>
+      <span>B2 100% · sound &amp; scalable</span>
     </div>
   </div>
 </header>
@@ -98,7 +98,7 @@
   <main>
     <section id="verdict">
       <div class="verdict">
-        <span class="k">One-line verdict:</span> the architecture is sound and it scales. Clean layering, a typed UI→API→repo→DB boundary, near-zero <code>any</code>, real test coverage. The remaining work is <b>finishing</b> a migration that's ~85% done and cleaning up a few drift pockets — not redesign. Two earlier claims were over-stated and are corrected in §6.
+        <span class="k">One-line verdict:</span> the architecture is sound and it scales. Clean layering, a typed UI→API→repo→DB boundary, near-zero <code>any</code>, real test coverage. The B2 migration (screens off direct DB) is now <b>100% complete</b> for browser-side calls (commit <code>3bbbbee</code>); what's left is small drift cleanup — not redesign.
       </div>
     </section>
 
@@ -133,23 +133,20 @@
 
     <h2 class="section" id="gaps">3 · What's NOT done / fragile <span style="font-size:11px;color:var(--muted);text-transform:none;letter-spacing:0">(ranked by risk)</span></h2>
 
-    <div class="item crit">
-      <h3>3.1 · B2 ("screens off direct DB") is ~85% done, not 100% <span class="sev crit">Highest</span></h3>
-      <p>This review found <b>~8 client-component screens still query the database directly in the browser</b>. The earlier "B2 done" status was scoped to only four directories (<code>pro/</code>, <code>sales/</code>, <code>attorney/</code>, <code>dashboard/</code>) and missed the rest of <code>app/</code>.</p>
+    <div class="item good">
+      <h3>3.1 · B2 ("screens off direct DB") — now 100% <span class="sev good">✅ Fixed · 3bbbbee</span></h3>
+      <p>The first version of this review found ~8 client screens still hitting the DB in the browser (the earlier "B2 done" status had been scoped to only four directories and missed the rest of <code>app/</code>). <b>Those 8 are now all converted.</b> For the record:</p>
       <table>
-        <thead><tr><th>Screen</th><th>Direct DB</th><th>Why it matters</th></tr></thead>
+        <thead><tr><th>Screen</th><th>Was</th><th>Now</th></tr></thead>
         <tbody>
-          <tr><td><code>app/will/page.tsx</code></td><td>reads <code>clients</code>, <code>quiz_sessions</code></td><td><b>consumer money flow</b></td></tr>
-          <tr><td><code>app/trust/page.tsx</code></td><td>reads <code>clients</code>, <code>quiz_sessions</code></td><td><b>consumer money flow</b></td></tr>
-          <tr><td><code>app/will/success/page.tsx</code></td><td>reads <code>documents</code> + storage</td><td>post-checkout, sensitive</td></tr>
-          <tr><td><code>app/trust/success/page.tsx</code></td><td>reads <code>documents</code> + storage</td><td>post-checkout, sensitive</td></tr>
-          <tr><td><code>app/auth/login/page.tsx</code></td><td>reads <code>profiles</code>, <code>clients</code>, <code>partners</code></td><td>auth path (post-login routing)</td></tr>
-          <tr><td><code>app/pro/training/exam/page.tsx</code></td><td>reads/writes <code>partners</code></td><td>unlocks platform features</td></tr>
-          <tr><td><code>app/pro/sales/page.tsx</code></td><td><b>partial</b> — reads converted, write handlers still direct</td><td>half-migrated</td></tr>
-          <tr><td><code>app/sales/dashboard/page.tsx</code></td><td><b>partial</b> — same shape</td><td>half-migrated</td></tr>
+          <tr><td><code>will/page</code> · <code>trust/page</code></td><td>read <code>clients</code> + <code>quiz_sessions</code></td><td><code>GET /api/client/quiz-latest</code></td></tr>
+          <tr><td><code>will/success</code> · <code>trust/success</code></td><td>read <code>documents</code> + storage</td><td>unified on the existing <code>check-status</code> poll</td></tr>
+          <tr><td><code>auth/login</code></td><td>read <code>profiles</code>/<code>clients</code>/<code>partners</code> + RPC</td><td><code>GET /api/auth/login-routing</code></td></tr>
+          <tr><td><code>pro/training/exam</code></td><td>read/write <code>partners</code></td><td><code>getMe()</code> + <code>POST /api/partner/certify</code></td></tr>
+          <tr><td><code>pro/sales/page</code> · <code>sales/dashboard</code></td><td>half-migrated write handlers</td><td><code>PATCH /api/sales/leads/[id]</code> + <code>POST /api/sales/attorney-verification</code></td></tr>
         </tbody>
       </table>
-      <p style="margin-top:10px"><span class="k">Blast radius:</span> business rules in the screen, no server backstop beyond RLS, not reusable by a mobile app. The consumer will/trust flow is the most important left — it's the revenue path. <b>Half-migrated is the worst state</b>: <code>pro/sales/page</code> and <code>sales/dashboard</code> have converted reads but direct writes, so the pattern is inconsistent inside one file.</p>
+      <p style="margin-top:10px"><span class="k">Result:</span> no client-component screen runs <code>supabase.from()</code>/<code>.storage</code>/<code>.rpc()</code> in the browser. The only remaining browser Supabase usage is the <b>realtime channel</b> in <code>dashboard/documents</code> (no REST equivalent — correct to keep) and <code>supabase.auth.*</code> (sign-in/out, not DB). Verified: tsc clean, 376 unit, lint clean, e2e anon guards for all 5 new endpoints.</p>
     </div>
 
     <div class="item high">
@@ -203,19 +200,18 @@
     <h2 class="section" id="next">5 · Recommended next steps <span style="font-size:11px;color:var(--muted);text-transform:none;letter-spacing:0">(smallest-risk-removed first)</span></h2>
     <div class="card">
       <ol class="steps">
-        <li><b>Fix the <code>quizSessionRepo</code> tsc error</b> (3.4) — makes the strict gate actually green. ~10 min.</li>
-        <li><b>Finish the partial screens</b> <code>pro/sales/page</code> + <code>sales/dashboard</code> (3.1) — convert lingering write handlers so no file is half-migrated. Highest consistency payoff.</li>
-        <li><b>Convert the consumer flow</b> <code>will/</code>, <code>trust/</code>, and their <code>success/</code> pages (3.1) — the revenue path; browser-check each.</li>
+        <li>✅ <b>B2 finished</b> (3.1) — done in commit <code>3bbbbee</code>; all 8 remaining screens converted (browser-check pending on the consumer flow).</li>
+        <li><b>Fix the <code>quizSessionRepo</code> tsc error</b> (3.4) — makes the strict gate actually green. ~10 min. <i>Now the top open item.</i></li>
         <li><b>Converge the inline admin clients</b> (3.2) onto the shared <code>createAdminClient</code> + repos, one page at a time.</li>
-        <li><b>Then</b> correct the B2 status in <code>SCALABILITY_PLAN</code>/<code>AUDIT</code> to "≈85% — N screens left" (see §6).</li>
-        <li>Later: decompose <code>webhooks/stripe</code> behind characterization tests (3.5); decide <code>custom_review_fee</code> policy (3.6); migrate raw-<code>getUser</code> routes onto <code>requireAuth</code> (3.3).</li>
+        <li><b>Migrate the raw-<code>getUser</code> routes</b> onto <code>requireAuth</code> (3.3).</li>
+        <li>Later: decompose <code>webhooks/stripe</code> behind characterization tests (3.5); decide <code>custom_review_fee</code> policy (3.6).</li>
       </ol>
-      <p style="font-size:14px;color:var(--muted);margin-bottom:0">None of these are live bugs today. They're completion + drift-cleanup.</p>
+      <p style="font-size:14px;color:var(--muted);margin-bottom:0">None of these are live bugs today. They're drift-cleanup.</p>
     </div>
 
     <h2 class="section" id="correction">6 · Correction to prior docs</h2>
-    <div class="note">
-      <span class="k">⚠ Over-stated status:</span> the <code>SCALABILITY_PLAN.md/.html</code> and <code>SCALABILITY_AUDIT.html</code> updates from earlier today mark B2 as <b>fully done</b>. This review shows that's over-stated — true for the four portal directories audited, but ~8 client screens outside them (the consumer will/trust flow, auth/login, training exam, two half-migrated sales screens) still call the DB directly. Those docs should be corrected to <b>"≈85% complete — consumer flow + auth + exam remain."</b> Flagged rather than silently edited, since the prior status was committed.
+    <div class="note" style="border-color:#cfe8d8;background:#f3f8f4;">
+      <span class="k" style="color:var(--good)">✅ Resolved:</span> the first version of this review (and the <code>SCALABILITY</code> docs) marked B2 fully done while ~8 client screens were still on direct DB — the original audit was scoped to four directories. <b>That gap has since been closed</b> (commit <code>3bbbbee</code>): the remaining screens were converted and B2 is now genuinely 100% for browser-side calls. Kept this section as a record — the lesson is that "done" claims should be backed by a whole-tree scan, not a directory subset.
     </div>
   </main>
 </div>

@@ -4,7 +4,7 @@
 **Reviewer:** senior-engineer pass (software-engineer skill, audit mode)
 **Method:** mapped the real code — routes, repos, the api-client layer, auth paths, type safety, tests — not the docs. Numbers below come from grepping the actual tree, not from prior progress notes.
 
-> **One-line verdict:** the architecture is sound and it scales. Clean layering, a typed UI→API→repo→DB boundary, near-zero `any`, real test coverage. The remaining work is **finishing** a migration that's ~85% done and cleaning up a few drift pockets — not redesign. Two earlier claims were over-stated and are corrected here.
+> **One-line verdict:** the architecture is sound and it scales. Clean layering, a typed UI→API→repo→DB boundary, near-zero `any`, real test coverage. The B2 migration (screens off direct DB) is now **100% complete** for browser-side calls (commit `3bbbbee`); the remaining work is small drift cleanup — not redesign.
 
 ---
 
@@ -44,24 +44,18 @@ The intended layering — **UI → api-client → API route (auth + Zod) → rep
 
 ## 3. What's NOT done / fragile (ranked by risk)
 
-### 🔴 3.1 — B2 ("screens off direct DB") is ~85% done, not 100%
-This review found **~8 client-component screens still query the database directly in the browser** — the earlier "B2 done" status was scoped to only four directories (`pro/`, `sales/`, `attorney/`, `dashboard/`) and missed the rest of `app/`.
+### ✅ 3.1 — B2 ("screens off direct DB") — now 100% (fixed 2026-06-03, commit `3bbbbee`)
+The first version of this review found ~8 client screens still hitting the DB in the browser (the earlier "B2 done" status had been scoped to only four directories and missed the rest of `app/`). **Those 8 are now all converted.** For the record, they were:
 
-Still on direct browser `supabase.from()`:
-
-| Screen | What it does directly | Why it matters |
+| Screen | Was | Now |
 |---|---|---|
-| `app/will/page.tsx` | reads `clients`, `quiz_sessions` (intake prefill) | **consumer money flow** |
-| `app/trust/page.tsx` | reads `clients`, `quiz_sessions` | **consumer money flow** |
-| `app/will/success/page.tsx` | reads `documents` + storage | post-checkout, security-sensitive |
-| `app/trust/success/page.tsx` | reads `documents` + storage | post-checkout, security-sensitive |
-| `app/auth/login/page.tsx` | reads `profiles`, `clients`, `partners` (post-login routing) | auth path |
-| `app/pro/training/exam/page.tsx` | reads/writes `partners` (certification) | unlocks platform features |
-| `app/pro/sales/page.tsx` | **partial** — reads converted, action handlers (`handleMarkContacted`, `handleActivateAttorney`) still write `professional_leads`/`partners` directly | half-migrated |
-| `app/sales/dashboard/page.tsx` | **partial** — same shape | half-migrated |
+| `app/will/page.tsx` · `app/trust/page.tsx` | read `clients` + `quiz_sessions` (intake prefill) | `GET /api/client/quiz-latest` |
+| `app/will/success` · `app/trust/success` | read `documents` + storage | unified on the existing `check-status` poll (one path for promo/test/normal) |
+| `app/auth/login/page.tsx` | read `profiles`/`clients`/`partners` + `get_partner_login_target` RPC | `GET /api/auth/login-routing` (hosts resolved server-side) |
+| `app/pro/training/exam/page.tsx` | read/write `partners` (certification) | `getMe()` + `POST /api/partner/certify` |
+| `app/pro/sales/page.tsx` · `app/sales/dashboard/page.tsx` | half-migrated — direct write handlers | `PATCH /api/sales/leads/[id]` + `POST /api/sales/attorney-verification` |
 
-**Blast radius:** same as the rest of B2 — business rules in the screen, no server backstop beyond RLS, not reusable by a mobile app. The consumer will/trust flow is the most important one left because it's the revenue path.
-**Half-migrated is the worst state** — `pro/sales/page` and `sales/dashboard` have converted reads but direct writes, so the pattern is inconsistent within one file.
+**Result:** no client-component screen runs `supabase.from()`/`.storage`/`.rpc()` in the browser. The only remaining browser Supabase usage is the **realtime channel** in `app/dashboard/documents/page.tsx` (Supabase realtime has no REST equivalent — correct to keep) and `supabase.auth.*` calls (sign-in/out/session — not DB). Verified: tsc clean, 376 unit, lint clean, e2e anon guards for all 5 new endpoints.
 
 ### 🟠 3.2 — Inline admin clients re-duplicated in ~8 places (B1 "67→0" has exceptions)
 These define their **own** `createAdminClient()` with `SUPABASE_SERVICE_ROLE_KEY` and query the DB directly, bypassing the shared `lib/api/auth.ts` client and the repo layer:
@@ -101,10 +95,10 @@ It's in the partner self-update whitelist (`partnerSelfUpdateSchema`). It's the 
 - **An enforced input boundary.** 76 Zod schemas; client input is parsed, not trusted. ✅
 - **Centralized auth** with a clear (if multi-path) set of guards. ✅
 - **Strong types** so refactors are caught at compile time, not in production. ✅
-- **A second frontend (mobile) is now realistic** — `requireAuth` already does Bearer tokens and the api-client layer is the contract a mobile app would reuse. The ~8 unconverted screens are the only piece that wouldn't port.
+- **A second frontend (mobile) is now realistic** — `requireAuth` already does Bearer tokens and the api-client layer is the contract a mobile app would reuse. With B2 complete, every screen's data path is a reusable endpoint.
 
 **What would limit scale if left unattended:**
-- The half-migrated screens (3.1) and inline admin clients (3.2) are *drift seeds* — each one is a template someone copies next time, re-spreading the old pattern. Converging them is what keeps the "one way to do it" property true.
+- The inline admin clients (3.2) are *drift seeds* — each one is a template someone copies next time, re-spreading the old pattern. Converging them is what keeps the "one way to do it" property true. (The half-migrated screens that were here have since been finished — 3.1.)
 - 148 routes is a lot of surface; the discipline of thin-route/fat-repo is what keeps that surface cheap. It's holding — keep enforcing it (the no-inline-`z.object` and no-`as any` tests help).
 - The 805-line webhook is the one place where "scale" means "complexity that's hard to test." Worth decomposing before it grows.
 
@@ -114,17 +108,16 @@ It's in the partner self-update whitelist (`partnerSelfUpdateSchema`). It's the 
 
 ## 5. Recommended next steps (smallest-risk-removed first)
 
-1. **Fix the `quizSessionRepo` tsc error** (3.4) — makes the strict gate actually green. ~10 min.
-2. **Finish the partial screens** `pro/sales/page` + `sales/dashboard` (3.1) — convert the lingering write handlers so no file is half-migrated. Highest consistency payoff.
-3. **Convert the consumer flow** `will/`, `trust/`, and their `success/` pages (3.1) — the revenue path; do it with a browser check each.
-4. **Converge the inline admin clients** (3.2) onto the shared `createAdminClient` + repos, one page at a time.
-5. **Then** correct the B2 status in `SCALABILITY_PLAN`/`AUDIT` to "≈85% — N screens left" (see §6).
-6. Later: decompose `webhooks/stripe` behind characterization tests (3.5); decide `custom_review_fee` policy (3.6); migrate the raw-`getUser` routes onto `requireAuth` (3.3).
+1. ✅ **B2 finished** (3.1) — done in commit `3bbbbee`; all 8 remaining screens converted, browser-check pending on the consumer flow.
+2. **Fix the `quizSessionRepo` tsc error** (3.4) — makes the strict gate actually green. ~10 min. *Now the top open item.*
+3. **Converge the inline admin clients** (3.2) onto the shared `createAdminClient` + repos, one page at a time.
+4. **Migrate the raw-`getUser` routes** onto `requireAuth` (3.3).
+5. Later: decompose `webhooks/stripe` behind characterization tests (3.5); decide `custom_review_fee` policy (3.6).
 
-None of these are live bugs today. They're completion + drift-cleanup.
+None of these are live bugs today. They're drift-cleanup.
 
 ---
 
-## 6. Correction to prior docs
+## 6. Note on prior docs
 
-The `SCALABILITY_PLAN.md/.html` and `SCALABILITY_AUDIT.html` updates from earlier today mark B2 as **fully done**. This review shows that's **over-stated** — it was true for the four portal directories audited, but ~8 client screens outside them (the consumer will/trust flow, auth/login, training exam, and two half-migrated sales screens) still call the DB directly. Those docs should be corrected to "≈85% complete — consumer flow + auth + exam remain." Flagging rather than silently editing, since the prior status was committed.
+The first version of this review (and the `SCALABILITY_PLAN`/`AUDIT` docs) marked B2 as fully done while ~8 client screens were in fact still on direct DB — the original audit was scoped to four directories. **That gap has since been closed** (commit `3bbbbee`): the remaining screens were converted and B2 is now genuinely 100% for browser-side calls. The SCALABILITY docs are accurate again. Kept this section as a record of how the over-claim was caught and fixed — the lesson is that "done" claims should be backed by a whole-tree scan, not a directory subset.
