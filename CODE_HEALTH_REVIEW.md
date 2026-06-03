@@ -64,8 +64,14 @@ Files converged: `app/affiliate`, `app/sales/affiliates` (+`[id]`), `app/a/[code
 
 **Bonus:** the typed shared client surfaced several **latent null-safety bugs** the untyped copies were hiding — all fixed properly (no casts): `request-access` was inserting number/array values into string columns (`client_count`, `practice_areas`, `desired_review_fee`); the affiliate admin pages mapped nullable `status`/`created_at`/`affiliate_id` into non-null component props; the marketing materials PATCH typed its update object. Verified: tsc clean, 376 unit, lint clean. **0 inline SERVICE_ROLE admin clients remain.**
 
-### 🟠 3.3 — Auth drift: a few routes hand-roll `getUser()` instead of `requireAuth`
-e.g. `app/api/marketing/materials/route.ts` does raw `supabase.auth.getUser()` + manual 401 rather than `requireAuth`. Functionally fine today; it's drift from the canonical guard and won't pick up future changes to `requireAuth` (e.g. mobile Bearer support).
+### ✅ 3.3 — Auth drift on the marketing routes fixed (2026-06-03, commit `e2e4938`)
+The 4 marketing asset routes (`materials`, `flyer`, `one-pager`, `script-card`) hand-rolled `createClient().auth.getUser()` + a manual 401. They now use `requireAuth(undefined, req)` — same "any logged-in user" semantics, but gains mobile Bearer support, a consistent 401, and follows future `requireAuth` changes.
+
+**Of the original ~10 raw-`getUser` routes, the rest were deliberately left** (they are *not* drift):
+- `checkout/{partner,amendment,vault-subscription}` — guest-capable purchase flows; `user` is optional, so `requireAuth` would wrongly block pre-account checkout.
+- `documents/download-by-session` — authenticated by a **Stripe session token**, not a user session.
+- `auth/welcome` — needs the raw `user.user_metadata`, which `requireAuth`'s profile shape doesn't expose.
+- `share` — an E2EE-vault feature (uses `getMyClient` + rate limiting). Convertible, but it's a `requireAuth` vs `requireClientUser` judgment call — parked as a small standalone decision rather than risk the crypto path.
 
 ### 🟡 3.4 — The strict typecheck gate is not actually green
 `lib/repos/server/quizSessionRepo.ts` has a pre-existing `tsc` error (`Record<string, unknown>` passed to a typed `.insert()`). It predates the B2 work and was left untouched, but it means `npx tsc --noEmit` is **not** clean — the bug gate the project relies on is one error short of green. Cheap to fix (type the insert like `attorneyReviewRepo` was).
@@ -101,9 +107,9 @@ It's in the partner self-update whitelist (`partnerSelfUpdateSchema`). It's the 
 
 1. ✅ **B2 finished** (3.1) — commit `3bbbbee`; all 8 remaining screens converted.
 2. ✅ **Inline admin clients converged** (3.2) — commit `4218d94`; 0 left, plus several null-safety bugs fixed.
-3. **Fix the `quizSessionRepo` tsc error** (3.4) — makes the strict gate actually green. ~10 min. *Now the top open item.*
-4. **Migrate the raw-`getUser` routes** onto `requireAuth` (3.3).
-5. Later: decompose `webhooks/stripe` behind characterization tests (3.5); decide `custom_review_fee` policy (3.6).
+3. ✅ **Marketing routes onto `requireAuth`** (3.3) — commit `e2e4938`; the rest left as intentional non-drift.
+4. **Fix the `quizSessionRepo` tsc error** (3.4) — makes the strict gate actually green. ~10 min. *Now the top open item.*
+5. Later: decompose `webhooks/stripe` behind characterization tests (3.5); decide `custom_review_fee` policy (3.6); optionally settle `share`'s guard (3.3).
 
 None of these are live bugs today. They're drift-cleanup.
 

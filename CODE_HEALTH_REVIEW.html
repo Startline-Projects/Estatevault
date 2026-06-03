@@ -158,9 +158,10 @@
       <p><span class="k">Bonus:</span> the typed shared client surfaced several <b>latent null-safety bugs</b> the untyped copies were hiding — all fixed properly (no casts): <code>request-access</code> inserted number/array values into string columns (<code>client_count</code>, <code>practice_areas</code>, <code>desired_review_fee</code>); the affiliate admin pages mapped nullable <code>status</code>/<code>created_at</code>/<code>affiliate_id</code> into non-null component props; the marketing materials PATCH typed its update object. Verified: tsc clean, 376 unit, lint clean. <b>0 inline SERVICE_ROLE admin clients remain.</b></p>
     </div>
 
-    <div class="item high">
-      <h3>3.3 · Auth drift: a few routes hand-roll <code>getUser()</code> <span class="sev high">High</span></h3>
-      <p>e.g. <code>app/api/marketing/materials/route.ts</code> does raw <code>supabase.auth.getUser()</code> + manual 401 rather than <code>requireAuth</code>. Functionally fine today; it's drift from the canonical guard and won't pick up future changes to <code>requireAuth</code> (e.g. mobile Bearer support).</p>
+    <div class="item good">
+      <h3>3.3 · Auth drift on marketing routes fixed <span class="sev good">✅ Fixed · e2e4938</span></h3>
+      <p>The 4 marketing asset routes (<code>materials</code>, <code>flyer</code>, <code>one-pager</code>, <code>script-card</code>) hand-rolled <code>createClient().auth.getUser()</code> + a manual 401. They now use <code>requireAuth(undefined, req)</code> — same "any logged-in user" semantics, plus mobile Bearer support, a consistent 401, and they follow future <code>requireAuth</code> changes.</p>
+      <p><span class="k">The rest of the ~10 raw-<code>getUser</code> routes were deliberately left</span> (not drift): <code>checkout/*</code> (guest-capable purchase — <code>requireAuth</code> would block pre-account checkout), <code>documents/download-by-session</code> (Stripe-session-token auth, not a user), <code>auth/welcome</code> (needs raw <code>user.user_metadata</code>), and <code>share</code> (E2EE-vault feature; <code>requireAuth</code> vs <code>requireClientUser</code> is a separate small decision).</p>
     </div>
 
     <div class="item med">
@@ -202,9 +203,9 @@
       <ol class="steps">
         <li>✅ <b>B2 finished</b> (3.1) — commit <code>3bbbbee</code>; all 8 remaining screens converted.</li>
         <li>✅ <b>Inline admin clients converged</b> (3.2) — commit <code>4218d94</code>; 0 left, plus several null-safety bugs fixed.</li>
+        <li>✅ <b>Marketing routes onto <code>requireAuth</code></b> (3.3) — commit <code>e2e4938</code>; the rest left as intentional non-drift.</li>
         <li><b>Fix the <code>quizSessionRepo</code> tsc error</b> (3.4) — makes the strict gate actually green. ~10 min. <i>Now the top open item.</i></li>
-        <li><b>Migrate the raw-<code>getUser</code> routes</b> onto <code>requireAuth</code> (3.3).</li>
-        <li>Later: decompose <code>webhooks/stripe</code> behind characterization tests (3.5); decide <code>custom_review_fee</code> policy (3.6).</li>
+        <li>Later: decompose <code>webhooks/stripe</code> behind characterization tests (3.5); decide <code>custom_review_fee</code> policy (3.6); optionally settle <code>share</code>'s guard (3.3).</li>
       </ol>
       <p style="font-size:14px;color:var(--muted);margin-bottom:0">None of these are live bugs today. They're drift-cleanup.</p>
     </div>
