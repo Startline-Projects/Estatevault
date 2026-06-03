@@ -180,6 +180,10 @@ describe("S-10 DEK conditional write (no TOCTOU)", () => {
 describe("H-01 no listUsers() in API routes", () => {
   const files = [
     "app/api/webhooks/stripe/route.ts",
+    // Stripe checkout account-provisioning was extracted out of the route into
+    // these handlers (3.5) — the no-listUsers guard follows the code.
+    "lib/webhooks/stripe/handleDocumentCheckout.ts",
+    "lib/webhooks/stripe/resolveOrCreateGuestClient.ts",
     "app/api/checkout/will/route.ts",
     "app/api/checkout/trust/route.ts",
     "app/api/checkout/vault-subscription/route.ts",
@@ -191,8 +195,9 @@ describe("H-01 no listUsers() in API routes", () => {
       expect(src(f)).not.toMatch(/listUsers\s*\(/);
     });
   }
-  it("at least one route uses the targeted find_auth_user_by_email RPC", () => {
-    expect(src("app/api/webhooks/stripe/route.ts")).toMatch(/find_auth_user_by_email/);
+  it("the webhook account-provisioning uses the targeted find_auth_user_by_email RPC", () => {
+    expect(src("lib/webhooks/stripe/handleDocumentCheckout.ts")).toMatch(/find_auth_user_by_email/);
+    expect(src("lib/webhooks/stripe/resolveOrCreateGuestClient.ts")).toMatch(/find_auth_user_by_email/);
   });
 });
 
