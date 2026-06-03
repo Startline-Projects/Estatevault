@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
+import { getDashboard as getSalesDashboard } from "@/lib/api-client/sales";
 import { usePortalBase } from "@/lib/portal-base";
 import TeamManagement from "@/components/sales/TeamManagement";
 import TestControls from "@/components/sales/TestControls";
@@ -116,173 +117,19 @@ export default function SalesDashboardPage() {
 
   useEffect(() => {
     async function load() {
-      const supabase = createClient();
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (!user) return;
-
-      // Rep name and type from profile
-      const { data: profileData } = await supabase
-        .from("profiles")
-        .select("full_name, user_type")
-        .eq("id", user.id)
-        .single();
-
-      const name = profileData?.full_name ||
-        user.user_metadata?.full_name ||
-        user.email?.split("@")[0] ||
-        "Rep";
-      setRepName(name);
-      if (profileData?.user_type) setUserType(profileData.user_type);
-
-      // Fetch partners, admin sees all, reps see only their own
-      const isAdmin = profileData?.user_type === "admin" || profileData?.user_type === "review_attorney";
-      let partnersQuery = supabase
-        .from("partners")
-        .select("id, company_name, tier, status, created_at, updated_at, onboarding_completed, onboarding_step, platform_fee_amount, one_time_fee_paid");
-      if (!isAdmin) partnersQuery = partnersQuery.eq("created_by", user.id);
-      const { data: partners } = await partnersQuery;
-
-      const typedPartners = (partners || []) as PartnerRow[];
-
-      // Stat cards
-      const active = typedPartners.filter((p) => p.status === "active").length;
-      const onboarding = typedPartners.filter((p) => !p.onboarding_completed).length;
-      setActivePartners(active);
-      setOnboardingPartners(onboarding);
-
-      // MTD revenue from orders for this rep's partners
-      const now = new Date();
-      const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
-      const partnerIds = typedPartners.map((p) => p.id);
-
-      const { data: orders } = partnerIds.length > 0
-        ? await supabase
-            .from("orders")
-            .select("ev_cut, partner_cut, partner_id, status")
-            .in("partner_id", partnerIds)
-            .in("status", ["paid", "delivered", "generating", "review"])
-            .gte("created_at", monthStart)
-        : { data: [] };
-
-      const typedOrders = (orders || []) as OrderRow[];
-
-      // MTD EstateVault revenue = sum of ev_cut (EV's share from document sales)
-      const evRevenue = typedOrders.reduce((sum, o) => sum + (o.ev_cut || 0), 0) / 100;
-      setMtdEvRevenue(evRevenue);
-
-      // MTD Platform Fees = sum of platform_fee_amount from partners who paid their fee this month
-      const platformFees = typedPartners
-        .filter((p) => p.one_time_fee_paid && new Date(p.created_at) >= new Date(monthStart))
-        .reduce((sum, p) => sum + (p.platform_fee_amount || 0), 0) / 100;
-      setMtdPlatformFees(platformFees);
-
-      // Stuck partners: on same onboarding step 3+ days
-      const threeDaysAgo = new Date();
-      threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
-      const stuck = typedPartners
-        .filter(
-          (p) =>
-            !p.onboarding_completed &&
-            p.updated_at &&
-            new Date(p.updated_at) < threeDaysAgo
-        )
-        .map((p) => ({
-          id: p.id,
-          company_name: p.company_name,
-          onboarding_step: p.onboarding_step,
-          daysSinceUpdate: Math.floor(
-            (Date.now() - new Date(p.updated_at).getTime()) / (1000 * 60 * 60 * 24)
-          ),
-        }));
-      setStuckPartners(stuck);
-
-      // Recent 5 partners with MTD stats
-      const sorted = [...typedPartners].sort(
-        (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-      );
-      const recent5 = sorted.slice(0, 5);
-
-      const recentDisplay: RecentPartnerDisplay[] = recent5.map((p) => {
-        const partnerOrders = typedOrders.filter((o) => o.partner_id === p.id);
-        // partner_cut = what the partner earned from document sales this month
-        const partnerEarnings = partnerOrders.reduce((sum, o) => sum + (o.partner_cut || 0), 0) / 100;
-        return {
-          id: p.id,
-          company_name: p.company_name,
-          tier: p.tier,
-          status: p.status,
-          mtdDocs: partnerOrders.length,
-          mtdRevenue: partnerEarnings,
-        };
-      });
-      setRecentPartners(recentDisplay);
-
-      // Fetch new leads
-      const { data: leadsData } = await supabase
-        .from("professional_leads")
-        .select("*")
-        .in("status", ["new", "contacted"])
-        .order("created_at", { ascending: false })
-        .limit(10);
-
-      if (leadsData) {
-        setLeads(leadsData as unknown as LeadRow[]);
-      }
-
-      // Fetch pending attorney verifications
-      const { data: pendingData } = await supabase
-        .from("partners")
-        .select("id, company_name, bar_number, tier, custom_review_fee, created_at, profile_id")
-        .eq("status", "pending_verification")
-        .eq("professional_type", "attorney")
-        .order("created_at", { ascending: false });
-
-      if (pendingData && pendingData.length > 0) {
-        const profileIds = pendingData
-          .map((p: { profile_id: string | null }) => p.profile_id)
-          .filter(Boolean) as string[];
-
-        let profileMap: Record<string, { full_name: string; email: string }> = {};
-        if (profileIds.length > 0) {
-          const { data: profiles } = await supabase
-            .from("profiles")
-            .select("id, full_name, email")
-            .in("id", profileIds);
-
-          if (profiles) {
-            for (const prof of profiles) {
-              profileMap[prof.id] = {
-                full_name: prof.full_name || "Unknown",
-                email: prof.email || "",
-              };
-            }
-          }
-        }
-
-        const mapped: PendingAttorney[] = pendingData.map(
-          (p: {
-            id: string;
-            company_name: string;
-            bar_number: string | null;
-            tier: string;
-            custom_review_fee: number | null;
-            created_at: string | null;
-            profile_id: string | null;
-          }) => ({
-            id: p.id,
-            company_name: p.company_name,
-            bar_number: p.bar_number || "N/A",
-            tier: p.tier,
-            review_fee: p.custom_review_fee,
-            created_at: p.created_at ?? "",
-            profile_name: p.profile_id ? profileMap[p.profile_id]?.full_name || "Unknown" : "Unknown",
-            profile_email: p.profile_id ? profileMap[p.profile_id]?.email || "" : "",
-          })
-        );
-        setPendingAttorneys(mapped);
-      }
+      // Data now comes from the API boundary (B2).
+      const { data } = await getSalesDashboard();
+      if (!data) { setLoading(false); return; }
+      setRepName(data.repName);
+      if (data.userType) setUserType(data.userType);
+      setActivePartners(data.activePartners);
+      setOnboardingPartners(data.onboardingPartners);
+      setMtdEvRevenue(data.mtdEvRevenue);
+      setMtdPlatformFees(data.mtdPlatformFees);
+      setStuckPartners(data.stuckPartners as unknown as StuckPartner[]);
+      setRecentPartners(data.recentPartners as RecentPartnerDisplay[]);
+      setLeads(data.leads as unknown as LeadRow[]);
+      setPendingAttorneys(data.pendingVerifications as PendingAttorney[]);
 
       setLoading(false);
     }

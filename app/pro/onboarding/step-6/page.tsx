@@ -2,25 +2,20 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
-import { stripeConnect } from "@/lib/api-client/partner";
+import { stripeConnect, getMe, updateMe } from "@/lib/api-client/partner";
 
 export default function Step6Page() {
   const router = useRouter();
   const [method, setMethod] = useState<"stripe" | "ach" | "">("");
-  const [partnerId, setPartnerId] = useState("");
   const [connecting, setConnecting] = useState(false);
   const [stripeConnected, setStripeConnected] = useState(false);
   const [connectError, setConnectError] = useState("");
 
   useEffect(() => {
     async function load() {
-      const supabase = createClient();
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-      const { data: partner } = await supabase.from("partners").select("id, stripe_account_id").eq("profile_id", user.id).single();
+      const { data } = await getMe();
+      const partner = data?.partner;
       if (partner) {
-        setPartnerId(partner.id);
         if (partner.stripe_account_id) {
           setMethod("stripe");
           setStripeConnected(true);
@@ -46,8 +41,7 @@ export default function Step6Page() {
   }
 
   async function handleContinue() {
-    const supabase = createClient();
-    await supabase.from("partners").update({ onboarding_step: 7 }).eq("id", partnerId);
+    await updateMe({ onboarding_step: 7 });
     router.push("/pro/onboarding/step-7");
   }
 

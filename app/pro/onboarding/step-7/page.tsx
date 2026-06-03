@@ -3,38 +3,32 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/client";
+import { getMe, updateMe, inviteClient } from "@/lib/api-client/partner";
 
 export default function Step7Page() {
   const router = useRouter();
   const [companyName, setCompanyName] = useState("");
-  const [partnerId, setPartnerId] = useState("");
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteSent, setInviteSent] = useState(false);
   const [inviting, setInviting] = useState(false);
 
   useEffect(() => {
     async function load() {
-      const supabase = createClient();
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-      const { data: partner } = await supabase.from("partners").select("id, company_name").eq("profile_id", user.id).single();
-      if (partner) { setPartnerId(partner.id); setCompanyName(partner.company_name || ""); }
+      const { data } = await getMe();
+      if (data?.partner) setCompanyName(data.partner.company_name || "");
     }
     load();
   }, []);
 
   async function handleGoToDashboard() {
-    const supabase = createClient();
-    await supabase.from("partners").update({ onboarding_completed: true, onboarding_step: 7, status: "active" }).eq("id", partnerId);
+    await updateMe({ onboarding_completed: true, onboarding_step: 7, status: "active" });
     window.location.href = "/pro/dashboard";
   }
 
   async function handleInvite() {
     if (!inviteEmail.trim() || inviting) return;
     setInviting(true);
-    const supabase = createClient();
-    await supabase.from("waitlist_invites").insert({ partner_id: partnerId, client_email: inviteEmail });
+    await inviteClient(inviteEmail);
     setInviteSent(true);
     setInviteEmail("");
     setInviting(false);

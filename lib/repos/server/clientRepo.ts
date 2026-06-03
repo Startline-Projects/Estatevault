@@ -164,6 +164,43 @@ export function findByProfileId(admin: Admin, profileId: string) {
     .single();
 }
 
+// Client id + funding checklist for a profile (B2 funding checklist screen).
+export function getFundingByProfile(admin: Admin, profileId: string) {
+  return admin
+    .from("clients")
+    .select("id, funding_checklist")
+    .eq("profile_id", profileId)
+    .maybeSingle();
+}
+
+// Update a client's funding checklist, scoped to its owning profile (B2).
+export function updateFundingByProfile(
+  admin: Admin,
+  profileId: string,
+  checklist: Record<string, boolean>,
+) {
+  return admin
+    .from("clients")
+    .update({ funding_checklist: checklist })
+    .eq("profile_id", profileId)
+    .select("id")
+    .maybeSingle();
+}
+
+// Advisor-sharing fields for a profile (B2 client settings).
+export function getAdvisorByProfile(admin: Admin, profileId: string) {
+  return admin
+    .from("clients")
+    .select("advisor_name, advisor_firm, advisor_share_consent")
+    .eq("profile_id", profileId)
+    .maybeSingle();
+}
+
+// Update advisor-sharing fields, scoped to the owning profile (B2).
+export function updateAdvisorByProfile(admin: Admin, profileId: string, patch: ClientUpdate) {
+  return admin.from("clients").update(patch).eq("profile_id", profileId).select("id").maybeSingle();
+}
+
 // A partner's clients with their profile + order summaries (B2: backs the
 // GET on /api/partner/clients, used by the pro/clients screen).
 export function listByPartnerWithOrders(admin: Admin, partnerId: string) {
@@ -217,4 +254,18 @@ export function listNotes(admin: Admin, clientId: string) {
     .select("id, note, created_at")
     .eq("client_id", clientId)
     .order("created_at", { ascending: false });
+}
+
+// Clients (id + profile) by id set (B2 attorney reviews assembly).
+export function listByIds(admin: Admin, ids: string[]) {
+  return admin.from("clients").select("id, profile_id").in("id", ids);
+}
+
+// Active-vault clients (raw subscription fields) for a partner (B2 revenue synthesis).
+export function listActiveVaultRaw(admin: Admin, partnerId: string) {
+  return admin
+    .from("clients")
+    .select("id, vault_subscription_status, vault_subscription_expiry, updated_at, created_at")
+    .eq("partner_id", partnerId)
+    .eq("vault_subscription_status", "active");
 }

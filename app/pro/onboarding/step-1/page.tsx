@@ -2,9 +2,9 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
-import { PRICES, PARTNER_PLATFORM_FEE, PARTNER_SPLITS, PROMO_CODES, formatPrice } from "@/lib/orders/pricing";
+import { PARTNER_PLATFORM_FEE, PARTNER_SPLITS, PROMO_CODES, formatPrice } from "@/lib/orders/pricing";
 import { checkoutPartner } from "@/lib/api-client/checkout";
+import { getMe, applyPromo } from "@/lib/api-client/partner";
 
 export default function Step1Page() {
   const router = useRouter();
@@ -19,15 +19,12 @@ export default function Step1Page() {
 
   useEffect(() => {
     async function load() {
-      const supabase = createClient();
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) { router.push("/auth/login"); return; }
-      const { data: partnerRows, error: partnerErr } = await supabase.from("partners").select("id, tier, annual_fee_paid, one_time_fee_paid, professional_type, promo_code, created_at").eq("profile_id", user.id).order("created_at", { ascending: false }).limit(1);
-      if (partnerErr) {
-        setError(`Could not load partner profile: ${partnerErr.message}`);
+      const { data, error: meErr } = await getMe();
+      if (meErr) {
+        setError(`Could not load partner profile: ${meErr}`);
         return;
       }
-      const partner = partnerRows?.[0];
+      const partner = data?.partner;
       if (!partner) {
         setError("No partner profile found for this account. Contact info@estatevault.us.");
         return;
@@ -37,11 +34,15 @@ export default function Step1Page() {
       const isBasic = partner.tier === "basic";
       const nextStep = isBasic ? "/pro/onboarding/step-2-vault" : "/pro/onboarding/step-2";
       if (partner.annual_fee_paid || partner.one_time_fee_paid) setAlreadyPaid(true);
+      // Promo comp: the server re-validates the stored code and grants the fee
+      // waiver (the screen can't flip the financial flag itself anymore).
       const cameFromInternal = typeof document !== "undefined" && document.referrer.includes(window.location.host);
       if (!cameFromInternal && partner.promo_code && partner.promo_code.toUpperCase() in PROMO_CODES && !partner.one_time_fee_paid && !partner.annual_fee_paid) {
-        await supabase.from("partners").update({ one_time_fee_paid: true, onboarding_step: 2 }).eq("id", partner.id);
-        router.push(nextStep);
-        return;
+        const { data: promo } = await applyPromo();
+        if (promo?.applied) {
+          router.push(nextStep);
+          return;
+        }
       }
     }
     load();

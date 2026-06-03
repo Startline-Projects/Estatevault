@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { getMyProfile } from "@/lib/api-client/profile";
 import PortalSidebar, { PortalNavItem } from "@/components/shared/PortalSidebar";
 
 const baseNavItems: PortalNavItem[] = [
@@ -23,13 +24,9 @@ export default function SalesLayout({ children }: { children: React.ReactNode })
   const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
-    const supabase = createClient();
-    (async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-      const { data } = await supabase.from("profiles").select("user_type").eq("id", user.id).single();
-      setIsAdmin(data?.user_type === "admin");
-    })();
+    getMyProfile().then(({ data }) => {
+      setIsAdmin(data?.profile?.user_type === "admin");
+    });
   }, []);
 
   const portalLabel = isAdmin ? "Admin Portal" : "Sales Portal";

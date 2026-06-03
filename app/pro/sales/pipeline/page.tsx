@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { createClient } from "@/lib/supabase/client";
+import { getProspects, createProspect, updateProspect } from "@/lib/api-client/sales";
 
 interface Prospect { id: string; company_name: string; contact_name: string | null; email: string | null; professional_type: string | null; stage: string; created_at: string | null }
 interface PartnerCard { id: string; company_name: string; tier: string; onboarding_step: number | null; onboarding_completed: boolean | null; certification_completed: boolean | null; status: string | null; created_at: string | null }
@@ -23,19 +23,11 @@ export default function PipelinePage() {
   const [form, setForm] = useState({ company_name: "", contact_name: "", email: "", professional_type: "", source: "" });
   const [saving, setSaving] = useState(false);
   const [dragItem, setDragItem] = useState<string | null>(null);
-  const [repId, setRepId] = useState("");
 
   const load = useCallback(async () => {
-    const supabase = createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
-    setRepId(user.id);
-
-    const { data: p } = await supabase.from("sales_prospects").select("*").eq("sales_rep_id", user.id).order("created_at", { ascending: false });
-    setProspects((p || []) as Prospect[]);
-
-    const { data: partners } = await supabase.from("partners").select("id, company_name, tier, onboarding_step, onboarding_completed, certification_completed, status, created_at").eq("created_by", user.id);
-    setPartners(partners || []);
+    const { data } = await getProspects();
+    setProspects((data?.prospects ?? []) as unknown as Prospect[]);
+    setPartners((data?.partners ?? []) as unknown as typeof partners);
   }, []);
 
   useEffect(() => { load(); }, [load]);
@@ -43,8 +35,7 @@ export default function PipelinePage() {
   async function addProspect() {
     if (!form.company_name) return;
     setSaving(true);
-    const supabase = createClient();
-    await supabase.from("sales_prospects").insert({ ...form, sales_rep_id: repId, stage: "prospect" });
+    await createProspect({ ...form });
     setForm({ company_name: "", contact_name: "", email: "", professional_type: "", source: "" });
     setShowAdd(false);
     await load();
@@ -53,8 +44,7 @@ export default function PipelinePage() {
 
   async function moveProspect(id: string, newStage: string) {
     if (!MANUAL_STAGES.includes(newStage)) return;
-    const supabase = createClient();
-    await supabase.from("sales_prospects").update({ stage: newStage }).eq("id", id);
+    await updateProspect(id, { stage: newStage });
     await load();
   }
 

@@ -25,3 +25,15 @@ export function getLatestAnswersByClient(admin: Admin, clientId: string) {
     .limit(1)
     .single();
 }
+
+// Latest trust-recommended quiz answers for a client (B2 funding checklist).
+export function getLatestTrustAnswersByClient(admin: Admin, clientId: string) {
+  return admin
+    .from("quiz_sessions")
+    .select("answers")
+    .eq("client_id", clientId)
+    .eq("recommendation", "trust")
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+}

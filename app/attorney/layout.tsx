@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { getMyProfile } from "@/lib/api-client/profile";
 import PortalSidebar, { PortalNavItem } from "@/components/shared/PortalSidebar";
 
 const navItems: PortalNavItem[] = [
@@ -22,13 +23,9 @@ export default function AttorneyLayout({ children }: { children: React.ReactNode
   const [displayName, setDisplayName] = useState("");
 
   useEffect(() => {
-    const supabase = createClient();
-    (async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-      const { data } = await supabase.from("profiles").select("full_name, email").eq("id", user.id).single();
-      setDisplayName(data?.full_name || data?.email || "Attorney");
-    })();
+    getMyProfile().then(({ data }) => {
+      setDisplayName(data?.profile?.full_name || data?.profile?.email || "Attorney");
+    });
   }, []);
 
   if (pathname === "/attorney") return <>{children}</>;

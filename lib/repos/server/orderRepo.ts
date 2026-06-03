@@ -74,3 +74,55 @@ export function latestByClient(admin: Admin, clientId: string) {
     .order("created_at", { ascending: false })
     .limit(1);
 }
+
+// Orders by id set (B2 attorney reviews/pipeline assembly).
+export function listByIds(admin: Admin, ids: string[]) {
+  return admin.from("orders").select("id, product_type, client_id, partner_id").in("id", ids);
+}
+
+// Active MTD orders for a set of partners (B2 sales dashboard revenue).
+export function listMtdByPartnerIds(admin: Admin, partnerIds: string[], sinceIso: string) {
+  return admin
+    .from("orders")
+    .select("ev_cut, partner_cut, partner_id, status")
+    .in("partner_id", partnerIds)
+    .in("status", ["paid", "delivered", "generating", "review"])
+    .gte("created_at", sinceIso);
+}
+
+// MTD orders (amount_total) for a set of partners (B2 pro/sales overview).
+export function listMtdAmountByPartnerIds(admin: Admin, partnerIds: string[], sinceIso: string) {
+  return admin
+    .from("orders")
+    .select("amount_total, partner_id")
+    .in("partner_id", partnerIds)
+    .gte("created_at", sinceIso);
+}
+
+// Orders (amount_total + date) since a date for a set of partners (B2 commission history).
+export function listSinceDatedByPartnerIds(admin: Admin, partnerIds: string[], sinceIso: string) {
+  return admin
+    .from("orders")
+    .select("amount_total, partner_id, created_at")
+    .in("partner_id", partnerIds)
+    .gte("created_at", sinceIso);
+}
+
+// Active orders (revenue-eligible statuses) for a partner (B2 revenue page).
+export function listActiveByPartner(admin: Admin, partnerId: string) {
+  return admin
+    .from("orders")
+    .select("id, client_id, product_type, partner_cut, status, created_at")
+    .eq("partner_id", partnerId)
+    .in("status", ["paid", "delivered", "generating", "review"]);
+}
+
+// Paid-status orders (partner_cut + created_at) for a partner — the route slices
+// these into MTD/last-month/all-time/6-month buckets (B2 sales partner-detail).
+export function listPaidByPartner(admin: Admin, partnerId: string) {
+  return admin
+    .from("orders")
+    .select("partner_cut, created_at")
+    .eq("partner_id", partnerId)
+    .in("status", ["paid", "delivered", "generating", "review"]);
+}

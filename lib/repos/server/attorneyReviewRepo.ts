@@ -1,10 +1,12 @@
 // Server-side data access for `attorney_reviews` table.
 
 import { createAdminClient } from "@/lib/api/auth";
+import type { Database } from "@/types/db.generated";
 
 type Admin = ReturnType<typeof createAdminClient>;
+type AttorneyReviewInsert = Database["public"]["Tables"]["attorney_reviews"]["Insert"];
 
-export function insert(admin: Admin, row: Record<string, unknown>) {
+export function insert(admin: Admin, row: AttorneyReviewInsert) {
   return admin.from("attorney_reviews").insert(row);
 }
 
@@ -46,4 +48,24 @@ export function getReviewWithOrder(admin: Admin, reviewId: string) {
     .select("order_id, orders(product_type, client_id, partner_id, clients(profiles(email)))")
     .eq("id", reviewId)
     .single();
+}
+
+// An attorney's review queue (B2: backs GET /api/attorney/reviews).
+export function listByAttorney(admin: Admin, attorneyId: string) {
+  return admin
+    .from("attorney_reviews")
+    .select("id, order_id, status, sla_deadline, created_at, reviewer_type, fee_destination, fee_amount, partner_id")
+    .eq("attorney_id", attorneyId)
+    .order("created_at", { ascending: false });
+}
+
+// Update a review's status, scoped to the owning attorney (B2 pipeline).
+export function updateStatusForAttorney(admin: Admin, reviewId: string, attorneyId: string, status: string) {
+  return admin
+    .from("attorney_reviews")
+    .update({ status })
+    .eq("id", reviewId)
+    .eq("attorney_id", attorneyId)
+    .select("id")
+    .maybeSingle();
 }

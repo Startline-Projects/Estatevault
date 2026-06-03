@@ -2,9 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
 import { PRICES, PARTNER_SPLITS, formatPrice } from "@/lib/orders/pricing";
-import { createReviewAttorney } from "@/lib/api-client/partner";
+import { createReviewAttorney, getMe, updateMe } from "@/lib/api-client/partner";
 
 export default function Step3Page() {
   const router = useRouter();
@@ -19,14 +18,8 @@ export default function Step3Page() {
 
   useEffect(() => {
     async function load() {
-      const supabase = createClient();
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-      const { data: partner } = await supabase
-        .from("partners")
-        .select("id, tier, professional_type, has_inhouse_estate_attorney")
-        .eq("profile_id", user.id)
-        .single();
+      const { data } = await getMe();
+      const partner = data?.partner;
       if (partner) {
         setPartnerId(partner.id);
         setTier(partner.tier || "standard");
@@ -49,7 +42,6 @@ export default function Step3Page() {
   async function handleContinue() {
     if (!accepted) return;
     if (isAttorney && hasInhouseAttorney === null) return;
-    const supabase = createClient();
 
     // Save in-house attorney selection
     if (isAttorney) {
@@ -69,13 +61,13 @@ export default function Step3Page() {
         }
       }
 
-      await supabase.from("partners").update({
+      await updateMe({
         has_inhouse_estate_attorney: hasInhouseAttorney === true,
         onboarding_step: 4,
         ...(inhouseReviewAttorneyId ? { inhouse_review_attorney_id: inhouseReviewAttorneyId } : {}),
-      }).eq("id", partnerId);
+      });
     } else {
-      await supabase.from("partners").update({ onboarding_step: 4 }).eq("id", partnerId);
+      await updateMe({ onboarding_step: 4 });
     }
 
     router.push("/pro/onboarding/step-4");

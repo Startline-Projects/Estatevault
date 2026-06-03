@@ -3,9 +3,8 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
 import { usePortalBase } from "@/lib/portal-base";
-import { partnerLastLogin, addPartnerNote } from "@/lib/api-client/sales";
+import { partnerLastLogin, addPartnerNote, getPartnerDetail, setPartnerStatus } from "@/lib/api-client/sales";
 
 type TabKey = "overview" | "performance" | "activity" | "notes";
 
@@ -115,90 +114,30 @@ export default function PartnerDetailPage() {
   }, [partnerId]);
 
   async function loadPartner() {
-    const supabase = createClient();
-    const { data } = await supabase
-      .from("partners")
-      .select("*")
-      .eq("id", partnerId)
-      .single();
-
+    const { data } = await getPartnerDetail(partnerId);
     if (data) {
-      // Fetch real last login from auth
       const loginResult = await partnerLastLogin(partnerId);
       const lastLogin = loginResult.data?.lastLogin ?? null;
 
-      setPartner({ ...(data as unknown as PartnerDetail), last_login: lastLogin });
-      await Promise.all([
-        loadPerformance(supabase, partnerId),
-        loadActivity(supabase, partnerId),
-        loadNotes(supabase, partnerId),
-      ]);
+      setPartner({ ...(data.partner as unknown as PartnerDetail), last_login: lastLogin });
+
+      const p = data.performance;
+      setMtdDocs(p.mtdDocs);
+      setMtdRevenue(p.mtdRevenue);
+      setLmDocs(p.lmDocs);
+      setLmRevenue(p.lmRevenue);
+      setAllDocs(p.allDocs);
+      setAllRevenue(p.allRevenue);
+      setMonthlyStats(p.monthlyStats);
+      setActivity(data.activity as AuditEntry[]);
+      setNotes(data.notes as NoteEntry[]);
     }
     setLoading(false);
   }
 
-  async function loadPerformance(supabase: ReturnType<typeof createClient>, pid: string) {
-    const now = new Date();
-    const mtdStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
-    const lmStart = new Date(now.getFullYear(), now.getMonth() - 1, 1).toISOString();
-    const lmEnd = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59).toISOString();
-
-    const PAID_STATUSES = ["paid", "delivered", "generating", "review"];
-
-    // MTD
-    const { data: mtdData } = await supabase.from("orders").select("partner_cut").eq("partner_id", pid).in("status", PAID_STATUSES).gte("created_at", mtdStart);
-    setMtdDocs((mtdData || []).length);
-    setMtdRevenue((mtdData || []).reduce((s, o) => s + (o.partner_cut || 0), 0) / 100);
-
-    // Last month
-    const { data: lmData } = await supabase.from("orders").select("partner_cut").eq("partner_id", pid).in("status", PAID_STATUSES).gte("created_at", lmStart).lte("created_at", lmEnd);
-    setLmDocs((lmData || []).length);
-    setLmRevenue((lmData || []).reduce((s, o) => s + (o.partner_cut || 0), 0) / 100);
-
-    // All time
-    const { data: allData } = await supabase.from("orders").select("partner_cut").eq("partner_id", pid).in("status", PAID_STATUSES);
-    setAllDocs((allData || []).length);
-    setAllRevenue((allData || []).reduce((s, o) => s + (o.partner_cut || 0), 0) / 100);
-
-    // Monthly chart (6 months)
-    const months: MonthlyStats[] = [];
-    for (let i = 5; i >= 0; i--) {
-      const mStart = new Date(now.getFullYear(), now.getMonth() - i, 1);
-      const mEnd = new Date(now.getFullYear(), now.getMonth() - i + 1, 0, 23, 59, 59);
-      const { data: mData } = await supabase
-        .from("orders")
-        .select("partner_cut")
-        .eq("partner_id", pid)
-        .in("status", PAID_STATUSES)
-        .gte("created_at", mStart.toISOString())
-        .lte("created_at", mEnd.toISOString());
-      months.push({
-        month: mStart.toLocaleString("default", { month: "short" }),
-        docs: (mData || []).length,
-        revenue: (mData || []).reduce((s, o) => s + (o.partner_cut || 0), 0) / 100,
-      });
-    }
-    setMonthlyStats(months);
-  }
-
-  async function loadActivity(supabase: ReturnType<typeof createClient>, pid: string) {
-    const { data } = await supabase
-      .from("audit_log")
-      .select("id, action, metadata, created_at")
-      .eq("resource_id", pid)
-      .eq("resource_type", "partner")
-      .order("created_at", { ascending: false })
-      .limit(50);
-    setActivity((data || []) as AuditEntry[]);
-  }
-
-  async function loadNotes(supabase: ReturnType<typeof createClient>, pid: string) {
-    const { data } = await supabase
-      .from("sales_partner_notes")
-      .select("id, note, sales_rep_id, created_at")
-      .eq("partner_id", pid)
-      .order("created_at", { ascending: false });
-    setNotes((data || []) as NoteEntry[]);
+  async function reloadNotes() {
+    const { data } = await getPartnerDetail(partnerId);
+    if (data) setNotes(data.notes as NoteEntry[]);
   }
 
   async function handleAddNote() {
@@ -207,8 +146,7 @@ export default function PartnerDetailPage() {
     try {
       const { error: apiError } = await addPartnerNote(partnerId, newNote);
       if (!apiError) {
-        const supabase = createClient();
-        await loadNotes(supabase, partnerId);
+        await reloadNotes();
         setNewNote("");
       }
     } catch {
@@ -226,8 +164,7 @@ export default function PartnerDetailPage() {
     if (!confirm(msg)) return;
 
     setToggling(true);
-    const supabase = createClient();
-    await supabase.from("partners").update({ status: newStatus }).eq("id", partnerId);
+    await setPartnerStatus(partnerId, newStatus);
     setPartner((prev) => prev ? { ...prev, status: newStatus } : prev);
     setToggling(false);
   }

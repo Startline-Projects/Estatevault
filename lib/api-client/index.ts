@@ -9,5 +9,6 @@ export * as partnerApi from "./partner";
 export * as profileApi from "./profile";
 export * as salesApi from "./sales";
 export * as trusteeApi from "./trustee";
+export * as attorneyApi from "./attorney";
 export * as farewellApi from "./farewell";
 export * as miscApi from "./misc";

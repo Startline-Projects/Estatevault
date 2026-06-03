@@ -1,7 +1,14 @@
 "use client";
 
 import { useState, useEffect, useCallback, useMemo } from "react";
-import { createClient } from "@/lib/supabase/client";
+import {
+  getProspects,
+  createProspect,
+  updateProspect,
+  deleteProspect as apiDeleteProspect,
+  getProspectActivity,
+  logProspectActivity,
+} from "@/lib/api-client/sales";
 import { usePortalBase } from "@/lib/portal-base";
 
 interface Prospect {
@@ -71,7 +78,6 @@ export default function PipelinePage() {
   const [saving, setSaving] = useState(false);
   const [dragItem, setDragItem] = useState<string | null>(null);
   const [dragOverCol, setDragOverCol] = useState<string | null>(null);
-  const [repId, setRepId] = useState("");
 
   const [search, setSearch] = useState("");
   const [filterSource, setFilterSource] = useState("");
@@ -86,46 +92,27 @@ export default function PipelinePage() {
   const [editForm, setEditForm] = useState<Partial<Prospect>>({});
 
   const load = useCallback(async () => {
-    const supabase = createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
-    setRepId(user.id);
-
-    const [{ data: p }, { data: pa }] = await Promise.all([
-      supabase.from("sales_prospects").select("*").eq("sales_rep_id", user.id).order("created_at", { ascending: false }),
-      supabase
-        .from("partners")
-        .select("id, company_name, tier, onboarding_step, onboarding_completed, certification_completed, status, created_at")
-        .eq("created_by", user.id),
-    ]);
-    setProspects((p || []) as Prospect[]);
-    setPartners((pa || []) as PartnerCard[]);
+    const { data } = await getProspects();
+    setProspects((data?.prospects ?? []) as unknown as Prospect[]);
+    setPartners((data?.partners ?? []) as unknown as PartnerCard[]);
     setLoading(false);
   }, []);
 
   useEffect(() => { load(); }, [load]);
 
   async function loadActivity(prospectId: string) {
-    const supabase = createClient();
-    const { data } = await supabase
-      .from("sales_prospect_activity")
-      .select("*")
-      .eq("prospect_id", prospectId)
-      .order("created_at", { ascending: false });
-    setActivity(data || []);
+    const { data } = await getProspectActivity(prospectId);
+    setActivity((data?.activity ?? []) as unknown as typeof activity);
   }
 
   async function logActivity(prospectId: string, type: string, body: string | null) {
-    const supabase = createClient();
-    const { error } = await supabase.from("sales_prospect_activity").insert({ prospect_id: prospectId, sales_rep_id: repId, type, body });
-    if (error) console.warn("Activity log skipped (migration not run?):", error.message);
+    await logProspectActivity(prospectId, type, body);
   }
 
   async function addProspect() {
     if (!form.company_name) return;
     setSaving(true);
-    const supabase = createClient();
-    await supabase.from("sales_prospects").insert({ ...form, sales_rep_id: repId, stage: "prospect" });
+    await createProspect({ ...form });
     setForm({ company_name: "", contact_name: "", email: "", phone: "", professional_type: "", source: "" });
     setShowAdd(false);
     await load();
@@ -147,19 +134,13 @@ export default function PipelinePage() {
       )
     );
 
-    const supabase = createClient();
-    // Try full update first; if last_contacted_at column missing, retry with stage only
-    let { error } = await supabase
-      .from("sales_prospects")
-      .update(newStage === "contacted" ? { stage: newStage, last_contacted_at: nowIso } : { stage: newStage })
-      .eq("id", id);
-
-    if (error && /last_contacted_at/.test(error.message)) {
-      ({ error } = await supabase.from("sales_prospects").update({ stage: newStage }).eq("id", id));
-    }
+    const { error } = await updateProspect(
+      id,
+      newStage === "contacted" ? { stage: newStage, last_contacted_at: nowIso } : { stage: newStage },
+    );
 
     if (error) {
-      console.error("Stage update failed:", error.message);
+      console.error("Stage update failed:", error);
       // Roll back optimistic move
       setProspects((prev) => prev.map((p) => (p.id === id ? cur : p)));
       return;
@@ -171,20 +152,18 @@ export default function PipelinePage() {
 
   async function deleteProspect(id: string) {
     if (!confirm("Delete this prospect? Activity log will be removed too.")) return;
-    const supabase = createClient();
-    await supabase.from("sales_prospects").delete().eq("id", id);
+    await apiDeleteProspect(id);
     setOpenCard(null);
     await load();
   }
 
   async function saveEdit() {
     if (!openCard) return;
-    const supabase = createClient();
-    await supabase.from("sales_prospects").update(editForm).eq("id", openCard.id);
+    await updateProspect(openCard.id, editForm as Record<string, unknown>);
     setEditing(false);
     await load();
-    const fresh = (await supabase.from("sales_prospects").select("*").eq("id", openCard.id).single()).data;
-    if (fresh) setOpenCard({ ...openCard, raw: fresh as Prospect, name: fresh.company_name, sub: fresh.professional_type || fresh.email || "" });
+    const merged = { ...openCard.raw, ...editForm } as Prospect;
+    setOpenCard({ ...openCard, raw: merged, name: merged.company_name, sub: merged.professional_type || merged.email || "" });
   }
 
   async function addNote() {

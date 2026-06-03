@@ -470,3 +470,106 @@ export const backfillFetchQuerySchema = z.object({
   table: z.enum(["vault_items", "vault_trustees", "farewell_messages"]),
   limit: z.coerce.number().int().min(1).max(100).default(50),
 });
+
+// B2: attorney moves a review's status (pipeline drag/drop).
+export const attorneyReviewStatusSchema = z.object({
+  status: z.string().min(1).max(40),
+});
+
+// B2: sales pipeline prospect CRUD.
+export const salesProspectCreateSchema = z.object({
+  company_name: z.string().min(1).max(200),
+  contact_name: z.string().max(200).optional().nullable(),
+  email: z.string().max(200).optional().nullable(),
+  phone: z.string().max(50).optional().nullable(),
+  professional_type: z.string().max(80).optional().nullable(),
+  source: z.string().max(120).optional().nullable(),
+});
+
+export const salesProspectUpdateSchema = z.object({
+  company_name: z.string().min(1).max(200).optional(),
+  contact_name: z.string().max(200).optional().nullable(),
+  email: z.string().max(200).optional().nullable(),
+  phone: z.string().max(50).optional().nullable(),
+  professional_type: z.string().max(80).optional().nullable(),
+  source: z.string().max(120).optional().nullable(),
+  notes: z.string().max(5000).optional().nullable(),
+  stage: z.string().max(40).optional(),
+  last_contacted_at: z.string().optional().nullable(),
+  next_action_at: z.string().optional().nullable(),
+});
+
+export const salesProspectActivitySchema = z.object({
+  type: z.string().min(1).max(40),
+  body: z.string().max(5000).optional().nullable(),
+});
+
+// B2: partner self-update of onboarding fields (NON-financial — payment flags
+// like one_time_fee_paid are excluded; those stay server/webhook-controlled).
+export const partnerSelfUpdateSchema = z.object({
+  onboarding_step: z.number().int().min(1).max(8).optional(),
+  onboarding_completed: z.boolean().optional(),
+  status: z.enum(["onboarding", "active", "suspended", "cancelled"]).optional(),
+  professional_type: z.string().max(80).optional(),
+  has_inhouse_estate_attorney: z.boolean().optional(),
+  inhouse_review_attorney_id: z.string().uuid().optional().nullable(),
+  business_url: z.string().max(255).optional(),
+  partner_slug: z.string().max(120).optional(),
+  // Branding (non-financial, partner-owned presentation fields).
+  company_name: z.string().max(200).optional(),
+  product_name: z.string().max(200).optional(),
+  accent_color: z.string().max(40).optional(),
+  logo_url: z.string().max(2048).optional().nullable(),
+  theme_preset: z.string().max(80).optional(),
+  hero_recipe: z.string().max(80).optional(),
+  highlight_dark: z.string().max(40).optional().nullable(),
+  highlight_light: z.string().max(40).optional().nullable(),
+  cta_text_override: z.string().max(120).optional().nullable(),
+  landing_text_color: z.string().max(40).optional(),
+  // Email sender identity + vault presentation (non-financial).
+  sender_name: z.string().max(200).optional(),
+  sender_email: z.string().email().max(255).optional(),
+  vault_tagline: z.string().max(255).optional().nullable(),
+  vault_theme: z.enum(["light", "dark"]).optional(),
+  // Attorney-partner's own in-house review fee (they keep 100%); cents.
+  custom_review_fee: z.number().int().min(0).max(100000).optional().nullable(),
+});
+
+// A user updating their own profile display name (B2 settings).
+export const profileSelfUpdateSchema = z.object({
+  full_name: z.string().min(1).max(200),
+});
+
+// A sales rep toggling a managed partner's account status (B2 partner-detail).
+export const salesPartnerStatusSchema = z.object({
+  status: z.enum(["active", "suspended"]),
+});
+
+// A sales rep applying a promo code to a managed partner (comps platform fee).
+export const salesApplyPromoSchema = z.object({
+  promo_code: z.string().min(1).max(40),
+});
+
+// A client toggling their trust funding checklist (B2). Map of asset -> done.
+export const fundingChecklistSchema = z.object({
+  checklist: z.record(z.string().max(200), z.boolean()),
+});
+
+// A client updating their own profile contact + notification prefs (B2 settings).
+export const clientProfileUpdateSchema = z.object({
+  full_name: z.string().max(200).optional(),
+  phone: z.string().max(40).optional().nullable(),
+  notification_preferences: z.record(z.string().max(80), z.boolean()).optional(),
+});
+
+// A client updating their advisor-sharing settings (B2 settings).
+export const clientAdvisorUpdateSchema = z.object({
+  advisor_name: z.string().max(200).optional().nullable(),
+  advisor_firm: z.string().max(200).optional().nullable(),
+  advisor_share_consent: z.boolean().optional(),
+});
+
+// A partner queuing a pre-launch client invite during onboarding (B2).
+export const waitlistInviteSchema = z.object({
+  client_email: z.string().email(),
+});

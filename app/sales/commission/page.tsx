@@ -1,18 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { createClient } from "@/lib/supabase/client";
-import { PARTNER_PLATFORM_FEE } from "@/lib/orders/pricing";
-
-interface PartnerRow {
-  id: string;
-  company_name: string;
-  tier: string | null;
-  platform_fee_amount: number | null;
-  one_time_fee_paid: boolean;
-  created_at: string;
-  created_by: string;
-}
+import { getMyProfile } from "@/lib/api-client/profile";
+import { getCommission, getMyPlatformCommission } from "@/lib/api-client/sales";
 
 interface BreakdownRow {
   partnerName: string;
@@ -20,19 +10,6 @@ interface BreakdownRow {
   commission: number;
   paidAt: string;
   status: "Paid" | "Pending";
-}
-
-// Expected platform fee by tier (cents). Used when partner hasn't paid yet.
-const TIER_FEE_CENTS: Record<string, number> = {
-  basic: PARTNER_PLATFORM_FEE.basic,
-  standard: PARTNER_PLATFORM_FEE.standard,
-  enterprise: PARTNER_PLATFORM_FEE.enterprise,
-};
-
-function effectiveFeeCents(p: PartnerRow): number {
-  if (p.one_time_fee_paid && p.platform_fee_amount) return p.platform_fee_amount;
-  const tier = (p.tier || "standard").toLowerCase();
-  return TIER_FEE_CENTS[tier] ?? TIER_FEE_CENTS.standard;
 }
 
 interface HistoryRow {
@@ -58,10 +35,6 @@ function formatCurrency(amount: number): string {
   return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(amount);
 }
 
-function getMonthLabel(date: Date): string {
-  return date.toLocaleDateString("en-US", { month: "long", year: "numeric" });
-}
-
 // ─── ADMIN VIEW ────────────────────────────────────────────────────────────────
 function AdminCommissionView() {
   const [loading, setLoading] = useState(true);
@@ -71,50 +44,11 @@ function AdminCommissionView() {
 
   useEffect(() => {
     async function load() {
-      const supabase = createClient();
-
-      // Fetch all sales reps
-      const { data: reps } = await supabase
-        .from("profiles")
-        .select("id, full_name, email, commission_rate")
-        .eq("user_type", "sales_rep");
-
-      if (!reps || reps.length === 0) {
-        setLoading(false);
-        return;
-      }
-
-      // Fetch all partners (paid + pending) so newly-added partners count toward projected commission
-      const { data: partners } = await supabase
-        .from("partners")
-        .select("id, company_name, tier, platform_fee_amount, one_time_fee_paid, created_at, created_by")
-        .order("created_at", { ascending: false });
-
-      const typedPartners = (partners || []) as PartnerRow[];
-      const now = new Date();
-      const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-
-      const summaries: RepSummaryRow[] = reps.map((rep) => {
-        const repPartners = typedPartners.filter((p) => p.created_by === rep.id);
-        const mtdPartners = repPartners.filter((p) => new Date(p.created_at) >= monthStart);
-        const rate = rep.commission_rate ?? 0.5;
-        const mtdFees = mtdPartners.reduce((sum, p) => sum + effectiveFeeCents(p), 0) / 100;
-        return {
-          repId: rep.id,
-          repName: rep.full_name || "Unknown",
-          repEmail: rep.email || "",
-          commissionRate: rate,
-          mtdPlatformFees: mtdFees,
-          mtdCommissionOwed: mtdFees * rate,
-          totalPartners: repPartners.length,
-          mtdPartners: mtdPartners.length,
-        };
-      });
-
-      summaries.sort((a, b) => b.mtdCommissionOwed - a.mtdCommissionOwed);
-      setRepSummaries(summaries);
-      setTotalMtdOwed(summaries.reduce((s, r) => s + r.mtdCommissionOwed, 0));
-      setTotalMtdFees(summaries.reduce((s, r) => s + r.mtdPlatformFees, 0));
+      // Data now comes from the API boundary (B2).
+      const { data } = await getCommission();
+      setRepSummaries((data?.repSummaries ?? []) as unknown as RepSummaryRow[]);
+      setTotalMtdOwed(data?.totalMtdOwed ?? 0);
+      setTotalMtdFees(data?.totalMtdFees ?? 0);
       setLoading(false);
     }
     load();
@@ -216,68 +150,13 @@ function RepCommissionView() {
 
   useEffect(() => {
     async function load() {
-      const supabase = createClient();
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      const { data: profileData } = await supabase
-        .from("profiles")
-        .select("commission_rate")
-        .eq("id", user.id)
-        .single();
-
-      const rate = profileData?.commission_rate ?? 0.5;
-      setCommissionRate(rate);
-
-      const { data: partners } = await supabase
-        .from("partners")
-        .select("id, company_name, tier, platform_fee_amount, one_time_fee_paid, created_at, created_by")
-        .eq("created_by", user.id)
-        .order("created_at", { ascending: false });
-
-      if (!partners || partners.length === 0) {
-        setLoading(false);
-        return;
+      const { data } = await getMyPlatformCommission();
+      if (data) {
+        setCommissionRate(data.commissionRate);
+        setMtdCommission(data.mtdCommission);
+        setBreakdown(data.breakdown as BreakdownRow[]);
+        setHistory(data.history as HistoryRow[]);
       }
-
-      const typedPartners = partners as PartnerRow[];
-      const now = new Date();
-      const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-
-      const mtdPartners = typedPartners.filter((p) => new Date(p.created_at) >= monthStart);
-      const mtdFees = mtdPartners.reduce((sum, p) => sum + effectiveFeeCents(p), 0) / 100;
-      setMtdCommission(mtdFees * rate);
-
-      const breakdownRows: BreakdownRow[] = mtdPartners.map((p) => {
-        const fee = effectiveFeeCents(p) / 100;
-        return {
-          partnerName: p.company_name,
-          platformFee: fee,
-          commission: fee * rate,
-          paidAt: new Date(p.created_at).toLocaleDateString(),
-          status: p.one_time_fee_paid ? "Paid" : "Pending",
-        };
-      });
-      breakdownRows.sort((a, b) => b.platformFee - a.platformFee);
-      setBreakdown(breakdownRows);
-
-      const historyRows: HistoryRow[] = [];
-      for (let i = 0; i < 6; i++) {
-        const mDate = new Date(now.getFullYear(), now.getMonth() - i, 1);
-        const mEnd = new Date(now.getFullYear(), now.getMonth() - i + 1, 1);
-        const monthPartners = typedPartners.filter((p) => {
-          const d = new Date(p.created_at);
-          return d >= mDate && d < mEnd;
-        });
-        const fees = monthPartners.reduce((sum, p) => sum + effectiveFeeCents(p), 0) / 100;
-        historyRows.push({
-          month: getMonthLabel(mDate),
-          platformFees: fees,
-          commission: fees * rate,
-          status: i === 0 ? "Pending" : "Paid",
-        });
-      }
-      setHistory(historyRows);
       setLoading(false);
     }
     load();
@@ -400,12 +279,8 @@ export default function SalesCommissionPage() {
   const [userType, setUserType] = useState<string | null>(null);
 
   useEffect(() => {
-    const supabase = createClient();
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      if (!user) return;
-      supabase.from("profiles").select("user_type").eq("id", user.id).single().then(({ data }) => {
-        setUserType(data?.user_type ?? "sales_rep");
-      });
+    getMyProfile().then(({ data }) => {
+      setUserType(data?.profile?.user_type ?? "sales_rep");
     });
   }, []);
 

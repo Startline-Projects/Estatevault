@@ -2,13 +2,11 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
-import { addDomain, verifyDomain } from "@/lib/api-client/partner";
+import { addDomain, verifyDomain, getMe, updateMe } from "@/lib/api-client/partner";
 
 export default function Step4Page() {
   const router = useRouter();
   const [businessUrl, setBusinessUrl] = useState("");
-  const [partnerId, setPartnerId] = useState("");
   const [slug, setSlug] = useState("");
   const [tier, setTier] = useState("");
   const [copied, setCopied] = useState("");
@@ -22,16 +20,9 @@ export default function Step4Page() {
 
   useEffect(() => {
     async function load() {
-      const supabase = createClient();
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-      const { data: partner } = await supabase
-        .from("partners")
-        .select("id, business_url, company_name, partner_slug, tier, subdomain, domain_verified")
-        .eq("profile_id", user.id)
-        .single();
+      const { data } = await getMe();
+      const partner = data?.partner;
       if (partner) {
-        setPartnerId(partner.id);
         setTier(partner.tier || "standard");
         setSlug(
           partner.partner_slug ||
@@ -77,11 +68,7 @@ export default function Step4Page() {
       setVerifyStatus("idle");
 
       // Also save business_url and slug
-      const supabase = createClient();
-      await supabase
-        .from("partners")
-        .update({ business_url: cleanUrl, partner_slug: slug, onboarding_step: 5 })
-        .eq("id", partnerId);
+      await updateMe({ business_url: cleanUrl, partner_slug: slug, onboarding_step: 5 });
 
     } catch {
       setError("Something went wrong. Please try again.");
@@ -113,11 +100,7 @@ export default function Step4Page() {
   }
 
   async function handleContinue() {
-    const supabase = createClient();
-    await supabase
-      .from("partners")
-      .update({ partner_slug: slug, onboarding_step: 5 })
-      .eq("id", partnerId);
+    await updateMe({ partner_slug: slug, onboarding_step: 5 });
     router.push("/pro/onboarding/step-5");
   }
 

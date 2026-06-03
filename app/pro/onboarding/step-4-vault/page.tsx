@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
 import { stripeConnectOnboard } from "@/lib/api-client/misc";
+import { getMe } from "@/lib/api-client/partner";
 
 export default function Step4VaultPage() {
   const router = useRouter();
@@ -19,14 +19,8 @@ export default function Step4VaultPage() {
 
   useEffect(() => {
     async function load() {
-      const supabase = createClient();
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) { router.push("/pro/login"); return; }
-      const { data: partner } = await supabase
-        .from("partners")
-        .select("id, tier, stripe_account_id")
-        .eq("profile_id", user.id)
-        .single();
+      const { data } = await getMe();
+      const partner = data?.partner;
       if (!partner || partner.tier !== "basic") { router.push("/pro/dashboard"); return; }
       if (partner.stripe_account_id) setAlreadyConnected(true);
       if (searchParams.get("stripe_connect") === "success") {

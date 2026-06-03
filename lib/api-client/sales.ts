@@ -1,5 +1,25 @@
 import { post, get, patch, del, type ApiResult } from "./client";
 
+// --- B2 sales pipeline (prospects CRUD) ---
+export function getProspects(): Promise<ApiResult<{ prospects: unknown[]; partners: unknown[] }>> {
+  return get("/api/sales/prospects");
+}
+export function createProspect(body: Record<string, unknown>): Promise<ApiResult<{ id: string }>> {
+  return post("/api/sales/prospects", body);
+}
+export function updateProspect(id: string, patch_: Record<string, unknown>): Promise<ApiResult<{ success: boolean }>> {
+  return patch(`/api/sales/prospects/${id}`, patch_);
+}
+export function deleteProspect(id: string): Promise<ApiResult<{ success: boolean }>> {
+  return del(`/api/sales/prospects/${id}`);
+}
+export function getProspectActivity(id: string): Promise<ApiResult<{ activity: unknown[] }>> {
+  return get(`/api/sales/prospects/${id}/activity`);
+}
+export function logProspectActivity(id: string, type: string, body: string | null): Promise<ApiResult<{ success: boolean }>> {
+  return post(`/api/sales/prospects/${id}/activity`, { type, body });
+}
+
 export type ManagedPartner = {
   id: string;
   company_name: string | null;
@@ -19,6 +39,68 @@ export function getPartners(): Promise<ApiResult<{ partners: ManagedPartner[] }>
   return get("/api/sales/partners");
 }
 
+export type SalesDashboard = {
+  repName: string;
+  userType: string;
+  activePartners: number;
+  onboardingPartners: number;
+  mtdEvRevenue: number;
+  mtdPlatformFees: number;
+  stuckPartners: Array<{ id: string; company_name: string | null; onboarding_step: number | null; daysSinceUpdate: number }>;
+  recentPartners: Array<{ id: string; company_name: string | null; tier: string | null; status: string | null; mtdDocs: number; mtdRevenue: number }>;
+  leads: unknown[];
+  pendingVerifications: Array<{ id: string; company_name: string | null; bar_number: string; tier: string | null; review_fee: number | null; created_at: string; profile_name: string; profile_email: string }>;
+};
+
+// The sales dashboard summary (B2).
+export function getDashboard(): Promise<ApiResult<SalesDashboard>> {
+  return get("/api/sales/dashboard");
+}
+
+export type RepSummary = {
+  repId: string;
+  repName: string;
+  repEmail: string;
+  commissionRate: number;
+  mtdPlatformFees: number;
+  mtdCommissionOwed: number;
+  totalPartners: number;
+  mtdPartners: number;
+};
+
+// Per-rep commission summary (B2, admin view).
+export function getCommission(): Promise<ApiResult<{ repSummaries: RepSummary[]; totalMtdOwed: number; totalMtdFees: number }>> {
+  return get("/api/sales/commission");
+}
+
+export type SalesOverview = {
+  repName: string;
+  activePartners: number;
+  onboardingPartners: number;
+  mtdRevenue: number;
+  mtdCommission: number;
+  stuckPartners: Array<{ id: string; company_name: string | null; onboarding_step: number | null; daysSinceUpdate: number }>;
+  recentPartners: Array<{ id: string; company_name: string | null; tier: string | null; status: string | null; mtdDocs: number; mtdRevenue: number }>;
+  leads: unknown[];
+  pendingVerifications: Array<{ id: string; company_name: string | null; bar_number: string; tier: string | null; review_fee: number | null; created_at: string; profile_name: string; profile_email: string }>;
+};
+
+// The pro-portal sales overview (B2).
+export function getOverview(): Promise<ApiResult<SalesOverview>> {
+  return get("/api/sales/overview");
+}
+
+export type MyCommission = {
+  breakdown: Array<{ partnerName: string; mtdRevenue: number; commission: number }>;
+  mtdCommission: number;
+  history: Array<{ month: string; partnerRevenue: number; commission: number; status: string }>;
+};
+
+// The signed-in rep's own commission breakdown + history (B2).
+export function getMyCommission(): Promise<ApiResult<MyCommission>> {
+  return get("/api/sales/my-commission");
+}
+
 export function createPartner(body: Record<string, unknown>): Promise<ApiResult<{ partnerId: string; tempPassword?: string }>> {
   return post("/api/sales/create-partner", body);
 }
@@ -33,6 +115,45 @@ export function partnerLastLogin(partnerId: string): Promise<ApiResult<{ lastLog
 
 export function addPartnerNote(partnerId: string, content: string): Promise<ApiResult<{ success: boolean }>> {
   return post("/api/sales/partner-notes", { partnerId, content });
+}
+
+export type PartnerDetailResponse = {
+  partner: Record<string, unknown>;
+  performance: {
+    mtdDocs: number; mtdRevenue: number;
+    lmDocs: number; lmRevenue: number;
+    allDocs: number; allRevenue: number;
+    monthlyStats: { month: string; docs: number; revenue: number }[];
+  };
+  activity: { id: string; action: string; metadata: Record<string, unknown> | null; created_at: string }[];
+  notes: { id: string; note: string; sales_rep_id: string | null; created_at: string }[];
+};
+
+// A managed partner's full detail (B2, ownership enforced server-side).
+export function getPartnerDetail(partnerId: string): Promise<ApiResult<PartnerDetailResponse>> {
+  return get(`/api/sales/partners/${partnerId}`);
+}
+
+// Toggle a managed partner's account status (B2).
+export function setPartnerStatus(partnerId: string, status: "active" | "suspended"): Promise<ApiResult<{ success: boolean }>> {
+  return patch(`/api/sales/partners/${partnerId}`, { status });
+}
+
+// Apply a promo code to a managed partner, comping the platform fee (B2).
+export function applyPartnerPromo(partnerId: string, promoCode: string): Promise<ApiResult<{ success: boolean }>> {
+  return post(`/api/sales/partners/${partnerId}/apply-promo`, { promo_code: promoCode });
+}
+
+export type MyPlatformCommission = {
+  commissionRate: number;
+  mtdCommission: number;
+  breakdown: { partnerName: string; platformFee: number; commission: number; paidAt: string; status: string }[];
+  history: { month: string; platformFees: number; commission: number; status: string }[];
+};
+
+// The signed-in rep's platform-fee commission breakdown + history (B2).
+export function getMyPlatformCommission(): Promise<ApiResult<MyPlatformCommission>> {
+  return get("/api/sales/my-platform-commission");
 }
 
 export function getReps(): Promise<ApiResult<{ reps: unknown[] }>> {

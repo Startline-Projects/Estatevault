@@ -64,3 +64,21 @@ npx playwright test          # app + pro + sales + admin
 ```
 
 With that in place, the login-handoff and the `@pro/@sales/@admin` specs can pass too.
+
+---
+
+## B2 migration test run — 2026-06-03
+
+The B2 work (moving screens behind the API boundary) added `tests/e2e/b2-partner-api.spec.ts`.
+
+| Layer | Result |
+|-------|--------|
+| **Unit (Vitest)** | ✅ **376 / 376** |
+| **Typecheck** | ✅ 1 pre-existing error only (`quizSessionRepo`); the second long-standing `attorneyReviewRepo` error was fixed during B2 |
+| **Lint** | ✅ clean on changed files |
+| **E2E — endpoint guards (`--project=app`)** | ✅ **13 / 13** — every B2 GET endpoint rejects anonymous callers |
+| **E2E — authenticated (`@pro` / `@sales` / client)** | ⚙ **blocked on this machine** — same host/port mismatch as above (login handoff → unreachable `app.localhost`/`pro.localhost`; not code failures) |
+
+**B2 endpoints guarded (13):** `partner/me`, `profile/me`, `partner/dashboard`, `partner/clients`, `partner/vault-clients`, `partner/documents`, `partner/referrals`, `sales/partners`, `sales/dashboard`, `sales/commission`, `client/documents`, `attorney/reviews`, `attorney/pipeline`.
+
+To run the authenticated B2 tests (partner/sales/client payload shapes + cross-partner ownership 403), add the `/etc/hosts` line above and run the matching project, e.g. `npx playwright test b2-partner-api --project=pro`.

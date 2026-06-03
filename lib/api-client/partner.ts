@@ -1,4 +1,4 @@
-import { post, put, get, publicGet, type ApiResult } from "./client";
+import { post, put, patch, get, publicGet, postFormAuthed, type ApiResult } from "./client";
 import type { Database } from "@/types/db.generated";
 
 export type MyPartner = Database["public"]["Tables"]["partners"]["Row"];
@@ -6,6 +6,28 @@ export type MyPartner = Database["public"]["Tables"]["partners"]["Row"];
 // The signed-in partner's own row (B2). null if the profile has no partner row.
 export function getMe(): Promise<ApiResult<{ partner: MyPartner | null }>> {
   return get("/api/partner/me");
+}
+
+// Self-update of NON-financial onboarding fields (B2).
+export function updateMe(patch_: Record<string, unknown>): Promise<ApiResult<{ success: boolean }>> {
+  return patch("/api/partner/me", patch_);
+}
+
+// Queue a pre-launch client invite during onboarding (B2).
+export function inviteClient(clientEmail: string): Promise<ApiResult<{ success: boolean }>> {
+  return post("/api/partner/invite-client", { client_email: clientEmail });
+}
+
+// Apply the partner's stored promo code server-side (comps the platform fee).
+export function applyPromo(): Promise<ApiResult<{ applied: boolean }>> {
+  return post("/api/partner/apply-promo");
+}
+
+// Upload the partner's logo (server-side storage + logo_url set). Returns URL.
+export function uploadLogo(file: File): Promise<ApiResult<{ url: string }>> {
+  const form = new FormData();
+  form.append("file", file);
+  return postFormAuthed("/api/partner/logo", form);
 }
 
 export type Referral = {
@@ -93,6 +115,16 @@ export type ClientDetailData = {
 // A single client's detail for the partner (B2, with ownership check server-side).
 export function getClientDetail(clientId: string): Promise<ApiResult<ClientDetailData>> {
   return get(`/api/partner/clients/${clientId}`);
+}
+
+export type RevenueDetails = {
+  orders: Array<{ id: string; client_id: string | null; product_type: string; partner_cut: number; status: string; created_at: string | null }>;
+  payouts: Array<{ id: string; amount: number | null; status: string | null; orders_included: unknown; created_at: string | null }>;
+};
+
+// Raw orders (with vault synthesis) + payouts for the revenue page (B2).
+export function getRevenueDetails(): Promise<ApiResult<RevenueDetails>> {
+  return get("/api/partner/revenue-details");
 }
 
 export type BrandingResult = {

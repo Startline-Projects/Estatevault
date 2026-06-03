@@ -1,9 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { createClient } from "@/lib/supabase/client";
 import { recovery } from "@/lib/api-client/auth";
 import { pinAction } from "@/lib/api-client/vault";
+import { getClientSettings, updateClientProfile, updateClientAdvisor } from "@/lib/api-client/clientAccount";
 import LoadingScreen from "@/components/ui/LoadingScreen";
 
 interface Profile {
@@ -53,17 +53,13 @@ export default function SettingsPage() {
 
   useEffect(() => {
     async function load() {
-      const supabase = createClient();
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-      setEmail(user.email || "");
-
-      const { data } = await supabase.from("profiles").select("full_name, phone, notification_preferences").eq("id", user.id).single();
-      if (data) {
+      const { data } = await getClientSettings();
+      if (data?.profile) {
+        setEmail(data.profile.email || "");
         setProfile({
-          full_name: data.full_name || "",
-          phone: data.phone || "",
-          notification_preferences: (data.notification_preferences as { documents_delivered: boolean; annual_review: boolean; life_event_reminders: boolean } | null) || { documents_delivered: true, annual_review: true, life_event_reminders: true },
+          full_name: data.profile.full_name || "",
+          phone: data.profile.phone || "",
+          notification_preferences: (data.profile.notification_preferences as { documents_delivered: boolean; annual_review: boolean; life_event_reminders: boolean } | null) || { documents_delivered: true, annual_review: true, life_event_reminders: true },
         });
       }
 
@@ -75,12 +71,10 @@ export default function SettingsPage() {
         }
       } catch {}
 
-      // Load advisor info
-      const { data: client } = await supabase.from("clients").select("advisor_name, advisor_firm, advisor_share_consent").eq("profile_id", user.id).single();
-      if (client) {
-        setAdvisorName(client.advisor_name || "");
-        setAdvisorFirm(client.advisor_firm || "");
-        setAdvisorConsent(client.advisor_share_consent || false);
+      if (data?.advisor) {
+        setAdvisorName(data.advisor.advisor_name || "");
+        setAdvisorFirm(data.advisor.advisor_firm || "");
+        setAdvisorConsent(data.advisor.advisor_share_consent || false);
       }
       setLoading(false);
     }
@@ -89,16 +83,11 @@ export default function SettingsPage() {
 
   async function saveProfile() {
     setSaving(true);
-    const supabase = createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
-
-    await supabase.from("profiles").update({
+    await updateClientProfile({
       full_name: profile.full_name,
       phone: profile.phone,
       notification_preferences: profile.notification_preferences,
-    }).eq("id", user.id);
-
+    });
     setSaving(false); setSaved(true);
     setTimeout(() => setSaved(false), 2000);
   }
@@ -121,10 +110,7 @@ export default function SettingsPage() {
   }
 
   async function saveAdvisor() {
-    const supabase = createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
-    await supabase.from("clients").update({ advisor_name: advisorName, advisor_firm: advisorFirm, advisor_share_consent: advisorConsent }).eq("profile_id", user.id);
+    await updateClientAdvisor({ advisor_name: advisorName, advisor_firm: advisorFirm, advisor_share_consent: advisorConsent });
     setSaved(true); setTimeout(() => setSaved(false), 2000);
   }
 

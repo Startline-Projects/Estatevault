@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { createClient } from "@/lib/supabase/client";
+import { getFundingChecklist, updateFundingChecklist } from "@/lib/api-client/clientAccount";
 import LoadingScreen from "@/components/ui/LoadingScreen";
 
 const ASSET_DETAILS: Record<string, { instruction: string; details: string }> = {
@@ -43,23 +43,10 @@ export default function FundingChecklistPage() {
 
   useEffect(() => {
     async function load() {
-      const supabase = createClient();
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      const { data: client } = await supabase.from("clients").select("id, funding_checklist").eq("profile_id", user.id).single();
-      if (!client) { setLoading(false); return; }
-
-      if (client.funding_checklist && typeof client.funding_checklist === "object") {
-        setChecklist(client.funding_checklist as Record<string, boolean>);
-      }
-
-      // Get asset types from latest trust quiz session
-      const { data: quiz } = await supabase.from("quiz_sessions").select("answers").eq("client_id", client.id).eq("recommendation", "trust").order("created_at", { ascending: false }).limit(1).single();
-
-      if (quiz?.answers) {
-        const answers = quiz.answers as Record<string, unknown>;
-        setAssetTypes((answers.assetTypes as string[]) || []);
+      const { data } = await getFundingChecklist();
+      if (data) {
+        setChecklist(data.checklist || {});
+        setAssetTypes(data.assetTypes || []);
       }
       setLoading(false);
     }
@@ -69,12 +56,7 @@ export default function FundingChecklistPage() {
   async function toggleItem(asset: string) {
     const updated = { ...checklist, [asset]: !checklist[asset] };
     setChecklist(updated);
-
-    const supabase = createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
-
-    await supabase.from("clients").update({ funding_checklist: updated }).eq("profile_id", user.id);
+    await updateFundingChecklist(updated);
   }
 
   if (loading) return <LoadingScreen message="Loading your checklist…" />;

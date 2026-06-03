@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
+import { getReviews } from "@/lib/api-client/attorney";
 
 interface Review {
   id: string;
@@ -78,76 +79,13 @@ export default function AttorneyQueuePage() {
       if (!user) return;
       setUserId(user.id);
 
-      const { data: profile } = await supabase.from("profiles").select("full_name, email").eq("id", user.id).single();
-      setUserName(profile?.full_name || profile?.email || "Attorney");
-
-      // Fetch raw review rows
-      const { data: rawReviews } = await supabase
-        .from("attorney_reviews")
-        .select("id, order_id, status, sla_deadline, created_at, reviewer_type, fee_destination, fee_amount, partner_id")
-        .eq("attorney_id", user.id)
-        .order("created_at", { ascending: false });
-
-      if (!rawReviews || rawReviews.length === 0) {
-        setReviews([]);
-        setLoading(false);
-        return;
+      // Data now comes from the API boundary (B2); auth above only feeds the
+      // realtime channel's attorney_id filter below.
+      const { data } = await getReviews();
+      if (data) {
+        setUserName(data.userName);
+        setReviews(data.reviews as unknown as Review[]);
       }
-
-      // Fetch orders separately to get product_type and client_id
-      const orderIds = rawReviews.map((r) => r.order_id).filter((x): x is string => x != null);
-      const { data: orders } = await supabase
-        .from("orders")
-        .select("id, product_type, client_id")
-        .in("id", orderIds);
-
-      const orderMap = Object.fromEntries((orders || []).map((o) => [o.id, o]));
-
-      // Fetch clients to get profile_id
-      const clientIds = (orders || []).map((o) => o.client_id).filter((x): x is string => x != null);
-      const { data: clients } = await supabase
-        .from("clients")
-        .select("id, profile_id")
-        .in("id", clientIds);
-
-      const clientMap = Object.fromEntries((clients || []).map((c) => [c.id, c]));
-
-      // Fetch client profiles
-      const profileIds = (clients || []).map((c) => c.profile_id).filter((x): x is string => x != null);
-      const { data: clientProfiles } = await supabase
-        .from("profiles")
-        .select("id, full_name, email")
-        .in("id", profileIds);
-
-      const profileMap = Object.fromEntries((clientProfiles || []).map((p) => [p.id, p]));
-
-      // Fetch partners
-      const partnerIds = rawReviews.map((r) => r.partner_id).filter((x): x is string => x != null);
-      let partnerMap: Record<string, { company_name: string }> = {};
-      if (partnerIds.length > 0) {
-        const { data: partners } = await supabase
-          .from("partners")
-          .select("id, company_name")
-          .in("id", partnerIds);
-        partnerMap = Object.fromEntries((partners || []).map((p) => [p.id, p]));
-      }
-
-      // Assemble enriched reviews
-      const enriched: Review[] = rawReviews.map((r) => {
-        const order = r.order_id != null ? (orderMap[r.order_id] || null) : null;
-        const client = order && order.client_id != null ? clientMap[order.client_id] : null;
-        const clientProfile = client && client.profile_id != null ? profileMap[client.profile_id] : null;
-        const partner = r.partner_id ? partnerMap[r.partner_id] : null;
-        return {
-          ...r,
-          product_type: order?.product_type || "will",
-          partner_company: partner?.company_name || null,
-          client_name: clientProfile?.full_name || clientProfile?.email || null,
-          client_email: clientProfile?.email || null,
-        };
-      });
-
-      setReviews(enriched);
       setLoading(false);
   }, []);
 

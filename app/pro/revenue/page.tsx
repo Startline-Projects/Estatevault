@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { createClient } from "@/lib/supabase/client";
+import { getRevenueDetails } from "@/lib/api-client/partner";
 import { PRICES } from "@/lib/orders/pricing";
 
 interface EarningsBreakdown {
@@ -56,27 +56,11 @@ export default function ProRevenuePage() {
 
   useEffect(() => {
     async function load() {
-      const supabase = createClient();
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (!user) {
+      const { data: rd } = await getRevenueDetails();
+      if (!rd) {
         setLoading(false);
         return;
       }
-
-      const { data: partner } = await supabase
-        .from("partners")
-        .select("id, tier, partner_revenue_pct, stripe_account_id")
-        .eq("profile_id", user.id)
-        .single();
-      if (!partner) {
-        setLoading(false);
-        return;
-      }
-
-      const VAULT_PRICE_CENTS = PRICES.vaultSubscriptionYear;
-      const partnerPct = Number(partner.partner_revenue_pct) || 0;
 
       const now = new Date();
       const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
@@ -84,45 +68,7 @@ export default function ProRevenuePage() {
       const lastMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59).toISOString();
       const yearStart = new Date(now.getFullYear(), 0, 1).toISOString();
 
-      // Fetch all orders for this partner
-      const { data: allOrders } = await supabase
-        .from("orders")
-        .select("id, client_id, product_type, partner_cut, status, created_at")
-        .eq("partner_id", partner.id)
-        .in("status", ["paid", "delivered", "generating", "review"]);
-
-      const orders = (allOrders || []).slice();
-
-      // Fallback: synthesize vault_subscription orders for active clients
-      // missing an orders row (basic-tier partner case where webhook insert
-      // failed or row predates the orders-tracking change).
-      if (partnerPct > 0) {
-        const { data: vaultClients } = await supabase
-          .from("clients")
-          .select("id, vault_subscription_status, vault_subscription_expiry, updated_at, created_at")
-          .eq("partner_id", partner.id)
-          .eq("vault_subscription_status", "active");
-
-        const tracked = new Set(
-          orders
-            .filter((o) => o.product_type === "vault_subscription" && o.client_id)
-            .map((o) => o.client_id as string)
-        );
-
-        const partnerCutCents = Math.round((VAULT_PRICE_CENTS * partnerPct) / 100);
-
-        for (const c of vaultClients || []) {
-          if (tracked.has(c.id)) continue;
-          orders.push({
-            id: `synthetic-${c.id}`,
-            client_id: c.id,
-            product_type: "vault_subscription",
-            partner_cut: partnerCutCents,
-            status: "paid",
-            created_at: c.updated_at || c.created_at,
-          });
-        }
-      }
+      const orders = rd.orders.slice();
 
       // MTD
       const mtdOrders = orders.filter((o) => (o.created_at ?? "") >= monthStart);
@@ -179,18 +125,13 @@ export default function ProRevenuePage() {
       }
       setBreakdown(bd);
 
-      // Payouts
-      const { data: payoutData } = await supabase
-        .from("payouts")
-        .select("id, amount, status, orders_included, created_at")
-        .eq("partner_id", partner.id)
-        .order("created_at", { ascending: false })
-        .limit(20);
+      // Payouts (from the API)
+      const payoutData = rd.payouts;
 
       const payoutsList: PayoutRow[] = (payoutData || []).map((p) => ({
         id: p.id,
-        amount: p.amount,
-        status: p.status,
+        amount: p.amount ?? 0,
+        status: p.status ?? "",
         created_at: p.created_at,
       }));
 

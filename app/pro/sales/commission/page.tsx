@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { createClient } from "@/lib/supabase/client";
+import { getMyCommission } from "@/lib/api-client/sales";
 
 interface PartnerRow {
   id: string;
@@ -45,96 +45,10 @@ export default function SalesCommissionPage() {
 
   useEffect(() => {
     async function load() {
-      const supabase = createClient();
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (!user) return;
-
-      // Fetch rep's partners
-      const { data: partners } = await supabase
-        .from("partners")
-        .select("id, company_name")
-        .eq("created_by", user.id);
-
-      if (!partners || partners.length === 0) {
-        setLoading(false);
-        return;
-      }
-
-      const typedPartners = partners as PartnerRow[];
-      const partnerIds = typedPartners.map((p) => p.id);
-      const partnerMap = new Map(typedPartners.map((p) => [p.id, p.company_name]));
-
-      // Fetch orders from last 6 months
-      const sixMonthsAgo = new Date();
-      sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
-      sixMonthsAgo.setDate(1);
-      sixMonthsAgo.setHours(0, 0, 0, 0);
-
-      const { data: orders } = await supabase
-        .from("orders")
-        .select("amount_total, partner_id, created_at")
-        .in("partner_id", partnerIds)
-        .gte("created_at", sixMonthsAgo.toISOString());
-
-      const typedOrders = (orders || []) as OrderRow[];
-
-      // MTD breakdown
-      const now = new Date();
-      const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-      const mtdOrders = typedOrders.filter((o) => new Date(o.created_at) >= monthStart);
-
-      const revenueByPartner = new Map<string, number>();
-      for (const o of mtdOrders) {
-        const prev = revenueByPartner.get(o.partner_id) || 0;
-        revenueByPartner.set(o.partner_id, prev + (o.amount_total || 0));
-      }
-
-      const breakdownRows: BreakdownRow[] = [];
-      let totalMtdRevenue = 0;
-      revenueByPartner.forEach((totalCents, partnerId) => {
-        const dollars = totalCents / 100;
-        totalMtdRevenue += dollars;
-        breakdownRows.push({
-          partnerName: partnerMap.get(partnerId) || "Unknown",
-          mtdRevenue: dollars,
-          commission: dollars * COMMISSION_RATE,
-        });
-      });
-      // Include partners with no revenue this month
-      for (const p of typedPartners) {
-        if (!revenueByPartner.has(p.id)) {
-          breakdownRows.push({
-            partnerName: p.company_name,
-            mtdRevenue: 0,
-            commission: 0,
-          });
-        }
-      }
-      breakdownRows.sort((a, b) => b.mtdRevenue - a.mtdRevenue);
-      setBreakdown(breakdownRows);
-      setMtdCommission(totalMtdRevenue * COMMISSION_RATE);
-
-      // History: last 6 months
-      const historyRows: HistoryRow[] = [];
-      for (let i = 0; i < 6; i++) {
-        const mDate = new Date(now.getFullYear(), now.getMonth() - i, 1);
-        const mEnd = new Date(now.getFullYear(), now.getMonth() - i + 1, 1);
-        const monthOrders = typedOrders.filter((o) => {
-          const d = new Date(o.created_at);
-          return d >= mDate && d < mEnd;
-        });
-        const partnerRevenue = monthOrders.reduce((sum, o) => sum + (o.amount_total || 0), 0) / 100;
-        const isCurrentMonth = i === 0;
-        historyRows.push({
-          month: getMonthLabel(mDate),
-          partnerRevenue,
-          commission: partnerRevenue * COMMISSION_RATE,
-          status: isCurrentMonth ? "Pending" : "Paid",
-        });
-      }
-      setHistory(historyRows);
+      const { data } = await getMyCommission();
+      setBreakdown((data?.breakdown ?? []) as unknown as BreakdownRow[]);
+      setMtdCommission(data?.mtdCommission ?? 0);
+      setHistory((data?.history ?? []) as unknown as HistoryRow[]);
       setLoading(false);
     }
     load();

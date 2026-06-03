@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
-import { createClient } from "@/lib/supabase/client";
+import { getMe, updateMe, uploadLogo } from "@/lib/api-client/partner";
 
 export default function Step2VaultPage() {
   const router = useRouter();
@@ -19,19 +19,8 @@ export default function Step2VaultPage() {
 
   useEffect(() => {
     async function load() {
-      const supabase = createClient();
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (!user) {
-        router.push("/auth/login");
-        return;
-      }
-      const { data: partner } = await supabase
-        .from("partners")
-        .select("id, tier, company_name, product_name, accent_color, logo_url")
-        .eq("profile_id", user.id)
-        .single();
+      const { data } = await getMe();
+      const partner = data?.partner;
       if (partner) {
         if (partner.tier !== "basic") {
           router.push("/pro/onboarding/step-2");
@@ -61,26 +50,12 @@ export default function Step2VaultPage() {
     setUploading(true);
     setUploadError("");
     try {
-      const supabase = createClient();
-      const ext = file.name.split(".").pop() || "png";
-      const filePath = `logos/${partnerId}-${Date.now()}.${ext}`;
-      const { error: uploadErr } = await supabase.storage.from("logos").upload(filePath, file, { upsert: true });
-      if (uploadErr) {
-        const { error: fallbackErr } = await supabase.storage.from("documents").upload(filePath, file, { upsert: true });
-        if (fallbackErr) {
-          setUploadError("Upload failed. Please try again.");
-          setUploading(false);
-          return;
-        }
-        const { data: urlData } = supabase.storage.from("documents").getPublicUrl(filePath);
-        setLogoUrl(urlData.publicUrl);
-        await supabase.from("partners").update({ logo_url: urlData.publicUrl }).eq("id", partnerId);
-        setUploading(false);
+      const { data, error } = await uploadLogo(file);
+      if (error || !data) {
+        setUploadError("Upload failed. Please try again.");
         return;
       }
-      const { data: urlData } = supabase.storage.from("logos").getPublicUrl(filePath);
-      setLogoUrl(urlData.publicUrl);
-      await supabase.from("partners").update({ logo_url: urlData.publicUrl }).eq("id", partnerId);
+      setLogoUrl(data.url);
     } catch {
       setUploadError("Upload failed. Please try again.");
     } finally {
@@ -102,17 +77,13 @@ export default function Step2VaultPage() {
   async function handleContinue() {
     if (!companyName.trim() || !partnerId) return;
     setSaving(true);
-    const supabase = createClient();
-    await supabase
-      .from("partners")
-      .update({
-        company_name: companyName,
-        product_name: productName,
-        accent_color: accentColor,
-        logo_url: logoUrl || null,
-        onboarding_step: 3,
-      })
-      .eq("id", partnerId);
+    await updateMe({
+      company_name: companyName,
+      product_name: productName,
+      accent_color: accentColor,
+      logo_url: logoUrl || null,
+      onboarding_step: 3,
+    });
     router.push("/pro/onboarding/step-3-vault");
   }
 

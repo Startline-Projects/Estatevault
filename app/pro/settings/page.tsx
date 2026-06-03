@@ -3,10 +3,10 @@
 import { useState, useEffect, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import Image from "next/image";
-import { createClient } from "@/lib/supabase/client";
 import { normalizeBusinessDomain } from "@/lib/hosts";
 import { PRICES, PARTNER_PLATFORM_FEE, PARTNER_SPLITS, formatPrice } from "@/lib/orders/pricing";
-import { addDomain, verifyDomain as verifyDomainApi } from "@/lib/api-client/partner";
+import { addDomain, verifyDomain as verifyDomainApi, getMe, updateMe, uploadLogo } from "@/lib/api-client/partner";
+import { getMyProfile, updateMyName } from "@/lib/api-client/profile";
 import { stripeConnectOnboard } from "@/lib/api-client/misc";
 
 interface PartnerData {
@@ -72,22 +72,16 @@ export default function ProSettingsPage() {
 
   useEffect(() => {
     async function load() {
-      const supabase = createClient();
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (!user) return;
+      const [{ data: meData }, { data: profData }] = await Promise.all([getMe(), getMyProfile()]);
+      const partnerRow = meData?.partner;
 
-      const { data } = await supabase
-        .from("partners")
-        .select(
-          "id, tier, company_name, product_name, accent_color, logo_url, business_url, partner_slug, sender_name, sender_email, stripe_account_id, professional_type, has_inhouse_estate_attorney, inhouse_review_attorney_id, custom_review_fee, vault_tagline, vault_theme, vault_subdomain, profiles!profile_id(full_name, email)"
-        )
-        .eq("profile_id", user.id)
-        .single();
-
-      if (data) {
-        const p = data as unknown as PartnerData & { subdomain?: string; domain_verified?: boolean };
+      if (partnerRow) {
+        const p = {
+          ...partnerRow,
+          profiles: profData?.profile
+            ? { full_name: profData.profile.full_name || "", email: profData.profile.email || "" }
+            : null,
+        } as unknown as PartnerData & { subdomain?: string; domain_verified?: boolean };
         setPartner(p);
         setCompanyName(p.company_name || "");
         setProductName(p.product_name || "Legacy Protection");
@@ -153,11 +147,7 @@ export default function ProSettingsPage() {
   async function saveBrand() {
     if (!partner) return;
     setSaving(true);
-    const supabase = createClient();
-    await supabase
-      .from("partners")
-      .update({ company_name: companyName, product_name: productName, accent_color: accentColor, logo_url: logoUrl || null })
-      .eq("id", partner.id);
+    await updateMe({ company_name: companyName, product_name: productName, accent_color: accentColor, logo_url: logoUrl || null });
     setPartner({ ...partner, company_name: companyName, product_name: productName, accent_color: accentColor, logo_url: logoUrl || null });
     setSaving(false);
     setSaveSuccess("brand");
@@ -178,32 +168,13 @@ export default function ProSettingsPage() {
     setUploading(true);
     setUploadError("");
     try {
-      const supabase = createClient();
-      const ext = file.name.split(".").pop() || "png";
-      const filePath = `logos/${partner.id}-${Date.now()}.${ext}`;
-
-      let publicUrl = "";
-      const { error: uploadErr } = await supabase.storage
-        .from("logos")
-        .upload(filePath, file, { upsert: true });
-
-      if (uploadErr) {
-        const { error: fallbackErr } = await supabase.storage
-          .from("documents")
-          .upload(filePath, file, { upsert: true });
-        if (fallbackErr) {
-          setUploadError("Upload failed. Try again.");
-          setUploading(false);
-          return;
-        }
-        publicUrl = supabase.storage.from("documents").getPublicUrl(filePath).data.publicUrl;
-      } else {
-        publicUrl = supabase.storage.from("logos").getPublicUrl(filePath).data.publicUrl;
+      const { data, error } = await uploadLogo(file);
+      if (error || !data) {
+        setUploadError("Upload failed. Try again.");
+        return;
       }
-
-      await supabase.from("partners").update({ logo_url: publicUrl }).eq("id", partner.id);
-      setLogoUrl(publicUrl);
-      setPartner({ ...partner, logo_url: publicUrl });
+      setLogoUrl(data.url);
+      setPartner({ ...partner, logo_url: data.url });
     } catch {
       setUploadError("Upload failed. Try again.");
     } finally {
@@ -213,8 +184,7 @@ export default function ProSettingsPage() {
 
   async function removeLogo() {
     if (!partner) return;
-    const supabase = createClient();
-    await supabase.from("partners").update({ logo_url: null }).eq("id", partner.id);
+    await updateMe({ logo_url: null });
     setLogoUrl("");
     setPartner({ ...partner, logo_url: null });
   }
@@ -268,11 +238,7 @@ export default function ProSettingsPage() {
   async function saveEmail() {
     if (!partner) return;
     setSaving(true);
-    const supabase = createClient();
-    await supabase
-      .from("partners")
-      .update({ sender_name: senderName, sender_email: senderEmail })
-      .eq("id", partner.id);
+    await updateMe({ sender_name: senderName, sender_email: senderEmail });
     setPartner({ ...partner, sender_name: senderName, sender_email: senderEmail });
     setSaving(false);
     setSaveSuccess("email");
@@ -282,13 +248,7 @@ export default function ProSettingsPage() {
   async function saveAccount() {
     if (!partner) return;
     setSaving(true);
-    const supabase = createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (user) {
-      await supabase.from("profiles").update({ full_name: fullName }).eq("id", user.id);
-    }
+    await updateMyName(fullName);
     setPartner({
       ...partner,
       profiles: { full_name: fullName, email },
@@ -301,9 +261,8 @@ export default function ProSettingsPage() {
   async function saveReviewFee() {
     if (!partner) return;
     setSaving(true);
-    const supabase = createClient();
     const feeInCents = Math.round(reviewFee * 100);
-    await supabase.from("partners").update({ custom_review_fee: feeInCents }).eq("id", partner.id);
+    await updateMe({ custom_review_fee: feeInCents });
     setPartner({ ...partner, custom_review_fee: feeInCents });
     setSaving(false);
     setSaveSuccess("attorney_review");
@@ -313,17 +272,13 @@ export default function ProSettingsPage() {
   async function saveVaultBrand() {
     if (!partner) return;
     setSaving(true);
-    const supabase = createClient();
-    await supabase
-      .from("partners")
-      .update({
-        company_name: companyName,
-        product_name: productName,
-        accent_color: accentColor,
-        vault_tagline: vaultTagline,
-        vault_theme: vaultTheme,
-      })
-      .eq("id", partner.id);
+    await updateMe({
+      company_name: companyName,
+      product_name: productName,
+      accent_color: accentColor,
+      vault_tagline: vaultTagline,
+      vault_theme: vaultTheme,
+    });
     setPartner({ ...partner, company_name: companyName, product_name: productName, accent_color: accentColor, vault_tagline: vaultTagline, vault_theme: vaultTheme });
     setSaving(false);
     setSaveSuccess("vault_branding");

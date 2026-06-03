@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from "react";
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/client";
+import { getPipeline, updateReviewStatus } from "@/lib/api-client/attorney";
 
 interface ReviewCase {
   id: string;
@@ -45,55 +45,8 @@ export default function AttorneyPipelinePage() {
   const [overdueOnly, setOverdueOnly] = useState(false);
 
   const load = useCallback(async () => {
-    const supabase = createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) { setLoading(false); return; }
-
-    const { data: raw } = await supabase
-      .from("attorney_reviews")
-      .select("id, order_id, status, sla_deadline, created_at")
-      .eq("attorney_id", user.id)
-      .order("created_at", { ascending: false });
-
-    if (!raw || raw.length === 0) { setCases([]); setLoading(false); return; }
-
-    const orderIds = raw.map((r) => r.order_id).filter((x): x is string => x != null);
-    const { data: orders } = await supabase.from("orders").select("id, product_type, client_id, partner_id").in("id", orderIds);
-    const orderMap = Object.fromEntries((orders || []).map((o) => [o.id, o]));
-
-    const clientIds = (orders || []).map((o) => o.client_id).filter((x): x is string => x != null);
-    const { data: clients } = clientIds.length
-      ? await supabase.from("clients").select("id, profile_id").in("id", clientIds)
-      : { data: [] as { id: string; profile_id: string }[] };
-    const clientMap = Object.fromEntries((clients || []).map((c) => [c.id, c]));
-
-    const profileIds = (clients || []).map((c) => c.profile_id).filter((x): x is string => x != null);
-    const { data: profs } = profileIds.length
-      ? await supabase.from("profiles").select("id, full_name, email").in("id", profileIds)
-      : { data: [] as { id: string; full_name: string; email: string }[] };
-    const profMap = Object.fromEntries((profs || []).map((p) => [p.id, p]));
-
-    const partnerIds = (orders || []).map((o) => o.partner_id).filter((x): x is string => x != null);
-    const { data: partners } = partnerIds.length
-      ? await supabase.from("partners").select("id, company_name").in("id", partnerIds)
-      : { data: [] as { id: string; company_name: string }[] };
-    const partnerMap = Object.fromEntries((partners || []).map((p) => [p.id, p]));
-
-    const enriched: ReviewCase[] = raw.map((r) => {
-      const o = r.order_id != null ? orderMap[r.order_id] : undefined;
-      const c = o && o.client_id != null ? clientMap[o.client_id] : null;
-      const prof = c && c.profile_id != null ? profMap[c.profile_id] : null;
-      const partner = o?.partner_id ? partnerMap[o.partner_id] : null;
-      return {
-        ...r,
-        product_type: o?.product_type || "will",
-        partner_company: partner?.company_name || null,
-        client_name: prof?.full_name || prof?.email || null,
-        client_email: prof?.email || null,
-      };
-    });
-
-    setCases(enriched);
+    const { data } = await getPipeline();
+    setCases((data?.cases ?? []) as unknown as ReviewCase[]);
     setLoading(false);
   }, []);
 
@@ -104,8 +57,7 @@ export default function AttorneyPipelinePage() {
     if (!cur) return;
     const allowed = MANUAL_TRANSITIONS[cur.status ?? ""] || [];
     if (!allowed.includes(newStatus)) return;
-    const supabase = createClient();
-    await supabase.from("attorney_reviews").update({ status: newStatus }).eq("id", id);
+    await updateReviewStatus(id, newStatus);
     await load();
   }
 

@@ -2,8 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
-import { emailSetup, emailVerify, emailTest } from "@/lib/api-client/partner";
+import { emailSetup, emailVerify, emailTest, getMe, updateMe } from "@/lib/api-client/partner";
 
 type DnsRecord = { record?: string; name: string; type: string; value: string; ttl?: string | number; status?: string };
 
@@ -11,7 +10,6 @@ export default function Step5Page() {
   const router = useRouter();
   const [senderName, setSenderName] = useState("");
   const [senderEmail, setSenderEmail] = useState("");
-  const [partnerId, setPartnerId] = useState("");
   const [companyName, setCompanyName] = useState("");
   const [copied, setCopied] = useState("");
   const [dnsRecords, setDnsRecords] = useState<DnsRecord[]>([]);
@@ -21,16 +19,9 @@ export default function Step5Page() {
 
   useEffect(() => {
     async function load() {
-      const supabase = createClient();
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-      const { data: partner } = await supabase
-        .from("partners")
-        .select("id, company_name, sender_name, sender_email, dns_records, email_verified")
-        .eq("profile_id", user.id)
-        .single();
+      const { data } = await getMe();
+      const partner = data?.partner;
       if (partner) {
-        setPartnerId(partner.id);
         setCompanyName(partner.company_name || "");
         setSenderName(partner.sender_name || partner.company_name || "");
         setSenderEmail(partner.sender_email || "");
@@ -81,8 +72,7 @@ export default function Step5Page() {
   }
 
   async function handleContinue() {
-    const supabase = createClient();
-    await supabase.from("partners").update({ onboarding_step: 6 }).eq("id", partnerId);
+    await updateMe({ onboarding_step: 6 });
     router.push("/pro/onboarding/step-6");
   }
 

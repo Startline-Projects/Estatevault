@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
-import { createClient } from "@/lib/supabase/client";
+import { getMe, updateMe, uploadLogo } from "@/lib/api-client/partner";
 import { THEME_PRESETS, HERO_RECIPES, buildPartnerTheme, buildHeroRecipe, contrastRatio, type ThemePresetId, type HeroRecipeId } from "@/lib/partner-pages/theme";
 import { PRICES, formatPrice } from "@/lib/orders/pricing";
 
@@ -23,7 +23,6 @@ export default function Step2Page() {
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState("");
   const [saving, setSaving] = useState(false);
-  const [partnerId, setPartnerId] = useState("");
   const [textColorOverride, setTextColorOverride] = useState("");
   const [landingTextColor, setLandingTextColor] = useState("#1C3557");
   const [customGradient, setCustomGradient] = useState(false);
@@ -122,12 +121,9 @@ export default function Step2Page() {
 
   useEffect(() => {
     async function load() {
-      const supabase = createClient();
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-      const { data: partner } = await supabase.from("partners").select("id, company_name, product_name, accent_color, theme_preset, hero_recipe, highlight_dark, highlight_light, cta_text_override, landing_text_color, logo_url").eq("profile_id", user.id).single();
+      const { data } = await getMe();
+      const partner = data?.partner;
       if (partner) {
-        setPartnerId(partner.id);
         setCompanyName(partner.company_name || "");
         if (partner.product_name) setProductName(partner.product_name);
         if (partner.accent_color) setAccentColor(partner.accent_color);
@@ -163,42 +159,12 @@ export default function Step2Page() {
     setUploadError("");
 
     try {
-      const supabase = createClient();
-      const ext = file.name.split(".").pop() || "png";
-      const filePath = `logos/${partnerId}-${Date.now()}.${ext}`;
-
-      const { error: uploadErr } = await supabase.storage
-        .from("logos")
-        .upload(filePath, file, { upsert: true });
-
-      if (uploadErr) {
-        // If bucket doesn't exist, try the documents bucket as fallback
-        const { error: fallbackErr } = await supabase.storage
-          .from("documents")
-          .upload(filePath, file, { upsert: true });
-
-        if (fallbackErr) {
-          setUploadError("Upload failed. Please try again.");
-          setUploading(false);
-          return;
-        }
-
-        const { data: urlData } = supabase.storage
-          .from("documents")
-          .getPublicUrl(filePath);
-
-        setLogoUrl(urlData.publicUrl);
-        await supabase.from("partners").update({ logo_url: urlData.publicUrl }).eq("id", partnerId);
-        setUploading(false);
+      const { data, error } = await uploadLogo(file);
+      if (error || !data) {
+        setUploadError("Upload failed. Please try again.");
         return;
       }
-
-      const { data: urlData } = supabase.storage
-        .from("logos")
-        .getPublicUrl(filePath);
-
-      setLogoUrl(urlData.publicUrl);
-      await supabase.from("partners").update({ logo_url: urlData.publicUrl }).eq("id", partnerId);
+      setLogoUrl(data.url);
     } catch {
       setUploadError("Upload failed. Please try again.");
     } finally {
@@ -220,8 +186,7 @@ export default function Step2Page() {
   async function handleContinue() {
     if (!companyName.trim()) return;
     setSaving(true);
-    const supabase = createClient();
-    await supabase.from("partners").update({
+    await updateMe({
       company_name: companyName,
       product_name: productName,
       accent_color: accentColor,
@@ -233,7 +198,7 @@ export default function Step2Page() {
       landing_text_color: landingTextColor,
       logo_url: logoUrl || null,
       onboarding_step: 3,
-    }).eq("id", partnerId);
+    });
     router.push("/pro/onboarding/step-3");
   }
 

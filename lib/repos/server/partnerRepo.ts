@@ -14,6 +14,20 @@ export function getTier(admin: Admin, partnerId: string) {
   return admin.from("partners").select("tier").eq("id", partnerId).single();
 }
 
+// Full partner row by id (B2 sales partner-detail; ownership checked in route).
+export function getById(admin: Admin, partnerId: string) {
+  return admin.from("partners").select("*").eq("id", partnerId).maybeSingle();
+}
+
+// A rep's managed partners with platform-fee fields (B2 rep commission view).
+export function listForRepCommission(admin: Admin, repId: string) {
+  return admin
+    .from("partners")
+    .select("id, company_name, tier, platform_fee_amount, one_time_fee_paid, created_at")
+    .eq("created_by", repId)
+    .order("created_at", { ascending: false });
+}
+
 // The signed-in partner's own row (B2: backs GET /api/partner/me). Reusable by
 // the pro/* screens that previously queried `partners` directly.
 export function getByProfileId(admin: Admin, profileId: string) {
@@ -194,4 +208,56 @@ export function countActiveByCreator(admin: Admin, createdBy: string) {
     .select("id", { count: "exact", head: true })
     .eq("created_by", createdBy)
     .eq("status", "active");
+}
+
+// Partner company names by id set (B2 attorney reviews assembly).
+export function listCompanyByIds(admin: Admin, ids: string[]) {
+  return admin.from("partners").select("id, company_name").in("id", ids);
+}
+
+// Managed partners with the columns the sales dashboard needs (B2). repId null
+// = admin/attorney view (all partners).
+export function listManagedForDashboard(admin: Admin, repId: string | null) {
+  let q = admin
+    .from("partners")
+    .select("id, company_name, tier, status, created_at, updated_at, onboarding_completed, onboarding_step, platform_fee_amount, one_time_fee_paid");
+  if (repId) q = q.eq("created_by", repId);
+  return q;
+}
+
+// Attorney partners awaiting bar verification (B2 sales dashboard).
+export function listPendingAttorneyVerifications(admin: Admin) {
+  return admin
+    .from("partners")
+    .select("id, company_name, bar_number, tier, custom_review_fee, created_at, profile_id")
+    .eq("status", "pending_verification")
+    .eq("professional_type", "attorney")
+    .order("created_at", { ascending: false });
+}
+
+// All partners with fee fields, for the sales commission summary (B2).
+export function listAllForCommission(admin: Admin) {
+  return admin
+    .from("partners")
+    .select("id, company_name, tier, platform_fee_amount, one_time_fee_paid, created_at, created_by")
+    .order("created_at", { ascending: false });
+}
+
+// Rep's partners for the pipeline board (B2).
+export function listManagedPipeline(admin: Admin, repId: string) {
+  return admin
+    .from("partners")
+    .select("id, company_name, tier, onboarding_step, onboarding_completed, certification_completed, status, created_at")
+    .eq("created_by", repId)
+    .order("created_at", { ascending: false });
+}
+
+// Patch a partner row scoped to its owning profile (B2 self-update).
+export function updateByProfileId(admin: Admin, profileId: string, patch: PartnerUpdate) {
+  return admin
+    .from("partners")
+    .update(patch)
+    .eq("profile_id", profileId)
+    .select("id")
+    .maybeSingle();
 }

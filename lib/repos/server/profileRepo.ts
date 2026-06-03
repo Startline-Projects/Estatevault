@@ -10,6 +10,7 @@ import type { Database } from "@/types/db.generated";
 type Admin = ReturnType<typeof createAdminClient>;
 
 type ProfileInsert = Database["public"]["Tables"]["profiles"]["Insert"];
+type ProfileUpdate = Database["public"]["Tables"]["profiles"]["Update"];
 
 // Look up a profile id by email (used by promo-free account-creation paths).
 export function findIdByEmail(admin: Admin, email: string) {
@@ -44,9 +45,33 @@ export function getEmailAndNameById(admin: Admin, profileId: string) {
 export function getMeById(admin: Admin, profileId: string) {
   return admin
     .from("profiles")
-    .select("id, full_name, email, phone")
+    .select("id, full_name, email, phone, user_type")
     .eq("id", profileId)
     .maybeSingle();
+}
+
+// Self-update of a profile's display name (B2 settings).
+export function updateName(admin: Admin, profileId: string, fullName: string) {
+  return admin.from("profiles").update({ full_name: fullName }).eq("id", profileId).select("id").maybeSingle();
+}
+
+// A sales rep's commission rate (B2 rep commission view).
+export function getCommissionRateById(admin: Admin, profileId: string) {
+  return admin.from("profiles").select("commission_rate").eq("id", profileId).maybeSingle();
+}
+
+// Client settings: contact + notification prefs + email (B2 dashboard settings).
+export function getSettingsById(admin: Admin, profileId: string) {
+  return admin
+    .from("profiles")
+    .select("full_name, phone, notification_preferences, email")
+    .eq("id", profileId)
+    .maybeSingle();
+}
+
+// Self-update of profile contact + notification prefs (B2).
+export function updateSettings(admin: Admin, profileId: string, patch: ProfileUpdate) {
+  return admin.from("profiles").update(patch).eq("id", profileId).select("id").maybeSingle();
 }
 
 // All sales rep profiles (for sales admin listing).
@@ -74,4 +99,9 @@ export function findByEmail(admin: Admin, email: string) {
     .select("id, user_type")
     .eq("email", email)
     .maybeSingle();
+}
+
+// Profiles (id + name + email) by id set (B2 attorney reviews assembly).
+export function listByIds(admin: Admin, ids: string[]) {
+  return admin.from("profiles").select("id, full_name, email").in("id", ids);
 }

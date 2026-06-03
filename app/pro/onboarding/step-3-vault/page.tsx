@@ -2,8 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
-import { checkVaultSubdomain, claimVaultSubdomain } from "@/lib/api-client/partner";
+import { checkVaultSubdomain, claimVaultSubdomain, getMe } from "@/lib/api-client/partner";
 
 export default function Step3VaultPage() {
   const router = useRouter();
@@ -16,14 +15,8 @@ export default function Step3VaultPage() {
 
   useEffect(() => {
     async function load() {
-      const supabase = createClient();
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) { router.push("/pro/login"); return; }
-      const { data: partner } = await supabase
-        .from("partners")
-        .select("id, tier, company_name, onboarding_step, vault_subdomain")
-        .eq("profile_id", user.id)
-        .single();
+      const { data } = await getMe();
+      const partner = data?.partner;
       if (!partner || partner.tier !== "basic") { router.push("/pro/dashboard"); return; }
       if ((partner.onboarding_step ?? 0) < 3) { router.push("/pro/onboarding/step-2-vault"); return; }
       if (partner.vault_subdomain) { router.push("/pro/dashboard"); return; }

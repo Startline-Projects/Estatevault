@@ -44,6 +44,12 @@ export async function postForm<T>(url: string, formData: FormData): Promise<ApiR
   return parseJson<T>(await fetch(url, { method: "POST", body: formData }));
 }
 
+// Authenticated multipart POST (do NOT set Content-Type — the browser adds the
+// multipart boundary). Used for partner logo uploads behind the API boundary.
+export async function postFormAuthed<T>(url: string, formData: FormData): Promise<ApiResult<T>> {
+  return parseJson<T>(await authedFetch(url, { method: "POST", body: formData }));
+}
+
 export async function getRaw(url: string, params?: Record<string, string | undefined>): Promise<Response> {
   return authedFetch(url + buildQs(params));
 }

@@ -19,8 +19,19 @@ const PARTNER_GET_ENDPOINTS = [
   "/api/partner/vault-clients",
   "/api/partner/documents",
   "/api/partner/referrals",
+  "/api/partner/revenue-details",
   "/api/sales/partners",
+  "/api/sales/dashboard",
+  "/api/sales/commission",
+  "/api/sales/overview",
+  "/api/sales/my-commission",
+  "/api/sales/prospects",
   "/api/client/documents",
+  "/api/client/funding-checklist",
+  "/api/client/settings",
+  "/api/sales/my-platform-commission",
+  "/api/attorney/reviews",
+  "/api/attorney/pipeline",
 ];
 
 const BLOCKED = [301, 302, 307, 401, 403];
@@ -77,6 +88,65 @@ test.describe("B2 partner endpoints — authenticated partner", () => {
       const body = await res.json();
       expect(Array.isArray(body[key]), `${url} -> ${key} is array`).toBe(true);
     }
+  });
+});
+
+test.describe("B2 partner mutations — unauthenticated", () => {
+  test("PATCH /api/partner/me rejects anonymous", async ({ request }) => {
+    const res = await request.patch("/api/partner/me", {
+      data: { onboarding_step: 4 },
+      maxRedirects: 0,
+    });
+    expect(BLOCKED).toContain(res.status());
+  });
+
+  test("POST /api/partner/invite-client rejects anonymous", async ({ request }) => {
+    const res = await request.post("/api/partner/invite-client", {
+      data: { client_email: "x@example.com" },
+      maxRedirects: 0,
+    });
+    expect(BLOCKED).toContain(res.status());
+  });
+
+  test("POST /api/partner/apply-promo rejects anonymous", async ({ request }) => {
+    const res = await request.post("/api/partner/apply-promo", { maxRedirects: 0 });
+    expect(BLOCKED).toContain(res.status());
+  });
+
+  test("POST /api/partner/logo rejects anonymous", async ({ request }) => {
+    const res = await request.post("/api/partner/logo", { maxRedirects: 0 });
+    expect(BLOCKED).toContain(res.status());
+  });
+
+  test("PATCH /api/profile/me rejects anonymous", async ({ request }) => {
+    const res = await request.patch("/api/profile/me", {
+      data: { full_name: "x" },
+      maxRedirects: 0,
+    });
+    expect(BLOCKED).toContain(res.status());
+  });
+
+  const FOREIGN = "00000000-0000-0000-0000-000000000000";
+
+  test("GET /api/sales/partners/:id rejects anonymous", async ({ request }) => {
+    const res = await request.get(`/api/sales/partners/${FOREIGN}`, { maxRedirects: 0 });
+    expect(BLOCKED).toContain(res.status());
+  });
+
+  test("PATCH /api/sales/partners/:id rejects anonymous", async ({ request }) => {
+    const res = await request.patch(`/api/sales/partners/${FOREIGN}`, {
+      data: { status: "active" },
+      maxRedirects: 0,
+    });
+    expect(BLOCKED).toContain(res.status());
+  });
+
+  test("POST /api/sales/partners/:id/apply-promo rejects anonymous", async ({ request }) => {
+    const res = await request.post(`/api/sales/partners/${FOREIGN}/apply-promo`, {
+      data: { promo_code: "TEST" },
+      maxRedirects: 0,
+    });
+    expect(BLOCKED).toContain(res.status());
   });
 });
 
