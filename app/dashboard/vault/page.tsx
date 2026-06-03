@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import { useRouter } from "next/navigation";
 import SubscriptionBanner from "@/components/dashboard/SubscriptionBanner";
 import { listItems, createItem, deleteItem, type VaultCategory } from "@/lib/repos/vaultRepo";
 import { downloadDocument } from "@/lib/repos/documentRepo";
@@ -17,6 +16,8 @@ import VaultUploadForm from "@/components/vault/VaultUploadForm";
 import VaultAddItemForm from "@/components/vault/VaultAddItemForm";
 import VaultCategoryView from "@/components/vault/VaultCategoryView";
 import VaultMainGrid from "@/components/vault/VaultMainGrid";
+import VaultFarewellView from "@/components/vault/VaultFarewellView";
+import VaultTrusteesView from "@/components/vault/VaultTrusteesView";
 import {
   CATEGORIES,
   CATEGORY_FIELDS,
@@ -28,17 +29,22 @@ import {
 const PIN_UNLOCK_MS = 2 * 60 * 1000;
 const SCREEN_STORAGE_KEY = "vault:screen";
 const CATEGORY_STORAGE_KEY = "vault:selected-category";
-const RESTORABLE_SCREENS = new Set<Screen>(["vault", "category", "add-item", "upload-doc"]);
+const DRAFT_STORAGE_KEY = "vault:add-draft";
+const PIN_EXPIRY_KEY = "vault:pin-expiry";
+const RESTORABLE_SCREENS = new Set<Screen>(["vault", "category", "add-item", "upload-doc", "farewell", "trustees"]);
+// Don't bump the sliding-unlock timer more than once per this window (avoids re-render storms).
+const ACTIVITY_THROTTLE_MS = 30 * 1000;
 
 export default function VaultPage() {
-  const router = useRouter();
   const initRef = useRef(false);
+  const lastBumpRef = useRef(0);
   const [screen, setScreen] = useState<Screen>("pin-check");
   const [pin, setPin] = useState("");
   const [confirmPin, setConfirmPin] = useState("");
   const [pinError, setPinError] = useState("");
   const [verifying, setVerifying] = useState(false);
   const [items, setItems] = useState<VaultItem[]>([]);
+  const [itemsLoaded, setItemsLoaded] = useState(false);
   const [farewellCount, setFarewellCount] = useState(0);
   const [selectedCategory, setSelectedCategory] = useState("");
   const [addForm, setAddForm] = useState<Record<string, string>>({});
@@ -64,24 +70,33 @@ export default function VaultPage() {
 
     const justSubscribed = typeof window !== "undefined" && new URLSearchParams(window.location.search).get("subscribed") === "true";
 
-    // 1. PIN check is the ONLY thing that gates the screen. Items load via the
-    //    screen-change effect below, so we don't await them here.
+    // 1a. Optimistic restore from the cached unlock — SYNCHRONOUS so returning to
+    //     this route (e.g. from /farewell) shows the vault instantly with no
+    //     network-gated flash. The PIN check below only confirms in the background.
+    const cachedExpiry = typeof window !== "undefined" ? Number(sessionStorage.getItem(PIN_EXPIRY_KEY) || 0) : 0;
+    const restoredFromCache = cachedExpiry > Date.now();
+    if (restoredFromCache) {
+      setPinExpiry(cachedExpiry);
+      const savedScreen = typeof window !== "undefined" ? sessionStorage.getItem(SCREEN_STORAGE_KEY) : null;
+      const savedCategory = typeof window !== "undefined" ? sessionStorage.getItem(CATEGORY_STORAGE_KEY) : null;
+      if (savedScreen && RESTORABLE_SCREENS.has(savedScreen as Screen)) {
+        if (savedCategory) setSelectedCategory(savedCategory);
+        if (savedScreen === "add-item") {
+          const draftRaw = typeof window !== "undefined" ? sessionStorage.getItem(DRAFT_STORAGE_KEY) : null;
+          if (draftRaw) { try { setAddForm(JSON.parse(draftRaw)); } catch { /* ignore bad draft */ } }
+        }
+        setScreen(savedScreen as Screen);
+      } else { setScreen("vault"); }
+    }
+
+    // 1b. Confirm the PIN gate in the background. If the optimistic restore was
+    //     wrong (no PIN on record, or no valid cache), correct the screen.
     (async () => {
       const { data: pinRaw } = await pinAction({ action: "check" });
       const pinData = pinRaw as Record<string, unknown> | undefined;
-      const cachedExpiry = typeof window !== "undefined" ? Number(sessionStorage.getItem("vault:pin-expiry") || 0) : 0;
-      if (pinData?.hasPin && cachedExpiry > Date.now()) {
-        setPinExpiry(cachedExpiry);
-        const savedScreen = typeof window !== "undefined" ? sessionStorage.getItem(SCREEN_STORAGE_KEY) : null;
-        const savedCategory = typeof window !== "undefined" ? sessionStorage.getItem(CATEGORY_STORAGE_KEY) : null;
-        if (savedScreen && RESTORABLE_SCREENS.has(savedScreen as Screen)) {
-          if (savedCategory) setSelectedCategory(savedCategory);
-          setScreen(savedScreen as Screen);
-        } else { setScreen("vault"); }
-      } else {
-        if (typeof window !== "undefined") { sessionStorage.removeItem("vault:pin-expiry"); sessionStorage.removeItem(SCREEN_STORAGE_KEY); sessionStorage.removeItem(CATEGORY_STORAGE_KEY); }
-        setScreen(pinData?.hasPin ? "pin-enter" : "pin-create");
-      }
+      if (pinData?.hasPin && restoredFromCache) return; // optimistic restore stands
+      if (typeof window !== "undefined") { sessionStorage.removeItem(PIN_EXPIRY_KEY); sessionStorage.removeItem(SCREEN_STORAGE_KEY); sessionStorage.removeItem(CATEGORY_STORAGE_KEY); }
+      setScreen(pinData?.hasPin ? "pin-enter" : "pin-create");
     })();
 
     // 2. Subscription status — off the critical path. Trust the DB (kept fresh by
@@ -109,18 +124,44 @@ export default function VaultPage() {
     }
   }, [screen, selectedCategory]);
 
-  // -- Auto-lock once the PIN unlock window expires --
+  // -- Persist the add-item draft so a lock/restore doesn't lose typed values --
   useEffect(() => {
-    if (screen !== "vault" && screen !== "category" && screen !== "add-item" && screen !== "upload-doc") return;
+    if (typeof window === "undefined") return;
+    if (screen !== "add-item") return;
+    if (Object.keys(addForm).length === 0) { sessionStorage.removeItem(DRAFT_STORAGE_KEY); return; }
+    sessionStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(addForm));
+  }, [screen, addForm]);
+
+  // -- Auto-lock once the PIN unlock window expires (idle, not absolute) --
+  useEffect(() => {
+    if (!RESTORABLE_SCREENS.has(screen)) return;
     if (pinExpiry === 0) return;
     const timer = setInterval(() => {
       if (Date.now() > pinExpiry) {
         setScreen("pin-enter"); setPin("");
-        if (typeof window !== "undefined") { sessionStorage.removeItem("vault:pin-expiry"); sessionStorage.removeItem(SCREEN_STORAGE_KEY); sessionStorage.removeItem(CATEGORY_STORAGE_KEY); }
+        if (typeof window !== "undefined") { sessionStorage.removeItem(PIN_EXPIRY_KEY); sessionStorage.removeItem(SCREEN_STORAGE_KEY); sessionStorage.removeItem(CATEGORY_STORAGE_KEY); }
       }
     }, 10000);
     return () => clearInterval(timer);
   }, [screen, pinExpiry]);
+
+  // -- Sliding unlock: user activity pushes the expiry forward so we never lock mid-entry --
+  const bumpExpiry = useCallback(() => {
+    const now = Date.now();
+    if (now - lastBumpRef.current < ACTIVITY_THROTTLE_MS) return;
+    lastBumpRef.current = now;
+    const expiry = now + PIN_UNLOCK_MS;
+    setPinExpiry(expiry);
+    if (typeof window !== "undefined") sessionStorage.setItem(PIN_EXPIRY_KEY, String(expiry));
+  }, []);
+
+  useEffect(() => {
+    if (!RESTORABLE_SCREENS.has(screen)) return;
+    if (pinExpiry === 0) return;
+    const events = ["keydown", "pointerdown", "input", "focusin"] as const;
+    events.forEach((e) => window.addEventListener(e, bumpExpiry));
+    return () => events.forEach((e) => window.removeEventListener(e, bumpExpiry));
+  }, [screen, pinExpiry, bumpExpiry]);
 
   const handleSubStatusLoaded = useCallback((s: { status: string }) => setIsSubscribed(s.status === "active"), []);
 
@@ -132,6 +173,7 @@ export default function VaultPage() {
     } else { console.error("vault list failed:", (listRes.reason as Error)?.message); }
     if (fwRes.status === "fulfilled") { setFarewellCount(fwRes.value.length); }
     else { console.error("farewell list failed:", (fwRes.reason as Error)?.message); }
+    setItemsLoaded(true);
   }, []);
 
   useEffect(() => { if (screen !== "vault" && screen !== "category") return; void loadItems(); }, [screen, loadItems]);
@@ -144,7 +186,7 @@ export default function VaultPage() {
     const { error: err } = await pinAction({ action: "create", pin });
     if (err) { setPinError("Failed to create PIN"); setVerifying(false); return; }
     const expiry = Date.now() + PIN_UNLOCK_MS; setPinExpiry(expiry);
-    if (typeof window !== "undefined") sessionStorage.setItem("vault:pin-expiry", String(expiry));
+    if (typeof window !== "undefined") sessionStorage.setItem(PIN_EXPIRY_KEY, String(expiry));
     // Show the grid immediately; the screen-change effect loads items in the background.
     setScreen("vault"); setVerifying(false);
   }
@@ -154,7 +196,7 @@ export default function VaultPage() {
     const { error: err } = await pinAction({ action: "verify", pin });
     if (err) { setPinError("Incorrect PIN"); setPin(""); setVerifying(false); return; }
     const expiry = Date.now() + PIN_UNLOCK_MS; setPinExpiry(expiry);
-    if (typeof window !== "undefined") sessionStorage.setItem("vault:pin-expiry", String(expiry));
+    if (typeof window !== "undefined") sessionStorage.setItem(PIN_EXPIRY_KEY, String(expiry));
     // Show the grid immediately; the screen-change effect loads items in the background.
     setScreen("vault"); setVerifying(false);
   }
@@ -162,7 +204,7 @@ export default function VaultPage() {
   async function handleAddItem() {
     if (!addForm.label?.trim()) return;
     setSaving(true);
-    try { const { label, ...rest } = addForm; await createItem({ category: selectedCategory as VaultCategory, label, data: rest }); await loadItems(); setAddForm({}); setScreen("category"); }
+    try { const { label, ...rest } = addForm; await createItem({ category: selectedCategory as VaultCategory, label, data: rest }); await loadItems(); setAddForm({}); if (typeof window !== "undefined") sessionStorage.removeItem(DRAFT_STORAGE_KEY); setScreen("category"); }
     catch (e) { console.error("create item failed:", (e as Error).message); }
     finally { setSaving(false); }
   }
@@ -222,25 +264,34 @@ export default function VaultPage() {
     );
   }
 
+  if (screen === "farewell") {
+    return <VaultFarewellView onBack={() => setScreen("vault")} />;
+  }
+
+  if (screen === "trustees") {
+    return <VaultTrusteesView onBack={() => setScreen("vault")} />;
+  }
+
   if (screen === "add-item") {
-    return <VaultAddItemForm selectedCategory={selectedCategory} addForm={addForm} saving={saving} onFormChange={setAddForm} onSave={handleAddItem} onBack={() => setScreen("category")} categories={CATEGORIES} categoryFields={CATEGORY_FIELDS} />;
+    return <VaultAddItemForm selectedCategory={selectedCategory} addForm={addForm} saving={saving} onFormChange={setAddForm} onSave={handleAddItem} onBack={() => { setAddForm({}); if (typeof window !== "undefined") sessionStorage.removeItem(DRAFT_STORAGE_KEY); setScreen("category"); }} categories={CATEGORIES} categoryFields={CATEGORY_FIELDS} />;
   }
 
   return (
     <VaultMainGrid
       items={items}
+      itemsLoaded={itemsLoaded}
       farewellCount={farewellCount}
       isSubscribed={isSubscribed}
       showUpgradePrompt={showUpgradePrompt}
       formattedPrice={formatPrice(PRICES.vaultSubscriptionYear)}
       categories={CATEGORIES}
       subscriptionBanner={<SubscriptionBanner status={subData} onStatusLoaded={handleSubStatusLoaded} />}
-      onManageAccess={() => { if (!isSubscribed) { setShowUpgradePrompt(true); return; } router.push("/dashboard/vault/trustees"); }}
+      onManageAccess={() => { if (!isSubscribed) { setShowUpgradePrompt(true); return; } setScreen("trustees"); }}
       onShowUpgrade={() => setShowUpgradePrompt(true)}
       onDismissUpgrade={() => setShowUpgradePrompt(false)}
       onUpgrade={handleUpgradeCheckout}
       onSelectCategory={(key) => { setSelectedCategory(key); setScreen("category"); }}
-      onFarewellClick={() => { if (!isSubscribed) { setShowUpgradePrompt(true); return; } router.push("/dashboard/vault/farewell"); }}
+      onFarewellClick={() => { if (!isSubscribed) { setShowUpgradePrompt(true); return; } setScreen("farewell"); }}
     />
   );
 }

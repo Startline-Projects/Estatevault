@@ -69,4 +69,23 @@ describe("vaultItemSchema", () => {
   it("rejects an unknown category", () => {
     expect(vaultItemSchema.safeParse({ category: "spaceship", label: "x" }).success).toBe(false);
   });
+
+  it("rejects a pure-number company name (server-side enforcement)", () => {
+    const r = vaultItemSchema.safeParse({ category: "insurance", label: "Policy", data: { company: "12345" } });
+    expect(r.success).toBe(false);
+  });
+
+  it("accepts a well-formed insurance payload", () => {
+    const r = vaultItemSchema.safeParse({
+      category: "insurance",
+      label: "Policy",
+      data: { company: "State Farm", coverage_amount: "$100,000", policy_number: "POL-1" },
+    });
+    expect(r.success).toBe(true);
+  });
+
+  it("rejects a bad phone in a contact", () => {
+    const r = vaultItemSchema.safeParse({ category: "contact", label: "Lawyer", data: { phone: "abc" } });
+    expect(r.success).toBe(false);
+  });
 });

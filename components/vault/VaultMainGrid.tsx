@@ -5,6 +5,7 @@ import type { VaultItem } from "./vault-constants";
 
 interface VaultMainGridProps {
   items: VaultItem[];
+  itemsLoaded: boolean;
   farewellCount: number;
   isSubscribed: boolean;
   showUpgradePrompt: boolean;
@@ -21,6 +22,7 @@ interface VaultMainGridProps {
 
 export default function VaultMainGrid({
   items,
+  itemsLoaded,
   farewellCount,
   isSubscribed,
   showUpgradePrompt,
@@ -99,7 +101,11 @@ export default function VaultMainGrid({
                 onSelectCategory(cat.key);
               }}
               className={`relative rounded-xl p-5 text-left transition-all hover:shadow-md ${
-                count > 0 ? "bg-gold text-white" : "bg-gold/5 border border-gray-200 text-navy"
+                !itemsLoaded
+                  ? "bg-gold/5 border border-gray-200 text-navy animate-pulse"
+                  : count > 0
+                  ? "bg-gold text-white"
+                  : "bg-gold/5 border border-gray-200 text-navy"
               }`}
             >
               {requiresUpgrade && (
@@ -121,13 +127,17 @@ export default function VaultMainGrid({
               )}
               <span className="text-2xl">{cat.icon}</span>
               <p className="mt-3 text-sm font-semibold">{cat.label}</p>
-              <p className={`mt-1 text-xs ${count > 0 ? "text-white/60" : "text-charcoal/50"}`}>
-                {requiresUpgrade
-                  ? "Vault plan required"
-                  : count > 0
-                  ? `${count} item${count !== 1 ? "s" : ""}`
-                  : "Empty"}
-              </p>
+              {!itemsLoaded && !requiresUpgrade ? (
+                <span className="mt-2 block h-3 w-10 rounded bg-charcoal/10" />
+              ) : (
+                <p className={`mt-1 text-xs ${count > 0 ? "text-white/60" : "text-charcoal/50"}`}>
+                  {requiresUpgrade
+                    ? "Vault plan required"
+                    : count > 0
+                    ? `${count} item${count !== 1 ? "s" : ""}`
+                    : "Empty"}
+                </p>
+              )}
             </button>
           );
         })}
@@ -135,7 +145,11 @@ export default function VaultMainGrid({
         <button
           onClick={onFarewellClick}
           className={`relative rounded-xl p-5 text-left transition-all hover:shadow-md ${
-            farewellCount > 0 ? "bg-gold text-white" : "bg-gold/5 border border-gold/30 text-navy"
+            !itemsLoaded
+              ? "bg-gold/5 border border-gold/30 text-navy animate-pulse"
+              : farewellCount > 0
+              ? "bg-gold text-white"
+              : "bg-gold/5 border border-gold/30 text-navy"
           }`}
         >
           {!isSubscribed && (
@@ -157,15 +171,19 @@ export default function VaultMainGrid({
           )}
           <span className="text-2xl">🎥</span>
           <p className="mt-3 text-sm font-semibold">Farewell Messages</p>
-          <p
-            className={`mt-1 text-xs ${farewellCount > 0 ? "text-white/60" : "text-charcoal/60"}`}
-          >
-            {!isSubscribed
-              ? "Vault plan required"
-              : farewellCount > 0
-              ? `${farewellCount} message${farewellCount !== 1 ? "s" : ""}`
-              : "Video messages for loved ones"}
-          </p>
+          {!itemsLoaded && isSubscribed ? (
+            <span className="mt-2 block h-3 w-20 rounded bg-charcoal/10" />
+          ) : (
+            <p
+              className={`mt-1 text-xs ${farewellCount > 0 ? "text-white/60" : "text-charcoal/60"}`}
+            >
+              {!isSubscribed
+                ? "Vault plan required"
+                : farewellCount > 0
+                ? `${farewellCount} message${farewellCount !== 1 ? "s" : ""}`
+                : "Video messages for loved ones"}
+            </p>
+          )}
         </button>
       </div>
     </div>

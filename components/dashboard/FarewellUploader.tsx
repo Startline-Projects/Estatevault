@@ -69,13 +69,15 @@ export default function FarewellUploader({ title, recipientEmail, onComplete, on
       // E2EE path: encrypt + stream to storage + create DB row in one repo call.
       // Server never sees title, recipient_email, or video bytes.
       void ext;
-      setProgress(20);
+      setProgress(1);
       const { uploadFarewell } = await import("@/lib/repos/videoRepo");
       await uploadFarewell({
         blob: selectedFile,
         title,
         recipientEmail,
         durationSeconds: duration,
+        // Real progress: never let the bar go backwards on stage boundaries.
+        onProgress: (f) => setProgress((prev) => Math.max(prev, Math.round(f * 100))),
       });
       setProgress(100);
       onComplete();
@@ -150,9 +152,11 @@ export default function FarewellUploader({ title, recipientEmail, onComplete, on
           {uploading && (
             <div className="mt-3">
               <div className="w-full h-2 rounded-full bg-gray-100 overflow-hidden">
-                <div className="h-full bg-gold rounded-full transition-all" style={{ width: `${progress}%` }} />
+                <div className="h-full bg-gold rounded-full transition-all duration-300 ease-out" style={{ width: `${progress}%` }} />
               </div>
-              <p className="text-xs text-gray-400 mt-1">{progress}% uploaded</p>
+              <p className="text-xs text-gray-400 mt-1">
+                {progress < 30 ? "Encrypting…" : progress < 100 ? "Uploading…" : "Finalizing…"} {progress}%
+              </p>
             </div>
           )}
         </div>

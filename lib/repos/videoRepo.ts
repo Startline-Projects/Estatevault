@@ -63,7 +63,7 @@ async function getSignedUpload(expectedSize: number): Promise<SignedUploadResp> 
   return res.json();
 }
 
-async function encryptToBlob(plaintext: Blob, fileKey: Uint8Array): Promise<Blob> {
+async function encryptToBlob(plaintext: Blob, fileKey: Uint8Array, onProgress?: (fraction: number) => void): Promise<Blob> {
   const s = await getSodium();
   const numChunks = Math.max(1, Math.ceil(plaintext.size / CHUNK));
   const parts: BlobPart[] = [u8toAB(MAGIC), u8toAB(new Uint8Array([VERSION])), u8toAB(u32be(numChunks))];
@@ -89,9 +89,27 @@ async function encryptToBlob(plaintext: Blob, fileKey: Uint8Array): Promise<Blob
     const frame = concat(nonce, ct);
     parts.push(u8toAB(u32be(frame.length)));
     parts.push(u8toAB(frame));
+    onProgress?.((index + 1) / numChunks);
   }
 
   return new Blob(parts, { type: "application/octet-stream" });
+}
+
+// PUT to a signed storage URL with real upload-progress events (fetch has none).
+function putWithProgress(url: string, blob: Blob, onProgress?: (fraction: number) => void): Promise<void> {
+  return new Promise<void>((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open("PUT", url);
+    xhr.setRequestHeader("Content-Type", "application/octet-stream");
+    xhr.setRequestHeader("x-upsert", "true");
+    xhr.upload.onprogress = (e) => { if (e.lengthComputable) onProgress?.(e.loaded / e.total); };
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300) resolve();
+      else reject(new Error(`storage upload failed: ${xhr.status}`));
+    };
+    xhr.onerror = () => reject(new Error("storage upload network error"));
+    xhr.send(blob);
+  });
 }
 
 export type UploadFarewellArgs = {
@@ -99,23 +117,25 @@ export type UploadFarewellArgs = {
   title: string;
   recipientEmail: string;
   durationSeconds?: number;
+  // Reports overall progress 0..1 across encrypt → upload → finalize stages.
+  onProgress?: (fraction: number) => void;
 };
 
 export type UploadFarewellResult = { messageId: string; storagePath: string };
 
+// Stage weights for the overall progress bar (sum = 1).
+const ENCRYPT_WEIGHT = 0.3;
+const UPLOAD_WEIGHT = 0.65;
+
 export async function uploadFarewell(args: UploadFarewellArgs): Promise<UploadFarewellResult> {
+  const report = args.onProgress;
   const signed = await getSignedUpload(args.blob.size);
   if (args.blob.size > signed.sizeLimit) throw new Error("file too large");
 
   const fileKey = await getFileKey();
-  const cipherBlob = await encryptToBlob(args.blob, fileKey);
+  const cipherBlob = await encryptToBlob(args.blob, fileKey, (f) => report?.(f * ENCRYPT_WEIGHT));
 
-  const putRes = await fetch(signed.signedUrl, {
-    method: "PUT",
-    headers: { "Content-Type": "application/octet-stream", "x-upsert": "true" },
-    body: cipherBlob,
-  });
-  if (!putRes.ok) throw new Error(`storage upload failed: ${putRes.status}`);
+  await putWithProgress(signed.signedUrl, cipherBlob, (f) => report?.(ENCRYPT_WEIGHT + f * UPLOAD_WEIGHT));
 
   const res = await fetch("/api/vault/farewell", {
     method: "POST",
@@ -133,6 +153,7 @@ export async function uploadFarewell(args: UploadFarewellArgs): Promise<UploadFa
     throw new Error(j.error ?? `farewell create failed: ${res.status}`);
   }
   const { id } = await res.json() as { id: string };
+  report?.(1);
   return { messageId: id, storagePath: signed.path };
 }
 

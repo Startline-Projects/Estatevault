@@ -2,6 +2,7 @@
 
 import { useState, useCallback } from "react";
 import type { CategoryField } from "./vault-constants";
+import { validateField } from "@/lib/validation/vaultFieldRules";
 
 interface VaultAddItemFormProps {
   selectedCategory: string;
@@ -13,8 +14,6 @@ interface VaultAddItemFormProps {
   categories: ReadonlyArray<{ key: string; icon: string; label: string; vaultOnly: boolean }>;
   categoryFields: Record<string, CategoryField[]>;
 }
-
-const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export default function VaultAddItemForm({
   selectedCategory,
@@ -35,35 +34,20 @@ export default function VaultAddItemForm({
     setTouched((prev) => ({ ...prev, [fieldName]: true }));
   }, []);
 
-  // Validation helpers
-  const labelEmpty = touched["label"] && !addForm.label?.trim();
-  const isContactCategory = selectedCategory === "contact";
-
-  function getEmailError(): string | null {
-    const emailValue = addForm.email?.trim();
-    if (!emailValue) return null;
-    if (!EMAIL_REGEX.test(emailValue)) return "Please enter a valid email address.";
-    return null;
+  // Per-field validation error (only shown once the field is touched).
+  function fieldError(field: CategoryField): string | null {
+    return validateField(field.rule, addForm[field.name], field.required);
   }
 
-  const emailError = isContactCategory && touched["email"] ? getEmailError() : null;
-
   function handleSave() {
-    // Mark label as touched so validation error shows
-    if (!addForm.label?.trim()) {
-      setTouched((prev) => ({ ...prev, label: true }));
-      return;
-    }
-    // Check email if contact category
-    if (isContactCategory && addForm.email?.trim() && !EMAIL_REGEX.test(addForm.email.trim())) {
-      setTouched((prev) => ({ ...prev, email: true }));
+    // Validate every field; if any fail, mark all touched so errors render and block save.
+    const hasError = fields.some((f) => fieldError(f) !== null);
+    if (hasError) {
+      setTouched(Object.fromEntries(fields.map((f) => [f.name, true])));
       return;
     }
     onSave();
   }
-
-  const labelErrorId = "add-item-label-error";
-  const emailErrorId = "add-item-email-error";
 
   return (
     <div className="max-w-lg">
@@ -76,16 +60,14 @@ export default function VaultAddItemForm({
       <h1 className="text-xl font-bold text-navy">Add {cat?.label?.replace(/s$/, "")}</h1>
       <div className="mt-6 space-y-4">
         {fields.map((field) => {
-          const isLabel = field.name === "label";
-          const isEmailField = field.name === "email" && isContactCategory;
-          const hasLabelError = isLabel && labelEmpty;
-          const hasEmailError = isEmailField && emailError;
+          const error = touched[field.name] ? fieldError(field) : null;
+          const errorId = `add-item-${field.name}-error`;
 
           return (
             <div key={field.name}>
               <label className="block text-sm font-medium text-navy mb-1">
                 {field.label}
-                {isLabel && <span className="text-red-500 ml-0.5">*</span>}
+                {field.required && <span className="text-red-500 ml-0.5">*</span>}
               </label>
               {field.type === "choice" ? (
                 <div className="flex flex-wrap gap-2">
@@ -121,26 +103,15 @@ export default function VaultAddItemForm({
                       onFormChange((p) => ({ ...p, [field.name]: e.target.value }))
                     }
                     onBlur={() => markTouched(field.name)}
-                    aria-invalid={!!hasLabelError || !!hasEmailError}
-                    aria-describedby={
-                      hasLabelError
-                        ? labelErrorId
-                        : hasEmailError
-                        ? emailErrorId
-                        : undefined
-                    }
+                    aria-invalid={!!error}
+                    aria-describedby={error ? errorId : undefined}
                     className={`w-full min-h-[44px] rounded-xl border-2 px-4 py-3 text-sm focus:border-gold focus:outline-none ${
-                      hasLabelError || hasEmailError ? "border-red-400" : "border-gray-200"
+                      error ? "border-red-400" : "border-gray-200"
                     }`}
                   />
-                  {hasLabelError && (
-                    <p id={labelErrorId} className="mt-1 text-xs text-red-600" role="alert">
-                      Label is required.
-                    </p>
-                  )}
-                  {hasEmailError && (
-                    <p id={emailErrorId} className="mt-1 text-xs text-red-600" role="alert">
-                      {emailError}
+                  {error && (
+                    <p id={errorId} className="mt-1 text-xs text-red-600" role="alert">
+                      {error}
                     </p>
                   )}
                 </>

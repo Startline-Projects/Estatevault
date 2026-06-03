@@ -36,6 +36,14 @@ export async function publicGet<T>(url: string, params?: Record<string, string |
   return parseJson<T>(await fetch(url + buildQs(params)));
 }
 
+// Optional authed GET for use on PUBLIC pages that merely *prefill* from a
+// signed-in user's data. Uses plain fetch (same-origin cookies are sent
+// automatically) and returns an error result on 401 instead of redirecting the
+// whole window to /auth/login. A logged-out visitor simply gets no prefill.
+export async function getSoft<T>(url: string, params?: Record<string, string | undefined>): Promise<ApiResult<T>> {
+  return parseJson<T>(await fetch(url + buildQs(params)));
+}
+
 export async function publicPost<T>(url: string, body?: unknown): Promise<ApiResult<T>> {
   return parseJson<T>(await fetch(url, jsonInit("POST", body)));
 }

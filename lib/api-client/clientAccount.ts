@@ -1,10 +1,13 @@
-import { get, patch, type ApiResult } from "./client";
+import { get, getSoft, patch, type ApiResult } from "./client";
 
 // B2: signed-in user id + latest quiz answers, for will/trust intake prefill.
+// The will/trust pages are PUBLIC — a logged-out visitor can start an intake.
+// Use getSoft so a 401 (no session) yields an empty result instead of
+// redirecting the whole window to /auth/login.
 export function getLatestQuiz(): Promise<
   ApiResult<{ userId: string; answers: Record<string, string> | null }>
 > {
-  return get("/api/client/quiz-latest");
+  return getSoft("/api/client/quiz-latest");
 }
 
 // B2: the signed-in client's funding checklist + trust asset types.

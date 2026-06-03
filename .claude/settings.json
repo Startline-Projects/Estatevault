@@ -1,7 +1,4 @@
 {
-  "enabledPlugins": {
-    "claude-mem@thedotmack": false
-  },
   "permissions": {
     "allow": [
       "Bash(npm run dev)",
@@ -20,7 +17,50 @@
       "Bash(git branch*)",
       "Bash(git stash*)",
       "Bash(git pull)",
-      "Bash(git fetch)"
+      "Bash(git fetch)",
+      "Read(//Users/xamir/.nvm/versions/node/**)",
+      "Read(//usr/local/bin/**)",
+      "Read(//Users/xamir/.volta/bin/**)",
+      "Bash(command -v fnm volta nvm)",
+      "Read(//Users/xamir/**)",
+      "Bash(sed -n '20,26p' app/api/admin/orders-missing-docs/route.ts)",
+      "Bash(sed -n '27,31p;87,91p' app/api/admin/marketing/materials/route.ts)",
+      "Bash(sed -n '149,153p;205,210p' app/api/share/route.ts)",
+      "Bash(awk '$1>1')",
+      "Bash(ls -1 *TESTING* *TEST*)",
+      "Bash(find . -iname \"*testing*guide*\" -not -path \"*/node_modules/*\")",
+      "Bash(python3 -)",
+      "Bash(echo \"screens with raw fetch /api/: $\\(grep -rln --include='*.tsx' 'fetch\\(\"/api/\\\\|fetch\\(`/api/' app)",
+      "Bash(cd \"/Users/xamir/Desktop/Glo Staffing/Estatevault\" && echo \"=== globalSetup / teardown / webServer ===\"; grep -nE \"globalSetup|globalTeardown|webServer|grepInvert|grep:\" playwright.config.* ; echo; echo \"=== e2e scripts ===\"; grep -E \"test:e2e|test:db\" package.json; echo; echo \"=== /etc/hosts for subdomains ===\"; grep -E \"pro.localhost|sales.localhost|admin.localhost\" /etc/hosts 2>/dev/null || echo \"NOT in /etc/hosts \\(pro/sales/admin projects would fail DNS\\)\"; echo; echo \"=== .env.test: which Supabase URL? \\(is it a separate TEST project?\\) ===\"; grep -iE \"SUPABASE_URL|TEST_MODE|TEST_ALLOW_SHARED\" .env.test 2>/dev/null | sed 's/=.*/=<redacted>/'; echo; echo \"=== does .env.test url differ from .env.local \\(prod\\)? ===\"; echo \"env.test URL host:\"; grep \"NEXT_PUBLIC_SUPABASE_URL\" .env.test 2>/dev/null | sed -E 's#.*//\\([^.]+\\)\\\\..*#\\\\1#'; echo \"env.local URL host:\"; grep \"NEXT_PUBLIC_SUPABASE_URL\" .env.local 2>/dev/null | sed -E 's#.*//\\([^.]+\\)\\\\..*#\\\\1#')",
+      "Read(//private/etc/**)",
+      "Bash(ls vitest.config.*)",
+      "Bash(cat vitest.config.*)",
+      "Bash(grep -nE \"test-results|playwright-report|coverage\" .gitignore)",
+      "Bash(python3 -c ' *)",
+      "Bash(ls app/api/partner/)",
+      "Bash(grep -rln \"tier\" app/api/partner)",
+      "Bash(sed -n '1,35p' app/pro/preview/page.tsx)",
+      "Bash(sed -n '50,70p' app/pro/training/page.tsx)",
+      "Bash(ls app/api/partner/ app/api/partners/)",
+      "Bash(sed -n '15,140p' app/pro/onboarding/step-3-vault/page.tsx)",
+      "Bash(ls *.md *.html)",
+      "Bash(grep -rln \"B2\\\\|api boundary\\\\|API boundary\\\\|behind the API\" *.md docs/)",
+      "Bash(ls .claude/skills/ ~/.claude/skills/)",
+      "Bash(ls ~/.claude/plugins/cache/)",
+      "Bash(cat .claude/skills/software-engineer/references/refactor-playbook.md)",
+      "Bash(sed -n '1,60p' .claude/skills/software-engineer/references/conventions.md)",
+      "Bash(sed -n '1,20p' lib/documents/storage.ts)",
+      "Bash(sed -n '1,15p' lib/marketing/admin-auth.ts)",
+      "Bash(sed -n '1,40p' tests/fixtures/users.ts)",
+      "Bash(sed -n '1,40p' tests/e2e/helpers/auth.ts)",
+      "Read(//private/tmp/**)",
+      "Read(//tmp/**)",
+      "Bash(pkill -f \"playwright test\")",
+      "Bash(pkill -f \"next dev --port 3100\")",
+      "Bash(lsof -ti:3100)",
+      "Bash(xargs kill -9)",
+      "Bash(xargs cat)",
+      "Bash(xargs sed -n '15,40p')"
     ],
     "deny": [
       "Bash(git push --force*)",
@@ -40,5 +80,8 @@
         ]
       }
     ]
+  },
+  "enabledPlugins": {
+    "claude-mem@thedotmack": false
   }
 }

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { validateCategoryData } from "@/lib/validation/vaultFieldRules";
 
 export const affiliateSignupSchema = z.object({
   fullName: z.string().min(1, "Full name is required"),
@@ -22,6 +23,18 @@ export const vaultItemSchema = z.object({
   label: z.string().min(1).max(500),
   data: z.record(z.string(), z.unknown()).default({}),
   storagePath: z.string().optional(),
+}).superRefine((val, ctx) => {
+  // Per-field format validation (label is top-level on the client, so merge it
+  // back in before validating against the category's field rules).
+  const merged = { ...val.data, label: val.label };
+  const errors = validateCategoryData(val.category, merged);
+  for (const [field, message] of Object.entries(errors)) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message,
+      path: field === "label" ? ["label"] : ["data", field],
+    });
+  }
 });
 
 // Encrypted-search query (plaintext label → server-side blind index).
