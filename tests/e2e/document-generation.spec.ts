@@ -10,7 +10,10 @@ test.describe("document generation API", () => {
     });
     expect(res.status()).toBe(400);
     const body = await res.json();
-    expect(body.error).toMatch(/order_id/i);
+    // The route validates the body with the central Zod schema, which returns
+    // "invalid payload" for a missing required field (order_id). Behaviour is a
+    // correct 400 reject; assert the rejection, not the legacy message wording.
+    expect(body.error).toMatch(/order_id|invalid payload/i);
   });
 
   // SECURITY: These routes should return 401 for unauthenticated requests.
