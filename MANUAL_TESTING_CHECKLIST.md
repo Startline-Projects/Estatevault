@@ -47,31 +47,31 @@ Add notes for any bugs found.
 
 ### 1.5 Hard Stops (CRITICAL — must never bypass)
 - [ ] During intake: indicate special needs dependent → generation HALTS
-- [ ] Shows attorney referral message (not just an error)
+- [x] Shows attorney referral message (not just an error)
 - [ ] No way to proceed past hard stop (refresh, back, URL hack)
 - [ ] During intake: indicate irrevocable trust → generation HALTS
-- [ ] Shows attorney referral message
-- [ ] No payment taken, no document generated
+- [x] Shows attorney referral message
+- [x] No payment taken, no document generated
 
 ### 1.6 Checkout — Will ($400)
-- [ ] `/will/checkout` loads → shows order summary
-- [ ] Email verification gate: enter email → verify via code
-- [ ] Code email arrives → enter code → verified
-- [ ] Attorney Review add-on option visible ($300 extra)
-- [ ] "Proceed to Payment" → redirects to Stripe Checkout
-- [ ] Stripe shows correct price ($400, or $700 with attorney review)
-- [ ] Use test card `4242 4242 4242 4242` → payment succeeds
-- [ ] Redirected to `/will/success`
-- [ ] Account created automatically (can now login with email)
+- [x] `/will/checkout` loads → shows order summary
+- [x] Email verification gate: enter email → verify via code
+- [x] Code email arrives → enter code → verified
+- [x] Attorney Review add-on option visible ($300 extra)
+- [x] "Proceed to Payment" → redirects to Stripe Checkout
+- [x] Stripe shows correct price ($400, or $700 with attorney review)
+- [x] Use test card `4242 4242 4242 4242` → payment succeeds
+- [x] Redirected to `/will/success`
+- [x] Account created automatically (can now login with email)
 
 ### 1.7 Checkout — Trust ($600)
-- [ ] Same flow at `/trust/checkout` but price = $600
-- [ ] With attorney review = $900
-- [ ] Redirected to `/trust/success`
+- [x] Same flow at `/trust/checkout` but price = $600
+- [x] With attorney review = $900
+- [x] Redirected to `/trust/success`
 
 ### 1.8 Payment Edge Cases
-- [ ] Declined card `4000 0000 0000 0002` → shows error on Stripe page
-- [ ] After successful payment → webhook fires → order created in DB
+- [x] Declined card `4000 0000 0000 0002` → shows error on Stripe page
+- [x] After successful payment → webhook fires → order created in DB
 - [ ] Revenue split correct (check DB: platform keeps $100/will, $200/trust)
 
 ---
@@ -79,24 +79,24 @@ Add notes for any bugs found.
 ## PHASE 2: Login & Access Control
 
 ### 2.1 Login Flow
-- [ ] Go to `/auth/login` — page loads
-- [ ] Login with client credentials (created during checkout) → lands on `/dashboard`
-- [ ] Login with partner credentials → lands on `/pro/dashboard`
-- [ ] Login with sales rep credentials → lands on `/sales/dashboard`
-- [ ] Login with attorney credentials → lands on `/attorney`
-- [ ] Wrong password → shows error (no info leak about email existence)
-- [ ] Non-existent email → same generic error
+- [x] Go to `/auth/login` — page loads
+- [x] Login with client credentials (created during checkout) → lands on `/dashboard`
+- [x] Login with partner credentials → lands on `/pro/dashboard`
+- [x] Login with sales rep credentials → lands on `/sales/dashboard`
+- [x] Login with attorney credentials → lands on `/attorney`
+- [x] Wrong password → shows error (no info leak about email existence)
+- [x] Non-existent email → same generic error
 
 ### 2.2 Password Reset
-- [ ] Go to `/auth/forgot-password`
-- [ ] Enter valid email → shows "check your email"
-- [ ] Click reset link in email → lands on reset password page
-- [ ] Enter new password → success → can login with new password
+- [x] Go to `/auth/forgot-password`
+- [x] Enter valid email → shows "check your email"
+- [x] Click reset link in email → lands on reset password page
+- [x] Enter new password → success → can login with new password
 - [ ] Try expired/reused reset link → shows error
 
 ### 2.3 Cross-Portal Guards
-- [ ] Logged in as client → try visiting `/pro/dashboard` → redirected away
-- [ ] Logged in as partner → try visiting `/sales/dashboard` → redirected away
+- [x] Logged in as client → try visiting `/pro/dashboard` → redirected away
+- [] Logged in as partner → try visiting `/sales/dashboard` → redirected away
 - [ ] Logged in as sales rep → try visiting `/dashboard` → redirected away
 - [ ] Not logged in → try visiting `/dashboard` → redirected to `/auth/login`
 - [ ] Not logged in → try visiting `/pro/dashboard` → redirected to login
@@ -345,8 +345,8 @@ Add notes for any bugs found.
 
 | # | Phase | Description | Severity | Screenshot |
 |---|-------|-------------|----------|------------|
-| 1 | 2.4   | useEffect reset verifyStage from code_sent→idle (fixed) | High | — |
-| 2 | 2.4   | authSignupSchema rejected null partnerSlug (fixed) | Medium | — |
+| 1 | 2.4   | useEffect reset verifyStage from code_sent→idle  | High | — |
+| 2 | 2.4   | authSignupSchema rejected null partnerSlug  | Medium | — |
 | 3 | 2.2   | Password reset link reusable — clicking "change password" a second time still works (should expire/invalidate after first use) | High | — |
 | 3 |       |             |          |            |
 
