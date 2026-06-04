@@ -11,6 +11,8 @@ import { getStatus as getSubStatus, sync as syncSub, type SubscriptionStatus } f
 import { checkoutVaultSubscription } from "@/lib/api-client/checkout";
 
 import VaultPinScreen from "@/components/vault/VaultPinScreen";
+import VaultSubscribeScreen from "@/components/vault/VaultSubscribeScreen";
+import LoadingScreen from "@/components/ui/LoadingScreen";
 import VaultItemDetailModal from "@/components/vault/VaultItemDetailModal";
 import VaultUploadForm from "@/components/vault/VaultUploadForm";
 import VaultAddItemForm from "@/components/vault/VaultAddItemForm";
@@ -51,8 +53,10 @@ export default function VaultPage() {
   const [saving, setSaving] = useState(false);
   const [pinExpiry, setPinExpiry] = useState(0);
   const [isSubscribed, setIsSubscribed] = useState(false);
+  const [subLoaded, setSubLoaded] = useState(false);
   const [subData, setSubData] = useState<SubscriptionStatus | null>(null);
   const [showUpgradePrompt, setShowUpgradePrompt] = useState(false);
+  const [checkingOut, setCheckingOut] = useState(false);
 
   const [uploadFile, setUploadFile] = useState<File | null>(null);
   const [uploadLabel, setUploadLabel] = useState("");
@@ -89,26 +93,31 @@ export default function VaultPage() {
       } else { setScreen("vault"); }
     }
 
-    // 1b. Confirm the PIN gate in the background. If the optimistic restore was
-    //     wrong (no PIN on record, or no valid cache), correct the screen.
+    // 1b. Confirm PIN + subscription together, then pick the gate screen. A brand-new
+    //     user (no PIN) who isn't subscribed must subscribe BEFORE creating a PIN, so the
+    //     no-PIN branch waits on subscription status. Existing-PIN users are unaffected
+    //     (a lapsed sub still unlocks to view via pin-enter).
     (async () => {
-      const { data: pinRaw } = await pinAction({ action: "check" });
+      const [{ data: pinRaw }, { data: subRaw }] = await Promise.all([
+        pinAction({ action: "check" }),
+        getSubStatus(),
+      ]);
       const pinData = pinRaw as Record<string, unknown> | undefined;
-      if (pinData?.hasPin && restoredFromCache) return; // optimistic restore stands
-      if (typeof window !== "undefined") { sessionStorage.removeItem(PIN_EXPIRY_KEY); sessionStorage.removeItem(SCREEN_STORAGE_KEY); sessionStorage.removeItem(CATEGORY_STORAGE_KEY); }
-      setScreen(pinData?.hasPin ? "pin-enter" : "pin-create");
-    })();
+      const hasPin = Boolean(pinData?.hasPin);
 
-    // 2. Subscription status — off the critical path. Trust the DB (kept fresh by
-    //    webhook); only reconcile with Stripe right after returning from checkout.
-    (async () => {
-      const { data } = await getSubStatus();
-      let status: SubscriptionStatus | null = data ?? null;
+      let status: SubscriptionStatus | null = subRaw ?? null;
       if (justSubscribed && status?.status !== "active") {
         try { const { data: syncData } = await syncSub(); if (syncData?.status === "active") status = { ...(status ?? { status: "active" }), status: "active" }; } catch { /* ignore */ }
       }
+      const active = status?.status === "active";
       setSubData(status);
-      setIsSubscribed(status?.status === "active");
+      setIsSubscribed(active);
+      setSubLoaded(true);
+
+      if (hasPin && restoredFromCache) return; // optimistic restore stands
+      if (typeof window !== "undefined") { sessionStorage.removeItem(PIN_EXPIRY_KEY); sessionStorage.removeItem(SCREEN_STORAGE_KEY); sessionStorage.removeItem(CATEGORY_STORAGE_KEY); }
+      if (hasPin) { setScreen("pin-enter"); return; }
+      setScreen(active ? "pin-create" : "subscribe");
     })();
 
     if (justSubscribed && typeof window !== "undefined") { const url = new URL(window.location.href); url.searchParams.delete("subscribed"); window.history.replaceState({}, "", url.toString()); }
@@ -163,7 +172,7 @@ export default function VaultPage() {
     return () => events.forEach((e) => window.removeEventListener(e, bumpExpiry));
   }, [screen, pinExpiry, bumpExpiry]);
 
-  const handleSubStatusLoaded = useCallback((s: { status: string }) => setIsSubscribed(s.status === "active"), []);
+  const handleSubStatusLoaded = useCallback((s: { status: string }) => { setIsSubscribed(s.status === "active"); setSubLoaded(true); }, []);
 
   const loadItems = useCallback(async () => {
     const [listRes, fwRes] = await Promise.allSettled([listItems(), listFarewellMessages()]);
@@ -242,12 +251,22 @@ export default function VaultPage() {
 
   async function handleUpgradeCheckout() {
     setShowUpgradePrompt(false);
+    setCheckingOut(true);
     const { data } = await checkoutVaultSubscription();
     if (data?.url) window.location.href = data.url;
+    else setCheckingOut(false);
   }
 
   // -- Render --
-  if (screen === "pin-check" || screen === "pin-create" || screen === "pin-enter") {
+  if (screen === "subscribe") {
+    return <VaultSubscribeScreen formattedPrice={formatPrice(PRICES.vaultSubscriptionYear)} submitting={checkingOut} onSubscribe={handleUpgradeCheckout} />;
+  }
+
+  if (screen === "pin-check") {
+    return <LoadingScreen message="Unlocking your vault…" />;
+  }
+
+  if (screen === "pin-create" || screen === "pin-enter") {
     return <VaultPinScreen screen={screen} pin={pin} confirmPin={confirmPin} pinError={pinError} submitting={verifying} onPinChange={setPin} onConfirmPinChange={setConfirmPin} onPinErrorClear={() => setPinError("")} onCreatePin={handleCreatePin} onVerifyPin={handleVerifyPin} />;
   }
 
@@ -274,6 +293,12 @@ export default function VaultPage() {
 
   if (screen === "add-item") {
     return <VaultAddItemForm selectedCategory={selectedCategory} addForm={addForm} saving={saving} onFormChange={setAddForm} onSave={handleAddItem} onBack={() => { setAddForm({}); if (typeof window !== "undefined") sessionStorage.removeItem(DRAFT_STORAGE_KEY); setScreen("category"); }} categories={CATEGORIES} categoryFields={CATEGORY_FIELDS} />;
+  }
+
+  // Hold the grid until subscription status is known — avoids flashing the locked
+  // "Vault plan required" state before we know whether the user is subscribed.
+  if (!subLoaded) {
+    return <LoadingScreen message="Loading your vault…" />;
   }
 
   return (

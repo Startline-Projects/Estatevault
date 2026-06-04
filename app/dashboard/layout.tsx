@@ -21,7 +21,15 @@ export default async function DashboardLayout({
     .from("profiles")
     .select("full_name, email, requires_password_change")
     .eq("id", user.id)
-    .single();
+    .maybeSingle();
+
+  // Orphaned session: a valid auth cookie whose `profiles` row no longer exists
+  // (e.g. the account was wiped). Clear the dead session and send to login rather
+  // than rendering a broken, data-less portal.
+  if (!profile) {
+    await supabase.auth.signOut();
+    redirect("/auth/login");
+  }
 
   const admin = createAdminClient();
 

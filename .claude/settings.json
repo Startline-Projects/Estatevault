@@ -60,12 +60,47 @@
       "Bash(lsof -ti:3100)",
       "Bash(xargs kill -9)",
       "Bash(xargs cat)",
-      "Bash(xargs sed -n '15,40p')"
+      "Bash(xargs sed -n '15,40p')",
+      "Bash(git fetch *)",
+      "Bash(mkdir -p \"/Users/xamir/Desktop/Glo Staffing/Estatevault/.claude/skills/bug-hunter/references\")",
+      "Edit(/.claude/skills/bug-hunter/**)",
+      "Bash(mkdir -p evals)",
+      "Bash(mkdir -p ../bug-hunter-workspace/iteration-1)",
+      "Bash(mkdir -p \"/Users/xamir/Desktop/Glo Staffing/Estatevault/.claude/skills/bug-hunter-workspace/iteration-1/eval-0/with_skill/outputs\"; echo done)",
+      "Bash(mkdir -p \"/Users/xamir/Desktop/Glo Staffing/Estatevault/.claude/skills/bug-hunter-workspace/iteration-1/eval-0/without_skill/outputs\")",
+      "Bash(mkdir -p \"/Users/xamir/Desktop/Glo Staffing/Estatevault/.claude/skills/bug-hunter-workspace/iteration-1/eval-2/without_skill/outputs/\" && echo ok)",
+      "Bash(mkdir -p \"/Users/xamir/Desktop/Glo Staffing/Estatevault/.claude/skills/bug-hunter-workspace/iteration-1/eval-2/with_skill/outputs\")",
+      "Bash(mkdir -p \"/Users/xamir/Desktop/Glo Staffing/Estatevault/.claude/skills/bug-hunter-workspace/iteration-1/eval-1/without_skill/outputs\")",
+      "Bash(cat > *)",
+      "Edit(/.claude/skills/bug-hunter-workspace/**)",
+      "Bash(sort -t- -k2 -n)",
+      "Bash(python3 -m scripts.aggregate_benchmark '/Users/xamir/Desktop/Glo Staffing/Estatevault/.claude/skills/bug-hunter-workspace/iteration-1' --skill-name bug-hunter)",
+      "Bash(nohup python3 /Users/xamir/.claude/plugins/cache/claude-plugins-official/skill-creator/unknown/skills/skill-creator/eval-viewer/generate_review.py '/Users/xamir/Desktop/Glo Staffing/Estatevault/.claude/skills/bug-hunter-workspace/iteration-1' --skill-name bug-hunter --benchmark '/Users/xamir/Desktop/Glo Staffing/Estatevault/.claude/skills/bug-hunter-workspace/iteration-1/benchmark.json')",
+      "Bash(echo \"pid $!\")",
+      "Bash(ls middleware.ts)",
+      "Bash(sed -n '1,200p' middleware.ts)",
+      "Bash(echo \"EXIT:$?\")",
+      "Bash(sed -n '80,92p' lib/attorney-review/routing.ts)",
+      "Bash(sed -n '50,75p' lib/webhooks/stripe/handleAttorneyReview.ts)",
+      "Bash(sed -n '144,152p' lib/checkout/createCheckoutSession.ts)",
+      "Bash(sed -n '18,32p' app/api/subscription/cancel/route.ts)",
+      "Bash(sed -n '18,28p' app/api/subscription/status/route.ts)"
     ],
     "deny": [
       "Bash(git push --force*)",
       "Bash(git reset --hard*)",
       "Bash(rm -rf *)"
+    ],
+    "additionalDirectories": [
+      "/Users/xamir/Desktop/Glo Staffing/Estatevault/.claude/skills/bug-hunter",
+      "/Users/xamir/Desktop/Glo Staffing/Estatevault/.claude/skills/bug-hunter-workspace/iteration-1/eval-0/with_skill",
+      "/Users/xamir/Desktop/Glo Staffing/Estatevault/.claude/skills/bug-hunter-workspace/iteration-1/eval-0/without_skill",
+      "/Users/xamir/Desktop/Glo Staffing/Estatevault/.claude/skills/bug-hunter-workspace/iteration-1/eval-2/without_skill",
+      "/Users/xamir/Desktop/Glo Staffing/Estatevault/.claude/skills/bug-hunter-workspace/iteration-1/eval-2/with_skill",
+      "/Users/xamir/Desktop/Glo Staffing/Estatevault/.claude/skills/bug-hunter-workspace/iteration-1/eval-1/without_skill",
+      "/Users/xamir/Desktop/Glo Staffing/Estatevault/.claude/skills/bug-hunter-workspace/iteration-1/eval-0/with_skill/outputs",
+      "/Users/xamir/Desktop/Glo Staffing/Estatevault/.claude/skills/bug-hunter-workspace/iteration-1/eval-1/with_skill",
+      "/Users/xamir/Desktop/Glo Staffing/Estatevault/.claude/skills/bug-hunter-workspace/iteration-1/eval-2/without_skill/outputs"
     ]
   },
   "hooks": {

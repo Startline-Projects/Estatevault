@@ -89,13 +89,38 @@ export async function createCheckoutSession(
   // ── GET OR CREATE CLIENT ───────────────────────────────
   let clientId: string;
 
-  if (userId) {
-    const { data: existingClient } = await clientRepo.getIdByProfile(supabase, userId);
+  // Resolve the profile to attach. A session can be orphaned after a data wipe:
+  // the `profiles` row (and even the `auth.users` record) may be gone. Self-heal
+  // where we can, and fall back to guest checkout when the account no longer exists
+  // — the verified email links it back on the success page.
+  let resolvedUserId: string | null = userId ?? null;
+  if (resolvedUserId) {
+    const { data: existingProfile } = await profileRepo.getMeById(supabase, resolvedUserId);
+    if (!existingProfile) {
+      const { data: authUser } = await supabase.auth.admin.getUserById(resolvedUserId);
+      if (authUser?.user) {
+        const meta = (authUser.user.user_metadata || {}) as Record<string, unknown>;
+        await profileRepo.upsert(supabase, {
+          id: resolvedUserId,
+          email: authUser.user.email || (conflictEmail ?? ""),
+          full_name: (meta.full_name as string) || `${(intakeAnswers.firstName as string) || ""} ${(intakeAnswers.lastName as string) || ""}`.trim(),
+          user_type: "client",
+        });
+      } else {
+        // Account fully wiped — proceed as a guest rather than dead-ending the user.
+        console.warn("Checkout: orphaned session, no profile or auth record; continuing as guest:", resolvedUserId);
+        resolvedUserId = null;
+      }
+    }
+  }
+
+  if (resolvedUserId) {
+    const { data: existingClient } = await clientRepo.getIdByProfile(supabase, resolvedUserId);
     if (existingClient) {
       clientId = existingClient.id;
     } else {
       const { data: newClient, error: clientError } = await clientRepo.create(supabase, {
-        profile_id: userId,
+        profile_id: resolvedUserId,
         source: partnerId ? "partner" : "direct",
         state: "Michigan",
         partner_id: partnerId || null,
@@ -256,7 +281,7 @@ export async function createCheckoutSession(
   if (complexityFlag !== undefined) auditMeta.complexity_flag = complexityFlag;
 
   await supabase.from("audit_log").insert({
-    actor_id: userId || null,
+    actor_id: resolvedUserId,
     action: "checkout.started",
     resource_type: "order",
     resource_id: order.id,

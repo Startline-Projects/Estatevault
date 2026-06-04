@@ -87,4 +87,4 @@ export const CATEGORY_FIELDS: Record<string, CategoryField[]> = {
 
 export const DOC_TYPE_OPTIONS = ["Will", "Trust", "Power of Attorney", "Healthcare Directive", "Deed", "Insurance Policy", "Other"];
 
-export type Screen = "pin-check" | "pin-create" | "pin-enter" | "vault" | "category" | "add-item" | "upload-doc" | "farewell" | "trustees";
+export type Screen = "pin-check" | "subscribe" | "pin-create" | "pin-enter" | "vault" | "category" | "add-item" | "upload-doc" | "farewell" | "trustees";
