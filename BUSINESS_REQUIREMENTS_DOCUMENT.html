@@ -1,0 +1,1430 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EstateVault — Business Requirements Document (As-Built)</title>
+  <style>
+    :root {
+      --navy: #1C3557;
+      --gold: #C9A84C;
+      --white: #FFFFFF;
+      --charcoal: #2D2D2D;
+      --light-bg: #F8F9FB;
+      --border: #E2E6EC;
+      --gold-light: #F5EDD8;
+      --navy-light: #EDF1F6;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      color: var(--charcoal);
+      line-height: 1.7;
+      background: var(--light-bg);
+    }
+
+    .page-header {
+      background: linear-gradient(135deg, var(--navy) 0%, #14253D 100%);
+      color: var(--white);
+      padding: 3rem 2rem 2.5rem;
+      text-align: center;
+      border-bottom: 4px solid var(--gold);
+    }
+
+    .page-header h1 {
+      font-size: 2rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      margin-bottom: 0.75rem;
+    }
+
+    .page-header .subtitle {
+      color: var(--gold);
+      font-size: 0.95rem;
+      font-weight: 500;
+    }
+
+    .page-header .meta {
+      margin-top: 1rem;
+      font-size: 0.85rem;
+      opacity: 0.7;
+    }
+
+    .container {
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 2rem 1.5rem 4rem;
+    }
+
+    /* Table of Contents */
+    .toc {
+      background: var(--white);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 2rem;
+      margin-bottom: 2.5rem;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+    }
+
+    .toc h2 {
+      font-size: 1.15rem;
+      color: var(--navy);
+      margin-bottom: 1rem;
+      padding-bottom: 0.5rem;
+      border-bottom: 2px solid var(--gold);
+      display: inline-block;
+    }
+
+    .toc ol {
+      columns: 2;
+      column-gap: 2rem;
+      padding-left: 1.25rem;
+    }
+
+    .toc li {
+      padding: 0.25rem 0;
+      break-inside: avoid;
+    }
+
+    .toc a {
+      color: var(--navy);
+      text-decoration: none;
+      font-size: 0.9rem;
+      transition: color 0.2s;
+    }
+
+    .toc a:hover {
+      color: var(--gold);
+      text-decoration: underline;
+    }
+
+    /* Sections */
+    .section {
+      background: var(--white);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 2rem;
+      margin-bottom: 1.5rem;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+    }
+
+    h2 {
+      font-size: 1.4rem;
+      color: var(--navy);
+      margin-bottom: 1.25rem;
+      padding-bottom: 0.5rem;
+      border-bottom: 2px solid var(--gold);
+    }
+
+    h3 {
+      font-size: 1.1rem;
+      color: var(--navy);
+      margin-top: 1.75rem;
+      margin-bottom: 0.75rem;
+    }
+
+    h3:first-child { margin-top: 0; }
+
+    h4 {
+      font-size: 0.95rem;
+      color: var(--charcoal);
+      margin-top: 1.25rem;
+      margin-bottom: 0.5rem;
+      font-weight: 600;
+    }
+
+    p {
+      margin-bottom: 0.75rem;
+      font-size: 0.925rem;
+    }
+
+    ul, ol {
+      margin-bottom: 0.75rem;
+      padding-left: 1.5rem;
+    }
+
+    li {
+      margin-bottom: 0.35rem;
+      font-size: 0.925rem;
+    }
+
+    strong { color: var(--navy); }
+
+    /* Tables */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 1rem 0;
+      font-size: 0.875rem;
+    }
+
+    thead th {
+      background: var(--navy);
+      color: var(--white);
+      padding: 0.65rem 0.75rem;
+      text-align: left;
+      font-weight: 600;
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    thead th:first-child { border-radius: 6px 0 0 0; }
+    thead th:last-child { border-radius: 0 6px 0 0; }
+
+    tbody td {
+      padding: 0.6rem 0.75rem;
+      border-bottom: 1px solid var(--border);
+      vertical-align: top;
+    }
+
+    tbody tr:nth-child(even) { background: var(--light-bg); }
+    tbody tr:hover { background: var(--navy-light); }
+
+    tbody tr:last-child td:first-child { border-radius: 0 0 0 6px; }
+    tbody tr:last-child td:last-child { border-radius: 0 0 6px 0; }
+
+    /* Callouts */
+    .callout {
+      border-left: 4px solid var(--gold);
+      background: var(--gold-light);
+      padding: 0.75rem 1rem;
+      margin: 1rem 0;
+      border-radius: 0 6px 6px 0;
+      font-size: 0.875rem;
+    }
+
+    .callout-compliance {
+      border-left-color: #C0392B;
+      background: #FDF2F2;
+    }
+
+    .callout strong {
+      color: var(--charcoal);
+    }
+
+    .hard-stop {
+      color: #C0392B;
+      font-weight: 700;
+    }
+
+    hr {
+      border: none;
+      border-top: 1px solid var(--border);
+      margin: 1.5rem 0;
+    }
+
+    /* Appendix badge */
+    .appendix-label {
+      display: inline-block;
+      background: var(--gold);
+      color: var(--navy);
+      font-size: 0.7rem;
+      font-weight: 700;
+      padding: 0.15rem 0.5rem;
+      border-radius: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-right: 0.5rem;
+      vertical-align: middle;
+    }
+
+    .footer-note {
+      text-align: center;
+      font-size: 0.8rem;
+      color: #888;
+      margin-top: 2rem;
+      font-style: italic;
+    }
+
+    @media (max-width: 640px) {
+      .toc ol { columns: 1; }
+      .page-header h1 { font-size: 1.5rem; }
+      .container { padding: 1rem; }
+      .section { padding: 1.25rem; }
+      table { font-size: 0.8rem; }
+      thead th, tbody td { padding: 0.5rem; }
+    }
+  </style>
+</head>
+<body>
+
+<header class="page-header">
+  <h1>EstateVault — Business Requirements Document</h1>
+  <div class="subtitle">As-Built Specification</div>
+  <div class="meta">
+    <strong>Purpose:</strong> Document what the platform actually does today, organized by functionality and views.<br>
+    <strong>Generated from:</strong> Full codebase review (June 2026)
+  </div>
+</header>
+
+<div class="container">
+
+  <!-- Table of Contents -->
+  <nav class="toc">
+    <h2>Table of Contents</h2>
+    <ol>
+      <li><a href="#s1">Platform Overview</a></li>
+      <li><a href="#s2">User Roles &amp; Access</a></li>
+      <li><a href="#s3">Public Marketing Site</a></li>
+      <li><a href="#s4">Estate Planning Quiz</a></li>
+      <li><a href="#s5">Will Intake &amp; Purchase</a></li>
+      <li><a href="#s6">Trust Intake &amp; Purchase</a></li>
+      <li><a href="#s7">Client Dashboard</a></li>
+      <li><a href="#s8">Encrypted Vault</a></li>
+      <li><a href="#s9">Trustee &amp; Farewell Access</a></li>
+      <li><a href="#s10">Attorney Review Pipeline</a></li>
+      <li><a href="#s11">Partner (Pro) Portal</a></li>
+      <li><a href="#s12">Partner Onboarding</a></li>
+      <li><a href="#s13">Sales Portal</a></li>
+      <li><a href="#s14">Affiliate Program</a></li>
+      <li><a href="#s15">Attorney Partnership Program</a></li>
+      <li><a href="#s16">Pricing &amp; Revenue Model</a></li>
+      <li><a href="#s17">Document Generation</a></li>
+      <li><a href="#s18">Email Communications</a></li>
+      <li><a href="#s19">Automated Jobs (Cron)</a></li>
+      <li><a href="#s20">Security &amp; Encryption</a></li>
+      <li><a href="#s21">White-Label Theming</a></li>
+      <li><a href="#s22">Hard Stops &amp; Compliance</a></li>
+    </ol>
+  </nav>
+
+  <!-- Section 1 -->
+  <section class="section" id="s1">
+    <h2>1. Platform Overview</h2>
+    <p>EstateVault is a B2B2C white-label estate planning platform with four portals:</p>
+    <table>
+      <thead>
+        <tr><th>Portal</th><th>Host</th><th>Audience</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Consumer Site</td><td>estatevault.us</td><td>End clients</td></tr>
+        <tr><td>Partner Portal</td><td>pro.estatevault.us</td><td>Professional partners (FAs, CPAs, attorneys, insurance agents)</td></tr>
+        <tr><td>Sales Portal</td><td>sales.estatevault.us</td><td>Internal sales reps + admins</td></tr>
+        <tr><td>Attorney Portal</td><td>admin.estatevault.us</td><td>Review attorneys</td></tr>
+      </tbody>
+    </table>
+    <p>Clients create wills or trusts through a guided intake flow. Documents are generated by AI (Claude), optionally reviewed by an attorney, and delivered digitally. Clients also get an encrypted vault for storing sensitive information and farewell messages.</p>
+    <p>Partners white-label the platform under their own branding and earn revenue splits on every client purchase.</p>
+  </section>
+
+  <!-- Section 2 -->
+  <section class="section" id="s2">
+    <h2>2. User Roles &amp; Access</h2>
+
+    <h3>2.1 Role Definitions</h3>
+    <table>
+      <thead>
+        <tr><th>Role</th><th>Description</th><th>Portal Access</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><strong>Client</strong></td><td>End user who purchases estate plans and uses the vault</td><td>Consumer site + Client Dashboard</td></tr>
+        <tr><td><strong>Partner</strong></td><td>Professional who white-labels the platform for their clients</td><td>Partner Portal (Pro)</td></tr>
+        <tr><td><strong>Attorney</strong></td><td>Reviews and approves generated documents</td><td>Attorney Portal</td></tr>
+        <tr><td><strong>Sales Rep</strong></td><td>Internal team managing partner relationships and pipeline</td><td>Sales Portal</td></tr>
+        <tr><td><strong>Admin</strong></td><td>Full system access across all portals</td><td>All portals</td></tr>
+        <tr><td><strong>Affiliate</strong></td><td>Referral partner who earns commission on referred sales</td><td>Affiliate dashboard</td></tr>
+      </tbody>
+    </table>
+
+    <h3>2.2 Authentication</h3>
+    <ul>
+      <li><strong>Login:</strong> Universal login page at <code>/auth/login</code> — routes to correct portal based on role.</li>
+      <li><strong>Signup:</strong> Email verification (code or link) → password setup → account creation.</li>
+      <li><strong>Cross-Portal Handoff:</strong> Encrypted session token transfers user between subdomains without re-login.</li>
+      <li><strong>Vault PIN:</strong> Clients set a 4-digit PIN during onboarding for vault access (separate from account password).</li>
+      <li><strong>Password Recovery:</strong> Email-based reset flow at <code>/auth/forgot-password</code>.</li>
+    </ul>
+
+    <h3>2.3 Route Guards</h3>
+    <table>
+      <thead>
+        <tr><th>Subdomain</th><th>Allowed Roles</th><th>Unauthorized Redirect</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><code>localhost</code> (consumer)</td><td>client, public</td><td>→ <code>pro.localhost</code> (partner), <code>sales.localhost</code> (sales/admin)</td></tr>
+        <tr><td><code>pro.localhost</code></td><td>partner</td><td>→ <code>localhost</code> (client), <code>sales.localhost</code> (sales)</td></tr>
+        <tr><td><code>sales.localhost</code></td><td>sales_rep, admin</td><td>→ <code>localhost</code> or <code>pro.localhost</code></td></tr>
+        <tr><td><code>admin.localhost</code></td><td>attorney, review_attorney</td><td>→ <code>localhost</code></td></tr>
+        <tr><td><code>localhost/quiz</code>, <code>/will</code>, <code>/trust</code></td><td>Public (anyone)</td><td>N/A</td></tr>
+        <tr><td><code>localhost/auth/*</code></td><td>Public</td><td>Authenticated users → their portal subdomain</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- Section 3 -->
+  <section class="section" id="s3">
+    <h2>3. Public Marketing Site</h2>
+
+    <h3>3.1 Homepage (<code>/</code>)</h3>
+    <p><strong>View:</strong> Full marketing landing page.</p>
+    <p><strong>Sections displayed:</strong></p>
+    <ul>
+      <li>Hero banner with primary CTA ("Protect Your Family")</li>
+      <li>Trust bar (credibility indicators)</li>
+      <li>"How It Works" — 3-step visual walkthrough</li>
+      <li>Package cards (Will $400 / Trust $600)</li>
+      <li>Vault feature showcase</li>
+      <li>Social proof / testimonials</li>
+      <li>FAQ accordion</li>
+      <li>Final CTA</li>
+    </ul>
+    <p><strong>Actions available:</strong></p>
+    <ul>
+      <li>Start quiz → <code>/quiz</code></li>
+      <li>View packages</li>
+      <li>Navigate to professional signup → <code>/professionals</code></li>
+      <li>Contact form → <code>/contact</code></li>
+    </ul>
+
+    <h3>3.2 Partner Landing Pages (<code>/&lt;partner-slug&gt;</code>)</h3>
+    <p><strong>View:</strong> White-labeled version of the homepage, dynamically themed per partner.</p>
+    <p><strong>What changes per partner:</strong></p>
+    <ul>
+      <li>Logo, company name, accent color</li>
+      <li>Hero background (mesh / spotlight / geometric / twilight)</li>
+      <li>Theme preset (warm / cool / mono / bold / earth)</li>
+      <li>CTA text and copy</li>
+      <li>Custom domain support</li>
+    </ul>
+    <p><strong>Actions available:</strong></p>
+    <ul>
+      <li>Start quiz (partner-attributed) → <code>/quiz?partner=&lt;slug&gt;</code></li>
+      <li>Start will/trust intake (partner-attributed)</li>
+    </ul>
+
+    <h3>3.3 Other Public Pages</h3>
+    <table>
+      <thead>
+        <tr><th>Page</th><th>Path</th><th>Purpose</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Contact</td><td><code>/contact</code></td><td>Contact form (name, email, message)</td></tr>
+        <tr><td>Privacy Policy</td><td><code>/privacy</code></td><td>Legal privacy policy</td></tr>
+        <tr><td>Terms of Service</td><td><code>/terms</code></td><td>Legal terms</td></tr>
+        <tr><td>Perspectives</td><td><code>/perspectives</code></td><td>Interactive demo of vault features</td></tr>
+        <tr><td>Professional Signup</td><td><code>/professionals</code></td><td>Lead capture for FAs, CPAs, insurance agents</td></tr>
+        <tr><td>Attorney Referral</td><td><code>/attorney-referral</code></td><td>CTA to refer attorneys to program</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- Section 4 -->
+  <section class="section" id="s4">
+    <h2>4. Estate Planning Quiz</h2>
+
+    <h3>4.1 Quiz Flow (<code>/quiz</code>)</h3>
+    <p><strong>View:</strong> Animated card-based questionnaire with progress indicator.</p>
+    <p><strong>Questions collected (in order):</strong></p>
+    <table>
+      <thead>
+        <tr><th>Step</th><th>Question</th><th>Input Type</th><th>Options</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>A1</td><td>State of residence</td><td>Pre-filled</td><td>Michigan (default)</td></tr>
+        <tr><td>B1</td><td>Marital status</td><td>Choice tiles</td><td>Single / Married / Divorced / Widowed</td></tr>
+        <tr><td>B2</td><td>Do you have children?</td><td>Yes/No</td><td>If yes → how many, any special needs?</td></tr>
+        <tr><td>C1</td><td>Own real estate?</td><td>Yes/No</td><td>If yes → only in Michigan?</td></tr>
+        <tr><td>C2</td><td>Own a business?</td><td>Yes/No</td><td>—</td></tr>
+        <tr><td>C3</td><td>Estimated net worth</td><td>Choice tiles</td><td>Under $150K / $150K–$500K / $500K–$1M / Over $1M</td></tr>
+        <tr><td>D1</td><td>Is privacy important?</td><td>Yes/No</td><td>—</td></tr>
+        <tr><td>E1</td><td>Charitable giving plans?</td><td>Yes/No</td><td>—</td></tr>
+        <tr><td>F1</td><td>Have existing estate plan?</td><td>Yes/No</td><td>If yes → update or start fresh?</td></tr>
+        <tr><td>G1</td><td>Additional situations</td><td>Text</td><td>Free-form</td></tr>
+      </tbody>
+    </table>
+
+    <h3>4.2 Recommendation Engine</h3>
+    <p><strong>Logic (hardcoded):</strong></p>
+    <ul>
+      <li><strong>Will recommended</strong> when ALL of: net worth under $150K, no real estate, no business ownership, privacy not important.</li>
+      <li><strong>Trust recommended</strong> for everything else.</li>
+    </ul>
+    <p><strong>Output:</strong> "Based on your answers, we recommend a [Will/Trust] package."</p>
+    <div class="callout">
+      <strong>Compliance note:</strong> Wording is always "Based on your answers..." — never "We recommend..." — platform does not give legal advice.
+    </div>
+
+    <h3>4.3 Hard Stops (Quiz Level)</h3>
+    <table>
+      <thead>
+        <tr><th>Trigger</th><th>Action</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Special needs dependent</td><td class="hard-stop">Halt → attorney referral</td></tr>
+        <tr><td>Multi-state real estate (trust)</td><td>Flag for attorney review</td></tr>
+        <tr><td>Business interests (trust)</td><td>Flag for attorney review</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- Section 5 -->
+  <section class="section" id="s5">
+    <h2>5. Will Intake &amp; Purchase</h2>
+
+    <h3>5.1 Acknowledgment (<code>/will</code> — Step 1)</h3>
+    <p><strong>View:</strong> Single acknowledgment card.</p>
+    <p><strong>Client must confirm:</strong> They understand the platform generates documents from their answers, does not provide legal advice, and an attorney review add-on is available.</p>
+    <div class="callout callout-compliance">
+      <strong>Compliance note:</strong> Client MUST sign acknowledgment before proceeding. This is a hard requirement.
+    </div>
+
+    <h3>5.2 Will Intake Form (<code>/will</code> — Steps 2–8)</h3>
+    <table>
+      <thead>
+        <tr><th>Section</th><th>Fields</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><strong>Residency</strong></td><td>State (Michigan), marital status</td></tr>
+        <tr><td><strong>About You</strong></td><td>First name, last name, date of birth, city, has minor children</td></tr>
+        <tr><td><strong>Executor</strong></td><td>Primary executor (name + relationship), successor executor (name + relationship)</td></tr>
+        <tr><td><strong>Beneficiaries</strong></td><td>List of beneficiaries (name, relationship, share %), equal or unequal split, contingent beneficiaries</td></tr>
+        <tr><td><strong>Guardian</strong></td><td>(If minor children) Primary guardian, successor guardian</td></tr>
+        <tr><td><strong>Gifts &amp; Wishes</strong></td><td>Organ donation preference, specific gifts description (free text)</td></tr>
+        <tr><td><strong>Review</strong></td><td>Collapsible summary of all answers — client can edit any section</td></tr>
+      </tbody>
+    </table>
+
+    <h3>5.3 Will Checkout (<code>/will/checkout</code>)</h3>
+    <p><strong>View:</strong> Order summary + Stripe payment form.</p>
+    <p><strong>Line items:</strong></p>
+    <ul>
+      <li>Will Package: $400</li>
+      <li>Attorney Review Add-On: $300 (optional, selected during intake)</li>
+    </ul>
+    <p><strong>Flow:</strong></p>
+    <ol>
+      <li>Client reviews intake summary</li>
+      <li>Enters/confirms email</li>
+      <li>Redirected to Stripe Checkout</li>
+      <li>Payment confirmed → account auto-created (if new user)</li>
+      <li>Documents queued for generation</li>
+      <li>Redirect to <code>/will/success</code> → confirmation page</li>
+    </ol>
+
+    <h3>5.4 Will Package Documents Generated</h3>
+    <table>
+      <thead>
+        <tr><th>Document</th><th>Description</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Last Will &amp; Testament</td><td>Personalized will based on Michigan law</td></tr>
+        <tr><td>Durable Power of Attorney</td><td>Financial decision-making authority</td></tr>
+        <tr><td>Healthcare Directive</td><td>Medical decision-making preferences</td></tr>
+        <tr><td>Execution Guide</td><td>Step-by-step signing/notarizing instructions</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- Section 6 -->
+  <section class="section" id="s6">
+    <h2>6. Trust Intake &amp; Purchase</h2>
+
+    <h3>6.1 Trust Intake Form (<code>/trust</code>)</h3>
+    <p>Same acknowledgment requirement as Will. Additional sections:</p>
+    <table>
+      <thead>
+        <tr><th>Section</th><th>Fields</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><strong>Trust Name</strong></td><td>Auto-generated or custom (e.g., "The Smith Family Trust")</td></tr>
+        <tr><td><strong>Trustee</strong></td><td>Primary trustee (self or named), successor trustee(s) with relationships</td></tr>
+        <tr><td><strong>Distribution</strong></td><td>Distribution age for minor beneficiaries</td></tr>
+        <tr><td><strong>Assets</strong></td><td>Asset types included (real estate, investments, business, bank accounts, etc.)</td></tr>
+        <tr><td><strong>Power of Attorney</strong></td><td>Agent name/relationship, successor agent, specific powers (banking, healthcare, real estate)</td></tr>
+        <tr><td><strong>Healthcare Directive</strong></td><td>Patient advocate, successor advocate, organ donation, specific healthcare wishes</td></tr>
+        <tr><td><strong>Beneficiaries</strong></td><td>Same as Will (name, relationship, share, contingent)</td></tr>
+        <tr><td><strong>Guardian</strong></td><td>Same as Will (if minor children)</td></tr>
+        <tr><td><strong>Review</strong></td><td>Full summary with edit capability</td></tr>
+      </tbody>
+    </table>
+
+    <h3>6.2 Complexity Detection (Trust Only)</h3>
+    <table>
+      <thead>
+        <tr><th>Trigger</th><th>Action</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Multi-state real estate</td><td>Recommend attorney review</td></tr>
+        <tr><td>Business interests</td><td>Recommend attorney review</td></tr>
+        <tr><td>Unequal beneficiary split</td><td>Recommend attorney review</td></tr>
+        <tr><td>Custom healthcare wishes</td><td>Recommend attorney review</td></tr>
+        <tr><td>Irrevocable trust request</td><td class="hard-stop">HARD STOP → attorney referral only</td></tr>
+        <tr><td>Special needs trust request</td><td class="hard-stop">HARD STOP → attorney referral only</td></tr>
+        <tr><td>Medicaid planning</td><td class="hard-stop">HARD STOP → attorney referral only</td></tr>
+      </tbody>
+    </table>
+    <div class="callout callout-compliance">
+      <strong>Hard stops are hardcoded and cannot be overridden.</strong> They halt document generation entirely and redirect to attorney referral.
+    </div>
+
+    <h3>6.3 Trust Checkout (<code>/trust/checkout</code>)</h3>
+    <p><strong>Line items:</strong></p>
+    <ul>
+      <li>Trust Package: $600</li>
+      <li>Attorney Review Add-On: $300 (optional)</li>
+    </ul>
+
+    <h3>6.4 Trust Package Documents Generated</h3>
+    <table>
+      <thead>
+        <tr><th>Document</th><th>Description</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Revocable Living Trust</td><td>Full trust instrument</td></tr>
+        <tr><td>Pour-Over Will</td><td>Directs remaining assets into the trust</td></tr>
+        <tr><td>Durable Power of Attorney</td><td>Financial decision-making</td></tr>
+        <tr><td>Healthcare Directive</td><td>Medical preferences</td></tr>
+        <tr><td>Execution Guide</td><td>Signing instructions</td></tr>
+        <tr><td>Funding Instructions</td><td>Checklist for transferring assets into the trust</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- Section 7 -->
+  <section class="section" id="s7">
+    <h2>7. Client Dashboard</h2>
+
+    <h3>7.1 Main Dashboard (<code>/dashboard</code>)</h3>
+    <p><strong>View:</strong> Overview of client's estate plan status.</p>
+    <ul>
+      <li>Completion ring (percentage toward full estate plan setup)</li>
+      <li>Recent orders with status badges (pending / paid / generating / review / delivered)</li>
+      <li>Documents panel with download buttons</li>
+      <li>Quick action buttons: Vault Setup, Request Amendment, Funding Checklist</li>
+      <li>Partner branding (if client came through a partner)</li>
+    </ul>
+
+    <h3>7.2 Documents View (<code>/dashboard/documents</code>)</h3>
+    <p><strong>View:</strong> List of all generated documents with statuses.</p>
+    <ul>
+      <li>Document list (will, trust, POA, healthcare directive, etc.)</li>
+      <li>Status per document (pending, generated, in review, approved, delivered)</li>
+      <li>Download buttons (DOCX and/or PDF)</li>
+      <li>Execution guide (instructions for signing each document type)</li>
+      <li>Attorney review status (if requested)</li>
+      <li>Amendment history</li>
+    </ul>
+    <p><strong>Actions:</strong></p>
+    <ul>
+      <li>Download individual documents</li>
+      <li>Download all as ZIP</li>
+      <li>Request an amendment ($50)</li>
+      <li>View execution steps</li>
+    </ul>
+
+    <h3>7.3 Amendment Flow (<code>/dashboard/amendment</code>)</h3>
+    <p><strong>Process:</strong></p>
+    <ol>
+      <li>Client selects change type (beneficiary, executor, guardian, etc.)</li>
+      <li>Describes requested changes (free text)</li>
+      <li>Pays $50 via Stripe</li>
+      <li>New document version generated</li>
+      <li>Old version marked as superseded</li>
+    </ol>
+    <p><strong>Guard:</strong> Vault subscription required to access amendments.</p>
+
+    <h3>7.4 Funding Checklist (<code>/dashboard/funding-checklist</code>)</h3>
+    <p><strong>Purpose:</strong> Guide trust clients through transferring assets into their trust (bank accounts, real estate titles, investment accounts, insurance beneficiary designations, etc.).</p>
+
+    <h3>7.5 Life Events (<code>/dashboard/life-events</code>)</h3>
+    <p><strong>Purpose:</strong> Prompt clients to update their estate plan after major life events (marriage, new child, move, new home, divorce, etc.).</p>
+
+    <h3>7.6 Settings (<code>/dashboard/settings</code>)</h3>
+    <p><strong>Actions:</strong> Update profile, change password, manage vault subscription.</p>
+  </section>
+
+  <!-- Section 8 -->
+  <section class="section" id="s8">
+    <h2>8. Encrypted Vault</h2>
+
+    <h3>8.1 Vault Overview (<code>/dashboard/vault</code>)</h3>
+    <p><strong>Access:</strong> Requires 4-digit PIN (2-minute session timeout after unlock).</p>
+    <p><strong>Categories:</strong></p>
+    <table>
+      <thead>
+        <tr><th>Category</th><th>What's Stored</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Estate Documents</td><td>Generated wills, trusts, POAs</td></tr>
+        <tr><td>Financial</td><td>Bank accounts, investment accounts, retirement funds</td></tr>
+        <tr><td>Insurance</td><td>Life, health, property, auto policies</td></tr>
+        <tr><td>Digital</td><td>Online accounts, passwords, subscriptions</td></tr>
+        <tr><td>Locations</td><td>Safe deposit boxes, physical document locations</td></tr>
+        <tr><td>Contacts</td><td>Attorneys, accountants, financial advisors</td></tr>
+        <tr><td>Business</td><td>Business documents, partnership agreements</td></tr>
+        <tr><td>Wishes</td><td>Final wishes, funeral preferences</td></tr>
+      </tbody>
+    </table>
+    <p><strong>Actions per item:</strong></p>
+    <ul>
+      <li>Add structured item (category-specific fields)</li>
+      <li>Upload documents (encrypted at rest)</li>
+      <li>Pin/favorite items</li>
+      <li>Edit/delete items</li>
+      <li>Search across items (encrypted search via blind indexing)</li>
+    </ul>
+
+    <h3>8.2 Farewell Messages (<code>/dashboard/vault/farewell</code>)</h3>
+    <p><strong>Purpose:</strong> Clients can record or upload farewell video messages for loved ones, stored encrypted, to be released to trustees upon the client's passing.</p>
+    <p><strong>Actions:</strong></p>
+    <ul>
+      <li>Record new farewell video</li>
+      <li>Upload pre-recorded video</li>
+      <li>Manage existing messages (view, delete)</li>
+      <li>Assign to specific trustees</li>
+    </ul>
+
+    <h3>8.3 Trustees (<code>/dashboard/vault/trustees</code>)</h3>
+    <p><strong>Rules:</strong></p>
+    <ul>
+      <li>Maximum 2 trustees per client</li>
+      <li>Trustee name and email encrypted at rest</li>
+      <li>Each trustee gets a scoped access level:
+        <ul>
+          <li>Which vault categories they can see</li>
+          <li>Whether they can view documents</li>
+          <li>Whether they can access farewell messages</li>
+        </ul>
+      </li>
+    </ul>
+    <p><strong>Actions:</strong> Add trustee (name, email, relationship), set access scope, remove trustee.</p>
+
+    <h3>8.4 Vault Subscription</h3>
+    <p><strong>Pricing:</strong> $99/year (auto-renewal via Stripe).</p>
+    <p><strong>What's included:</strong></p>
+    <ul>
+      <li>Encrypted vault storage</li>
+      <li>Trustee access management</li>
+      <li>Farewell message storage</li>
+      <li>Amendment eligibility</li>
+      <li>Annual review reminders</li>
+    </ul>
+    <p>Vault subscription is separate from document purchase. Clients can subscribe vault-only through a partner (basic tier) or after purchasing documents.</p>
+  </section>
+
+  <!-- Section 9 -->
+  <section class="section" id="s9">
+    <h2>9. Trustee &amp; Farewell Access</h2>
+
+    <h3>9.1 Trustee Unlock Flow</h3>
+    <p><strong>Process by which a trustee gains access to a client's vault after passing:</strong></p>
+    <ol>
+      <li><strong>Trustee submits verification request</strong> — provides identity documentation.</li>
+      <li><strong>Admin reviews request</strong> — verifies identity.</li>
+      <li><strong>If approved → 72-hour veto window starts.</strong></li>
+      <li><strong>Owner notification</strong> — client (if alive) receives urgent email with "Veto" button.</li>
+      <li><strong>If owner vetos</strong> — access cancelled, trustee notified.</li>
+      <li><strong>If 72 hours pass without veto</strong> — trustee access granted.</li>
+      <li><strong>Trustee receives unlock email</strong> with time-limited link (7-day expiry).</li>
+      <li><strong>Trustee verifies identity via OTP</strong> — 6-digit code sent to email (10-minute validity).</li>
+      <li><strong>Vault unlocked</strong> — trustee can view scoped vault items, documents, and farewell messages.</li>
+    </ol>
+
+    <h3>9.2 Owner Veto (<code>/farewell/owner-veto</code>)</h3>
+    <p><strong>Purpose:</strong> Safety mechanism — if the client is alive and someone falsely requests access, the client can block it.</p>
+
+    <h3>9.3 Trustee Vault View (<code>/trustee/vault</code>)</h3>
+    <p><strong>What trustee sees:</strong></p>
+    <ul>
+      <li>Estate documents (downloadable)</li>
+      <li>Vault items by category (filtered by access scope)</li>
+      <li>Farewell video playback</li>
+      <li>Verification status</li>
+    </ul>
+    <p><strong>Session:</strong> httpOnly cookie, expires at end of access window.</p>
+  </section>
+
+  <!-- Section 10 -->
+  <section class="section" id="s10">
+    <h2>10. Attorney Review Pipeline</h2>
+
+    <h3>10.1 How It Works</h3>
+    <p>When a client adds the "Attorney Review" add-on ($300), their generated documents are routed to a review attorney before delivery.</p>
+
+    <h3>10.2 Assignment</h3>
+    <ul>
+      <li>If the client's partner has an in-house review attorney → assigned to that attorney.</li>
+      <li>Otherwise → assigned from the platform's attorney pool (round-robin, filtered by state + practice area).</li>
+    </ul>
+
+    <h3>10.3 Attorney Review Dashboard (<code>/attorney/reviews</code>)</h3>
+    <p><strong>What's displayed:</strong></p>
+    <ul>
+      <li>Review queue (pending, in progress, completed, rejected)</li>
+      <li>SLA deadline badges (green = on time, orange = &lt;12 hours remaining, red = overdue)</li>
+      <li>Filter and search</li>
+      <li>Client and partner details per review</li>
+    </ul>
+
+    <h3>10.4 Review Detail View (<code>/attorney/review/[id]</code>)</h3>
+    <p><strong>Actions:</strong></p>
+    <ul>
+      <li>Approve document (stamps attorney name + bar number)</li>
+      <li>Reject with feedback (sends back for revision)</li>
+      <li>Upload reviewed/annotated version</li>
+      <li>Request more information from client</li>
+    </ul>
+
+    <h3>10.5 SLA Rules</h3>
+    <ul>
+      <li><strong>48-hour SLA</strong> from assignment to completion.</li>
+      <li>Reminder emails sent at 24 hours and 6 hours remaining.</li>
+      <li>Overdue reviews flagged in dashboard.</li>
+    </ul>
+
+    <h3>10.6 Attorney Revenue</h3>
+    <ul>
+      <li>Attorney review fee: $300 (100% goes to attorney — platform takes $0).</li>
+      <li>Fee range configurable per attorney: $150–$1,500.</li>
+      <li>Tracked in <code>/attorney/commission</code> view.</li>
+    </ul>
+  </section>
+
+  <!-- Section 11 -->
+  <section class="section" id="s11">
+    <h2>11. Partner (Pro) Portal</h2>
+
+    <h3>11.1 Partner Dashboard (<code>/pro/dashboard</code>)</h3>
+    <ul>
+      <li>Welcome banner with daily tips (dismissable)</li>
+      <li>Stat cards: Total Clients, Documents This Month, MTD Earnings, Referral Fees</li>
+      <li>Vault clients stats (active vault subscriptions)</li>
+      <li>Recent activity feed</li>
+      <li>Tier badge (Standard / Enterprise / Basic)</li>
+      <li>Vault URL copy button (basic tier partners)</li>
+    </ul>
+
+    <h3>11.2 Clients View (<code>/pro/clients</code>)</h3>
+    <p><strong>Actions:</strong> View client detail, invite new client (sends branded email).</p>
+    <div class="callout">
+      <strong>Guard:</strong> Partners can ONLY see their own clients.
+    </div>
+
+    <h3>11.3 Documents View (<code>/pro/documents</code>)</h3>
+    <p>All documents generated for partner's clients. Search, filter by document type and status.</p>
+
+    <h3>11.4 Vault Clients (<code>/pro/vault-clients</code>)</h3>
+    <p>Clients subscribed to vault-only plan ($99/year). Actions: view list, create new vault client with info, PIN, payment.</p>
+
+    <h3>11.5 Training Center (<code>/pro/training</code>)</h3>
+    <p><strong>Modules:</strong></p>
+    <ol>
+      <li>Estate Planning Fundamentals</li>
+      <li>Platform Walkthrough</li>
+      <li>Compliance &amp; Hard Stops</li>
+      <li>Sales Conversations</li>
+    </ol>
+    <p><strong>Certification:</strong> Quiz-based exam at <code>/pro/training/exam</code>. Must pass for "Certified Partner" status.</p>
+
+    <h3>11.6 Marketing Materials (<code>/pro/marketing</code>)</h3>
+    <p>Library of partner-branded marketing assets: flyers, one-pagers, sales scripts, logos.</p>
+
+    <h3>11.7 Referrals (<code>/pro/referrals</code>)</h3>
+    <p>Referral link, total referrals, conversion rate, earnings from referrals.</p>
+
+    <h3>11.8 Revenue (<code>/pro/revenue</code>)</h3>
+    <p>MTD, last month, YTD, all-time earnings. Per-product breakdown. Monthly trend chart. Pending balance and next payout date.</p>
+
+    <h3>11.9 Preview (<code>/pro/preview</code>)</h3>
+    <p>Live preview of partner's branded client landing page.</p>
+
+    <h3>11.10 Settings (<code>/pro/settings</code>)</h3>
+    <p>Company name, product name, logo upload, accent color, theme preset, email sender config, payment info (Stripe Connect).</p>
+
+    <h3>11.11 Support (<code>/pro/support</code>)</h3>
+    <p>Help articles, FAQ, contact form.</p>
+  </section>
+
+  <!-- Section 12 -->
+  <section class="section" id="s12">
+    <h2>12. Partner Onboarding</h2>
+
+    <h3>12.1 Onboarding Wizard (<code>/pro/onboarding/step-1</code> through <code>step-7</code>)</h3>
+    <p><strong>View:</strong> 7-step guided setup wizard with progress bar.</p>
+    <table>
+      <thead>
+        <tr><th>Step</th><th>Title</th><th>What's Collected</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>1</td><td>Tier Selection</td><td>Choose tier (Basic / Standard / Enterprise), accept fee agreement, enter promo code</td></tr>
+        <tr><td>2</td><td>Company Info</td><td>Company name, industry, website, phone, initial branding</td></tr>
+        <tr><td>2-Vault</td><td>Vault Subdomain</td><td>(Basic tier only) Set vault subdomain</td></tr>
+        <tr><td>3</td><td>Business Details</td><td>Team size, client count, business context</td></tr>
+        <tr><td>3-Vault</td><td>Vault Branding</td><td>(Basic tier only) Vault-specific branding</td></tr>
+        <tr><td>4</td><td>Email Setup</td><td>Configure sender email (custom SMTP or Resend)</td></tr>
+        <tr><td>4-Vault</td><td>Vault Email</td><td>(Basic tier only) Vault-specific email settings</td></tr>
+        <tr><td>5</td><td>Logo Upload</td><td>Upload company logo</td></tr>
+        <tr><td>6</td><td>Theme Customization</td><td>Choose accent color, theme preset, hero recipe</td></tr>
+        <tr><td>7</td><td>Review &amp; Launch</td><td>Confirm all settings, activate partner account</td></tr>
+      </tbody>
+    </table>
+    <p><strong>Progress tracking:</strong> <code>onboarding_step</code> + <code>onboarding_completed</code> in database. Partners can pause and resume.</p>
+
+    <h3>12.2 Partner Tiers</h3>
+    <table>
+      <thead>
+        <tr><th>Feature</th><th>Basic</th><th>Standard</th><th>Enterprise</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>White-label branding</td><td>Vault subdomain only</td><td>Full custom domain</td><td>Full custom domain</td></tr>
+        <tr><td>Monthly platform fee</td><td>—</td><td>$1,200</td><td>$6,000</td></tr>
+        <tr><td>Will revenue split</td><td>—</td><td>$300 to partner</td><td>$350 to partner</td></tr>
+        <tr><td>Trust revenue split</td><td>—</td><td>$400 to partner</td><td>$450 to partner</td></tr>
+        <tr><td>In-house attorney</td><td>No</td><td>Optional</td><td>Optional</td></tr>
+        <tr><td>Custom domain</td><td>No</td><td>Yes</td><td>Yes</td></tr>
+        <tr><td>Vault-only offering</td><td>Yes</td><td>Yes</td><td>Yes</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- Section 13 -->
+  <section class="section" id="s13">
+    <h2>13. Sales Portal</h2>
+
+    <h3>13.1 Sales Dashboard (<code>/sales/dashboard</code>)</h3>
+    <p>Lead pipeline summary, team performance metrics (admin), recent activity, key metrics, test controls (admin only).</p>
+
+    <h3>13.2 Partners Management (<code>/sales/partners</code>)</h3>
+    <p>Table of all onboarded partners with tier, status, onboarding %, earnings. Filter by tier/status.</p>
+
+    <h3>13.3 Partner Detail (<code>/sales/partners/[partner-id]</code>)</h3>
+    <p><strong>Actions:</strong> Update status, apply promo codes, view client stats, add notes, send welcome email, contact partner.</p>
+
+    <h3>13.4 New Partner (<code>/sales/new-partner</code>)</h3>
+    <p>Form: Name, email, phone, tier selection, notes. On submit: partner account created, onboarding invite sent.</p>
+
+    <h3>13.5 Pipeline (<code>/sales/pipeline</code>)</h3>
+    <p>Kanban-style lead pipeline. Stages: Prospect → Contacted → Demo → Negotiation → Closed.</p>
+
+    <h3>13.6 Commission (<code>/sales/commission</code>)</h3>
+    <p>Sales reps see personal commission. Admins see all rep commissions + payout history.</p>
+
+    <h3>13.7 Affiliates (<code>/sales/affiliates</code>) — Admin Only</h3>
+    <p>View all affiliates, activate/suspend, view payouts, trigger manual payouts.</p>
+
+    <h3>13.8 Additional Admin Views</h3>
+    <ul>
+      <li><code>/sales/marketing-materials</code> — Marketing asset library</li>
+      <li><code>/sales/admin/regenerate-docs</code> — Trigger document regeneration for test/missing orders</li>
+      <li><code>/sales/farewell-verification</code> — Trustee identity verification queue</li>
+    </ul>
+  </section>
+
+  <!-- Section 14 -->
+  <section class="section" id="s14">
+    <h2>14. Affiliate Program</h2>
+
+    <h3>14.1 Affiliate Signup (<code>/affiliate-signup</code>)</h3>
+    <ol>
+      <li><strong>Form:</strong> Email, phone, company details</li>
+      <li><strong>Stripe Connect:</strong> Link bank account for payouts</li>
+      <li><strong>Success:</strong> Receive unique referral code</li>
+    </ol>
+
+    <h3>14.2 Affiliate Dashboard (<code>/affiliate</code>)</h3>
+    <p>Referral link and code, total clicks, conversions, earnings, 30-day activity chart, daily breakdown.</p>
+
+    <h3>14.3 Revenue Model</h3>
+    <table>
+      <thead>
+        <tr><th>Product</th><th>Affiliate Earns</th><th>Platform Keeps</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Will</td><td>$100</td><td>$300</td></tr>
+        <tr><td>Trust</td><td>$200</td><td>$400</td></tr>
+        <tr><td>Amendment</td><td>$0</td><td>$50</td></tr>
+      </tbody>
+    </table>
+    <p><strong>Payouts:</strong> Batched weekly (Fridays) via Stripe Connect transfers.</p>
+  </section>
+
+  <!-- Section 15 -->
+  <section class="section" id="s15">
+    <h2>15. Attorney Partnership Program</h2>
+
+    <h3>15.1 Attorney Marketing Page (<code>/partners/attorneys</code>)</h3>
+    <p>Hero, problem/solution narrative, how-it-works flow, tier comparison, interactive earnings calculator, testimonials, FAQ, compliance info.</p>
+
+    <h3>15.2 Attorney Signup (<code>/partners/attorneys/signup</code>)</h3>
+    <p><strong>Fields:</strong> Name, email, phone, firm name, bar number, years in practice, practice area, review fee selection ($150–$1,500), agreement checkbox.</p>
+    <p><strong>Payment:</strong> Stripe checkout (one-time fee, waivable via promo codes like TPFP).</p>
+
+    <h3>15.3 Attorney Portal Features</h3>
+    <table>
+      <thead>
+        <tr><th>View</th><th>Path</th><th>Purpose</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Dashboard</td><td><code>/attorney/dashboard</code></td><td>Overview stats</td></tr>
+        <tr><td>Reviews</td><td><code>/attorney/reviews</code></td><td>Assigned review queue with SLA tracking</td></tr>
+        <tr><td>Review Detail</td><td><code>/attorney/review/[id]</code></td><td>Document review workspace</td></tr>
+        <tr><td>Partners</td><td><code>/attorney/partners</code></td><td>Partner relationships</td></tr>
+        <tr><td>Pipeline</td><td><code>/attorney/pipeline</code></td><td>Review queue visualization + projected earnings</td></tr>
+        <tr><td>Commission</td><td><code>/attorney/commission</code></td><td>Monthly earnings + payout history</td></tr>
+        <tr><td>Farewell Verification</td><td><code>/attorney/farewell-verification</code></td><td>Trustee identity verification tasks</td></tr>
+        <tr><td>Account</td><td><code>/attorney/account</code></td><td>Profile, bar number, review fee, payment info</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- Section 16 -->
+  <section class="section" id="s16">
+    <h2>16. Pricing &amp; Revenue Model</h2>
+
+    <h3>16.1 Consumer Pricing (Fixed — Partners Cannot Change)</h3>
+    <table>
+      <thead>
+        <tr><th>Product</th><th>Price</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Will Package</td><td>$400</td></tr>
+        <tr><td>Trust Package</td><td>$600</td></tr>
+        <tr><td>Attorney Review Add-On</td><td>$300</td></tr>
+        <tr><td>Amendment</td><td>$50</td></tr>
+        <tr><td>Vault Subscription</td><td>$99/year</td></tr>
+      </tbody>
+    </table>
+
+    <h3>16.2 Revenue Splits</h3>
+
+    <h4>Standard Partner Tier</h4>
+    <table>
+      <thead>
+        <tr><th>Product</th><th>EstateVault</th><th>Partner</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Will</td><td>$100</td><td>$300</td></tr>
+        <tr><td>Trust</td><td>$200</td><td>$400</td></tr>
+        <tr><td>Amendment</td><td>$15</td><td>$35</td></tr>
+        <tr><td>Attorney Review</td><td>$0</td><td>$0 (100% to attorney)</td></tr>
+      </tbody>
+    </table>
+
+    <h4>Enterprise Partner Tier</h4>
+    <table>
+      <thead>
+        <tr><th>Product</th><th>EstateVault</th><th>Partner</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Will</td><td>$50</td><td>$350</td></tr>
+        <tr><td>Trust</td><td>$150</td><td>$450</td></tr>
+        <tr><td>Amendment</td><td>$10</td><td>$40</td></tr>
+        <tr><td>Attorney Review</td><td>$0</td><td>$0 (100% to attorney)</td></tr>
+      </tbody>
+    </table>
+
+    <h3>16.3 Partner Platform Fees</h3>
+    <table>
+      <thead>
+        <tr><th>Tier</th><th>Monthly Fee</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Basic</td><td>—</td></tr>
+        <tr><td>Standard</td><td>$1,200/month</td></tr>
+        <tr><td>Enterprise</td><td>$6,000/month</td></tr>
+      </tbody>
+    </table>
+
+    <h3>16.4 Payout Mechanics</h3>
+    <ul>
+      <li>Partner payouts via <strong>Stripe Connect</strong> transfer when order status = delivered.</li>
+      <li>Affiliate payouts <strong>batched weekly</strong> (Fridays) via Stripe Connect.</li>
+      <li><strong>Idempotency guard</strong> (stripe_transfer_id) prevents double-pays.</li>
+      <li>Attorney review fees paid directly to attorney's connected account.</li>
+    </ul>
+  </section>
+
+  <!-- Section 17 -->
+  <section class="section" id="s17">
+    <h2>17. Document Generation</h2>
+
+    <h3>17.1 AI Engine</h3>
+    <ul>
+      <li><strong>Model:</strong> Claude Sonnet 4.5 (Anthropic)</li>
+      <li><strong>Process:</strong> Intake answers → template prompt → Claude generates personalized legal language → DOCX output</li>
+      <li><strong>Templates:</strong> Michigan-specific (will, trust, pour-over will, POA, healthcare directive)</li>
+    </ul>
+
+    <h3>17.2 Generation Pipeline</h3>
+    <ol>
+      <li>Client completes payment → Stripe webhook fires</li>
+      <li>Order status → "paid"</li>
+      <li>Documents queued for generation</li>
+      <li>Background processor picks up job</li>
+      <li>For each document type in the package:
+        <ul>
+          <li>Load Michigan-specific template</li>
+          <li>Build prompt from intake answers</li>
+          <li>Call Claude API</li>
+          <li>Generate DOCX file</li>
+          <li>Upload to Supabase Storage (encrypted)</li>
+        </ul>
+      </li>
+      <li>If attorney review requested → status = "review" → route to attorney</li>
+      <li>If no review → status = "delivered" → email client download link</li>
+    </ol>
+
+    <h3>17.3 Document Versioning</h3>
+    <ul>
+      <li><code>template_version</code> tracks which template was used (e.g., "2025-01")</li>
+      <li><code>version</code> integer increments per amendment</li>
+      <li><code>parent_document_id</code> links amended documents to originals</li>
+      <li><code>superseded_by</code> marks old versions when new ones are generated</li>
+    </ul>
+
+    <h3>17.4 Document Sealing</h3>
+    <p>Once client confirms they've executed (signed) documents, they're marked as sealed. Sealed documents cannot be regenerated — only superseded via amendment.</p>
+  </section>
+
+  <!-- Section 18 -->
+  <section class="section" id="s18">
+    <h2>18. Email Communications</h2>
+
+    <h3>18.1 Email Types</h3>
+    <table>
+      <thead>
+        <tr><th>Email</th><th>Trigger</th><th>Content</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Welcome</td><td>Account creation</td><td>Greeting, product type, login link</td></tr>
+        <tr><td>Documents Ready</td><td>Generation complete</td><td>Download link, document list, funding checklist (trust)</td></tr>
+        <tr><td>Attorney Review Pending</td><td>Review add-on purchased</td><td>"48-hour turnaround" messaging</td></tr>
+        <tr><td>Attorney Approved</td><td>Review completed</td><td>Download link to approved documents</td></tr>
+        <tr><td>Payment Failed (Dunning)</td><td>Vault subscription payment fails</td><td>"Update payment method" CTA</td></tr>
+        <tr><td>Annual Review Reminder</td><td>1 year since plan creation (cron)</td><td>"Review your estate plan" nudge</td></tr>
+        <tr><td>Life Event Check-In</td><td>Periodic (cron)</td><td>"Has anything changed?" prompt</td></tr>
+        <tr><td>Trustee Unlock</td><td>Vault access approved</td><td>Unlock link (7-day expiry)</td></tr>
+        <tr><td>Veto Reminder</td><td>Trustee requests access</td><td>"72 hours to cancel" with veto button</td></tr>
+        <tr><td>Owner Veto Alert</td><td>Trustee access requested</td><td>URGENT subject, veto CTA</td></tr>
+        <tr><td>Trustee OTP</td><td>Trustee unlocking vault</td><td>6-digit code (10-minute validity)</td></tr>
+        <tr><td>Access Cancelled</td><td>Owner vetoes</td><td>Trustee notified of denial</td></tr>
+        <tr><td>Farewell Unlock</td><td>Farewell message released</td><td>Access link to farewell content</td></tr>
+        <tr><td>Verification Rejected</td><td>Identity check failed</td><td>"Resubmit documentation" instructions</td></tr>
+      </tbody>
+    </table>
+
+    <h3>18.2 Branding</h3>
+    <ul>
+      <li><strong>Default sender:</strong> EstateVault (info@estatevault.us)</li>
+      <li><strong>Partner white-label:</strong> Custom sender_email, sender_name, logo in header</li>
+      <li><strong>Footer:</strong> "Powered by EstateVault" for partner-sent emails</li>
+      <li><strong>Email verification:</strong> DKIM/SPF via Resend domain verification</li>
+    </ul>
+  </section>
+
+  <!-- Section 19 -->
+  <section class="section" id="s19">
+    <h2>19. Automated Jobs (Cron)</h2>
+    <table>
+      <thead>
+        <tr><th>Job</th><th>Schedule</th><th>Purpose</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Annual Review Reminder</td><td>Yearly</td><td>Email clients on anniversary of plan creation</td></tr>
+        <tr><td>Life Event Check-In</td><td>Periodic</td><td>Prompt clients about life changes</td></tr>
+        <tr><td>Farewell Veto Reminder</td><td>As needed</td><td>Remind owner during 72-hour veto window</td></tr>
+        <tr><td>Farewell Window Expired</td><td>After 72h</td><td>Grant trustee access when veto window closes</td></tr>
+        <tr><td>Test Order Cleanup</td><td>Periodic</td><td>Delete expired test orders</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- Section 20 -->
+  <section class="section" id="s20">
+    <h2>20. Security &amp; Encryption</h2>
+
+    <h3>20.1 Vault Encryption Architecture</h3>
+    <p><strong>End-to-end encryption</strong> — Supabase (server) never sees plaintext vault data.</p>
+    <p><strong>Key hierarchy:</strong></p>
+    <ol>
+      <li>Client passphrase → Argon2 KDF → 32-byte master key</li>
+      <li>Master key split via <strong>Shamir Secret Sharing (3-of-3)</strong>:
+        <ul>
+          <li>Share A: Stored on client device</li>
+          <li>Share B: Server-wrapped, encrypted at rest</li>
+          <li>Share C: Client-managed recovery</li>
+        </ul>
+      </li>
+      <li><strong>Data Encryption Key (DEK):</strong> 256-bit per vault, wrapped with master key</li>
+      <li><strong>Per-item encryption:</strong> DEK + AEAD (ChaCha20-Poly1305)</li>
+    </ol>
+
+    <h3>20.2 Encrypted Search</h3>
+    <p>Blind indexing on item labels — allows search without decrypting all items.</p>
+
+    <h3>20.3 Trustee Key Release</h3>
+    <p>When trustee access is granted, system reconstructs master key from shares to decrypt vault content for trustee session.</p>
+
+    <h3>20.4 Recovery</h3>
+    <p>Mnemonic phrase (BIP39) recovery flow at <code>/recover</code> — client enters recovery phrase to derive new passphrase.</p>
+
+    <h3>20.5 Other Security Features</h3>
+    <ul>
+      <li>Row-Level Security (RLS) in Supabase — users can only access their own data</li>
+      <li>Vault PIN (separate from password) with rate limiting</li>
+      <li>2-minute vault session timeout</li>
+      <li>httpOnly cookies for authentication</li>
+      <li>CSP reporting endpoint</li>
+      <li>Clipboard scrubbing for sensitive data</li>
+      <li>XSS sanitization</li>
+    </ul>
+  </section>
+
+  <!-- Section 21 -->
+  <section class="section" id="s21">
+    <h2>21. White-Label Theming</h2>
+
+    <h3>21.1 What Partners Can Customize</h3>
+    <table>
+      <thead>
+        <tr><th>Element</th><th>Customizable?</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Company name / product name</td><td>Yes</td></tr>
+        <tr><td>Logo</td><td>Yes (upload)</td></tr>
+        <tr><td>Accent color</td><td>Yes (any hex)</td></tr>
+        <tr><td>Theme preset</td><td>Yes (warm / cool / mono / bold / earth)</td></tr>
+        <tr><td>Hero background</td><td>Yes (mesh / spotlight / geometric / twilight)</td></tr>
+        <tr><td>CTA text</td><td>Yes</td></tr>
+        <tr><td>Landing page text color</td><td>Yes</td></tr>
+        <tr><td>Custom domain</td><td>Yes (Standard/Enterprise tiers)</td></tr>
+        <tr><td>Vault subdomain</td><td>Yes (Basic tier)</td></tr>
+        <tr><td>Sender email</td><td>Yes (verified domain required)</td></tr>
+        <tr><td>Vault theme</td><td>Yes (light / dark)</td></tr>
+      </tbody>
+    </table>
+
+    <h3>21.2 Theme Presets</h3>
+    <table>
+      <thead>
+        <tr><th>Preset</th><th>Style</th><th>Hero Treatment</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Warm</td><td>Cream + accent light, premium</td><td>Light accent wash</td></tr>
+        <tr><td>Cool</td><td>Deep accent hero, clean sections</td><td>Dark accent depth</td></tr>
+        <tr><td>Mono</td><td>Near-black hero, accent highlights only</td><td>Minimal, dark</td></tr>
+        <tr><td>Bold</td><td>Saturated accent, high contrast</td><td>Full accent saturation</td></tr>
+        <tr><td>Earth</td><td>Soft accent wash, muted</td><td>Subtle, natural tones</td></tr>
+      </tbody>
+    </table>
+
+    <h3>21.3 Color System</h3>
+    <ul>
+      <li>Partner's accent color → algorithmically generates a 10-shade palette (50–900)</li>
+      <li>WCAG contrast ratio checking ensures text readability</li>
+      <li>CSS variables injected at runtime (<code>--brand-50</code> through <code>--brand-900</code>)</li>
+    </ul>
+  </section>
+
+  <!-- Section 22 -->
+  <section class="section" id="s22">
+    <h2>22. Hard Stops &amp; Compliance</h2>
+
+    <h3>22.1 Immutable Rules (Hardcoded, No Override)</h3>
+    <table>
+      <thead>
+        <tr><th>Rule</th><th>Enforcement</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Platform NEVER gives legal advice</td><td>All recommendations prefixed "Based on your answers..."</td></tr>
+        <tr><td>Acknowledgment required before document generation</td><td>Hard gate in intake flow</td></tr>
+        <tr><td>Special needs dependent → attorney referral</td><td>Quiz hard stop, halts generation</td></tr>
+        <tr><td>Irrevocable trust → attorney referral</td><td>Trust intake hard stop</td></tr>
+        <tr><td>Medicaid planning → attorney referral</td><td>Trust intake hard stop</td></tr>
+        <tr><td>Fixed pricing — partners cannot change prices</td><td>Prices defined in server-side constants</td></tr>
+        <tr><td>Attorney review fee: 100% to attorney</td><td>Split logic in pricing module</td></tr>
+        <tr><td>72-hour veto window for trustee access</td><td>Server-enforced timer</td></tr>
+        <tr><td>Max 2 trustees per client</td><td>Database constraint</td></tr>
+      </tbody>
+    </table>
+
+    <h3>22.2 Language Rules</h3>
+    <table>
+      <thead>
+        <tr><th>Never Say</th><th>Always Say Instead</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>"death"</td><td>"protection", "legacy", "family security"</td></tr>
+        <tr><td>"We recommend..."</td><td>"Based on your answers..."</td></tr>
+        <tr><td>"legal advice"</td><td>"document generation from your answers"</td></tr>
+      </tbody>
+    </table>
+
+    <h3>22.3 Audit Trail</h3>
+    <p>All significant actions logged to <code>audit_log</code> table with actor ID, resource type, action, metadata, and IP address.</p>
+  </section>
+
+  <!-- Appendix A -->
+  <section class="section" id="appendix-a">
+    <h2><span class="appendix-label">Appendix</span> A: View Inventory (All Pages)</h2>
+
+    <h3>Public Pages (No Auth Required)</h3>
+    <table>
+      <thead><tr><th>Page</th><th>Path</th></tr></thead>
+      <tbody>
+        <tr><td>Homepage</td><td><code>/</code></td></tr>
+        <tr><td>Quiz</td><td><code>/quiz</code></td></tr>
+        <tr><td>Will Intake</td><td><code>/will</code></td></tr>
+        <tr><td>Will Checkout</td><td><code>/will/checkout</code></td></tr>
+        <tr><td>Will Success</td><td><code>/will/success</code></td></tr>
+        <tr><td>Trust Intake</td><td><code>/trust</code></td></tr>
+        <tr><td>Trust Checkout</td><td><code>/trust/checkout</code></td></tr>
+        <tr><td>Trust Success</td><td><code>/trust/success</code></td></tr>
+        <tr><td>Partner Landing</td><td><code>/&lt;partner-slug&gt;</code></td></tr>
+        <tr><td>Partner Vault Landing</td><td><code>/&lt;partner-slug&gt;/vault</code></td></tr>
+        <tr><td>Contact</td><td><code>/contact</code></td></tr>
+        <tr><td>Privacy Policy</td><td><code>/privacy</code></td></tr>
+        <tr><td>Terms of Service</td><td><code>/terms</code></td></tr>
+        <tr><td>Perspectives Demo</td><td><code>/perspectives</code></td></tr>
+        <tr><td>Professional Signup</td><td><code>/professionals</code></td></tr>
+        <tr><td>Attorney Referral</td><td><code>/attorney-referral</code></td></tr>
+        <tr><td>Attorney Partners Marketing</td><td><code>/partners/attorneys</code></td></tr>
+        <tr><td>Attorney Signup</td><td><code>/partners/attorneys/signup</code></td></tr>
+        <tr><td>Attorney Welcome</td><td><code>/partners/attorneys/welcome</code></td></tr>
+        <tr><td>Affiliate Signup</td><td><code>/affiliate-signup</code></td></tr>
+        <tr><td>Login</td><td><code>/auth/login</code></td></tr>
+        <tr><td>Signup</td><td><code>/auth/signup</code></td></tr>
+        <tr><td>Verify Email</td><td><code>/auth/verify-email</code></td></tr>
+        <tr><td>Forgot Password</td><td><code>/auth/forgot-password</code></td></tr>
+        <tr><td>Reset Password</td><td><code>/auth/reset-password</code></td></tr>
+      </tbody>
+    </table>
+
+    <h3>Client Portal (Auth: Client)</h3>
+    <table>
+      <thead><tr><th>Page</th><th>Path</th></tr></thead>
+      <tbody>
+        <tr><td>Dashboard</td><td><code>/dashboard</code></td></tr>
+        <tr><td>Documents</td><td><code>/dashboard/documents</code></td></tr>
+        <tr><td>Amendment</td><td><code>/dashboard/amendment</code></td></tr>
+        <tr><td>Funding Checklist</td><td><code>/dashboard/funding-checklist</code></td></tr>
+        <tr><td>Life Events</td><td><code>/dashboard/life-events</code></td></tr>
+        <tr><td>Settings</td><td><code>/dashboard/settings</code></td></tr>
+        <tr><td>Vault</td><td><code>/dashboard/vault</code></td></tr>
+        <tr><td>Vault — Trustees</td><td><code>/dashboard/vault/trustees</code></td></tr>
+        <tr><td>Vault — Trustee Init</td><td><code>/dashboard/vault/trustees/init</code></td></tr>
+        <tr><td>Vault — Farewell</td><td><code>/dashboard/vault/farewell</code></td></tr>
+        <tr><td>Vault PIN Setup</td><td><code>/auth/vault-pin</code></td></tr>
+        <tr><td>Recovery</td><td><code>/recover</code></td></tr>
+      </tbody>
+    </table>
+
+    <h3>Partner Portal (Auth: Partner)</h3>
+    <table>
+      <thead><tr><th>Page</th><th>Path</th></tr></thead>
+      <tbody>
+        <tr><td>Dashboard</td><td><code>/pro/dashboard</code></td></tr>
+        <tr><td>Clients</td><td><code>/pro/clients</code></td></tr>
+        <tr><td>Client Detail</td><td><code>/pro/clients/[client-id]</code></td></tr>
+        <tr><td>Documents</td><td><code>/pro/documents</code></td></tr>
+        <tr><td>Vault Clients</td><td><code>/pro/vault-clients</code></td></tr>
+        <tr><td>New Vault Client</td><td><code>/pro/vault-clients/new</code></td></tr>
+        <tr><td>Vault Client Success</td><td><code>/pro/vault-clients/success</code></td></tr>
+        <tr><td>Training Hub</td><td><code>/pro/training</code></td></tr>
+        <tr><td>Training Module 1–4</td><td><code>/pro/training/module-{1–4}</code></td></tr>
+        <tr><td>Certification Exam</td><td><code>/pro/training/exam</code></td></tr>
+        <tr><td>Marketing Materials</td><td><code>/pro/marketing</code></td></tr>
+        <tr><td>Referrals</td><td><code>/pro/referrals</code></td></tr>
+        <tr><td>Revenue</td><td><code>/pro/revenue</code></td></tr>
+        <tr><td>Preview</td><td><code>/pro/preview</code></td></tr>
+        <tr><td>Settings</td><td><code>/pro/settings</code></td></tr>
+        <tr><td>Support</td><td><code>/pro/support</code></td></tr>
+        <tr><td>Onboarding Steps 1–7</td><td><code>/pro/onboarding/step-{1–7}</code></td></tr>
+      </tbody>
+    </table>
+
+    <h3>Sales Portal (Auth: Sales Rep / Admin)</h3>
+    <table>
+      <thead><tr><th>Page</th><th>Path</th></tr></thead>
+      <tbody>
+        <tr><td>Dashboard</td><td><code>/sales/dashboard</code></td></tr>
+        <tr><td>Partners</td><td><code>/sales/partners</code></td></tr>
+        <tr><td>Partner Detail</td><td><code>/sales/partners/[partner-id]</code></td></tr>
+        <tr><td>New Partner</td><td><code>/sales/new-partner</code></td></tr>
+        <tr><td>Pipeline</td><td><code>/sales/pipeline</code></td></tr>
+        <tr><td>Commission</td><td><code>/sales/commission</code></td></tr>
+        <tr><td>Affiliates</td><td><code>/sales/affiliates</code></td></tr>
+        <tr><td>Affiliate Detail</td><td><code>/sales/affiliates/[id]</code></td></tr>
+        <tr><td>Marketing Materials</td><td><code>/sales/marketing-materials</code></td></tr>
+        <tr><td>Regenerate Docs</td><td><code>/sales/admin/regenerate-docs</code></td></tr>
+        <tr><td>Farewell Verification</td><td><code>/sales/farewell-verification</code></td></tr>
+        <tr><td>Account</td><td><code>/sales/account</code></td></tr>
+      </tbody>
+    </table>
+
+    <h3>Attorney Portal (Auth: Attorney)</h3>
+    <table>
+      <thead><tr><th>Page</th><th>Path</th></tr></thead>
+      <tbody>
+        <tr><td>Dashboard</td><td><code>/attorney/dashboard</code></td></tr>
+        <tr><td>Reviews</td><td><code>/attorney/reviews</code></td></tr>
+        <tr><td>Review Detail</td><td><code>/attorney/review/[id]</code></td></tr>
+        <tr><td>Partners</td><td><code>/attorney/partners</code></td></tr>
+        <tr><td>Partner Detail</td><td><code>/attorney/partners/[partner-id]</code></td></tr>
+        <tr><td>New Partner</td><td><code>/attorney/new-partner</code></td></tr>
+        <tr><td>Pipeline</td><td><code>/attorney/pipeline</code></td></tr>
+        <tr><td>Commission</td><td><code>/attorney/commission</code></td></tr>
+        <tr><td>Farewell Verification</td><td><code>/attorney/farewell-verification</code></td></tr>
+        <tr><td>Account</td><td><code>/attorney/account</code></td></tr>
+      </tbody>
+    </table>
+
+    <h3>Trustee Access (Auth: Access Token)</h3>
+    <table>
+      <thead><tr><th>Page</th><th>Path</th></tr></thead>
+      <tbody>
+        <tr><td>Trustee Unlock</td><td><code>/trustee/unlock</code></td></tr>
+        <tr><td>Trustee Vault</td><td><code>/trustee/vault</code></td></tr>
+        <tr><td>Trustee Confirm</td><td><code>/vault/trustee-confirm</code></td></tr>
+        <tr><td>Farewell Access</td><td><code>/farewell/[clientId]</code></td></tr>
+        <tr><td>Owner Veto</td><td><code>/farewell/owner-veto</code></td></tr>
+      </tbody>
+    </table>
+
+    <h3>Affiliate Portal (Auth: Affiliate)</h3>
+    <table>
+      <thead><tr><th>Page</th><th>Path</th></tr></thead>
+      <tbody>
+        <tr><td>Dashboard</td><td><code>/affiliate</code></td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- Appendix B -->
+  <section class="section" id="appendix-b">
+    <h2><span class="appendix-label">Appendix</span> B: API Route Count by Domain</h2>
+    <table>
+      <thead>
+        <tr><th>Domain</th><th>Route Count</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Authentication</td><td>14</td></tr>
+        <tr><td>Checkout / Payments</td><td>10</td></tr>
+        <tr><td>Documents</td><td>10</td></tr>
+        <tr><td>Vault (items, files, PIN)</td><td>12</td></tr>
+        <tr><td>Trustee / Farewell</td><td>12</td></tr>
+        <tr><td>Partner Management</td><td>18</td></tr>
+        <tr><td>Sales / CRM</td><td>20</td></tr>
+        <tr><td>Attorney Reviews</td><td>8</td></tr>
+        <tr><td>Affiliate</td><td>4</td></tr>
+        <tr><td>Crypto / Encryption</td><td>7</td></tr>
+        <tr><td>Subscription</td><td>3</td></tr>
+        <tr><td>Admin Tools</td><td>6</td></tr>
+        <tr><td>Marketing</td><td>5</td></tr>
+        <tr><td>Cron Jobs</td><td>4</td></tr>
+        <tr><td>Webhooks</td><td>1</td></tr>
+        <tr><td>Miscellaneous</td><td>5</td></tr>
+        <tr><td><strong>Total</strong></td><td><strong>~139</strong></td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <p class="footer-note">This document reflects the as-built state of the EstateVault codebase. Discrepancies between this document and intended business requirements should be flagged for review.</p>
+
+</div>
+
+</body>
+</html>

@@ -73,14 +73,14 @@ Partners white-label the platform under their own branding and earn revenue spli
 
 ### 2.3 Route Guards
 
-| Path Pattern | Allowed Roles | Unauthorized Redirect |
+| Subdomain | Allowed Roles | Unauthorized Redirect |
 |---|---|---|
-| `/dashboard/*` | client | → `/pro/dashboard` (partner), `/sales/dashboard` (sales/admin) |
-| `/pro/*` | partner | → `/dashboard` (client), `/sales/dashboard` (sales) |
-| `/sales/*` | sales_rep, admin | → `/dashboard` or `/pro/dashboard` |
-| `/attorney/*` | attorney, review_attorney | → `/dashboard` |
-| `/quiz`, `/will`, `/trust` | Public (anyone) | N/A |
-| `/auth/*` | Public | Authenticated users → their portal |
+| `localhost` (consumer) | client, public | → `pro.localhost` (partner), `sales.localhost` (sales/admin) |
+| `pro.localhost` | partner | → `localhost` (client), `sales.localhost` (sales) |
+| `sales.localhost` | sales_rep, admin | → `localhost` or `pro.localhost` |
+| `admin.localhost` | attorney, review_attorney | → `localhost` |
+| `localhost/quiz`, `/will`, `/trust` | Public (anyone) | N/A |
+| `localhost/auth/*` | Public | Authenticated users → their portal subdomain |
 
 ---
 
