@@ -1,0 +1,24 @@
+{
+ "expectations": [
+  {
+   "text": "Finds cross-tenant data-leak path",
+   "passed": true,
+   "evidence": "Critical: unconstrained storagePath, trustee download-url signs it (schemas.ts:21-38)"
+  },
+  {
+   "text": "Flags PIN brute-force",
+   "passed": true,
+   "evidence": "High: pin/route.ts:46-65 no rate limit/lockout"
+  },
+  {
+   "text": "file:line + severity",
+   "passed": true,
+   "evidence": "All findings file:line + severity"
+  },
+  {
+   "text": "Separates confirmed from needs-verification",
+   "passed": true,
+   "evidence": "'..' path-scoping flagged for verification separately"
+  }
+ ]
+}

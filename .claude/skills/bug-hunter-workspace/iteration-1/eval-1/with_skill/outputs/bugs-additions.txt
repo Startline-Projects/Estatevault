@@ -1,0 +1,22 @@
+Proposed additions to BUGS.md (continue numbering after BUG-7).
+NOTE: per task override, the real BUGS.md was NOT modified.
+
+---
+
+## BUG-8 — Acknowledgment gate is client-side only; server fabricates the signature
+- **Severity:** Critical
+- **Area:** `lib/checkout/createCheckoutSession.ts:188-189` and `:351-352`; `app/api/checkout/amendment/route.ts:50,89`; intake `app/will/page.tsx:243-247`, `app/trust/page.tsx:218-222`; webhook `lib/webhooks/stripe/handleDocumentCheckout.ts:141-150`
+- **What:** Core Rule 3 (client must sign the acknowledgment before any document generates) is enforced only as a client-side stage transition. The server writes `acknowledgment_signed: true` hardcoded on every order; the checkout schemas (`willCheckoutSchema`/`trustCheckoutSchema`) carry no acknowledgment field, and the webhook advances the order to `generating` and creates documents without checking it.
+- **Impact:** A direct POST to the checkout route generates documents for a customer who never signed, and stamps a fabricated `acknowledgment_signed_at`. The compliance record is worthless as evidence; Rule 3 is violated.
+- **Repro:** POST `/api/checkout/will` with valid `intakeAnswers` and no UI interaction → order has `acknowledgment_signed: true`; on payment the webhook generates documents.
+- **Fix:** Require an explicit `acknowledgmentSigned: true` in the Zod schema (400 if absent) and set the column from input, not a literal. Ideally persist the acknowledgment as an audited event and gate the webhook's transition to `generating` on its existence.
+
+---
+
+## BUG-9 — Hard stops (Rule 4) have no server-side enforcement; trivially bypassed
+- **Severity:** Critical
+- **Area:** Client-only check `app/quiz/page.tsx:118-128,143-146`; no enforcement in `lib/checkout/createCheckoutSession.ts`, checkout routes, or `lib/webhooks/stripe/handleDocumentCheckout.ts`
+- **What:** Core Rule 4 (special-needs dependent or irrevocable trust must halt generation → attorney referral, hardcoded, no override) is enforced only in the quiz component. The `/will` and `/trust` intake flows are a separate path that runs no hard-stop check, and neither the server checkout nor the fulfillment webhook inspects intake answers for these conditions. (`checkComplexity()` in `lib/trust-types.ts:102` is the override-able complexity flag — different mechanism, does not cover special-needs/irrevocable and halts nothing server-side.)
+- **Impact:** A user reaching `/will` or `/trust` directly (skipping the quiz), or entering a hard-stop condition during intake after a clean quiz, pays and receives auto-generated documents for the exact scenarios the platform is required to refuse. The "no override" guarantee is unenforceable.
+- **Repro:** Go straight to `/trust` (bypass `/quiz`), complete intake with an irrevocable-trust / special-needs situation, pay → webhook sets `generating` and documents generate; no hard stop fires.
+- **Fix:** Add a server-side hard-stop predicate on the canonical intake fields and enforce it in `createCheckoutSession` (reject/route to referral) AND as a guard in the document webhook before status → `generating`. Must ignore any client override flag (incl. `confirmOverride`).
