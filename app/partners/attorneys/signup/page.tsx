@@ -424,43 +424,22 @@ function AttorneySignupContent() {
         {/* ============================================================ */}
         {step === 2 && (
           <div className="bg-white rounded-2xl border border-gray-200 p-8 shadow-sm">
-            <h2 className="text-2xl font-bold text-navy">Set Your Review Fee</h2>
+            <h2 className="text-2xl font-bold text-navy">Your Review Fee</h2>
             <p className="mt-2 text-sm text-charcoal/60">
               This is the fee clients pay you for reviewing their documents. You keep 100% of it.
+              The fee is set by EstateVault — your account manager can adjust it after onboarding.
             </p>
 
-            {/* Large fee input */}
+            {/* Fixed fee display (admin-controlled) */}
             <div className="mt-10 text-center">
               <label className="block text-sm font-semibold text-charcoal/50 uppercase tracking-wider mb-4">
                 Your Review Fee Per Document
               </label>
               <div className="flex items-center justify-center gap-2">
                 <span className="text-4xl font-bold text-charcoal">$</span>
-                <input
-                  type="number"
-                  min={150}
-                  max={1500}
-                  value={formData.reviewFee}
-                  onChange={(e) => {
-                    const v = parseInt(e.target.value, 10);
-                    if (!isNaN(v)) updateField('reviewFee', Math.min(1500, Math.max(150, v)));
-                  }}
-                  className="w-40 text-center text-5xl font-bold text-navy border-b-2 border-gold bg-transparent outline-none focus:border-navy transition-colors"
-                />
+                <span className="text-5xl font-bold text-navy">{formData.reviewFee}</span>
               </div>
-              <input
-                type="range"
-                min={150}
-                max={1500}
-                step={25}
-                value={formData.reviewFee}
-                onChange={(e) => updateField('reviewFee', parseInt(e.target.value, 10))}
-                className="mt-6 w-full max-w-md mx-auto block accent-gold"
-              />
-              <div className="flex justify-between text-xs text-charcoal/60 mt-1 max-w-md mx-auto">
-                <span>$150 min</span>
-                <span>$1,500 max</span>
-              </div>
+              <p className="mt-4 text-xs text-charcoal/50">Set by EstateVault</p>
             </div>
 
             {/* Live earnings preview */}

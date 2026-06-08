@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { validateCategoryData } from "@/lib/validation/vaultFieldRules";
+import { ATTORNEY_REVIEW_FEE_RANGE } from "@/lib/orders/pricing";
 
 export const affiliateSignupSchema = z.object({
   fullName: z.string().min(1, "Full name is required"),
@@ -102,6 +103,8 @@ const intakeAnswersSchema = z
     email: z.string().optional(),
     firstName: z.string().optional(),
     lastName: z.string().optional(),
+    // Core Rule 4 hard-stop signal; re-derived server-side via evaluateHardStop.
+    hasSpecialNeedsDependent: z.string().optional(),
   })
   .passthrough();
 
@@ -160,7 +163,8 @@ export const attorneyCheckoutSchema = z.object({
   last_name: z.string().max(100).optional(),
   firm_name: z.string().max(200).optional(),
   bar_number: z.string().min(1).max(100),
-  review_fee: z.coerce.number().nonnegative().optional(),
+  // review_fee removed: the attorney review fee is admin-controlled (BUG-4),
+  // not partner-set. New partners seed the platform default; Admin adjusts it.
   practice_area: z.string().max(200).optional(),
   years_in_practice: z.union([z.string(), z.number()]).optional(),
   phone: z.string().max(50).optional(),
@@ -544,8 +548,24 @@ export const partnerSelfUpdateSchema = z.object({
   sender_email: z.string().email().max(255).optional(),
   vault_tagline: z.string().max(255).optional().nullable(),
   vault_theme: z.enum(["light", "dark"]).optional(),
-  // Attorney-partner's own in-house review fee (they keep 100%); cents.
-  custom_review_fee: z.number().int().min(0).max(100000).optional().nullable(),
+  // NOTE: custom_review_fee is intentionally NOT here. The attorney review fee
+  // is admin-controlled (BUG-4); partners cannot set their own. Admin writes it
+  // via adminPartnerFeeSchema on the partner-detail route.
+});
+
+// Admin-only: set a partner's attorney review fee (cents). Clamped to the
+// allowed range so it can never exceed what checkout collects. See BUG-4.
+export const adminPartnerFeeSchema = z.object({
+  custom_review_fee: z
+    .number()
+    .int()
+    .min(ATTORNEY_REVIEW_FEE_RANGE.min)
+    .max(ATTORNEY_REVIEW_FEE_RANGE.max),
+});
+
+// Admin-only: set the platform-default attorney review fee (cents).
+export const adminReviewFeeDefaultSchema = z.object({
+  fee: z.number().int().min(ATTORNEY_REVIEW_FEE_RANGE.min).max(ATTORNEY_REVIEW_FEE_RANGE.max),
 });
 
 // A user updating their own profile display name (B2 settings).

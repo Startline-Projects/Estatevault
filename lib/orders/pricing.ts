@@ -26,6 +26,21 @@ export const DEFAULT_ATTORNEY_REVIEW_FEE = 30000;
 
 export const ATTORNEY_REVIEW_FEE_RANGE = { min: 15000, max: 150000 } as const;
 
+// `app_settings` key holding the admin-controlled platform-default attorney
+// review fee (cents). Admin sets this; partners cannot. See ATTORNEY_REVIEW_FEE.
+export const ATTORNEY_REVIEW_FEE_SETTING_KEY = "attorney_review_fee_default";
+
+// Clamp any attorney-review fee (admin-set, per-partner or platform-default)
+// into the allowed range. Single guard for BUG-4: an out-of-range value can
+// never be charged or transferred. Non-finite input falls back to the default.
+export function clampAttorneyReviewFee(cents: number): number {
+  if (!Number.isFinite(cents)) return DEFAULT_ATTORNEY_REVIEW_FEE;
+  return Math.min(
+    ATTORNEY_REVIEW_FEE_RANGE.max,
+    Math.max(ATTORNEY_REVIEW_FEE_RANGE.min, Math.round(cents)),
+  );
+}
+
 export const PROMO_CODES = {
   FREE134: "free",
   TEST: "test",

@@ -16,6 +16,12 @@ export function insert(admin: Admin, row: OrderInsert) {
   return admin.from("orders").insert(row).select("id").single();
 }
 
+// The attorney-review fee actually collected for an order (cents). Used by the
+// payout handler to cap the Connect transfer to what was charged (BUG-4 guard).
+export function getAttorneyCut(admin: Admin, orderId: string) {
+  return admin.from("orders").select("attorney_cut").eq("id", orderId).single();
+}
+
 // Patch an order by id (e.g. stripe_session_id, quiz_session_id, promo→free).
 export function update(admin: Admin, orderId: string, patch: OrderUpdate) {
   return admin.from("orders").update(patch).eq("id", orderId);

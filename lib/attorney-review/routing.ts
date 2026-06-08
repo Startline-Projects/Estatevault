@@ -23,7 +23,7 @@
  */
 
 import type { ReviewRouting, PartnerForRouting } from "./types";
-import { DEFAULT_ATTORNEY_REVIEW_FEE } from "@/lib/orders/pricing";
+import { DEFAULT_ATTORNEY_REVIEW_FEE, clampAttorneyReviewFee } from "@/lib/orders/pricing";
 
 export const INHOUSE_ATTORNEY_EMAIL = "test-attorney@estatevault.test";
 export const ESTATEVAULT_ADMIN_EMAIL = "ockmedk@gmail.com";
@@ -35,12 +35,16 @@ export const DEFAULT_REVIEW_FEE_CENTS = DEFAULT_ATTORNEY_REVIEW_FEE;
  * @param partner - The partner record if order came through a partner, or null for direct clients
  * @param inhouseAttorneyProfileId - Mo's profile ID (looked up by caller)
  * @param adminProfileId - EstateVault admin profile ID (looked up by caller)
+ * @param platformDefaultFee - Admin-set platform-default review fee in cents
+ *   (from `app_settings`); used for all EstateVault-destined reviews. Defaults
+ *   to the hardcoded fallback when the caller has no DB lookup.
  * @returns ReviewRouting with reviewer assignment, fee destination, and fee controller
  */
 export function resolveReviewRouting(
   partner: PartnerForRouting | null,
   inhouseAttorneyProfileId: string | null,
-  adminProfileId: string | null
+  adminProfileId: string | null,
+  platformDefaultFee: number = DEFAULT_REVIEW_FEE_CENTS
 ): ReviewRouting {
   // ── Case 1: Direct EstateVault client (no partner) ────────────
   if (!partner) {
@@ -48,7 +52,7 @@ export function resolveReviewRouting(
       reviewerId: inhouseAttorneyProfileId,
       reviewerType: "inhouse_estatevault",
       feeDestination: "estatevault",
-      feeAmount: DEFAULT_REVIEW_FEE_CENTS,
+      feeAmount: platformDefaultFee,
       feeControlledBy: adminProfileId,
       partnerId: null,
     };
@@ -60,7 +64,7 @@ export function resolveReviewRouting(
       reviewerId: inhouseAttorneyProfileId,
       reviewerType: "inhouse_estatevault",
       feeDestination: "estatevault",
-      feeAmount: DEFAULT_REVIEW_FEE_CENTS,
+      feeAmount: platformDefaultFee,
       feeControlledBy: adminProfileId,
       partnerId: partner.id,
     };
@@ -72,7 +76,7 @@ export function resolveReviewRouting(
       reviewerId: inhouseAttorneyProfileId,
       reviewerType: "inhouse_estatevault",
       feeDestination: "estatevault",
-      feeAmount: DEFAULT_REVIEW_FEE_CENTS,
+      feeAmount: platformDefaultFee,
       feeControlledBy: adminProfileId,
       partnerId: partner.id,
     };
@@ -85,7 +89,9 @@ export function resolveReviewRouting(
     reviewerId: partner.inhouse_review_attorney_id,
     reviewerType: "inhouse_partner",
     feeDestination: "partner_admin",
-    feeAmount: partner.custom_review_fee || DEFAULT_REVIEW_FEE_CENTS,
+    feeAmount: partner.custom_review_fee
+      ? clampAttorneyReviewFee(partner.custom_review_fee)
+      : platformDefaultFee,
     feeControlledBy: partner.profile_id,
     partnerId: partner.id,
   };

@@ -4,8 +4,11 @@ import { stripe } from "@/lib/stripe";
 import { calculateSplit } from "@/lib/stripe-payouts";
 import { AFFILIATE_COOKIE } from "@/lib/affiliate";
 import { checkPlanConflict } from "@/lib/orders/plan-conflict";
+import { evaluateHardStop } from "@/lib/compliance/hardStop";
 import { createAdminClient } from "@/lib/api/auth";
 import { PRICES, PROMO_CODES } from "@/lib/orders/pricing";
+import { resolveReviewRouting } from "@/lib/attorney-review/routing";
+import { getPlatformDefaultReviewFee } from "@/lib/attorney-review/fee";
 import * as clientRepo from "@/lib/repos/server/clientRepo";
 import * as partnerRepo from "@/lib/repos/server/partnerRepo";
 import * as orderRepo from "@/lib/repos/server/orderRepo";
@@ -67,6 +70,24 @@ export async function createCheckoutSession(
   const isTestCode = upperPromo && upperPromo in PROMO_CODES && PROMO_CODES[upperPromo] === "test";
 
   const supabase = createAdminClient();
+
+  // ── HARD STOP (Core Rule 4) ────────────────────────────
+  // Re-derive from intake answers server-side. Never trust a client flag, and
+  // never let any promo path (test/free/paid) bypass it. No order, no Stripe
+  // session — route the family to an attorney.
+  const hardStop = evaluateHardStop(intakeAnswers);
+  if (hardStop.halted) {
+    return NextResponse.json(
+      {
+        error:
+          "Based on your answers, your family's situation needs a licensed attorney. We can't generate this document automatically.",
+        hardStop: true,
+        reasons: hardStop.reasons,
+        referralPath: "/attorney-referral",
+      },
+      { status: 409 },
+    );
+  }
 
   if (!isTestCode && conflictEmail) {
     const conflict = await checkPlanConflict(supabase, conflictEmail, config.productType);
@@ -145,7 +166,27 @@ export async function createCheckoutSession(
   }
 
   // ── AMOUNTS + SPLITS ──────────────────────────────────
-  const attorneyAmount = attorneyReview ? PRICES.attorneyReview : 0;
+  // Attorney review fee is admin-controlled (platform default in app_settings,
+  // optional per-partner override on partners.custom_review_fee — both clamped
+  // to ATTORNEY_REVIEW_FEE_RANGE). Charge exactly what routing will transfer so
+  // collected == paid out (BUG-4). Partners cannot set this.
+  let attorneyAmount = 0;
+  if (attorneyReview) {
+    const platformDefault = await getPlatformDefaultReviewFee(supabase);
+    if (partnerId) {
+      const { data: rInfo } = await partnerRepo.getReviewRoutingInfo(supabase, partnerId);
+      const pForRouting = rInfo
+        ? {
+            ...rInfo,
+            profile_id: rInfo.profile_id ?? "",
+            has_inhouse_estate_attorney: rInfo.has_inhouse_estate_attorney ?? false,
+          }
+        : null;
+      attorneyAmount = resolveReviewRouting(pForRouting, null, null, platformDefault).feeAmount;
+    } else {
+      attorneyAmount = platformDefault;
+    }
+  }
   const totalAmount = config.baseAmount + attorneyAmount;
 
   let evCut = config.defaultEvCut;

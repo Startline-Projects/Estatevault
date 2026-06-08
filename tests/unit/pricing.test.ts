@@ -19,6 +19,8 @@ import {
   EV_DEFAULT_CUT,
   PARTNER_PLATFORM_FEE,
   DEFAULT_ATTORNEY_REVIEW_FEE,
+  ATTORNEY_REVIEW_FEE_RANGE,
+  clampAttorneyReviewFee,
   PROMO_CODES,
 } from "@/lib/orders/pricing";
 import { calculateSplit } from "@/lib/stripe-payouts";
@@ -70,5 +72,21 @@ describe("PRICES reconcile with calculateSplit", () => {
   it("will direct EV cut matches the legacy default", () => {
     expect(calculateSplit("will", "standard").evCut).toBe(EV_DEFAULT_CUT.will);
     expect(calculateSplit("trust", "standard").evCut).toBe(EV_DEFAULT_CUT.trust);
+  });
+});
+
+// BUG-4 guard: attorney review fee can never escape the allowed range.
+describe("clampAttorneyReviewFee", () => {
+  it("clamps below min up to the floor", () => {
+    expect(clampAttorneyReviewFee(100)).toBe(ATTORNEY_REVIEW_FEE_RANGE.min);
+  });
+  it("clamps above max down to the ceiling", () => {
+    expect(clampAttorneyReviewFee(999999)).toBe(ATTORNEY_REVIEW_FEE_RANGE.max);
+  });
+  it("leaves an in-range value untouched", () => {
+    expect(clampAttorneyReviewFee(50000)).toBe(50000);
+  });
+  it("falls back to the default on non-finite input", () => {
+    expect(clampAttorneyReviewFee(NaN)).toBe(DEFAULT_ATTORNEY_REVIEW_FEE);
   });
 });

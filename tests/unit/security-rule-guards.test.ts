@@ -71,6 +71,20 @@ describe("attorney review fee — fixed $300 invariant (3.6)", () => {
   it("ONLY an attorney partner WITH an in-house reviewer may use custom_review_fee", () => {
     const routing = resolveReviewRouting(base, "moAtt", "admin");
     expect(routing.reviewerType).toBe("inhouse_partner");
-    expect(routing.feeAmount).toBe(12345);
+    // 12345 is below the $150 floor → clamped up to ATTORNEY_REVIEW_FEE_RANGE.min (BUG-4).
+    expect(routing.feeAmount).toBe(15000);
+  });
+
+  it("custom_review_fee is clamped to ATTORNEY_REVIEW_FEE_RANGE (BUG-4)", () => {
+    const tooHigh = resolveReviewRouting({ ...base, custom_review_fee: 999999 }, "moAtt", "admin");
+    expect(tooHigh.feeAmount).toBe(150000); // clamped down to max
+    const inRange = resolveReviewRouting({ ...base, custom_review_fee: 50000 }, "moAtt", "admin");
+    expect(inRange.feeAmount).toBe(50000); // untouched within range
+  });
+
+  it("platform default fee param feeds EstateVault-destined reviews", () => {
+    const routing = resolveReviewRouting(null, "moAtt", "admin", 45000);
+    expect(routing.feeAmount).toBe(45000);
+    expect(routing.feeDestination).toBe("estatevault");
   });
 });
