@@ -39,6 +39,12 @@ export function regenerateMissing(orderId: string): Promise<ApiResult<unknown>> 
   return get("/api/documents/regenerate-missing", { order_id: orderId });
 }
 
+// Re-run full fulfillment from the verified Stripe session for a paid-but-stuck
+// order (webhook missed / generation failed) that has no document rows yet.
+export function retryFulfillment(orderId: string): Promise<ApiResult<{ action: string }>> {
+  return post("/api/admin/retry-fulfillment", { order_id: orderId });
+}
+
 export function sendEmail(): Promise<ApiResult<{ success: boolean }>> {
   return post("/api/documents/send-email");
 }

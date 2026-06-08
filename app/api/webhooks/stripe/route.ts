@@ -38,16 +38,36 @@ export const POST = withRoute(async (request: NextRequest) => {
 
   const supabase = createAdminClient();
 
-  // ── IDEMPOTENCY GUARD ──────────────────────────────────────
-  const { data: inserted } = await stripeWebhookRepo.checkIdempotency(
-    supabase,
-    event.id,
-    event.type,
-  );
-  if (!inserted) {
+  // ── IDEMPOTENCY GUARD (two-phase) ──────────────────────────
+  // Claim the event as `processing`. Only a previously-COMPLETED event is a
+  // true duplicate; a crashed/partial prior attempt is re-run so the order is
+  // not left paid-but-unfulfilled (BUG-1).
+  const claim = await stripeWebhookRepo.claimEvent(supabase, event.id, event.type);
+  if (!claim.proceed) {
     return ok({ received: true, duplicate: true });
   }
 
+  // Dispatch under a commit-after-success guard: mark the event completed only
+  // when the handler returns, mark it failed + rethrow when it throws so the
+  // route returns 500 and Stripe redelivers (which can now re-run).
+  try {
+    const response = await dispatchEvent(supabase, event);
+    await stripeWebhookRepo.markCompleted(supabase, event.id);
+    return response;
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    console.error(`Webhook handler failed for ${event.type} (${event.id}):`, message);
+    await stripeWebhookRepo.markFailed(supabase, event.id, message);
+    return fail("Webhook handler failed", 500);
+  }
+});
+
+// Per-event dispatch. Throwing here marks the event failed and triggers a
+// Stripe retry; returning marks it completed.
+async function dispatchEvent(
+  supabase: ReturnType<typeof createAdminClient>,
+  event: Stripe.Event,
+) {
   // ── VAULT SUBSCRIPTION EVENTS ───────────────────────────────
   if (event.type === "invoice.payment_succeeded") {
     const invoice = event.data.object as Stripe.Invoice;
@@ -153,4 +173,4 @@ export const POST = withRoute(async (request: NextRequest) => {
   }
 
   return ok({ received: true });
-});
+}

@@ -1,0 +1,152 @@
+// Reconciliation cron for paid-but-unfulfilled orders (BUG-1 / BUG-13).
+//
+// The real safety net for "customer paid but never got documents." It checks
+// the END RESULT — are the finished PDFs there? — independent of which
+// generation path ran (the optional Redis queue, the synchronous success-page
+// processNow, or the daily sweep). For each stuck order it:
+//   1. advances paid orders that never ran the webhook handler (pending/failed)
+//      by re-dispatching the replay-safe handler from the verified Stripe
+//      session, then
+//   2. triggers document generation for orders sitting in `generating` with
+//      missing PDFs, then
+//   3. alerts the admin about anything still unfinished past a threshold.
+//
+// It never touches the attorney-review lock: process-now short-circuits
+// `review`/`delivered`, and the handler never downgrades those states.
+
+import { type NextRequest } from "next/server";
+import { getAppUrl } from "@/lib/config/appUrl";
+import { withRoute } from "@/lib/api/route";
+import { ok, fail } from "@/lib/api/response";
+import { createAdminClient } from "@/lib/api/auth";
+import { reconcilePaidOrder } from "@/lib/orders/reconcileOrder";
+import { sendFulfillmentFailureAlert } from "@/lib/email";
+
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+export const maxDuration = 300;
+
+const EXPECTED_DOCS: Record<string, string[]> = {
+  will: ["will", "poa", "healthcare_directive"],
+  trust: ["trust", "pour_over_will", "poa", "healthcare_directive"],
+};
+
+// Only act on orders old enough that the normal paths have had their chance.
+const RETRY_AFTER_MINUTES = 15;
+// Alert about anything still unfinished this long after payment.
+const ALERT_AFTER_MINUTES = 60;
+
+type Admin = ReturnType<typeof createAdminClient>;
+
+// Kick the public, idempotent generator. Safe to call repeatedly: it only
+// generates orders in `generating` and short-circuits finished ones.
+async function triggerGeneration(orderId: string) {
+  try {
+    await fetch(`${getAppUrl()}/api/documents/process-now?order_id=${encodeURIComponent(orderId)}`, {
+      method: "GET",
+    });
+  } catch (e) {
+    console.error("[reconcile-orders] generation trigger failed:", e instanceof Error ? e.message : e);
+  }
+}
+
+// True when every expected document for the order has an uploaded file.
+async function hasAllFinishedDocs(admin: Admin, orderId: string, productType: string) {
+  const expected = EXPECTED_DOCS[productType] || [];
+  if (!expected.length) return true;
+  const { data: docs } = await admin
+    .from("documents")
+    .select("document_type, storage_path")
+    .eq("order_id", orderId);
+  const ready = new Set((docs || []).filter((d) => d.storage_path).map((d) => d.document_type));
+  return expected.every((t) => ready.has(t));
+}
+
+export const GET = withRoute(async (req: NextRequest) => {
+  const secret = process.env.CRON_SECRET;
+  const auth = req.headers.get("authorization");
+  if (!secret || auth !== `Bearer ${secret}`) {
+    return fail("unauthorized", 401);
+  }
+
+  const admin = createAdminClient();
+  const now = Date.now();
+  const retryBefore = new Date(now - RETRY_AFTER_MINUTES * 60_000).toISOString();
+
+  // Paid-but-stuck across the whole fulfillment lifecycle, for document
+  // products, with a Stripe session so we can verify payment.
+  //  - pending: handler never advanced it (webhook missed)            → BUG-1
+  //  - failed:  an explicit failure was recorded                      → BUG-13
+  //  - generating: ran but PDFs not finished (queue/processNow gap)   → BUG-13
+  //  - review: attorney-locked but PDFs missing (rare)                → surface only
+  const { data: stuck, error } = await admin
+    .from("orders")
+    .select("id, status, product_type, created_at, stripe_session_id")
+    .in("product_type", ["will", "trust"])
+    .in("status", ["pending", "failed", "generating", "review"])
+    .not("stripe_session_id", "is", null)
+    .lt("created_at", retryBefore)
+    .order("created_at", { ascending: true })
+    .limit(100);
+
+  if (error) {
+    console.error("[reconcile-orders] query failed:", error);
+    return fail("query failed", 500);
+  }
+
+  let advanced = 0;
+  let generationTriggered = 0;
+  let healthy = 0;
+  let alerted = 0;
+
+  for (const o of stuck || []) {
+    // If the finished PDFs are already present, nothing is wrong — skip.
+    if (await hasAllFinishedDocs(admin, o.id, o.product_type)) {
+      healthy++;
+      continue;
+    }
+
+    // 1. Orders that never ran the handler: re-dispatch it (creates document
+    //    rows, advances to `generating`, replay-safe). Verifies payment first.
+    if (o.status === "pending" || o.status === "failed") {
+      const outcome = await reconcilePaidOrder(admin, o.id).catch((e) => ({
+        ok: false as const,
+        reason: e instanceof Error ? e.message : "unknown",
+      }));
+      if (outcome.ok) advanced++;
+    }
+
+    // 2. Trigger generation for any non-locked order still missing PDFs. The
+    //    generator only acts on `generating` and short-circuits locked/finished
+    //    orders, so this respects the attorney-review lock.
+    if (o.status !== "review") {
+      await triggerGeneration(o.id);
+      generationTriggered++;
+    }
+
+    // 3. Alert on anything still unfinished past the threshold.
+    const ageMs = now - new Date(o.created_at ?? now).getTime();
+    if (ageMs >= ALERT_AFTER_MINUTES * 60_000) {
+      try {
+        await sendFulfillmentFailureAlert({
+          orderId: o.id,
+          productType: o.product_type,
+          reason: o.status === "review" ? "attorney_review_missing_docs" : "missing_documents",
+          detail: `status=${o.status}, age=${Math.round(ageMs / 60_000)}min`,
+        });
+        alerted++;
+      } catch (alertErr) {
+        console.error("[reconcile-orders] alert failed:", alertErr);
+      }
+    }
+  }
+
+  return ok({
+    ok: true,
+    checked: stuck?.length || 0,
+    healthy,
+    advanced,
+    generationTriggered,
+    alerted,
+  });
+});

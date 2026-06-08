@@ -1751,19 +1751,28 @@ export type Database = {
       }
       stripe_webhook_events: {
         Row: {
+          completed_at: string | null
           event_id: string
           event_type: string
+          last_error: string | null
           processed_at: string
+          status: string
         }
         Insert: {
+          completed_at?: string | null
           event_id: string
           event_type: string
+          last_error?: string | null
           processed_at?: string
+          status?: string
         }
         Update: {
+          completed_at?: string | null
           event_id?: string
           event_type?: string
+          last_error?: string | null
           processed_at?: string
+          status?: string
         }
         Relationships: []
       }

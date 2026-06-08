@@ -145,7 +145,11 @@ describe("S-08 middleware hostname sanitization", () => {
 describe("S-09 / M-14 stripe webhook", () => {
   const code = src("app/api/webhooks/stripe/route.ts");
   it("S-09 checks idempotency and short-circuits duplicates", () => {
-    expect(code).toMatch(/checkIdempotency/);
+    // BUG-1: two-phase guard — claim before handling, commit/fail after, so a
+    // crashed handler is retried instead of dropped as a duplicate.
+    expect(code).toMatch(/claimEvent/);
+    expect(code).toMatch(/markCompleted/);
+    expect(code).toMatch(/markFailed/);
     expect(code).toMatch(/duplicate:\s*true/);
   });
   it("M-14 returns a generic signature error, not the raw message", () => {
