@@ -160,19 +160,42 @@ export const GET = withRoute(async (request: NextRequest) => {
       }
     }
 
-    // Update order and document statuses based on attorney review
-    if (isAttorneyReview) {
-      await supabase.from("orders").update({ status: "review" }).eq("id", orderId);
-      await supabase.from("documents").update({ status: "review" }).eq("order_id", orderId);
-      log.push("8. Order and documents set to 'review' (attorney review required)");
-    } else {
-      await supabase.from("orders").update({ status: "delivered" }).eq("id", orderId);
-      await supabase.from("documents").update({ status: "delivered", delivered_at: new Date().toISOString() }).eq("order_id", orderId);
-      log.push("8. Order and documents set to 'delivered'");
+    // Only advance the order to a "finished" state when EVERY document was
+    // actually generated and uploaded. Otherwise the order would be marked
+    // delivered with missing/zero files — a false "done" that hides the failure
+    // and (because delivered short-circuits this route) can never self-heal.
+    const succeededTypes = results.filter((r) => r.success).map((r) => r.docType);
+    const allSucceeded = results.length > 0 && results.every((r) => r.success);
+
+    // Mark only the documents that actually produced a file.
+    if (succeededTypes.length) {
+      const succeededStatus = isAttorneyReview ? "review" : "delivered";
+      await supabase
+        .from("documents")
+        .update({
+          status: succeededStatus,
+          ...(succeededStatus === "delivered" ? { delivered_at: new Date().toISOString() } : {}),
+        })
+        .eq("order_id", orderId)
+        .in("document_type", succeededTypes);
     }
 
-    // Notify client via email
-    if (!isTestOrder && order.client_id) {
+    if (!allSucceeded) {
+      // Some (or all) documents failed → surface it; keep the order out of a
+      // finished state so the admin screen / reconcile cron retries it.
+      await supabase.from("orders").update({ status: "failed" }).eq("id", orderId);
+      log.push(`8. ${results.length - succeededTypes.length}/${results.length} documents FAILED — order marked 'failed'`);
+    } else if (isAttorneyReview) {
+      await supabase.from("orders").update({ status: "review" }).eq("id", orderId);
+      log.push("8. Order set to 'review' (attorney review required)");
+    } else {
+      await supabase.from("orders").update({ status: "delivered" }).eq("id", orderId);
+      log.push("8. Order set to 'delivered'");
+    }
+
+    // Notify client via email — only when everything actually succeeded, so we
+    // never tell a client their documents are ready while files are missing.
+    if (allSucceeded && !isTestOrder && order.client_id) {
       try {
         const { data: clientRow } = await supabase
           .from("clients")

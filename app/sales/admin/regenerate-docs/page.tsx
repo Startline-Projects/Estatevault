@@ -39,11 +39,39 @@ const DOC_LABELS: Record<string, string> = {
   healthcare_directive: "Healthcare Directive",
 };
 
+// Turn a raw generation error (often an Anthropic API JSON blob) into a short,
+// admin-friendly sentence with the action to take. Never surface raw JSON.
+function friendlyGenError(raw?: string): string {
+  const r = (raw || "").toLowerCase();
+  if (r.includes("credit balance is too low") || r.includes("plans & billing") || r.includes("purchase credits")) {
+    return "Anthropic API is out of credits. Top up at console.anthropic.com → Plans & Billing, then retry.";
+  }
+  if (r.includes("authentication") || r.includes("invalid x-api-key") || r.includes("api key") || r.includes("anthropic_api_key")) {
+    return "Anthropic API key is missing or invalid. Check the ANTHROPIC_API_KEY setting.";
+  }
+  if (r.includes("rate") && r.includes("limit")) {
+    return "Hit the Anthropic API rate limit. Wait a moment, then retry.";
+  }
+  if (r.includes("overloaded") || r.includes("529")) {
+    return "Anthropic API is temporarily overloaded. Retry in a minute.";
+  }
+  if (r.includes("no intake") || r.includes("intake answers")) {
+    return "Missing intake answers for this order — documents can't be rebuilt automatically.";
+  }
+  return "Document generation failed. Please retry; if it persists, check the generator status.";
+}
+
+// Pull the first real failure reason out of a regenerate-missing response.
+function firstFailureReason(d?: Record<string, unknown>): string | undefined {
+  const results = (d?.results as Array<{ success?: boolean; error?: string }> | undefined) || [];
+  return results.find((x) => x && x.success === false)?.error;
+}
+
 export default function RegenerateDocsPage() {
   const [orders, setOrders] = useState<OrderRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
-  const [state, setState] = useState<Record<string, { stage: RegenState; message?: string; log?: string[] }>>({});
+  const [state, setState] = useState<Record<string, { stage: RegenState; message?: string }>>({});
 
   const loadOrders = useCallback(async () => {
     setLoading(true);
@@ -80,7 +108,7 @@ export default function RegenerateDocsPage() {
       if (needsFullRefulfill) {
         const result = await retryFulfillment(orderId);
         if (result.error) {
-          setState((s) => ({ ...s, [orderId]: { stage: "error", message: result.error } }));
+          setState((s) => ({ ...s, [orderId]: { stage: "error", message: friendlyGenError(result.error) } }));
           return;
         }
         setState((s) => ({ ...s, [orderId]: { stage: "ok", message: "Fulfillment re-run queued." } }));
@@ -91,22 +119,25 @@ export default function RegenerateDocsPage() {
       const result = await regenerateMissing(orderId);
       const d = result.data as Record<string, unknown> | undefined;
       if (result.error) {
-        setState((s) => ({ ...s, [orderId]: { stage: "error", message: result.error, log: d?.log as string[] | undefined } }));
+        setState((s) => ({ ...s, [orderId]: { stage: "error", message: friendlyGenError(result.error) } }));
+        return;
+      }
+      const regenerated = (d?.regenerated as number) ?? (d?.documents_generated as number) ?? 0;
+      const failed = (d?.failed as number) ?? 0;
+      if (failed > 0 || regenerated === 0) {
+        // Some/all documents failed — show the friendly reason, not raw JSON.
+        setState((s) => ({ ...s, [orderId]: { stage: "error", message: friendlyGenError(firstFailureReason(d)) } }));
         return;
       }
       setState((s) => ({
         ...s,
-        [orderId]: {
-          stage: "ok",
-          message: `Regenerated ${(d?.regenerated as number) ?? (d?.documents_generated as number) ?? 0} document(s).`,
-          log: d?.log as string[] | undefined,
-        },
+        [orderId]: { stage: "ok", message: `Regenerated ${regenerated} document(s).` },
       }));
       setTimeout(() => loadOrders(), 800);
     } catch (e) {
       setState((s) => ({
         ...s,
-        [orderId]: { stage: "error", message: e instanceof Error ? e.message : String(e) },
+        [orderId]: { stage: "error", message: friendlyGenError(e instanceof Error ? e.message : String(e)) },
       }));
     }
   }
@@ -222,15 +253,10 @@ export default function RegenerateDocsPage() {
                 </div>
               </div>
 
-              {s?.log && s.log.length > 0 && (
-                <details className="mt-4">
-                  <summary className="cursor-pointer text-xs text-charcoal/50 hover:text-navy">
-                    View log ({s.log.length} lines)
-                  </summary>
-                  <pre className="mt-2 max-h-64 overflow-auto rounded-lg bg-gray-50 p-3 text-[11px] text-charcoal/70 whitespace-pre-wrap">
-                    {s.log.join("\n")}
-                  </pre>
-                </details>
+              {s?.stage === "error" && (
+                <div className="mt-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+                  {s.message}
+                </div>
               )}
             </div>
           );
