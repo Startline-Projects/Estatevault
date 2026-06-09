@@ -17,8 +17,6 @@ export async function handleVaultSubscriptionCheckout(
   metadata: Record<string, string>,
 ) {
   const subscriptionId = typeof session.subscription === "string" ? session.subscription : null;
-  const expiry = new Date();
-  expiry.setFullYear(expiry.getFullYear() + 1);
   const partnerId = metadata.partner_id || null;
 
   let clientId = metadata.client_id || null;
@@ -28,6 +26,17 @@ export async function handleVaultSubscriptionCheckout(
   }
 
   if (!clientId) return;
+
+  // Stack onto any remaining paid term: if the client still has unexpired access
+  // (a resubscribe before lapse), the new year extends from the current expiry;
+  // otherwise it runs a year from now. Mirrors the checkout `trial_end` deferral.
+  const { data: current } = await clientRepo.getSubscriptionById(supabase, clientId);
+  const currentExpiryMs = current?.vault_subscription_expiry
+    ? new Date(current.vault_subscription_expiry).getTime()
+    : 0;
+  const base = currentExpiryMs > Date.now() ? new Date(currentExpiryMs) : new Date();
+  base.setFullYear(base.getFullYear() + 1);
+  const expiry = base;
 
   await clientRepo.updateVaultSubscription(supabase, clientId, {
     vault_subscription_status: "active",

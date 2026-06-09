@@ -12,6 +12,9 @@ interface VaultMainGridProps {
   formattedPrice: string;
   categories: ReadonlyArray<{ key: string; icon: string; label: string; vaultOnly: boolean }>;
   subscriptionBanner: ReactNode;
+  showExportAll?: boolean;
+  exportingAll?: boolean;
+  onExportAll?: () => void;
   onManageAccess: () => void;
   onShowUpgrade: () => void;
   onDismissUpgrade: () => void;
@@ -29,6 +32,9 @@ export default function VaultMainGrid({
   formattedPrice,
   categories,
   subscriptionBanner,
+  showExportAll,
+  exportingAll,
+  onExportAll,
   onManageAccess,
   onShowUpgrade,
   onDismissUpgrade,
@@ -58,6 +64,18 @@ export default function VaultMainGrid({
       </div>
 
       <div className="mt-6">{subscriptionBanner}</div>
+
+      {showExportAll && onExportAll && (
+        <div className="mt-3 flex justify-end">
+          <button
+            onClick={onExportAll}
+            disabled={exportingAll}
+            className="rounded-full border border-navy px-4 py-2 text-sm font-medium text-navy hover:bg-navy hover:text-white transition-colors disabled:opacity-50"
+          >
+            {exportingAll ? "Downloading…" : "Download all documents"}
+          </button>
+        </div>
+      )}
 
       {showUpgradePrompt && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-6">

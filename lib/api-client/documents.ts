@@ -1,4 +1,4 @@
-import { get, post, getRaw, publicGet, type ApiResult } from "./client";
+import { get, post, getRaw, publicGet, getSoft, type ApiResult } from "./client";
 
 export type CheckStatusResult = {
   ready?: boolean;
@@ -19,12 +19,16 @@ export function checkStatus(orderId: string): Promise<ApiResult<CheckStatusResul
   return publicGet("/api/documents/check-status", { order_id: orderId });
 }
 
+// Called from the public post-payment success page where the visitor has no
+// session yet. Auth is via the Stripe session_id (or owner-checked order_id),
+// not the user cookie — so use getSoft to avoid authedFetch redirecting the
+// whole window to /auth/login on a 401.
 export function downloadBySession(params: {
   id: string;
   session_id?: string;
   order_id?: string;
 }): Promise<ApiResult<DownloadBySessionResult>> {
-  return get("/api/documents/download-by-session", params);
+  return getSoft("/api/documents/download-by-session", params);
 }
 
 export function downloadZip(params: {

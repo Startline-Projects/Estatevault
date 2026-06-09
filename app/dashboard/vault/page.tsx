@@ -64,6 +64,7 @@ export default function VaultPage() {
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState("");
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
+  const [exportingAll, setExportingAll] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [viewItem, setViewItem] = useState<VaultItem | null>(null);
 
@@ -109,7 +110,8 @@ export default function VaultPage() {
       if (justSubscribed && status?.status !== "active") {
         try { const { data: syncData } = await syncSub(); if (syncData?.status === "active") status = { ...(status ?? { status: "active" }), status: "active" }; } catch { /* ignore */ }
       }
-      const active = status?.status === "active";
+      // Honor cancelled-but-still-paid access: canUseFarewell reflects real access.
+      const active = status?.status === "active" || status?.canUseFarewell === true;
       setSubData(status);
       setIsSubscribed(active);
       setSubLoaded(true);
@@ -172,7 +174,7 @@ export default function VaultPage() {
     return () => events.forEach((e) => window.removeEventListener(e, bumpExpiry));
   }, [screen, pinExpiry, bumpExpiry]);
 
-  const handleSubStatusLoaded = useCallback((s: { status: string }) => { setIsSubscribed(s.status === "active"); setSubLoaded(true); }, []);
+  const handleSubStatusLoaded = useCallback((s: { status: string; canUseFarewell?: boolean }) => { setIsSubscribed(s.status === "active" || s.canUseFarewell === true); setSubLoaded(true); }, []);
 
   const loadItems = useCallback(async () => {
     const [listRes, fwRes] = await Promise.allSettled([listItems(), listFarewellMessages()]);
@@ -249,6 +251,17 @@ export default function VaultPage() {
     } catch (e) { alert(`Download failed: ${(e as Error).message}`); } finally { setDownloadingId(null); }
   }
 
+  // Bulk-export every vault document so the owner can save assets before a
+  // cancelled subscription lapses; reuses the per-item (E2EE-decrypting) path.
+  async function handleExportAll() {
+    if (exportingAll) return;
+    const docs = items.filter((i) => i.storage_path);
+    if (docs.length === 0) { alert("No documents to download yet."); return; }
+    setExportingAll(true);
+    try { for (const item of docs) { await handleDownloadDoc(item); await new Promise((r) => setTimeout(r, 400)); } }
+    finally { setExportingAll(false); }
+  }
+
   async function handleUpgradeCheckout() {
     setShowUpgradePrompt(false);
     setCheckingOut(true);
@@ -311,6 +324,9 @@ export default function VaultPage() {
       formattedPrice={formatPrice(PRICES.vaultSubscriptionYear)}
       categories={CATEGORIES}
       subscriptionBanner={<SubscriptionBanner status={subData} onStatusLoaded={handleSubStatusLoaded} />}
+      showExportAll={subData?.status === "cancelled" && subData?.canUseFarewell === true}
+      exportingAll={exportingAll}
+      onExportAll={handleExportAll}
       onManageAccess={() => { if (!isSubscribed) { setShowUpgradePrompt(true); return; } setScreen("trustees"); }}
       onShowUpgrade={() => setShowUpgradePrompt(true)}
       onDismissUpgrade={() => setShowUpgradePrompt(false)}

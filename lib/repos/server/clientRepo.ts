@@ -11,20 +11,33 @@ type Admin = ReturnType<typeof createAdminClient>;
 type ClientInsert = Database["public"]["Tables"]["clients"]["Insert"];
 type ClientUpdate = Database["public"]["Tables"]["clients"]["Update"];
 
-// Subscription status for a known client id.
+// Whether a client still has paid vault access. A cancelled subscription keeps
+// access until its paid term ends (Stripe `cancel_at_period_end`): the gates
+// must honor `vault_subscription_expiry`, not just the `active` status, or a
+// mid-period cancel would revoke months the customer already paid for (BUG-5).
+export function hasVaultAccess(
+  status: string | null | undefined,
+  expiry: string | null | undefined,
+): boolean {
+  if (status === "active") return true;
+  if (status === "cancelled" && expiry) return new Date(expiry).getTime() > Date.now();
+  return false;
+}
+
+// Subscription status + expiry for a known client id.
 export function getSubscriptionById(admin: Admin, clientId: string) {
   return admin
     .from("clients")
-    .select("vault_subscription_status")
+    .select("vault_subscription_status, vault_subscription_expiry")
     .eq("id", clientId)
     .single();
 }
 
-// Resolve a client (id + subscription) from its owning auth profile.
+// Resolve a client (id + subscription + expiry) from its owning auth profile.
 export function findIdAndSubByProfile(admin: Admin, profileId: string) {
   return admin
     .from("clients")
-    .select("id, vault_subscription_status")
+    .select("id, vault_subscription_status, vault_subscription_expiry")
     .eq("profile_id", profileId)
     .single();
 }
@@ -33,7 +46,7 @@ export function findIdAndSubByProfile(admin: Admin, profileId: string) {
 export function findIdAndSubByProfileMaybe(admin: Admin, profileId: string) {
   return admin
     .from("clients")
-    .select("id, vault_subscription_status")
+    .select("id, vault_subscription_status, vault_subscription_expiry")
     .eq("profile_id", profileId)
     .maybeSingle();
 }
@@ -84,9 +97,9 @@ export function create(admin: Admin, row: ClientInsert) {
   return admin.from("clients").insert(row).select("id").single();
 }
 
-// Variant returning the subscription status alongside the id.
+// Variant returning the subscription status + expiry alongside the id.
 export function createReturningWithSub(admin: Admin, row: ClientInsert) {
-  return admin.from("clients").insert(row).select("id, vault_subscription_status").single();
+  return admin.from("clients").insert(row).select("id, vault_subscription_status, vault_subscription_expiry").single();
 }
 
 // Link an existing client row to a profile after the auth user is created.
@@ -115,6 +128,18 @@ export function stampLifeEventCheckin(admin: Admin, clientId: string) {
     .from("clients")
     .update({ last_life_event_checkin_sent_at: new Date().toISOString() })
     .eq("id", clientId);
+}
+
+// Cancelled vault subscriptions whose paid term ends within a window (expiry in
+// (now, now+windowDays]). Backs the expiry-reminder cron so we can warn the
+// owner to export their assets or resubscribe before access ends.
+export function findExpiringCancelled(admin: Admin, nowIso: string, untilIso: string) {
+  return admin
+    .from("clients")
+    .select("id, profile_id, partner_id, vault_subscription_expiry")
+    .eq("vault_subscription_status", "cancelled")
+    .gt("vault_subscription_expiry", nowIso)
+    .lte("vault_subscription_expiry", untilIso);
 }
 
 // Find a client by vault Stripe subscription ID (webhook renewal/failure/deletion).

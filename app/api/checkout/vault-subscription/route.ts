@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import type Stripe from "stripe";
 import { stripe } from "@/lib/stripe";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/api/auth";
@@ -45,6 +46,10 @@ export const POST = withRoute(async (request: Request) => {
 
     let clientId: string | null = null;
     let customerEmail = guestEmail || user?.email;
+    // When the user is resubscribing while a cancelled term is still paid, stack
+    // the new year on top: start billing when the current access ends so they
+    // aren't double-charged and lose no remaining days.
+    let existingExpiry: string | null = null;
 
     // For partner vault checkout we may receive guest details before a stable
     // browser session exists. Ensure auth/profile/client are created up front
@@ -98,6 +103,7 @@ export const POST = withRoute(async (request: Request) => {
 
         if (existingClient?.id) {
           clientId = existingClient.id;
+          existingExpiry = existingClient.vault_subscription_expiry;
         } else {
           const { data: createdClient } = await clientRepo.create(supabase, {
             profile_id: profileId,
@@ -128,6 +134,7 @@ export const POST = withRoute(async (request: Request) => {
       }
 
       clientId = client?.id ?? null;
+      existingExpiry = client?.vault_subscription_expiry ?? null;
     }
 
     const successPath = partnerSlug
@@ -137,6 +144,19 @@ export const POST = withRoute(async (request: Request) => {
     const cancelPath = partnerSlug
       ? `/${partnerSlug}/vault`
       : "/dashboard/vault";
+
+    // Stack a resubscribe onto remaining paid time: defer the first charge until
+    // the current access ends (Stripe `trial_end`), so billing — and the new
+    // 12-month term — begin exactly when the old one would have lapsed.
+    const expiryMs = existingExpiry ? new Date(existingExpiry).getTime() : 0;
+    const trialEnd = expiryMs > Date.now() ? Math.floor(expiryMs / 1000) : null;
+
+    const subscriptionData: Stripe.Checkout.SessionCreateParams.SubscriptionData = {};
+    if (partnerStripeAccountId && partnerRevenuePct > 0) {
+      subscriptionData.application_fee_percent = 100 - partnerRevenuePct;
+      subscriptionData.transfer_data = { destination: partnerStripeAccountId };
+    }
+    if (trialEnd) subscriptionData.trial_end = trialEnd;
 
     const session = await stripe.checkout.sessions.create({
       mode: "subscription",
@@ -155,12 +175,7 @@ export const POST = withRoute(async (request: Request) => {
       }],
       success_url: `${origin}${successPath}`,
       cancel_url: `${origin}${cancelPath}`,
-      ...(partnerStripeAccountId && partnerRevenuePct > 0 ? {
-        subscription_data: {
-          application_fee_percent: 100 - partnerRevenuePct,
-          transfer_data: { destination: partnerStripeAccountId },
-        },
-      } : {}),
+      ...(Object.keys(subscriptionData).length > 0 ? { subscription_data: subscriptionData } : {}),
       metadata: {
         product_type: "vault_subscription",
         ...(clientId && { client_id: clientId }),

@@ -12,6 +12,7 @@ import * as quizSessionRepo from "@/lib/repos/server/quizSessionRepo";
 import * as payoutRepo from "@/lib/repos/server/payoutRepo";
 import * as affiliateRepo from "@/lib/repos/server/affiliateRepo";
 import * as auditLogRepo from "@/lib/repos/server/auditLogRepo";
+import { evaluateHardStop } from "@/lib/compliance/hardStop";
 import { handleAmendmentCheckout } from "./handleAmendmentCheckout";
 import { handleAttorneyReview } from "./handleAttorneyReview";
 import type { Admin } from "./types";
@@ -54,7 +55,7 @@ export async function handleDocumentCheckout(
   // not a failed/stuck retry is a no-op.
   const { data: existingOrder } = await supabase
     .from("orders")
-    .select("status")
+    .select("status, intake_data")
     .eq("id", orderId)
     .maybeSingle();
 
@@ -163,6 +164,20 @@ export async function handleDocumentCheckout(
   // ── 2. Update order to generating ──────────────────────────
   const { data: quizForIntake } = await quizSessionRepo.getLatestAnswersByClient(supabase, clientId)
     .then(r => r, () => ({ data: null }));
+
+  // ── HARD STOP (Core Rule 4) — last checkpoint ──────────────
+  // Checkout already blocks this, but the webhook is the final gate before any
+  // document is created. Re-derive from whatever intake we have; if halted,
+  // park the order for an attorney and never create document records or queue
+  // generation. No override.
+  const intakeForStop =
+    (quizForIntake?.answers as Record<string, unknown> | undefined) ??
+    (existingOrder?.intake_data as Record<string, unknown> | null | undefined);
+  if (evaluateHardStop(intakeForStop).halted) {
+    console.error(`Hard stop hit in webhook for order ${orderId}; halting generation.`);
+    await orderRepo.update(supabase, orderId, { status: "needs_attorney" });
+    return;
+  }
 
   // Never downgrade an order that already advanced to attorney review (locked)
   // or delivery — only move it forward from a pre-generation state. This keeps

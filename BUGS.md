@@ -52,6 +52,7 @@ Tracking doc for checkout + fulfillment failure modes. Severity: Critical > High
 ---
 
 ## BUG-5 — Cancelling a vault subscription revokes paid access immediately (mid-period)
+- **Status:** ✅ FIXED (2026-06-09)
 - **Severity:** Critical (paid value revoked)
 - **Area:** `app/api/subscription/cancel/route.ts:22-29`; gates at `subscription/status/route.ts:20`, `vault/upload-url/route.ts:42`, `vault/farewell/route.ts:82`, `vault/download-document/route.ts:23`
 - **What:** Cancel correctly tells Stripe `cancel_at_period_end: true` (sub stays live until term end) but then immediately sets `vault_subscription_status = "cancelled"` in the DB. Every vault gate checks `status === "active"` and never consults `vault_subscription_expiry`. The route's own comment says "Cancel at period end, don't revoke access mid-period" — the DB flip does exactly that.
@@ -59,6 +60,7 @@ Tracking doc for checkout + fulfillment failure modes. Severity: Critical > High
 - **Repro:** Active subscriber → POST `/api/subscription/cancel` → GET `/api/subscription/status` returns `canUseFarewell:false`; vault upload/farewell/download 403.
 - **Check on website:** Subscribe to the vault, click Cancel Subscription, then immediately try to upload a document or record a farewell — you're blocked despite having paid through term end.
 - **Fix:** On cancel keep `status: "active"` (or a `cancel_pending` state the gates still treat as active) until `vault_subscription_expiry`; let `customer.subscription.deleted` flip it at period end. Better: gate on `status active OR expiry > now`.
+- **Resolution:** Took the "gate on expiry too" path. New `clientRepo.hasVaultAccess(status, expiry)` returns true when `status === "active"` OR `status === "cancelled" && expiry > now`. All four gates now call it — `subscription/status/route.ts:26`, `vault/upload-url/route.ts:42`, `vault/farewell/route.ts:82`, `vault/download-document/route.ts:23`. Cancel still flips status to `cancelled` (drives the cancel-pending UI) but access holds until `vault_subscription_expiry`. Tests: `vault-access.test.ts`.
 
 ---
 

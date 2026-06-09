@@ -74,11 +74,12 @@ export const GET = withRoute(async (request: NextRequest) => {
 
     log.push(`4. Intake has ${Object.keys(quizAnswers).length} fields. firstName=${quizAnswers.firstName}, lastName=${quizAnswers.lastName}`);
 
-    if (!process.env.ANTHROPIC_API_KEY || process.env.ANTHROPIC_API_KEY === "placeholder") {
+    const mockGen = process.env.MOCK_DOC_GENERATION === "true";
+    if (!mockGen && (!process.env.ANTHROPIC_API_KEY || process.env.ANTHROPIC_API_KEY === "placeholder")) {
       log.push("5. ANTHROPIC_API_KEY is missing!");
       return fail("Anthropic API key not configured", 500, { log });
     }
-    log.push("5. ANTHROPIC_API_KEY is set");
+    log.push(mockGen ? "5. MOCK_DOC_GENERATION on — using placeholder docs" : "5. ANTHROPIC_API_KEY is set");
 
     const isTestOrder = order.order_type === "test";
     const documentTypes = order.product_type === "trust"

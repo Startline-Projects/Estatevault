@@ -60,7 +60,10 @@ export const GET = withRoute(async (request: NextRequest) => {
       return fail("No intake answers available (quiz purged and order.intake_data empty)", 400, { log });
     }
 
-    if (!process.env.ANTHROPIC_API_KEY || process.env.ANTHROPIC_API_KEY === "placeholder") {
+    if (
+      process.env.MOCK_DOC_GENERATION !== "true" &&
+      (!process.env.ANTHROPIC_API_KEY || process.env.ANTHROPIC_API_KEY === "placeholder")
+    ) {
       return fail("ANTHROPIC_API_KEY missing", 500, { log });
     }
 

@@ -140,7 +140,7 @@
   </details>
 
   <details class="bug crit" open data-sev="crit">
-    <summary><span class="badge crit">Critical</span><span class="id">BUG-5</span>
+    <summary><span class="badge crit">Critical</span><span class="badge" style="background:#1a7f37;color:#fff">✅ FIXED</span><span class="id">BUG-5</span>
       <span class="ttl">Cancelling vault subscription revokes paid access immediately</span><span class="chev">▶</span></summary>
     <div class="body">
       <div class="row"><div class="k">In plain terms</div><div class="v">A customer who paid for a full year and cancels in month 2 instantly loses vault uploads, farewell messages, and downloads — for the 10 months they already paid for. The code even comments "don't revoke access mid-period," then does exactly that.</div></div>
@@ -148,6 +148,7 @@
       <div class="row"><div class="k">Impact</div><div class="v">Paid-for value silently revoked → refund / chargeback risk.</div></div>
       <div class="row check"><div class="k">Check on website</div><div class="v">Subscribe to the vault → click Cancel Subscription → immediately try to upload a document or record a farewell → you're blocked, despite paying through term end.</div></div>
       <div class="row fix"><div class="k">Fix</div><div class="v">On cancel keep access active until the expiry date (let Stripe's end-of-period event flip it). Gate on "active OR expiry in the future."</div></div>
+      <div class="row fix"><div class="k">Resolution (2026-06-09)</div><div class="v">Added <code>clientRepo.hasVaultAccess(status, expiry)</code> — true when <code>status === "active"</code> OR <code>status === "cancelled" &amp;&amp; expiry &gt; now</code>. All four gates now call it (<code>subscription/status</code>, <code>vault/upload-url</code>, <code>vault/farewell</code>, <code>vault/download-document</code>). Cancel still flips status to <code>cancelled</code> for the cancel-pending UI, but access holds until <code>vault_subscription_expiry</code>. Covered by <code>vault-access.test.ts</code>.</div></div>
     </div>
   </details>
 

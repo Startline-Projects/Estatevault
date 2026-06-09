@@ -20,7 +20,7 @@ export const GET = withRoute(async (request: NextRequest) => {
   const { data: client } = await clientRepo.findIdAndSubByProfile(admin, user.id);
 
   if (!client) return fail("Unauthorized", 401);
-  if (client.vault_subscription_status !== "active") {
+  if (!clientRepo.hasVaultAccess(client.vault_subscription_status, client.vault_subscription_expiry)) {
     return fail("Vault subscription required", 403);
   }
 

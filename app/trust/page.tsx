@@ -6,6 +6,7 @@ import Link from "next/link";
 import { getLatestQuiz } from "@/lib/api-client/clientAccount";
 import { type TrustIntake, initialTrustIntake, checkComplexity } from "@/lib/trust-types";
 import AcknowledgmentCard from "@/components/intake/AcknowledgmentCard";
+import HardStopCard from "@/components/quiz/HardStopCard";
 import PartnerThemedShell, { BrandedLoadingWordmark } from "@/components/partner/PartnerThemedShell";
 import ChoiceTile from "@/components/quiz/ChoiceTile";
 import YesNoTiles from "@/components/quiz/YesNoTiles";
@@ -43,6 +44,7 @@ export default function TrustPage() {
   const router = useRouter();
   const [partnerParam, setPartnerParam] = useState("");
   const [stage, setStage] = useState<Stage>("acknowledgment");
+  const [hardStopped, setHardStopped] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
   const [intake, setIntake] = useState<TrustIntake>(initialTrustIntake);
   const [currentCard, setCurrentCard] = useState(0);
@@ -128,7 +130,7 @@ export default function TrustPage() {
       case "residency":
         return intake.state === "Michigan" && intake.maritalStatus !== "";
       case "about":
-        return intake.firstName.trim() !== "" && intake.lastName.trim() !== "" && intake.dateOfBirth !== "" && intake.dateOfBirth <= maxDob && intake.city.trim() !== "" && intake.hasMinorChildren !== "";
+        return intake.firstName.trim() !== "" && intake.lastName.trim() !== "" && intake.dateOfBirth !== "" && intake.dateOfBirth <= maxDob && intake.city.trim() !== "" && intake.hasMinorChildren !== "" && intake.hasSpecialNeedsDependent !== "";
       case "trustee":
         return intake.primaryTrustee !== "" && (intake.primaryTrustee === "Myself" || intake.trusteeName.trim() !== "") && intake.successorTrusteeName.trim() !== "" && intake.successorTrusteeRelationship !== "";
       case "beneficiaries": {
@@ -182,6 +184,11 @@ export default function TrustPage() {
 
   function handleContinue() {
     if (!isCardComplete() || hasPartialName) return;
+    // Hard stop (Core Rule 4) — special-needs dependent halts generation.
+    if (intake.hasSpecialNeedsDependent === "Yes") {
+      setHardStopped(true);
+      return;
+    }
     if (activeCardId === "review") {
       const complexity = checkComplexity(intake);
       sessionStorage.setItem("trustIntake", JSON.stringify(intake));
@@ -205,6 +212,14 @@ export default function TrustPage() {
   const slideClass = animating
     ? direction === "forward" ? "translate-x-[-100%] opacity-0" : "translate-x-[100%] opacity-0"
     : "translate-x-0 opacity-100";
+
+  if (hardStopped) {
+    return (
+      <PartnerThemedShell showHeader={false}>
+        <HardStopCard />
+      </PartnerThemedShell>
+    );
+  }
 
   if (stage === "redirecting") {
     return (
@@ -327,6 +342,7 @@ export default function TrustPage() {
             </div>
             <div className="mt-5"><QuestionLabel required>City of residence</QuestionLabel><CityAutocomplete value={intake.city} onChange={(v) => update({ city: v })} placeholder="e.g. Grand Rapids" /></div>
             <div className="mt-5"><QuestionLabel required>Do you have minor children (under 18)?</QuestionLabel><YesNoTiles value={intake.hasMinorChildren} onChange={(v) => update({ hasMinorChildren: v, ...(v === "No" ? { guardianName: "", guardianRelationship: "", successorGuardianName: "" } : {}) })} /></div>
+            <div className="mt-5"><QuestionLabel required>Do you have a dependent with special needs?</QuestionLabel><YesNoTiles value={intake.hasSpecialNeedsDependent} onChange={(v) => update({ hasSpecialNeedsDependent: v })} /></div>
             <div className="mt-5">
               <QuestionLabel>Trust name (optional)</QuestionLabel>
               <p className="mb-2 text-xs text-charcoal/50">Leave blank to use the default: &quot;The [Your Name] Revocable Living Trust&quot;</p>
