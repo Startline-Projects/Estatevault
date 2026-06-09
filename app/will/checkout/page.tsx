@@ -46,6 +46,7 @@ export default function WillCheckoutPage() {
   const [conflictChecking, setConflictChecking] = useState(false);
   const [emailVerified, setEmailVerified] = useState(false);
   const [verifiedEmail, setVerifiedEmail] = useState("");
+  const [intakeData, setIntakeData] = useState<Record<string, unknown> | null>(null);
 
   const total = promoApplied ? 0 : (attorneyReview ? (PRICES.will + PRICES.attorneyReview) / 100 : PRICES.will / 100);
 
@@ -58,8 +59,28 @@ export default function WillCheckoutPage() {
         setPromoEmail(user.email || "");
         setCustomerEmail(user.email || "");
       }
-      const intake = sessionStorage.getItem("willIntake");
-      if (!intake) router.push("/will");
+      let raw = sessionStorage.getItem("willIntake");
+      if (!raw) {
+        const ls = localStorage.getItem("willIntake");
+        if (ls) {
+          try {
+            const envelope = JSON.parse(ls);
+            const INTAKE_TTL = 60 * 60 * 1000;
+            if (envelope.ts && Date.now() - envelope.ts > INTAKE_TTL) {
+              localStorage.removeItem("willIntake");
+            } else {
+              raw = JSON.stringify(envelope.data ?? envelope);
+            }
+          } catch { /* corrupt */ }
+        }
+      }
+      if (!raw) { router.push("/will"); return; }
+      try {
+        setIntakeData(JSON.parse(raw));
+      } catch {
+        router.push("/will");
+        return;
+      }
       setPartnerId(sessionStorage.getItem("willPartner") || "");
     }
     init();
@@ -99,11 +120,11 @@ export default function WillCheckoutPage() {
     setLoading(true);
     setError("");
     try {
-      const intake = sessionStorage.getItem("willIntake");
-      if (!intake) { router.push("/will"); return; }
-      const { data, error: err } = await checkoutWill({ userId: null, attorneyReview: false, intakeAnswers: JSON.parse(intake), promoCode });
+      if (!intakeData) { router.push("/will"); return; }
+      const { data, error: err } = await checkoutWill({ userId: null, attorneyReview: false, intakeAnswers: intakeData, promoCode });
       if (err || !data) { setError(err || "Something went wrong."); setLoading(false); return; }
       if ("orderId" in data && (data as Record<string, unknown>).test) {
+        try { localStorage.removeItem("willIntake"); } catch { /* ignore */ }
         router.push(`/will/success?test=true&order_id=${data.orderId}`);
         return;
       }
@@ -115,13 +136,12 @@ export default function WillCheckoutPage() {
     setError("");
 
     try {
-      const intake = sessionStorage.getItem("willIntake");
-      if (!intake) { router.push("/will"); return; }
+      if (!intakeData) { router.push("/will"); return; }
 
       const { data, error: err } = await checkoutWill({
         userId: userId || null,
         attorneyReview: false,
-        intakeAnswers: JSON.parse(intake),
+        intakeAnswers: intakeData,
         promoCode,
         email: promoEmail,
         partnerId: partnerId || null,
@@ -131,6 +151,7 @@ export default function WillCheckoutPage() {
 
       const result = data as Record<string, unknown>;
       if (result.free) {
+        try { localStorage.removeItem("willIntake"); } catch { /* ignore */ }
         router.push(`/will/success?promo=true&order_id=${result.orderId}&email=${encodeURIComponent(result.email as string)}&user_id=${result.userId || ""}`);
         return;
       }
@@ -167,18 +188,18 @@ export default function WillCheckoutPage() {
     setError("");
 
     try {
-      const intake = sessionStorage.getItem("willIntake");
-      if (!intake) { router.push("/will"); return; }
+      if (!intakeData) { router.push("/will"); return; }
 
       const { data, error: err } = await checkoutWill({
         userId: userId || null,
         attorneyReview,
-        intakeAnswers: JSON.parse(intake),
+        intakeAnswers: intakeData,
         partnerId: partnerId || null,
         customerEmail,
       });
 
       if (err || !data) { setError(err || "Something went wrong."); setLoading(false); return; }
+      try { localStorage.removeItem("willIntake"); } catch { /* ignore */ }
       if ("url" in data) window.location.href = data.url;
     } catch {
       setError("Something went wrong. Please try again.");

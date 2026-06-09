@@ -174,9 +174,11 @@ export default function WillPage() {
     if (!isCardComplete() || hasPartialName) return;
     if (activeCardId === "review") {
       // Save intake to sessionStorage and go to checkout
-      sessionStorage.setItem("willIntake", JSON.stringify(intake));
+      const intakeJson = JSON.stringify(intake);
+      sessionStorage.setItem("willIntake", intakeJson);
       sessionStorage.setItem("willUserId", userId || "");
       sessionStorage.setItem("willPartner", partnerParam);
+      try { localStorage.setItem("willIntake", JSON.stringify({ data: intake, ts: Date.now() })); } catch { /* quota */ }
       setStage("redirecting");
       router.push("/will/checkout");
       return;

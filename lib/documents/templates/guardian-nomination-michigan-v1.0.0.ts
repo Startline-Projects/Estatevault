@@ -1,0 +1,217 @@
+const template = `
+NOMINATION OF GUARDIAN
+
+FOR MINOR CHILDREN
+
+EFFECTIVE UPON DEATH OR TEMPORARY INCAPACITY
+
+OF
+
+{{client_full_name_upper}}
+
+Nominating Parent: {{client_full_name}}  ·  Date of Birth: {{client_dob}}
+
+Residence: {{street_address}}, {{city}}, {{county}} County, Michigan  {{zip}}
+
+Nominated Guardian: {{guardian.full_name}}  ·  {{guardian.relationship}}
+
+Successor Guardian: {{successor_guardian.full_name}}  ·  {{successor_guardian.relationship}}
+
+## OPERATION OF THIS DOCUMENT
+
+This is your Standalone Nomination of Guardian for your minor children under Michigan law (MCL 700.5202 and MCL 700.5204). It nominates a guardian to care for your minor children if you are deceased or, where you have elected, temporarily incapacitated. It is a separate document from the guardian nomination in your Will so that the guardian can step in immediately when needed, without waiting for probate or court proceedings. You may revoke this document at any time while you are alive and competent.
+
+State of Michigan  ·  MCL 700.5202 (testamentary)  ·  MCL 700.5204 (lifetime nomination)
+
+Estates and Protected Individuals Code
+
+{{#IF attorney_review_purchased}}
+
+## ATTORNEY REVIEWED & APPROVED
+
+Reviewing Attorney: {{reviewing_attorney_name}}  ·  Bar No. {{reviewing_attorney_bar_number}}
+
+Firm: {{reviewing_attorney_firm}}  ·  Reviewed: {{review_date}}
+
+{{/IF}}
+
+## IMPORTANT INFORMATION FOR THE PARENT
+
+This nomination is given priority by Michigan courts. A court will honor your nomination unless there is clear and compelling reason to do otherwise. The nominated guardian is responsible for the physical care, custody, education, and well-being of your minor children, including making decisions about their schooling, medical treatment, and daily life. The nominated guardian is generally not financially responsible for your children — that is handled separately through child support, your estate, life insurance, or other resources. Read this document carefully before signing.
+
+## ARTICLE I — IDENTIFICATION OF NOMINATING PARENT
+
+### Section 1.1 — Nominating Parent.
+
+I, {{client_full_name}}, a resident of {{city}}, {{county}} County, Michigan, with a residence address of {{street_address}}, {{city}}, Michigan {{zip}} (the "Nominating Parent"), do hereby make this Standalone Nomination of Guardian for my minor children pursuant to MCL 700.5202 and MCL 700.5204.
+
+### Section 1.2 — Statement of Capacity.
+
+I am eighteen (18) years of age or older and of sound mind. I am the natural parent, adoptive parent, or legal guardian of the minor children identified in Article II below. I am executing this Nomination of Guardian voluntarily, free from duress, fraud, and undue influence.
+
+## ARTICLE II — IDENTIFICATION OF MINOR CHILDREN
+
+### Section 2.1 — Minor Children Covered.
+
+This Nomination of Guardian applies to the following minor children of mine:
+
+{{#FOREACH children}}
+
+{{#IF is_minor equals true}}
+
+  •  {{full_name}}, born on {{date_of_birth}}.
+
+{{/IF}}
+
+{{/FOREACH}}
+
+This Nomination also applies to any child later born to me or legally adopted by me prior to my death or incapacity, provided that child is still a minor at the time the Guardian's authority would be exercised.
+
+## ARTICLE III — NOMINATION OF GUARDIAN
+
+### Section 3.1 — Primary Guardian.
+
+I nominate {{guardian.full_name}}, currently residing in {{guardian.city}}, {{guardian.state}}, with a contact telephone number of {{guardian.phone}} (the "Guardian"), to serve as Guardian of the person of my minor children. The Guardian is my {{guardian.relationship}}.
+
+### Section 3.2 — Successor Guardian.
+
+If {{guardian.full_name}} is unable or unwilling to serve as Guardian, dies, resigns, becomes incapacitated, or for any other reason ceases to serve, I nominate {{successor_guardian.full_name}}, currently residing in {{successor_guardian.city}}, {{successor_guardian.state}}, with a contact telephone number of {{successor_guardian.phone}}, as Successor Guardian. The Successor Guardian is my {{successor_guardian.relationship}}.
+
+{{#IF standby_guardian}}
+
+### Section 3.3 — Standby Guardian.
+
+If both {{guardian.full_name}} and {{successor_guardian.full_name}} are unable or unwilling to serve as Guardian, dies, resign, become incapacitated, or for any other reason cease to serve, I nominate {{standby_guardian.full_name}}, currently residing in {{standby_guardian.city}}, {{standby_guardian.state}}, with a contact telephone number of {{standby_guardian.phone}}, as Standby Guardian. The Standby Guardian is my {{standby_guardian.relationship}}.
+
+{{/IF}}
+
+### Section 3.4 — Authority of Successor and Standby Guardians.
+
+Each Successor Guardian and Standby Guardian shall have all of the same powers and authority granted to the primary Guardian under this nomination. References in this document to "the Guardian" shall include any Successor Guardian or Standby Guardian duly serving in that capacity.
+
+### Section 3.5 — Best Interests of the Children.
+
+I have nominated the persons named in this Article because I believe each, in their own way, would act in the best interests of my minor children. I have considered factors including the values and beliefs each nominee shares with me, their relationship with my children, their capacity to provide care, their geographic location, and their willingness to serve. Any court of competent jurisdiction reviewing this nomination is requested to honor my choice unless there is clear and compelling reason to do otherwise.
+
+## ARTICLE IV — WHEN GUARDIAN'S AUTHORITY BEGINS
+
+### Section 4.1 — Authority on Death.
+
+Pursuant to MCL 700.5202, upon my death, the Guardian shall have full authority to take physical custody of my minor children, to provide for their care, to make decisions regarding their education, medical treatment, and daily life, and to take any other action necessary or appropriate to act in the best interests of my minor children. This nomination is the primary nomination of Guardian, takes priority over any conflicting nomination, and shall be honored by any court of competent jurisdiction.
+
+### Section 4.2 — Authority on Temporary Incapacity.
+
+{{#IF guardian_temporary_incapacity_authority equals true}}
+
+Pursuant to MCL 700.5204, if I am alive but temporarily unable to care for my minor children due to physical or mental incapacity, hospitalization, coma, severe illness, accident, or other similar circumstance, the Guardian (or, if the primary Guardian is unable to serve, any Successor Guardian or Standby Guardian) shall have the authority to take physical custody of my minor children and to provide for their care during the period of my temporary incapacity. This authority shall be exercised in the best interests of my minor children and shall terminate upon my recovery, the appointment of a guardian by a court of competent jurisdiction, or my death. This grant of authority is intended to be effective immediately upon a determination of my temporary incapacity by a treating physician, without the necessity of court proceedings.
+
+{{/IF}}
+
+{{#IF guardian_temporary_incapacity_authority equals false}}
+
+This Nomination of Guardian is effective only upon my death. The Guardian nominated in Article III shall have no authority to act on my behalf during any period of my temporary incapacity. Any authority necessary during a period of my temporary incapacity must be obtained through separate legal proceedings or by separately executed instruments.
+
+{{/IF}}
+
+### Section 4.3 — Coordination with Will.
+
+I have also nominated the same Guardian in Article VI of my Last Will and Testament. The nomination in my Will operates from the date of my death; this Standalone Nomination of Guardian also covers my death and, where elected above, my temporary incapacity. Both documents are intended to be consistent and to reinforce one another. To the extent of any conflict between this document and my Will regarding the identity of the Guardian, this document, as the more recent or specific instrument, shall control.
+
+## ARTICLE V — SCOPE OF GUARDIAN'S AUTHORITY
+
+### Section 5.1 — General Authority.
+
+The Guardian, when acting under this Nomination, has the authority to do all of the following on behalf of my minor children:
+
+  •  Take physical custody of my minor children and provide for their daily care, supervision, food, clothing, and shelter.
+
+  •  Make decisions regarding the medical, dental, mental health, and other healthcare treatment of my minor children, including consent to or refusal of any medical procedure or treatment.
+
+  •  Enroll my minor children in school, select schools and educational programs, communicate with educators, and make all other decisions regarding their education.
+
+  •  Authorize travel for my minor children within and outside of the State of Michigan and the United States, including the issuance of passports and consent to international travel.
+
+  •  Make decisions regarding the religious, moral, and ethical upbringing of my minor children consistent with the values and traditions I have observed in raising them.
+
+  •  Make decisions regarding extracurricular activities, organized sports, social activities, friendships, and other aspects of my minor children's social and emotional development.
+
+  •  Take any other action necessary or appropriate to provide for the physical, mental, and emotional well-being of my minor children.
+
+### Section 5.2 — Limitations on Guardian's Authority.
+
+The Guardian shall not have authority to consent to a marriage of any of my minor children, to consent to the adoption of any of my minor children by another person, or to take any other action expressly excluded by Michigan law from the authority of a guardian. The Guardian's authority terminates as to any of my children upon that child reaching the age of eighteen (18) or upon any other event that emancipates the child under Michigan law.
+
+### Section 5.3 — Coordination with Estate Resources.
+
+The Guardian is generally not personally responsible for the financial support of my minor children. Financial support shall come from my estate, life insurance proceeds, Social Security benefits, child support obligations of any other parent, trust assets, or other resources designated for the support of my children. The Guardian shall coordinate with my Personal Representative, the Trustee of any trust I have established for the benefit of my children, and any other person or entity responsible for the financial well-being of my children to ensure that necessary expenses are paid promptly.
+
+## ARTICLE VI — REVOCATION
+
+### Section 6.1 — Revocation of Nomination.
+
+I may revoke this Standalone Nomination of Guardian at any time while I am alive and competent by any of the following methods: destroying the original Nomination with the intent to revoke it; executing a written revocation that specifically refers to this Nomination; or executing a new Nomination of Guardian that revokes this one.
+
+### Section 6.2 — Effect of Marriage Termination on Spouse Guardian.
+
+If my spouse is named as Guardian in this Nomination and our marriage is terminated by divorce, annulment, or court order, my spouse's designation as Guardian is automatically revoked unless this document specifically states otherwise. The next designated Successor Guardian shall serve as Guardian.
+
+### Section 6.3 — Effect of Coordinated Revocation of Will.
+
+Revocation of my Last Will and Testament does not automatically revoke this Standalone Nomination of Guardian, and revocation of this Nomination does not automatically revoke the guardian nomination in my Last Will and Testament. If I wish to revoke both, I must execute revocations of both documents.
+
+## ARTICLE VII — GENERAL PROVISIONS
+
+### Section 7.1 — Acceptance by Third Parties.
+
+Schools, healthcare providers, child welfare agencies, courts, and any other person or entity presented with this Nomination of Guardian may rely on its authority. A person or entity that acts in good faith in reliance on this Nomination is not liable to me, to my children, or to any other person for any action taken in reliance on the document.
+
+### Section 7.2 — Photocopies.
+
+A photocopy or electronically reproduced copy of this Nomination of Guardian shall have the same force and effect as the original.
+
+### Section 7.3 — Severability.
+
+If any provision of this Nomination of Guardian is held to be invalid, unenforceable, or contrary to law, the remaining provisions shall continue in full force and effect.
+
+### Section 7.4 — Governing Law.
+
+This Nomination of Guardian shall be governed by and construed in accordance with the laws of the State of Michigan, including MCL 700.5202 and MCL 700.5204.
+
+### Section 7.5 — Definitions.
+
+"Guardian" includes the Guardian designated in Section 3.1 and any duly-serving Successor Guardian or Standby Guardian. "Parent" refers to me, the Nominating Parent. Words denoting one gender include all genders, and the singular includes the plural.
+
+## EXECUTION
+
+IN WITNESS WHEREOF, I, {{client_full_name}}, the Nominating Parent, sign my name to this Standalone Nomination of Guardian on this _ day of _, 20_, in {{city}}, {{county}} County, Michigan, voluntarily and free from duress, fraud, and undue influence.
+
+[SIGNATURE] Nominating Parent — Signature and Date
+
+The foregoing Standalone Nomination of Guardian was signed and declared by the above-named Nominating Parent in our presence as the Parent's free and voluntary act for the purposes set forth therein. We, in the Parent's presence and in the presence of each other, have subscribed our names as witnesses.
+
+[SIGNATURE] Witness One — Signature, Printed Name, and Address
+
+[SIGNATURE] Witness Two — Signature, Printed Name, and Address
+
+[NOTARY_BLOCK]
+## NOTARY ACKNOWLEDGMENT
+
+Recommended to enhance third-party acceptance
+
+## STATE OF MICHIGAN
+
+COUNTY OF {{county_upper}}
+
+On this _ day of _, 20_, before me, the undersigned, a Notary Public in and for said County and State, personally appeared {{client_full_name}}, known to me (or satisfactorily proven) to be the person whose name is subscribed to the within instrument, and who acknowledged that the person executed the same as the person's free and voluntary act for the purposes set forth therein.
+
+## NOTARY ACKNOWLEDGMENT
+
+Notary Public, State of Michigan
+
+County of __  ·  Acting in {{county}} County, Michigan
+
+My commission expires: _
+[/NOTARY_BLOCK]
+`;
+
+export default template;

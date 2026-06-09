@@ -1,0 +1,261 @@
+const template = `
+FUNERAL REPRESENTATIVE
+
+DESIGNATION
+
+AUTHORITY OVER FUNERAL AND BURIAL ARRANGEMENTS
+
+OF
+
+{{client_full_name_upper}}
+
+Declarant: {{client_full_name}}  ·  Date of Birth: {{client_dob}}
+
+Residence: {{street_address}}, {{city}}, {{county}} County, Michigan  {{zip}}
+
+Funeral Representative: {{funeral_representative.full_name}}  ·  {{funeral_representative.relationship}}
+
+Successor Funeral Representative: {{#IF successor_funeral_representative}}{{successor_funeral_representative.full_name}}  ·  {{successor_funeral_representative.relationship}}{{/IF}}
+
+## OPERATION OF THIS DOCUMENT
+
+This is your Funeral Representative Designation under Michigan law (MCL 700.3206). It authorizes the person you name (your Funeral Representative) to make decisions about your funeral, the disposition of your remains, and related arrangements after your death. This document takes effect at the moment of your death. The Funeral Representative has priority over your family members and any other person under Michigan law in making these decisions. You may revoke this document at any time while you are alive and competent.
+
+State of Michigan  ·  MCL 700.3206  ·  Estates and Protected Individuals Code
+
+Funeral Representative Designation
+
+{{#IF attorney_review_purchased}}
+
+## ATTORNEY REVIEWED & APPROVED
+
+Reviewing Attorney: {{reviewing_attorney_name}}  ·  Bar No. {{reviewing_attorney_bar_number}}
+
+Firm: {{reviewing_attorney_firm}}  ·  Reviewed: {{review_date}}
+
+{{/IF}}
+
+## IMPORTANT INFORMATION FOR THE DECLARANT
+
+By signing this document, you are giving the person you name (your Funeral Representative) priority over your spouse, your children, your parents, and any other family member in making decisions about your funeral, burial, cremation, and disposition of your remains. The Funeral Representative's decisions are binding on funeral homes, cemeteries, crematoriums, and other entities involved in your arrangements. The Funeral Representative is also personally responsible for the reasonable costs of carrying out your arrangements, subject to reimbursement from your estate. Read this document carefully before signing.
+
+## ARTICLE I — DESIGNATION OF DECLARANT
+
+### Section 1.1 — Declarant.
+
+I, {{client_full_name}}, a resident of {{city}}, {{county}} County, Michigan, with a residence address of {{street_address}}, {{city}}, Michigan {{zip}} (the "Declarant"), do hereby make this Funeral Representative Designation under the Michigan Estates and Protected Individuals Code, MCL 700.3206.
+
+### Section 1.2 — Statement of Capacity.
+
+I am eighteen (18) years of age or older and of sound mind. I am executing this Funeral Representative Designation voluntarily, free from duress, fraud, and undue influence.
+
+## ARTICLE II — DESIGNATION OF FUNERAL REPRESENTATIVE
+
+### Section 2.1 — Funeral Representative.
+
+I designate {{funeral_representative.full_name}}, currently residing in {{funeral_representative.city}}, {{funeral_representative.state}}, with a contact telephone number of {{funeral_representative.phone}} (the "Funeral Representative"), as my Funeral Representative pursuant to MCL 700.3206. The Funeral Representative is my {{funeral_representative.relationship}}.
+
+{{#IF successor_funeral_representative}}
+
+### Section 2.2 — Successor Funeral Representative.
+
+If {{funeral_representative.full_name}} is unable or unwilling to serve as my Funeral Representative, dies before me or contemporaneously with me, is unable to be located within a reasonable time after my death, or for any other reason ceases to serve, I designate {{successor_funeral_representative.full_name}}, currently residing in {{successor_funeral_representative.city}}, {{successor_funeral_representative.state}}, with a contact telephone number of {{successor_funeral_representative.phone}}, as my Successor Funeral Representative. The Successor Funeral Representative is my {{successor_funeral_representative.relationship}}.
+
+### Section 2.3 — Authority of Successor.
+
+The Successor Funeral Representative shall have all of the same powers and authority granted to the Funeral Representative under this designation. References in this document to "the Funeral Representative" shall include the Successor Funeral Representative duly serving in that capacity.
+
+{{/IF}}
+
+## ARTICLE III — STATUTORY PRIORITY AND AUTHORITY
+
+### Section 3.1 — Statutory Priority.
+
+Pursuant to MCL 700.3206, the Funeral Representative designated in this document has priority over all other persons, including my spouse, my adult children, my parents, my siblings, and any other family member or interested party, in making decisions regarding my funeral, the disposition of my remains, and any other matter described in Article IV. The Funeral Representative's decisions are binding on funeral homes, cemeteries, crematoriums, hospitals, mortuaries, and any other person or entity involved in my arrangements.
+
+### Section 3.2 — When Effective.
+
+This Funeral Representative Designation becomes effective at the moment of my death. The Funeral Representative may not exercise any authority under this designation while I am alive. While I am living, decisions regarding my health, treatment, and other matters are governed by my Patient Advocate Designation (if any) and my Durable Power of Attorney (if any).
+
+### Section 3.3 — Effect of Marriage Termination on Spouse Funeral Representative.
+
+If my spouse is named as Funeral Representative in this designation and our marriage is terminated by divorce, annulment, or court order, my spouse's designation as Funeral Representative is automatically revoked unless this document specifically states otherwise. The next designated Successor Funeral Representative shall serve as Funeral Representative.
+
+## ARTICLE IV — SCOPE OF AUTHORITY
+
+### Section 4.1 — Authority Granted.
+
+The Funeral Representative is authorized and directed to make all of the following decisions and take all of the following actions on my behalf after my death:
+
+  •  Determine the manner of disposition of my remains, including but not limited to burial, cremation, entombment, or anatomical donation.
+
+  •  Select the funeral home, mortuary, cemetery, crematorium, or other facility responsible for handling my remains.
+
+  •  Select the casket, urn, vault, headstone, monument, marker, and any other item used in connection with my final arrangements.
+
+  •  Determine the time, place, and form of any funeral service, memorial service, viewing, wake, religious observance, or other ceremony associated with my death.
+
+  •  Determine the location of burial, entombment, or scattering of cremated remains.
+
+  •  Arrange for the publication of my obituary and decide the content of the obituary.
+
+  •  Make decisions regarding the donation of my organs, tissues, eyes, or other body parts under Michigan's Uniform Anatomical Gift Act (MCL 333.10101 et seq.), to the extent such decisions remain to be made at the time of my death and have not already been resolved by my Patient Advocate Designation or other valid authorization.
+
+  •  Execute contracts, releases, authorizations, and other documents necessary to give effect to my arrangements.
+
+  •  Take possession of my remains for the purpose of effecting my final arrangements.
+
+### Section 4.2 — Funeral and Burial Preference.
+
+I have provided the following statement of my preference regarding my final arrangements. The Funeral Representative shall consider this preference but is not strictly bound by it, except to the extent that disregarding the preference would be unreasonable or contrary to my known wishes:
+
+{{#IF funeral_preference equals "burial"}}
+
+MY ELECTED PREFERENCE  ·  Burial.
+
+It is my preference that my remains be interred by burial. My Funeral Representative shall make the final arrangements consistent with this preference and with the resources available to my estate.
+
+{{/IF}}
+
+{{#IF funeral_preference equals "cremation"}}
+
+MY ELECTED PREFERENCE  ·  Cremation.
+
+It is my preference that my remains be disposed of by cremation. My Funeral Representative shall make the final arrangements consistent with this preference and with the resources available to my estate.
+
+{{/IF}}
+
+{{#IF funeral_preference equals "family_decides"}}
+
+MY ELECTED PREFERENCE  ·  Family Decides.
+
+I leave the decision regarding the manner of disposition of my remains (whether burial, cremation, or other lawful method) to my Funeral Representative, who shall consult with my surviving family members and select the method that best honors my known wishes and the family's preferences.
+
+{{/IF}}
+
+## ARTICLE V — FINANCIAL RESPONSIBILITY
+
+### Section 5.1 — Liability for Costs.
+
+Pursuant to MCL 700.3206(13), my Funeral Representative is personally liable for the reasonable costs of carrying out the decisions made under this designation. This liability includes the costs of the funeral, the disposition of my remains, any service or ceremony, and all related arrangements.
+
+### Section 5.2 — Reimbursement from Estate.
+
+My Funeral Representative is entitled to reimbursement from my estate for all reasonable costs incurred in carrying out my arrangements. My Personal Representative under my Last Will and Testament (or, if there is no will, under Michigan intestate succession) shall promptly reimburse my Funeral Representative upon receipt of itemized documentation of expenses, to the extent that my estate has sufficient assets to do so.
+
+### Section 5.3 — Pre-Need Funeral Contracts.
+
+If I have entered into any pre-need funeral, burial, cremation, or other arrangement contract before my death, my Funeral Representative shall honor and carry out the terms of that contract to the extent feasible. Information regarding any such contract should be located among my personal records or with the funeral home, cemetery, or other entity that issued the contract.
+
+## ARTICLE VI — FUNERAL REPRESENTATIVE'S DUTIES
+
+### Section 6.1 — Good Faith and Reasonableness.
+
+The Funeral Representative shall act in good faith, in a manner consistent with my known wishes, and with the care, judgment, and sensitivity ordinarily exercised by persons in similar circumstances. The Funeral Representative shall consider the resources of my estate when making arrangements and shall not incur expenses that are unreasonable in light of those resources.
+
+### Section 6.2 — Consultation with Family.
+
+Although the Funeral Representative has statutory priority over my family members in making decisions, the Funeral Representative is encouraged to consult with my surviving spouse, my children, and other close family members regarding my arrangements, where doing so is practical and does not unreasonably delay my final arrangements.
+
+### Section 6.3 — Records.
+
+The Funeral Representative shall keep records of all decisions made and expenses incurred in carrying out my final arrangements. These records shall be available for inspection by my Personal Representative, my surviving family members, or any court of competent jurisdiction upon request.
+
+## ARTICLE VII — REVOCATION
+
+### Section 7.1 — Revocation of Designation.
+
+I may revoke this Funeral Representative Designation at any time while I am alive and competent by any of the following methods: destroying the original Funeral Representative Designation with the intent to revoke it; executing a written revocation that specifically refers to this designation; or executing a new Funeral Representative Designation that revokes this one. A revocation that I execute in writing shall be effective upon execution; oral revocations are not effective.
+
+### Section 7.2 — Revocation of Successor Designation Only.
+
+I may revoke the designation of a Successor Funeral Representative while retaining the designation of the primary Funeral Representative, or vice versa, by executing a written modification of this designation that specifically identifies which designation is being revoked.
+
+## ARTICLE VIII — GENERAL PROVISIONS
+
+### Section 8.1 — Acceptance by Third Parties.
+
+Funeral homes, cemeteries, crematoriums, hospitals, mortuaries, and any other person or entity presented with this Funeral Representative Designation may rely on its authority. A person or entity that acts in good faith in reliance on this designation is not liable to my estate, my heirs, or any other person for any action taken in reliance on the document.
+
+### Section 8.2 — Photocopies.
+
+A photocopy or electronically reproduced copy of this Funeral Representative Designation shall have the same force and effect as the original.
+
+### Section 8.3 — Severability.
+
+If any provision of this Funeral Representative Designation is held to be invalid, unenforceable, or contrary to law, the remaining provisions shall continue in full force and effect.
+
+### Section 8.4 — Governing Law.
+
+This Funeral Representative Designation shall be governed by and construed in accordance with the laws of the State of Michigan, including MCL 700.3206.
+
+### Section 8.5 — Coordination with Other Documents.
+
+This Funeral Representative Designation is intended to be coordinated with my Last Will and Testament, my Patient Advocate Designation (which governs medical decisions while I am living), and my Durable Power of Attorney (which governs financial matters while I am living). To the extent that any conflict arises between this designation and any other estate planning document I have executed regarding matters within the scope of the Funeral Representative's authority, this designation shall control as to those matters.
+
+## EXECUTION
+
+IN WITNESS WHEREOF, I, {{client_full_name}}, the Declarant, sign my name to this Funeral Representative Designation on this _ day of _, 20_, in {{city}}, {{county}} County, Michigan, voluntarily and free from duress, fraud, and undue influence.
+
+[SIGNATURE] Declarant — Signature and Date
+
+The foregoing Funeral Representative Designation was signed and declared by the above-named Declarant in our presence as the Declarant's free and voluntary act for the purposes set forth therein. We, in the Declarant's presence and in the presence of each other, have subscribed our names as witnesses.
+
+[SIGNATURE] Witness One — Signature, Printed Name, and Address
+
+[SIGNATURE] Witness Two — Signature, Printed Name, and Address
+
+[NOTARY_BLOCK]
+## NOTARY ACKNOWLEDGMENT
+
+Recommended under MCL 700.3206(3) to enhance third-party acceptance
+
+## STATE OF MICHIGAN
+
+COUNTY OF {{county_upper}}
+
+On this _ day of _, 20_, before me, the undersigned, a Notary Public in and for said County and State, personally appeared {{client_full_name}}, known to me (or satisfactorily proven) to be the person whose name is subscribed to the within instrument, and who acknowledged that the person executed the same as the person's free and voluntary act for the purposes set forth therein.
+
+## NOTARY ACKNOWLEDGMENT
+
+Notary Public, State of Michigan
+
+County of __  ·  Acting in {{county}} County, Michigan
+
+My commission expires: _
+[/NOTARY_BLOCK]
+
+## ACCEPTANCE BY FUNERAL REPRESENTATIVE
+
+Optional acceptance — recommended for streamlined administration
+
+## IMPORTANT NOTICE TO FUNERAL REPRESENTATIVE
+
+Under MCL 700.3206, you are personally liable for the reasonable costs of carrying out the Declarant's arrangements, subject to reimbursement from the Declarant's estate. Signing this Acceptance is optional but recommended. It confirms your understanding of the role and creates a clear record for funeral homes, cemeteries, and other entities that will rely on your authority. You may decline to serve as Funeral Representative at any time before the Declarant's death by notifying the Declarant in writing.
+
+I, the undersigned Funeral Representative, accept appointment as Funeral Representative under the foregoing designation. I acknowledge that:
+
+(1)  I understand that I have been granted statutory priority over the Declarant's family and any other party in making decisions regarding the Declarant's funeral and the disposition of the Declarant's remains.
+
+(2)  I understand that my authority becomes effective at the moment of the Declarant's death.
+
+(3)  I understand that I am personally liable under MCL 700.3206(13) for the reasonable costs of carrying out the Declarant's arrangements, subject to reimbursement from the Declarant's estate.
+
+(4)  I will act in good faith, consistent with the Declarant's known wishes and the resources available to the Declarant's estate.
+
+(5)  I will keep records of decisions made and expenses incurred and make those records available to the Declarant's Personal Representative and family members upon request.
+
+Primary Funeral Representative: {{funeral_representative.full_name}}
+
+[SIGNATURE] Primary Funeral Representative — Signature and Date
+
+{{#IF successor_funeral_representative}}
+
+Successor Funeral Representative (sign when assuming role): {{successor_funeral_representative.full_name}}
+
+[SIGNATURE] Successor Funeral Representative — Signature and Date
+
+{{/IF}}
+`;
+
+export default template;

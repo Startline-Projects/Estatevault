@@ -184,10 +184,12 @@ export default function TrustPage() {
     if (!isCardComplete() || hasPartialName) return;
     if (activeCardId === "review") {
       const complexity = checkComplexity(intake);
-      sessionStorage.setItem("trustIntake", JSON.stringify(intake));
+      const intakeJson = JSON.stringify(intake);
+      sessionStorage.setItem("trustIntake", intakeJson);
       sessionStorage.setItem("trustUserId", userId || "");
       sessionStorage.setItem("trustComplexity", JSON.stringify(complexity));
       sessionStorage.setItem("trustPartner", partnerParam);
+      try { localStorage.setItem("trustIntake", JSON.stringify({ data: intake, ts: Date.now() })); } catch { /* quota */ }
       setStage("redirecting");
       router.push("/trust/checkout");
       return;

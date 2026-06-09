@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
+import { exchangeResetToken } from "@/lib/api-client/auth";
 
 export default function ResetPasswordPage() {
   const router = useRouter();
@@ -14,6 +15,7 @@ export default function ResetPasswordPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [sessionReady, setSessionReady] = useState(false);
+  const [linkUsed, setLinkUsed] = useState(false);
   const [done, setDone] = useState(false);
 
   const hasMinLength = password.length >= 8;
@@ -22,32 +24,26 @@ export default function ResetPasswordPage() {
   const isValid = hasMinLength && hasNumber && passwordsMatch;
 
   useEffect(() => {
-    const supabase = createClient();
-
     async function bootstrap() {
-      // PKCE flow: token_hash in query params must be exchanged first
       const params = new URLSearchParams(window.location.search);
       const tokenHash = params.get("token_hash");
       const type = params.get("type");
       if (tokenHash && type === "recovery") {
-        const { error } = await supabase.auth.verifyOtp({ token_hash: tokenHash, type: "recovery" });
-        if (!error) { setSessionReady(true); return; }
+        const result = await exchangeResetToken(tokenHash);
+        if (result.data) {
+          setSessionReady(true);
+          return;
+        }
+        if (result.error === "link_already_used") {
+          setLinkUsed(true);
+          return;
+        }
+        setError("This reset link is invalid or has expired. Please request a new one.");
+        return;
       }
-
-      // Fallback: session already exists (hash-based flow)
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session) { setSessionReady(true); return; }
     }
 
     bootstrap();
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if ((event === "PASSWORD_RECOVERY" || event === "SIGNED_IN") && session) {
-        setSessionReady(true);
-      }
-    });
-
-    return () => subscription.unsubscribe();
   }, []);
 
   async function handleSubmit(e: React.FormEvent) {
@@ -72,6 +68,33 @@ export default function ResetPasswordPage() {
     const role = user?.user_metadata?.role;
     const dest = role === "partner" ? "/pro" : role === "admin" ? "/admin" : "/dashboard";
     setTimeout(() => router.push(dest), 2000);
+  }
+
+  if (linkUsed) {
+    return (
+      <div className="min-h-screen bg-navy flex items-center justify-center px-6 py-12">
+        <div className="w-full max-w-md">
+          <Link href="/" className="block text-center text-2xl font-bold text-white mb-8">
+            EstateVault
+          </Link>
+          <div className="rounded-2xl bg-white p-8 shadow-xl text-center">
+            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-red-50">
+              <span className="text-3xl text-red-500">!</span>
+            </div>
+            <h1 className="mt-6 text-xl font-bold text-navy">Link Already Used</h1>
+            <p className="mt-3 text-sm text-charcoal/60">
+              This password reset link has already been used. Each link can only be used once.
+            </p>
+            <Link
+              href="/auth/forgot-password"
+              className="mt-6 inline-block rounded-full bg-gold px-6 py-3 text-sm font-semibold text-white hover:bg-gold/90 transition-colors"
+            >
+              Request New Link
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   if (done) {

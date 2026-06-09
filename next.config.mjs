@@ -60,7 +60,7 @@ const baseSecurityHeaders = [
 
 const nextConfig = {
   experimental: {
-    serverComponentsExternalPackages: ['pdf-lib'],
+    serverComponentsExternalPackages: ['pdf-lib', '@react-pdf/renderer'],
   },
   images: {
     remotePatterns: [

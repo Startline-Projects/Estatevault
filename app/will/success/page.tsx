@@ -43,6 +43,7 @@ function SuccessContent() {
   // Email-ownership token captured at checkout; required by set-password.
   useEffect(() => {
     setVerifiedToken(sessionStorage.getItem("evVerifiedToken") || "");
+    try { localStorage.removeItem("willIntake"); } catch { /* ignore */ }
   }, []);
 
   const pollDocuments = useCallback(async (oid: string) => {

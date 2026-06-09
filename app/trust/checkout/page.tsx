@@ -51,6 +51,7 @@ export default function TrustCheckoutPage() {
   const [conflictChecking, setConflictChecking] = useState(false);
   const [emailVerified, setEmailVerified] = useState(false);
   const [verifiedEmail, setVerifiedEmail] = useState("");
+  const [intakeData, setIntakeData] = useState<Record<string, unknown> | null>(null);
 
   const total = promoApplied ? 0 : (attorneyReview ? (PRICES.trust + PRICES.attorneyReview) / 100 : PRICES.trust / 100);
 
@@ -59,8 +60,28 @@ export default function TrustCheckoutPage() {
       const supabase = createClient();
       const { data: { user } } = await supabase.auth.getUser();
       if (user) { setUserId(user.id); setPromoEmail(user.email || ""); setCustomerEmail(user.email || ""); }
-      const intake = sessionStorage.getItem("trustIntake");
-      if (!intake) { router.push("/trust"); return; }
+      let raw = sessionStorage.getItem("trustIntake");
+      if (!raw) {
+        const ls = localStorage.getItem("trustIntake");
+        if (ls) {
+          try {
+            const envelope = JSON.parse(ls);
+            const INTAKE_TTL = 60 * 60 * 1000;
+            if (envelope.ts && Date.now() - envelope.ts > INTAKE_TTL) {
+              localStorage.removeItem("trustIntake");
+            } else {
+              raw = JSON.stringify(envelope.data ?? envelope);
+            }
+          } catch { /* corrupt */ }
+        }
+      }
+      if (!raw) { router.push("/trust"); return; }
+      try {
+        setIntakeData(JSON.parse(raw));
+      } catch {
+        router.push("/trust");
+        return;
+      }
       setPartnerId(sessionStorage.getItem("trustPartner") || "");
       const comp = sessionStorage.getItem("trustComplexity");
       if (comp) {
@@ -101,11 +122,10 @@ export default function TrustCheckoutPage() {
   async function handleTestSubmit() {
     setLoading(true); setError("");
     try {
-      const intake = sessionStorage.getItem("trustIntake");
-      if (!intake) { router.push("/trust"); return; }
-      const { data, error: err } = await checkoutTrust({ userId: null, attorneyReview: false, intakeAnswers: JSON.parse(intake), promoCode, complexityFlag: false, complexityReasons: [], declinedAttorneyReview: true, partnerId: partnerId || null });
+      if (!intakeData) { router.push("/trust"); return; }
+      const { data, error: err } = await checkoutTrust({ userId: null, attorneyReview: false, intakeAnswers: intakeData, promoCode, complexityFlag: false, complexityReasons: [], declinedAttorneyReview: true, partnerId: partnerId || null });
       if (err || !data) { setError(err || "Something went wrong."); setLoading(false); return; }
-      if ("orderId" in data && (data as Record<string, unknown>).test) { router.push(`/trust/success?test=true&order_id=${data.orderId}`); return; }
+      if ("orderId" in data && (data as Record<string, unknown>).test) { try { localStorage.removeItem("trustIntake"); } catch { /* ignore */ } router.push(`/trust/success?test=true&order_id=${data.orderId}`); return; }
     } catch { setError("Something went wrong."); setLoading(false); }
   }
 
@@ -113,17 +133,17 @@ export default function TrustCheckoutPage() {
     setLoading(true);
     setError("");
     try {
-      const intake = sessionStorage.getItem("trustIntake");
-      if (!intake) { router.push("/trust"); return; }
+      if (!intakeData) { router.push("/trust"); return; }
       const { data, error: err } = await checkoutTrust({
         userId: userId || null, attorneyReview: false,
-        intakeAnswers: JSON.parse(intake), promoCode, email: promoEmail,
+        intakeAnswers: intakeData, promoCode, email: promoEmail,
         complexityFlag: complexity.flagged, complexityReasons: complexity.reasons,
         declinedAttorneyReview: false, partnerId: partnerId || null,
       });
       if (err || !data) { setError(err || "Something went wrong."); setLoading(false); setShowAcknowledgment(false); return; }
       const result = data as Record<string, unknown>;
       if (result.free) {
+        try { localStorage.removeItem("trustIntake"); } catch { /* ignore */ }
         router.push(`/trust/success?promo=true&order_id=${result.orderId}&email=${encodeURIComponent(result.email as string)}&user_id=${result.userId || ""}`);
         return;
       }
@@ -162,17 +182,17 @@ export default function TrustCheckoutPage() {
     setLoading(true);
     setError("");
     try {
-      const intake = sessionStorage.getItem("trustIntake");
-      if (!intake) { router.push("/trust"); return; }
+      if (!intakeData) { router.push("/trust"); return; }
       const { data, error: err } = await checkoutTrust({
         userId: userId || null, attorneyReview,
-        intakeAnswers: JSON.parse(intake),
+        intakeAnswers: intakeData,
         complexityFlag: complexity.flagged, complexityReasons: complexity.reasons,
         declinedAttorneyReview: complexity.flagged && !attorneyReview, partnerId: partnerId || null,
         customerEmail,
         confirmOverride: conflictAction === "override" && overrideAck,
       });
       if (err || !data) { setError(err || "Something went wrong."); setLoading(false); return; }
+      try { localStorage.removeItem("trustIntake"); } catch { /* ignore */ }
       if ("url" in data) window.location.href = data.url;
     } catch {
       setError("Something went wrong. Please try again.");

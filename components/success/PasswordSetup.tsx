@@ -114,7 +114,7 @@ export default function PasswordSetup({ email, userId, defaultName = "", verifie
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-white/60 hover:text-white/70 text-sm"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-gold/90 hover:text-gold text-sm font-medium"
             >
               {showPassword ? "Hide" : "Show"}
             </button>
@@ -147,7 +147,7 @@ export default function PasswordSetup({ email, userId, defaultName = "", verifie
             <button
               type="button"
               onClick={() => setShowConfirm(!showConfirm)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-white/60 hover:text-white/70 text-sm"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-gold/90 hover:text-gold text-sm font-medium"
             >
               {showConfirm ? "Hide" : "Show"}
             </button>

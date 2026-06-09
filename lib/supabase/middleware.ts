@@ -158,6 +158,13 @@ export async function updateSession(request: NextRequest) {
     }
   }
 
+  // Non-customer domains: root path goes straight to login
+  if ((isPartnerHost || isAdminHost || isSalesHost) && pathname === "/") {
+    const url = request.nextUrl.clone();
+    url.pathname = "/auth/login";
+    return NextResponse.redirect(url);
+  }
+
   // Public routes, no auth required
   const publicPaths = ["/", "/quiz", "/will", "/trust", "/auth", "/attorney-referral", "/pro-partners", "/partners", "/professionals", "/farewell", "/khan-lawgroup", "/api/webhooks", "/api/documents/process", "/api/documents/cleanup-test-orders", "/api/documents/process-now", "/api/documents/regenerate-missing", "/api/documents/check-status", "/api/attorney/check-sla", "/api/checkout", "/api/quiz", "/api/professionals", "/api/farewell", "/api/admin/test-promo", "/api/documents/download-zip", "/api/auth/set-password", "/api/auth/handoff", "/api/auth/signup", "/api/auth/recovery", "/api/auth/resend-verification", "/api/auth/check-email", "/api/auth/send-verify-code", "/api/auth/verify-code", "/api/auth/send-verify-link", "/api/auth/verify-link", "/api/auth/check-verification", "/a", "/affiliate-signup", "/api/affiliate", "/vault/trustee-confirm", "/api/vault/trustees", "/api/partners/branding", "/trustee", "/api/trustee"];
   const isPublic = publicPaths.some(

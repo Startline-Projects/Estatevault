@@ -1,5 +1,8 @@
 import { z } from "zod";
 import { validateCategoryData } from "@/lib/validation/vaultFieldRules";
+import type { QuizAnswers } from "@/lib/quiz-types";
+import type { WillIntake } from "@/lib/will-types";
+import type { TrustIntake } from "@/lib/trust-types";
 
 export const affiliateSignupSchema = z.object({
   fullName: z.string().min(1, "Full name is required"),
@@ -89,27 +92,177 @@ export const vaultDownloadUrlSchema = z.object({
   path: z.string().min(1),
 });
 
-// ---- Checkout (Phase 3) ----
-// Body shapes for the checkout group routes. Permissive on existing optional
-// fields — Phase 3 rejects malformed input (bad emails, missing required
-// fields) without changing how valid requests behave.
+// ---- Quiz answers (server-side validation) ----
 
-// Common shape for will/trust intake. `.passthrough()` keeps any extra fields
-// the form sends; only the three the route actually consumes as strings are
-// typed. The whole object is stored on the order row as JSON anyway.
-const intakeAnswersSchema = z
-  .object({
-    email: z.string().optional(),
-    firstName: z.string().optional(),
-    lastName: z.string().optional(),
-  })
-  .passthrough();
+const YES_NO = z.enum(["Yes", "No"]);
+const YES_NO_OR_EMPTY = z.union([z.enum(["Yes", "No"]), z.literal("")]);
+
+export const HARD_STOP_VALUES = {
+  specialNeedsChildren: "Yes" as const,
+  additionalSituation: "I have a family member with special needs" as const,
+};
+
+export const quizAnswersSchema = z.object({
+  state: z.enum(["Michigan", "Other"]),
+  maritalStatus: z.enum(["Single", "Married", "Divorced", "Widowed"]),
+  hasChildren: YES_NO,
+  numberOfChildren: z.union([z.enum(["1", "2", "3", "4+"]), z.literal("")]),
+  specialNeedsChildren: YES_NO_OR_EMPTY,
+  ownsRealEstate: YES_NO,
+  realEstateOnlyMichigan: YES_NO_OR_EMPTY,
+  ownsBusiness: YES_NO,
+  netWorth: z.enum(["Under $150K", "$150K to $500K", "$500K to $1M", "Over $1M"]),
+  privacyImportant: YES_NO,
+  charitableGiving: YES_NO,
+  hasExistingPlan: YES_NO,
+  existingPlanAction: z.union([z.enum(["Replace It", "Create New"]), z.literal("")]),
+  financeManager: z.string().max(200),
+  medicalDecisionMaker: z.string().max(200),
+  childGuardian: z.string().max(200),
+  additionalSituation: z.enum([
+    "I own a business with partners",
+    "I have a family member with special needs",
+    "None of the above",
+  ]),
+  worksWithAdvisor: YES_NO,
+  shareWithAdvisor: z.boolean(),
+});
+
+// Irrevocable trust is also a business-rule hard stop, but the platform only
+// generates revocable living trusts — there is no UI path or intake field for
+// irrevocable trusts, so no runtime check is needed here.
+export function detectQuizHardStop(answers: z.infer<typeof quizAnswersSchema>): string | null {
+  if (answers.specialNeedsChildren === HARD_STOP_VALUES.specialNeedsChildren) {
+    return "special_needs_dependent";
+  }
+  if (answers.additionalSituation === HARD_STOP_VALUES.additionalSituation) {
+    return "special_needs_family_member";
+  }
+  return null;
+}
+
+// ---- Checkout (Phase 3) ----
+
+const MARITAL_STATUS = z.enum(["Single", "Married", "Divorced", "Widowed"]);
+const RELATIONSHIP = z.enum(["Spouse/Partner", "Adult Child", "Sibling", "Parent", "Friend", "Other"]);
+const BENEFICIARY_REL = z.enum(["Spouse/Partner", "Child", "Parent", "Sibling", "Other"]);
+const CONTINGENT_REL = z.enum(["Child", "Parent", "Sibling", "Friend", "Charity/Organization", "Other"]);
+const GUARDIAN_REL = z.enum(["Spouse/Partner", "Sibling", "Parent", "Friend", "Other"]);
+
+const beneficiarySchema = z.object({
+  name: z.string().min(1).max(200),
+  relationship: BENEFICIARY_REL,
+  share: z.string().max(10),
+});
+
+const contingentBeneficiarySchema = z.object({
+  name: z.string().min(1).max(200),
+  relationship: CONTINGENT_REL,
+  share: z.string().max(10),
+});
+
+const RELATIONSHIP_OR_EMPTY = z.union([RELATIONSHIP, z.literal("")]);
+const GUARDIAN_REL_OR_EMPTY = z.union([GUARDIAN_REL, z.literal("")]);
+
+const willIntakeSchema = z.object({
+  email: z.string().email().optional(),
+  firstName: z.string().min(1).max(100),
+  lastName: z.string().min(1).max(100),
+  dateOfBirth: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  city: z.string().min(1).max(100),
+  state: z.string().min(1).max(50),
+  maritalStatus: MARITAL_STATUS,
+  hasMinorChildren: YES_NO,
+  executorName: z.string().min(1).max(200),
+  executorRelationship: RELATIONSHIP,
+  successorExecutorName: z.string().max(200),
+  successorExecutorRelationship: RELATIONSHIP_OR_EMPTY,
+  beneficiaries: z.array(beneficiarySchema).min(1).max(20),
+  beneficiariesEqualShares: YES_NO,
+  guardianName: z.string().max(200),
+  guardianRelationship: GUARDIAN_REL_OR_EMPTY,
+  successorGuardianName: z.string().max(200),
+  hasContingentBeneficiary: YES_NO,
+  contingentBeneficiaries: z.array(contingentBeneficiarySchema).max(20),
+  contingentEqualShares: z.string().max(10),
+  organDonation: YES_NO,
+  hasSpecificGifts: YES_NO,
+  specificGiftsDescription: z.string().max(5000),
+});
+
+const TRUST_ASSET_TYPES = [
+  "Primary home / real estate in Michigan",
+  "Real estate in another state",
+  "Bank and investment accounts",
+  "Business interests",
+  "Vehicles",
+  "Personal property and valuables",
+  "Digital assets and cryptocurrency",
+] as const;
+
+const POA_POWERS = [
+  "Banking and finances",
+  "Real estate transactions",
+  "Business operations",
+  "Tax filings",
+] as const;
+
+const trustIntakeSchema = z.object({
+  email: z.string().email().optional(),
+  firstName: z.string().min(1).max(100),
+  lastName: z.string().min(1).max(100),
+  dateOfBirth: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  city: z.string().min(1).max(100),
+  state: z.string().min(1).max(50),
+  maritalStatus: MARITAL_STATUS,
+  trustName: z.string().max(300),
+  primaryTrustee: z.enum(["Myself", "Someone else"]),
+  trusteeName: z.string().max(200),
+  successorTrusteeName: z.string().min(1).max(200),
+  successorTrusteeRelationship: RELATIONSHIP,
+  additionalSuccessorTrustees: z.array(z.object({
+    name: z.string().min(1).max(200),
+    relationship: RELATIONSHIP,
+  })).max(2),
+  beneficiaries: z.array(beneficiarySchema).min(1).max(20),
+  beneficiariesEqualShares: YES_NO,
+  distributionAge: z.string().max(10),
+  hasMinorChildren: YES_NO,
+  guardianName: z.string().max(200),
+  guardianRelationship: GUARDIAN_REL_OR_EMPTY,
+  successorGuardianName: z.string().max(200),
+  assetTypes: z.array(z.enum(TRUST_ASSET_TYPES)).min(1),
+  executorName: z.string().min(1).max(200),
+  executorRelationship: RELATIONSHIP,
+  successorExecutorName: z.string().max(200),
+  successorExecutorRelationship: RELATIONSHIP_OR_EMPTY,
+  poaAgentName: z.string().min(1).max(200),
+  poaAgentRelationship: RELATIONSHIP,
+  poaSuccessorAgentName: z.string().max(200),
+  poaSuccessorAgentRelationship: RELATIONSHIP_OR_EMPTY,
+  poaPowers: z.array(z.enum(POA_POWERS)).min(1),
+  patientAdvocateName: z.string().min(1).max(200),
+  patientAdvocateRelationship: RELATIONSHIP,
+  successorPatientAdvocateName: z.string().max(200),
+  organDonation: YES_NO,
+  hasHealthcareWishes: YES_NO,
+  healthcareWishesDescription: z.string().max(5000),
+  hasContingentBeneficiary: YES_NO,
+  contingentBeneficiaries: z.array(contingentBeneficiarySchema).max(20),
+  contingentEqualShares: z.string().max(10),
+  hasSpecificGifts: YES_NO,
+  specificGiftsDescription: z.string().max(5000),
+});
+
+type _QuizSchemaCheck = z.infer<typeof quizAnswersSchema> extends QuizAnswers ? true : never;
+type _WillSchemaCheck = z.infer<typeof willIntakeSchema> extends WillIntake ? true : never;
+type _TrustSchemaCheck = z.infer<typeof trustIntakeSchema> extends TrustIntake ? true : never;
 
 // POST /api/checkout/will
 export const willCheckoutSchema = z.object({
   userId: z.string().nullable().optional(),
   attorneyReview: z.boolean().optional().default(false),
-  intakeAnswers: intakeAnswersSchema,
+  intakeAnswers: willIntakeSchema,
   promoCode: z.string().max(64).optional(),
   email: z.string().email().optional(),
   partnerId: z.string().nullable().optional(),
@@ -120,7 +273,7 @@ export const willCheckoutSchema = z.object({
 export const trustCheckoutSchema = z.object({
   userId: z.string().nullable().optional(),
   attorneyReview: z.boolean().optional().default(false),
-  intakeAnswers: intakeAnswersSchema,
+  intakeAnswers: trustIntakeSchema,
   complexityFlag: z.boolean().optional(),
   complexityReasons: z.array(z.string()).optional(),
   declinedAttorneyReview: z.boolean().optional(),
@@ -216,6 +369,10 @@ export const authHandoffSchema = z.object({
 
 export const authHandoffConsumeSchema = z.object({
   token: z.string().min(1),
+});
+
+export const authExchangeResetTokenSchema = z.object({
+  token_hash: z.string().min(1),
 });
 
 export const authRecoverySchema = z.object({
@@ -375,7 +532,7 @@ export const salesCreateRepSchema = z.object({
 
 export const salesPartnerNotesSchema = z.object({
   partnerId: z.string().min(1),
-  note: z.string().min(1),
+  note: z.string().min(1).max(5000),
 });
 
 export const salesRepsUpdateSchema = z.object({
@@ -424,7 +581,7 @@ export const professionalRequestAccessSchema = z.object({
 });
 
 export const quizPersonalizeSchema = z.object({
-  quiz_answers: z.record(z.string(), z.unknown()),
+  quiz_answers: quizAnswersSchema,
   recommendation: z.enum(["will", "trust"]),
 });
 

@@ -67,6 +67,10 @@ export function recovery(email: string): Promise<ApiResult<{ success: boolean }>
   return publicPost("/api/auth/recovery", { email });
 }
 
+export function exchangeResetToken(tokenHash: string): Promise<ApiResult<{ success: boolean }>> {
+  return publicPost("/api/auth/exchange-reset-token", { token_hash: tokenHash });
+}
+
 export function setPassword(body: {
   email: string;
   password: string;

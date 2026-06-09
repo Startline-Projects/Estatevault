@@ -1,0 +1,199 @@
+HIPAA
+
+AUTHORIZATION
+
+USE & DISCLOSURE OF PROTECTED HEALTH INFORMATION
+
+OF
+
+{{client_full_name_upper}}
+
+Patient: {{client_full_name}}  ·  Date of Birth: {{client_dob}}
+
+Residence: {{street_address}}, {{city}}, {{county}} County, Michigan  {{zip}}
+
+Effective: Immediately upon signing
+
+Expiration: {{hipaa_expiration_date}}  (7 years from execution)
+
+## OPERATION OF THIS DOCUMENT
+
+This HIPAA Authorization is a federal document governed by the Health Insurance Portability and Accountability Act and its implementing regulations at 45 C.F.R. § 164.508. It takes effect immediately upon signing and authorizes the persons listed in Section 3 to receive your protected health information from any healthcare provider, insurer, or other covered entity. You do NOT need to be incapacitated. The persons listed below may use this document at any time. You may revoke this authorization at any time by following the instructions in Section 5.
+
+Federal Health Insurance Portability and Accountability Act of 1996 (HIPAA)
+
+45 C.F.R. Part 160  ·  45 C.F.R. Part 164  ·  45 C.F.R. § 164.508
+
+{{#IF attorney_review_purchased}}
+
+## ATTORNEY REVIEWED & APPROVED
+
+Reviewing Attorney: {{reviewing_attorney_name}}  ·  Bar No. {{reviewing_attorney_bar_number}}
+
+Firm: {{reviewing_attorney_firm}}  ·  Reviewed: {{review_date}}
+
+{{/IF}}
+
+## IMPORTANT INFORMATION FOR THE PATIENT
+
+This document gives certain people the right to receive your private medical information. Read this document carefully before signing. The persons you authorize will be able to discuss your care with your doctors, request copies of your medical records, file insurance claims on your behalf, and otherwise act on your behalf regarding your health information. If you do not understand any provision, consult an attorney or a healthcare professional before signing.
+
+## 45 C.F.R. § 164.508 COMPLIANCE  ·  CORE ELEMENTS PRESENT
+
+This authorization contains all six core elements and all three required statements mandated by federal regulation, indexed below:
+
+✓  Core Element 1.  Specific description of PHI (Section 2.1)
+
+✓  Core Element 2.  Persons authorized to disclose (Section 2.2)
+
+✓  Core Element 3.  Persons authorized to receive PHI (Section 3)
+
+✓  Core Element 4.  Statement of purpose (Section 4)
+
+✓  Core Element 5.  Expiration date (Section 5)
+
+✓  Core Element 6.  Patient signature and date (Section 9)
+
+✓  Required Statement 1.  Right to revoke in writing (Section 6)
+
+✓  Required Statement 2.  Treatment, payment, enrollment, and eligibility conditioning (Section 7.1)
+
+✓  Required Statement 3.  Potential for redisclosure (Section 7.3)
+
+## SECTION 1 — IDENTIFICATION OF PATIENT
+
+### 1.1 — Patient.
+
+I, {{client_full_name}}, am the Patient identified in this Authorization. I provide the following information for the purpose of identifying my health records:
+
+  •  Full legal name: {{client_full_name}}
+
+  •  Date of birth: {{client_dob}}
+
+  •  Residence address: {{street_address}}, {{city}}, Michigan {{zip}}
+
+### 1.2 — Statement of Capacity.
+
+I am eighteen (18) years of age or older and of sound mind. I am executing this HIPAA Authorization voluntarily, free from duress, fraud, and undue influence.
+
+## SECTION 2 — AUTHORIZATION FOR USE AND DISCLOSURE
+
+### 2.1 — Description of Protected Health Information.
+
+I authorize the use and disclosure of all of my protected health information, including but not limited to: medical records and clinical notes from all healthcare providers who have provided care to me; laboratory test results, imaging studies, and diagnostic reports; prescription and medication records, including pharmacy records; mental health and substance abuse treatment records (subject to the additional protections of federal law where applicable, including 42 C.F.R. Part 2 for substance abuse records); hospital admission, discharge, and treatment records; records relating to communicable diseases, including HIV/AIDS; genetic testing results and family medical history; insurance billing and payment records; records of communications between healthcare providers and other authorized parties about my care; and any other records relating to my physical or mental health, healthcare, or payment for healthcare services. This authorization covers all such information regardless of the date the information was created or the date the medical service was provided.
+
+### 2.2 — Covered Entities Authorized to Disclose.
+
+I authorize the following classes of persons and entities to disclose my protected health information: all healthcare providers, including physicians, dentists, optometrists, mental health professionals, chiropractors, podiatrists, nurses, nurse practitioners, physician assistants, and other licensed healthcare professionals who have provided care to me; all hospitals, clinics, surgery centers, urgent care facilities, nursing homes, rehabilitation facilities, hospices, and other healthcare institutions where I have received care; all pharmacies that have filled prescriptions for me; all laboratories, imaging centers, and diagnostic facilities that have performed tests on me; all health insurance companies, health maintenance organizations, and other insurers that have covered my healthcare; all government healthcare programs that have provided benefits to me, including Medicare, Medicaid, the Veterans Health Administration, and Tricare; and any other person or entity that holds my protected health information in connection with any aspect of my healthcare or payment for healthcare.
+
+### 2.3 — Excluded Records.
+
+This authorization does NOT cover psychotherapy notes as defined in 45 C.F.R. § 164.501. Under 45 C.F.R. § 164.508(b)(3), psychotherapy notes require a separate, single-purpose authorization that cannot be combined with other authorizations. If I wish to authorize disclosure of my psychotherapy notes, I will execute a separate authorization for that purpose.
+
+## SECTION 3 — PERSONS AUTHORIZED TO RECEIVE PROTECTED HEALTH INFORMATION
+
+I authorize the following persons to receive my protected health information from the covered entities identified in Section 2.2:
+
+### 3.1 — Patient Advocate.
+
+  •  {{patient_advocate.full_name}}, my {{patient_advocate.relationship}}.
+
+### 3.2 — Successor Patient Advocate.
+
+  •  {{successor_patient_advocate.full_name}}, my {{successor_patient_advocate.relationship}}.
+
+{{#IF hipaa_additional_authorized_parties_not_empty}}
+
+### 3.3 — Additional Authorized Parties.
+
+{{#FOREACH hipaa_additional_authorized_parties}}
+
+  •  {{full_name}}, my {{relationship}}.
+
+{{/FOREACH}}
+
+{{/IF}}
+
+The persons listed above are authorized to receive my protected health information, communicate with my healthcare providers about my care, and obtain copies of my medical records.
+
+## SECTION 4 — PURPOSE OF USE OR DISCLOSURE
+
+The purpose of the use or disclosure authorized by this document is at the request of the individual (the Patient). The authorized persons listed in Section 3 may use my protected health information for any lawful purpose, including but not limited to: coordinating my healthcare with my providers; filing or assisting with insurance claims and appeals; communicating with my Patient Advocate or successor about my health if I am incapacitated; coordinating long-term care and elder care arrangements; filing or assisting with applications for government benefits, including Medicare, Medicaid, Social Security disability, and Veterans Affairs benefits; and any other lawful purpose consistent with my interest.
+
+## SECTION 5 — EXPIRATION
+
+This authorization expires on {{hipaa_expiration_date}}, which is seven (7) years from the date I sign this authorization, unless I revoke it earlier in writing or unless I execute a new authorization that supersedes this one.
+
+If I wish to extend the authorization, I may execute a new authorization at any time. The new authorization replaces this one as to any new disclosures after the date of the new authorization.
+
+## SECTION 6 — REVOCATION RIGHTS
+
+### 6.1 — Right to Revoke.
+
+I understand that I have the right to revoke this authorization at any time, except to the extent that a covered entity has already taken action in reliance on this authorization before receiving my written revocation. To revoke this authorization, I must submit a written revocation to the relevant covered entity in one of the following manners: hand delivery to the covered entity's Privacy Officer; certified mail (return receipt requested) to the covered entity's Privacy Officer at the address provided on the covered entity's HIPAA Notice of Privacy Practices; or any other method permitted by the covered entity's policies, as set forth in the covered entity's HIPAA Notice of Privacy Practices.
+
+A written revocation is effective when received by the covered entity. Revocation is not retroactive: a covered entity that has already disclosed PHI in reliance on this authorization before receiving the written revocation is not liable for that disclosure.
+
+### 6.2 — Limitation on Revocation.
+
+Revocation does not affect disclosures already made in reliance on this authorization before the covered entity received the written revocation, disclosures required by law (court order, subpoena, or other legal process), or disclosures necessary to allow the covered entity to comply with the Privacy Rule itself.
+
+## SECTION 7 — REQUIRED STATEMENTS UNDER 45 C.F.R. § 164.508
+
+### 7.1 — Treatment, Payment, Enrollment, and Eligibility.
+
+My signing of this authorization is voluntary. No healthcare provider, insurer, or other covered entity may condition my treatment, my payment, my enrollment in a health plan, or my eligibility for benefits on my signing this authorization, except in the limited circumstances permitted by 45 C.F.R. § 164.508(b)(4) (relating to research-related treatment, eligibility for benefits underwritten by the insurer who is requesting the authorization, healthcare consisting solely of creation of PHI for disclosure to a third party, and certain other limited situations).
+
+### 7.2 — Right to Receive a Copy.
+
+I have the right to receive a copy of this signed authorization. By signing this authorization, I acknowledge that I have been offered a copy.
+
+### 7.3 — Redisclosure of Information.
+
+I understand that protected health information disclosed pursuant to this authorization may be subject to redisclosure by the recipient and may no longer be protected by federal privacy regulations. Once protected health information is disclosed to a person who is not a covered entity under HIPAA, the recipient is not bound by HIPAA's privacy and security rules with respect to the disclosed information.
+
+## SECTION 8 — PROVIDER RELIANCE AND GENERAL PROVISIONS
+
+### 8.1 — Direction to Healthcare Providers.
+
+I direct that any covered entity holding my protected health information accept this authorization as authority to disclose my protected health information to the persons listed in Section 3. Healthcare providers and other covered entities are entitled to rely on this authorization without further inquiry, except as required by 45 C.F.R. § 164.508.
+
+### 8.2 — Photocopies.
+
+A photocopy or electronically reproduced copy of this authorization shall have the same force and effect as the original.
+
+### 8.3 — Severability.
+
+If any provision of this authorization is held to be invalid, unenforceable, or contrary to law, the remaining provisions shall continue in full force and effect to the extent possible.
+
+### 8.4 — Governing Law.
+
+This authorization is governed by federal law, specifically the Health Insurance Portability and Accountability Act of 1996 and its implementing regulations at 45 C.F.R. Part 164. To the extent that any matter is not addressed by federal law, this authorization shall be governed by the laws of the State of Michigan.
+
+## SIGNATURE
+
+Section 9  ·  Core Element 6
+
+IN WITNESS WHEREOF, I, {{client_full_name}}, the Patient, sign this HIPAA Authorization voluntarily on this _ day of _, 20_, in {{city}}, {{county}} County, Michigan, having received a copy of this signed authorization.
+
+[SIGNATURE] Patient — Signature and Date
+
+[NOTARY_BLOCK]
+## NOTARY ACKNOWLEDGMENT
+
+Optional under federal law — recommended to enhance third-party acceptance
+
+## STATE OF MICHIGAN
+
+COUNTY OF {{county_upper}}
+
+On this _ day of _, 20_, before me, the undersigned, a Notary Public in and for said County and State, personally appeared {{client_full_name}}, known to me (or satisfactorily proven) to be the person whose name is subscribed to the within instrument, and who acknowledged that the person executed the same as the person's free and voluntary act for the purposes set forth therein.
+
+## NOTARY ACKNOWLEDGMENT
+
+Notary Public, State of Michigan
+
+County of __  ·  Acting in {{county}} County, Michigan
+
+My commission expires: _
+[/NOTARY_BLOCK]

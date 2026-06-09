@@ -7,6 +7,7 @@ import { uploadDocument } from "@/lib/documents/storage";
 import { sendDocumentEmail, sendAttorneyReviewPendingEmail, buildAssetChecklist } from "@/lib/email";
 import { wantsNotification } from "@/lib/notifications/prefs";
 import { getTemplate } from "@/lib/documents/templates/resolve";
+import { tryTemplateRender } from "@/lib/documents/generate-from-template";
 import * as auditLogRepo from "@/lib/repos/server/auditLogRepo";
 
 // Public, post-payment generation trigger fired by the order success page
@@ -115,30 +116,39 @@ export const GET = withRoute(async (request: NextRequest) => {
     for (const docType of documentTypes) {
       try {
         log.push(`7. Generating ${docType}...`);
-        const template = await getTemplate(docType);
-        const userPrompt = template.buildPrompt(quizAnswers);
-        const maxTokens = docType === "trust" ? 16000 : 8000;
+        const clientFullName = String(quizAnswers.firstName || quizAnswers.first_name || "") + " " + String(quizAnswers.lastName || quizAnswers.last_name || "");
+        let documentText: string;
+        let pdfBuffer: Buffer;
 
-        const response = await claude.messages.create({
-          model: CLAUDE_MODEL,
-          max_tokens: maxTokens,
-          system: template.systemPrompt,
-          messages: [{ role: "user", content: userPrompt }],
-        });
+        const templateResult = await tryTemplateRender(docType, quizAnswers, partnerName, partnerLogoUrl, clientFullName);
+        if (templateResult) {
+          pdfBuffer = templateResult.pdfBuffer;
+          documentText = templateResult.documentText;
+          log.push(`   ${docType}: template-rendered ${documentText.length} chars`);
+        } else {
+          const template = await getTemplate(docType);
+          const userPrompt = template.buildPrompt(quizAnswers);
+          const maxTokens = docType === "trust" ? 16000 : 8000;
 
-        const documentText = response.content[0].type === "text" ? response.content[0].text : "";
-        log.push(`   ${docType}: generated ${documentText.length} chars`);
+          const response = await claude.messages.create({
+            model: CLAUDE_MODEL,
+            max_tokens: maxTokens,
+            system: template.systemPrompt,
+            messages: [{ role: "user", content: userPrompt }],
+          });
 
-        const clientFullName = String(quizAnswers.firstName || "") + " " + String(quizAnswers.lastName || "");
-        const { generatePDF } = await import("@/lib/documents/generate-pdf");
-        const pdfBuffer = await generatePDF(
-          documentText, docType,
-          clientFullName,
-          partnerName, undefined, String(quizAnswers.city || ""),
-          partnerLogoUrl
-        );
+          documentText = response.content[0].type === "text" ? response.content[0].text : "";
+          log.push(`   ${docType}: claude-generated ${documentText.length} chars`);
 
-        // Editable DOCX for attorney review (non-fatal if it fails).
+          const { generatePDF } = await import("@/lib/documents/generate-pdf");
+          pdfBuffer = await generatePDF(
+            documentText, docType,
+            clientFullName,
+            partnerName, undefined, String(quizAnswers.city || ""),
+            partnerLogoUrl
+          );
+        }
+
         let docxBuffer: Buffer | undefined;
         if (isAttorneyReview) {
           try {

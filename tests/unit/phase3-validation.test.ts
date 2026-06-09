@@ -77,7 +77,7 @@ describe("validation registry", () => {
   });
 
   it("dead intake schemas were removed", () => {
-    for (const dead of ["willIntakeSchema", "trustIntakeSchema", "quizAnswersSchema"]) {
+    for (const dead of ["willIntakeSchema", "trustIntakeSchema"]) {
       expect(schemas).not.toMatch(new RegExp(`export const ${dead}\\b`));
     }
   });

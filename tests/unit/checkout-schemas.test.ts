@@ -11,26 +11,115 @@ import {
   checkConflictSchema,
 } from "@/lib/validation/schemas";
 
+const VALID_WILL_INTAKE = {
+  firstName: "John",
+  lastName: "Doe",
+  dateOfBirth: "1990-01-15",
+  city: "Detroit",
+  state: "Michigan",
+  maritalStatus: "Married" as const,
+  hasMinorChildren: "No" as const,
+  executorName: "Jane Doe",
+  executorRelationship: "Spouse/Partner" as const,
+  successorExecutorName: "",
+  successorExecutorRelationship: "",
+  beneficiaries: [{ name: "Jane Doe", relationship: "Spouse/Partner" as const, share: "100" }],
+  beneficiariesEqualShares: "Yes" as const,
+  guardianName: "",
+  guardianRelationship: "",
+  successorGuardianName: "",
+  hasContingentBeneficiary: "No" as const,
+  contingentBeneficiaries: [],
+  contingentEqualShares: "",
+  organDonation: "Yes" as const,
+  hasSpecificGifts: "No" as const,
+  specificGiftsDescription: "",
+};
+
+const VALID_TRUST_INTAKE = {
+  firstName: "John",
+  lastName: "Doe",
+  dateOfBirth: "1990-01-15",
+  city: "Detroit",
+  state: "Michigan",
+  maritalStatus: "Married" as const,
+  trustName: "The John Doe Revocable Living Trust",
+  primaryTrustee: "Myself" as const,
+  trusteeName: "",
+  successorTrusteeName: "Jane Doe",
+  successorTrusteeRelationship: "Spouse/Partner" as const,
+  additionalSuccessorTrustees: [],
+  beneficiaries: [{ name: "Jane Doe", relationship: "Spouse/Partner" as const, share: "100" }],
+  beneficiariesEqualShares: "Yes" as const,
+  distributionAge: "",
+  hasMinorChildren: "No" as const,
+  guardianName: "",
+  guardianRelationship: "",
+  successorGuardianName: "",
+  assetTypes: ["Primary home / real estate in Michigan" as const],
+  executorName: "Jane Doe",
+  executorRelationship: "Spouse/Partner" as const,
+  successorExecutorName: "",
+  successorExecutorRelationship: "",
+  poaAgentName: "Jane Doe",
+  poaAgentRelationship: "Spouse/Partner" as const,
+  poaSuccessorAgentName: "",
+  poaSuccessorAgentRelationship: "",
+  poaPowers: ["Banking and finances" as const],
+  patientAdvocateName: "Jane Doe",
+  patientAdvocateRelationship: "Spouse/Partner" as const,
+  successorPatientAdvocateName: "",
+  organDonation: "Yes" as const,
+  hasHealthcareWishes: "No" as const,
+  healthcareWishesDescription: "",
+  hasContingentBeneficiary: "No" as const,
+  contingentBeneficiaries: [],
+  contingentEqualShares: "",
+  hasSpecificGifts: "No" as const,
+  specificGiftsDescription: "",
+};
+
 describe("willCheckoutSchema", () => {
   it("requires intakeAnswers and rejects a bad customer email", () => {
     expect(willCheckoutSchema.safeParse({}).success).toBe(false);
-    expect(willCheckoutSchema.safeParse({ intakeAnswers: { name: "x" }, customerEmail: "banana" }).success).toBe(false);
+    expect(willCheckoutSchema.safeParse({ intakeAnswers: VALID_WILL_INTAKE, customerEmail: "banana" }).success).toBe(false);
   });
-  it("accepts the minimal valid body", () => {
-    expect(willCheckoutSchema.safeParse({ intakeAnswers: {} }).success).toBe(true);
+  it("accepts a valid will intake body", () => {
+    expect(willCheckoutSchema.safeParse({ intakeAnswers: VALID_WILL_INTAKE }).success).toBe(true);
+  });
+  it("rejects invalid enum values in intake", () => {
+    expect(willCheckoutSchema.safeParse({ intakeAnswers: { ...VALID_WILL_INTAKE, maritalStatus: "INVALID" } }).success).toBe(false);
+    expect(willCheckoutSchema.safeParse({ intakeAnswers: { ...VALID_WILL_INTAKE, organDonation: "Maybe" } }).success).toBe(false);
+  });
+  it("rejects empty required fields", () => {
+    expect(willCheckoutSchema.safeParse({ intakeAnswers: { ...VALID_WILL_INTAKE, firstName: "" } }).success).toBe(false);
+    expect(willCheckoutSchema.safeParse({ intakeAnswers: { ...VALID_WILL_INTAKE, executorName: "" } }).success).toBe(false);
+  });
+  it("rejects missing beneficiaries", () => {
+    expect(willCheckoutSchema.safeParse({ intakeAnswers: { ...VALID_WILL_INTAKE, beneficiaries: [] } }).success).toBe(false);
   });
 });
 
 describe("trustCheckoutSchema", () => {
   it("accepts the trust-specific extra fields", () => {
     const r = trustCheckoutSchema.safeParse({
-      intakeAnswers: { trust_type: "revocable" },
+      intakeAnswers: VALID_TRUST_INTAKE,
       complexityFlag: true,
       complexityReasons: ["X"],
       declinedAttorneyReview: true,
       confirmOverride: true,
     });
     expect(r.success).toBe(true);
+  });
+  it("rejects invalid asset types", () => {
+    expect(trustCheckoutSchema.safeParse({
+      intakeAnswers: { ...VALID_TRUST_INTAKE, assetTypes: ["Imaginary Assets"] },
+    }).success).toBe(false);
+  });
+  it("rejects invalid POA powers", () => {
+    expect(trustCheckoutSchema.safeParse({
+      intakeAnswers: { ...VALID_TRUST_INTAKE, poaPowers: ["Hacking"] },
+    }).success).toBe(false);
   });
 });
 

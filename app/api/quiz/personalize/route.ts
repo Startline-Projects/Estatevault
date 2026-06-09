@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { quizPersonalizeSchema } from "@/lib/validation/schemas";
+import { quizPersonalizeSchema, detectQuizHardStop } from "@/lib/validation/schemas";
 import { claude, CLAUDE_MODEL } from "@/lib/claude";
 
 const WILL_FALLBACK = {
@@ -24,8 +24,21 @@ export async function POST(request: Request) {
   try {
     const body = await request.json();
     const parsed = quizPersonalizeSchema.safeParse(body);
-    if (!parsed.success) return NextResponse.json(WILL_FALLBACK);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: "invalid_quiz_answers", details: parsed.error.flatten() },
+        { status: 400 },
+      );
+    }
     const { quiz_answers, recommendation } = parsed.data;
+
+    const hardStop = detectQuizHardStop(quiz_answers);
+    if (hardStop) {
+      return NextResponse.json(
+        { error: "hard_stop", reason: hardStop, referral: "/attorney-referral" },
+        { status: 422 },
+      );
+    }
 
     if (!process.env.ANTHROPIC_API_KEY || process.env.ANTHROPIC_API_KEY === "placeholder") {
       return NextResponse.json(recommendation === "will" ? WILL_FALLBACK : TRUST_FALLBACK);
@@ -57,18 +70,18 @@ Return nothing else. No markdown. No explanation. Just the raw JSON object.`;
 
     const a = quiz_answers;
     const userPrompt = `Client quiz answers:
-- State: ${a.state || "Michigan"}
-- Marital status: ${a.maritalStatus || a.marital_status || "Unknown"}
-- Has children: ${a.hasChildren || a.has_children || "No"}
-- Number of children: ${a.numberOfChildren || a.children_count || 0}
-- Owns real estate: ${a.ownsRealEstate || a.owns_real_estate || "No"}
-- Real estate only in Michigan: ${a.realEstateOnlyMichigan || a.real_estate_michigan_only || "N/A"}
-- Owns a business: ${a.ownsBusiness || a.owns_business || "No"}
-- Net worth range: ${a.netWorth || a.net_worth_range || "Unknown"}
-- Privacy important (avoid probate): ${a.privacyImportant || a.privacy_important || "No"}
-- Charitable giving plans: ${a.charitableGiving || a.charitable_intent || "No"}
-- Has existing estate plan: ${a.hasExistingPlan || a.has_existing_plan || "No"}
-- Additional complexity noted: ${a.additionalSituation || a.other_complexity || "None"}
+- State: ${a.state}
+- Marital status: ${a.maritalStatus}
+- Has children: ${a.hasChildren}
+- Number of children: ${a.numberOfChildren || "N/A"}
+- Owns real estate: ${a.ownsRealEstate}
+- Real estate only in Michigan: ${a.realEstateOnlyMichigan || "N/A"}
+- Owns a business: ${a.ownsBusiness}
+- Net worth range: ${a.netWorth}
+- Privacy important (avoid probate): ${a.privacyImportant}
+- Charitable giving plans: ${a.charitableGiving}
+- Has existing estate plan: ${a.hasExistingPlan}
+- Additional complexity noted: ${a.additionalSituation}
 
 Recommended package: ${recommendation}
 

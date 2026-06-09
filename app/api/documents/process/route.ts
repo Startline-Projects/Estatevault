@@ -10,6 +10,7 @@ import { uploadDocument } from "@/lib/documents/storage";
 import { sendDocumentEmail, sendAttorneyReviewPendingEmail, buildAssetChecklist } from "@/lib/email";
 import { wantsNotification } from "@/lib/notifications/prefs";
 import { getTemplate } from "@/lib/documents/templates/resolve";
+import { tryTemplateRender } from "@/lib/documents/generate-from-template";
 import * as auditLogRepo from "@/lib/repos/server/auditLogRepo";
 import * as documentRepo from "@/lib/repos/server/documentRepo";
 
@@ -164,27 +165,36 @@ export const GET = withRoute(async (request: NextRequest) => {
       try {
         await documentRepo.updateStatusByType(supabase, order.id, docType, "generating");
 
-        const template = await getTemplate(docType);
-        const userPrompt = template.buildPrompt(intake);
-        const maxTokens = docType === "trust" ? 16000 : 8000;
+        const clientFullName = String(intake.firstName || intake.first_name || "") + " " + String(intake.lastName || intake.last_name || "");
+        let documentText: string;
+        let pdfBuffer: Buffer;
 
-        const response = await claude.messages.create({
-          model: CLAUDE_MODEL,
-          max_tokens: maxTokens,
-          system: template.systemPrompt,
-          messages: [{ role: "user", content: userPrompt }],
-        });
+        const templateResult = await tryTemplateRender(docType, intake, partnerName, partnerLogoUrl, clientFullName);
+        if (templateResult) {
+          pdfBuffer = templateResult.pdfBuffer;
+          documentText = templateResult.documentText;
+        } else {
+          const template = await getTemplate(docType);
+          const userPrompt = template.buildPrompt(intake);
+          const maxTokens = docType === "trust" ? 16000 : 8000;
 
-        const documentText = response.content[0].type === "text" ? response.content[0].text : "";
+          const response = await claude.messages.create({
+            model: CLAUDE_MODEL,
+            max_tokens: maxTokens,
+            system: template.systemPrompt,
+            messages: [{ role: "user", content: userPrompt }],
+          });
 
-        const clientFullName = String(intake.firstName || "") + " " + String(intake.lastName || "");
-        const { generatePDF } = await import("@/lib/documents/generate-pdf");
-        const pdfBuffer = await generatePDF(
-          documentText, docType,
-          clientFullName,
-          partnerName, undefined, String(intake.city || ""),
-          partnerLogoUrl
-        );
+          documentText = response.content[0].type === "text" ? response.content[0].text : "";
+
+          const { generatePDF } = await import("@/lib/documents/generate-pdf");
+          pdfBuffer = await generatePDF(
+            documentText, docType,
+            clientFullName,
+            partnerName, undefined, String(intake.city || ""),
+            partnerLogoUrl
+          );
+        }
 
         let docxBuffer: Buffer | undefined;
         if (order.attorney_review_requested) {
@@ -289,26 +299,35 @@ export const GET = withRoute(async (request: NextRequest) => {
 
       await documentRepo.updateStatusByType(supabase, job.order_id, docType, "generating");
 
-      const template = await getTemplate(docType);
-      const userPrompt = template.buildPrompt(intake);
-      const maxTokens = docType === "trust" ? 16000 : 8000;
+      const jobClientFullName = String(intake.firstName || (intake as Record<string,unknown>).first_name || "") + " " + String(intake.lastName || (intake as Record<string,unknown>).last_name || "");
+      let documentText: string;
+      let pdfBuffer: Buffer;
 
-      const response = await claude.messages.create({
-        model: CLAUDE_MODEL,
-        max_tokens: maxTokens,
-        system: template.systemPrompt,
-        messages: [{ role: "user", content: userPrompt }],
-      });
+      const templateResult = await tryTemplateRender(docType, intake as Record<string, unknown>, jobPartnerName, jobPartnerLogoUrl, jobClientFullName);
+      if (templateResult) {
+        pdfBuffer = templateResult.pdfBuffer;
+        documentText = templateResult.documentText;
+      } else {
+        const template = await getTemplate(docType);
+        const userPrompt = template.buildPrompt(intake);
+        const maxTokens = docType === "trust" ? 16000 : 8000;
 
-      const documentText = response.content[0].type === "text" ? response.content[0].text : "";
+        const response = await claude.messages.create({
+          model: CLAUDE_MODEL,
+          max_tokens: maxTokens,
+          system: template.systemPrompt,
+          messages: [{ role: "user", content: userPrompt }],
+        });
 
-      const jobClientFullName = String(intake.firstName || "") + " " + String(intake.lastName || "");
-      const { generatePDF } = await import("@/lib/documents/generate-pdf");
-      const pdfBuffer = await generatePDF(
-        documentText, docType,
-        jobClientFullName,
-        jobPartnerName, undefined, undefined, jobPartnerLogoUrl
-      );
+        documentText = response.content[0].type === "text" ? response.content[0].text : "";
+
+        const { generatePDF } = await import("@/lib/documents/generate-pdf");
+        pdfBuffer = await generatePDF(
+          documentText, docType,
+          jobClientFullName,
+          jobPartnerName, undefined, undefined, jobPartnerLogoUrl
+        );
+      }
 
       let jobDocxBuffer: Buffer | undefined;
       if (jobReviewRequested) {

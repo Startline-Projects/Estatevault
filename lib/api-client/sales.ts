@@ -113,8 +113,8 @@ export function partnerLastLogin(partnerId: string): Promise<ApiResult<{ lastLog
   return get("/api/sales/partner-last-login", { partnerId });
 }
 
-export function addPartnerNote(partnerId: string, content: string): Promise<ApiResult<{ success: boolean }>> {
-  return post("/api/sales/partner-notes", { partnerId, content });
+export function addPartnerNote(partnerId: string, note: string): Promise<ApiResult<{ success: boolean }>> {
+  return post("/api/sales/partner-notes", { partnerId, note });
 }
 
 export type PartnerDetailResponse = {

@@ -8,6 +8,7 @@ import { createAdminClient, requireAuth } from "@/lib/api/auth";
 import { claude, CLAUDE_MODEL } from "@/lib/claude";
 import { uploadDocument } from "@/lib/documents/storage";
 import { getTemplate } from "@/lib/documents/templates/resolve";
+import { tryTemplateRender } from "@/lib/documents/generate-from-template";
 
 export const GET = withRoute(async (request: NextRequest) => {
   const auth = await requireAuth(["admin"], request);
@@ -85,39 +86,48 @@ export const GET = withRoute(async (request: NextRequest) => {
     for (const doc of missingDocs) {
       const docType = doc.document_type;
       try {
-        const template = await getTemplate(docType);
-        const userPrompt = template.buildPrompt(intake);
-        const maxTokens = docType === "trust" ? 16000 : 8000;
+        const clientFullName = String(intake.firstName || intake.first_name || "") + " " + String(intake.lastName || intake.last_name || "");
+        let documentText: string;
+        let pdfBuffer: Buffer;
 
-        const response = await claude.messages.create({
-          model: CLAUDE_MODEL,
-          max_tokens: maxTokens,
-          system: template.systemPrompt,
-          messages: [{ role: "user", content: userPrompt }],
-        });
+        const templateResult = await tryTemplateRender(docType, intake, partnerName, partnerLogoUrl, clientFullName);
+        if (templateResult) {
+          pdfBuffer = templateResult.pdfBuffer;
+          documentText = templateResult.documentText;
+          log.push(`${docType}: template-rendered ${documentText.length} chars`);
+        } else {
+          const template = await getTemplate(docType);
+          const userPrompt = template.buildPrompt(intake);
+          const maxTokens = docType === "trust" ? 16000 : 8000;
 
-        const text = response.content[0]?.type === "text" ? response.content[0].text : "";
-        if (!text) throw new Error(`empty response, stop_reason=${response.stop_reason}`);
-        log.push(`${docType}: ${text.length} chars, stop=${response.stop_reason}`);
+          const response = await claude.messages.create({
+            model: CLAUDE_MODEL,
+            max_tokens: maxTokens,
+            system: template.systemPrompt,
+            messages: [{ role: "user", content: userPrompt }],
+          });
 
-        const clientFullName = String(intake.firstName || "") + " " + String(intake.lastName || "");
-        const { generatePDF } = await import("@/lib/documents/generate-pdf");
-        const pdfBuffer = await generatePDF(
-          text,
-          docType,
-          clientFullName,
-          partnerName,
-          undefined,
-          String(intake.city || ""),
-          partnerLogoUrl
-        );
+          documentText = response.content[0]?.type === "text" ? response.content[0].text : "";
+          if (!documentText) throw new Error(`empty response, stop_reason=${response.stop_reason}`);
+          log.push(`${docType}: ${documentText.length} chars, stop=${response.stop_reason}`);
 
-        // Editable DOCX for attorney review (non-fatal if it fails).
+          const { generatePDF } = await import("@/lib/documents/generate-pdf");
+          pdfBuffer = await generatePDF(
+            documentText,
+            docType,
+            clientFullName,
+            partnerName,
+            undefined,
+            String(intake.city || ""),
+            partnerLogoUrl
+          );
+        }
+
         let docxBuffer: Buffer | undefined;
         if (isAttorneyReview) {
           try {
             const { generateDOCX } = await import("@/lib/documents/generate-docx");
-            docxBuffer = await generateDOCX(text, docType, clientFullName, partnerName, partnerLogoUrl);
+            docxBuffer = await generateDOCX(documentText, docType, clientFullName, partnerName, partnerLogoUrl);
           } catch (e) {
             log.push(`${docType}: DOCX generation failed (non-fatal): ${e instanceof Error ? e.message : String(e)}`);
           }

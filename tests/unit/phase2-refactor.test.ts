@@ -61,7 +61,6 @@ describe("H-09 withRoute coverage (pinned — partial)", () => {
     "app/api/marketing/flyer/route.ts",
     "app/api/marketing/materials/route.ts",
     "app/api/marketing/one-pager/route.ts",
-    "app/api/marketing/script-card/route.ts",
   ];
   // JSON routes still awaiting migration onto the kernel
   const NOT_YET_MIGRATED = [

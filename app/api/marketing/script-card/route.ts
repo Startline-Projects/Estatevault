@@ -1,9 +1,10 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { requireAuth } from "@/lib/api/auth";
+import { withRoute } from "@/lib/api/route";
 import { PDFDocument, StandardFonts, rgb, PageSizes } from "pdf-lib";
 
-export async function GET(req: NextRequest) {
-  const auth = await requireAuth(undefined, req);
+export const GET = withRoute(async (req: NextRequest) => {
+  const auth = await requireAuth(["partner", "admin"], req);
   if ("error" in auth) return auth.error;
   const admin = auth.admin;
 
@@ -103,7 +104,7 @@ export async function GET(req: NextRequest) {
     '"I\'m helping you with your legal plan"',
   ];
   for (const item of neverItems) {
-    drawText(`  \u2717  ${item}`, { size: 10, color: red });
+    drawText(`  X  ${item}`, { size: 10, color: red });
   }
 
   // Footer
@@ -124,4 +125,4 @@ export async function GET(req: NextRequest) {
       "Content-Disposition": `attachment; filename="${companyName} - Compliance Script Card.pdf"`,
     },
   });
-}
+});
