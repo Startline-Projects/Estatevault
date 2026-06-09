@@ -96,6 +96,7 @@ export type Database = {
           amount_cents: number
           created_at: string | null
           id: string
+          order_id: string | null
           orders_included: Json | null
           paid_at: string | null
           status: string | null
@@ -106,6 +107,7 @@ export type Database = {
           amount_cents: number
           created_at?: string | null
           id?: string
+          order_id?: string | null
           orders_included?: Json | null
           paid_at?: string | null
           status?: string | null
@@ -116,6 +118,7 @@ export type Database = {
           amount_cents?: number
           created_at?: string | null
           id?: string
+          order_id?: string | null
           orders_included?: Json | null
           paid_at?: string | null
           status?: string | null

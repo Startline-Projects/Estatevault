@@ -64,7 +64,8 @@ Tracking doc for checkout + fulfillment failure modes. Severity: Critical > High
 
 ---
 
-## BUG-6 — set-password links a stranger's order/documents to a brand-new account
+## BUG-6 — set-password links a stranger's order/documents to a brand-new account ✅ FIXED
+- **Status:** Fixed — removed the global 10-order orphan scan in `set-password`. Client↔profile linkage is owned by the Stripe webhook (keys on verified `customer_email` + `metadata.client_id`); set-password now only sets the account password.
 - **Severity:** Critical (cross-customer data disclosure)
 - **Area:** `app/api/auth/set-password/route.ts:67-87`
 - **What:** When set-password creates a NEW account, it queries the **10 most recent orders across ALL customers** (`orders` ordered by `created_at desc, limit 10` — no filter by email/client/session), finds the first whose `clients` row has `profile_id IS NULL`, and assigns that client to the just-created user. Nothing ties the orphaned client to the email being set up. Guest checkout deliberately creates `clients` rows with null `profile_id`, so orphaned clients are the normal state right after any guest purchase.
@@ -75,7 +76,8 @@ Tracking doc for checkout + fulfillment failure modes. Severity: Critical > High
 
 ---
 
-## BUG-7 — Public `download-zip` leaks any customer's will/trust PDFs (unauthenticated IDOR)
+## BUG-7 — Public `download-zip` leaks any customer's will/trust PDFs (unauthenticated IDOR) — ✅ FIXED
+- **Status:** Fixed — route removed entirely. The ZIP endpoint was reachable only from the test-mode "Download Documents" button on the success pages; we deleted that button instead of hardening it. Removed: `app/api/documents/download-zip/route.ts`, the `publicPaths` allowlist entry in `lib/supabase/middleware.ts:162`, `downloadZip`/`getRaw` in `lib/api-client/documents.ts`, and the test-ZIP blocks + imports in `app/will/success/page.tsx` and `app/trust/success/page.tsx`. Real downloads remain via the per-document `download-by-session` route (Stripe `session_id`/owner-checked). The endpoint now 404s — no order_id URL can pull documents.
 - **Severity:** Critical (cross-customer PII disclosure)
 - **Area:** `app/api/documents/download-zip/route.ts:33-71`; in the public allowlist `lib/supabase/middleware.ts:162`
 - **What:** The route is in `publicPaths` (no session). It takes `order_id` from the query, uses the **service-role admin client**, selects that order's documents (`status in generated/delivered`, storage_path not null), downloads each PDF, and streams a ZIP — with no Stripe-session check, no ownership check, and no `order_type='test'` restriction. The "Test" filename wording is cosmetic; the query matches every real paid order. The sibling `download-by-session` was hardened (H-12) to require a matching session_id or authenticated owner; this route never got that.
@@ -86,7 +88,7 @@ Tracking doc for checkout + fulfillment failure modes. Severity: Critical > High
 
 ---
 
-## BUG-8 — Webhook marks an event "processed" BEFORE doing the work → any mid-handler failure permanently poisons the retry
+## BUG-8 — Webhook marks an event "processed" BEFORE doing the work → any mid-handler failure permanently poisons the retry — ✅ FIXED
 - **Severity:** Critical
 - **Area:** `app/api/webhooks/stripe/route.ts:42-49`; `lib/repos/server/stripeWebhookRepo.ts:8-14`; `lib/api/route.ts:16-23`
 - **What:** The idempotency guard inserts+commits the `event_id` row BEFORE the handlers run. The handlers are long non-transactional sequences (account create → order update → payout → affiliate stats → document insert → attorney review → queue). If any step throws, `withRoute` returns a 500 to Stripe — but the `event_id` is already committed, so Stripe's redelivery hits `checkIdempotency` → null → the route short-circuits to `{received:true, duplicate:true}` and never re-runs the handler.
@@ -94,16 +96,18 @@ Tracking doc for checkout + fulfillment failure modes. Severity: Critical > High
 - **Repro:** Force any write in `handleDocumentCheckout` to throw on first delivery → webhook 500s. Replay the same event with the Stripe CLI → `{received:true,duplicate:true}`, order stuck `generating`, documents never created.
 - **Check on website:** In staging, break a write in the doc-checkout handler, pay a checkout → charged but no documents; resending the Stripe event does nothing.
 - **Fix:** Mark the event processed only AFTER the handler succeeds (insert at end, or a `received`→`processed` two-phase state, or wrap handler+marker in one transaction); on error don't leave a committed marker — return non-2xx so Stripe redelivers into a clean re-run. Add a reconciliation cron.
+- **Resolution:** Two-phase guard in `app/api/webhooks/stripe/route.ts` + `lib/repos/server/stripeWebhookRepo.ts`: `claimEvent` claims the event as `processing` (only a prior `completed` row is a true duplicate; `processing`/`failed` rows re-run); `markCompleted` runs only after the handler returns, `markFailed` + HTTP 500 on throw so Stripe redelivers. `stripe_webhook_events` carries `status`/`completed_at`/`last_error` with `event_id` PK backing the claim. Reconcile cron at `app/api/cron/reconcile-orders/route.ts` (every 15 min) re-runs paid-but-unfulfilled orders. Verified live: 265 completed / 2 failed (retryable) / 0 poisoned. Re-runs are safe per BUG-23 idempotency.
 
 ---
 
-## BUG-9 — Stripe session creation can orphan a `pending` order
+## BUG-9 — Stripe session creation can orphan a `pending` order — ✅ FIXED
 - **Severity:** High
 - **Area:** `lib/checkout/createCheckoutSession.ts` (~line 226)
 - **What:** Order row is inserted before the Stripe Checkout session is created. If `stripe.checkout.sessions.create()` throws (bad/expired key, Stripe outage, network), the request 500s but the `pending` order row already exists with no `stripe_session_id`.
 - **Impact:** Orphan `pending` orders accumulate; never paid, never cleaned up; pollute reporting. Retries create duplicates.
 - **Repro:** Set invalid `STRIPE_SECRET_KEY`, run a will/trust checkout → `pending` order in DB with no session.
 - **Fix:** Create Stripe session first then insert order, OR try/catch and delete/mark-failed the order on Stripe error. Add cron to expire stale `pending` orders.
+- **Resolution:** `stripe.checkout.sessions.create()` in `lib/checkout/createCheckoutSession.ts` is now wrapped in try/catch — on failure it deletes the just-created order (`orderRepo.deleteById`) and returns HTTP 502 with a friendly retry message, so no orphan is left. Safe because the order has nothing attached yet (payment/docs/payouts/affiliate-click all happen later). Cleanup sweep added to `app/api/cron/reconcile-orders/route.ts`: deletes `status='pending'` + `stripe_session_id IS NULL` + older than 30 min (logs ids first, never a silent mass delete), covering pre-existing orphans and the rare case where session create succeeds but the session-id update fails. Verified live: sweep matches a real orphan but NOT an abandoned-with-session order nor a fresh in-flight one.
 
 ---
 
@@ -248,7 +252,7 @@ Tracking doc for checkout + fulfillment failure modes. Severity: Critical > High
 
 ---
 
-## BUG-23 — Webhook side effects (payouts, affiliate counter, docs, attorney review) aren't individually idempotent
+## BUG-23 — Webhook side effects (payouts, affiliate counter, docs, attorney review) aren't individually idempotent — ✅ FIXED
 - **Severity:** High
 - **Area:** `lib/webhooks/stripe/handleDocumentCheckout.ts:178-184, :246-255, :287, :290-291`
 - **What:** The Stripe transfers carry idempotency keys, but the DB records of them — `payouts` rows, the affiliate stats counter (`increment_affiliate_stats`, a blind `+=`), `documents` rows, and the attorney_review row — have no unique constraint or status guard. The only thing preventing duplication is the single router-level event-id guard (BUG-8).
@@ -256,6 +260,7 @@ Tracking doc for checkout + fulfillment failure modes. Severity: Critical > High
 - **Repro:** Invoke `handleDocumentCheckout` twice for one session (bypassing the router guard) → transfers collapse via idempotency key, but `payouts` gets two "sent" rows and `affiliates.total_earned` increments twice.
 - **Check on website:** Not reproducible from UI today (router guard holds); confirm in staging by calling the handler twice / replaying concurrent deliveries.
 - **Fix:** Make each side effect idempotent independently: unique constraint on `payouts(stripe_transfer_id)` and `documents(order_id, document_type)`; guard the affiliate increment against re-application (or derive totals from payout rows); make the attorney-review insert an upsert keyed on `order_id`.
+- **Resolution:** DB-level backstop added in `supabase/migrations/20260610_000_bug23_payout_idempotency.sql` (dedup-then-create unique indexes): `documents(order_id, document_type)`, `attorney_reviews(order_id)`, partial `payouts(stripe_transfer_id)` and `affiliate_payouts(stripe_transfer_id)`, and a new webhook-only `affiliate_payouts.order_id` column with a partial unique index (the manual batch-payout route writes a multi-order `orders_included` array, leaves `order_id` null, and is untouched). The irreversible affiliate counter is now gated on a winning insert — `insertAffiliatePayout` returns the row (or null on unique conflict) and `handleDocumentCheckout` only calls `incrementStats` + writes the conversion audit when a row comes back, so a concurrent replay that loses the insert race cannot double-count. Attorney-review fee transfer now carries an `idempotencyKey` (`attyfee_<orderId>`). Together these make every side effect at-most-once regardless of concurrency, closing the check-then-act race the BUG-1/BUG-8 retries opened.
 
 ---
 

@@ -71,17 +71,22 @@ export async function handleAttorneyReview(
       return;
     }
     try {
-      const transfer = await stripe.transfers.create({
-        amount: transferAmount,
-        currency: "usd",
-        destination: partnerForRouting.stripe_account_id,
-        transfer_group: orderId,
-        metadata: {
-          type: "attorney_review_fee",
-          order_id: orderId,
-          reviewer_type: routing.reviewerType,
+      const transfer = await stripe.transfers.create(
+        {
+          amount: transferAmount,
+          currency: "usd",
+          destination: partnerForRouting.stripe_account_id,
+          transfer_group: orderId,
+          metadata: {
+            type: "attorney_review_fee",
+            order_id: orderId,
+            reviewer_type: routing.reviewerType,
+          },
         },
-      });
+        // BUG-23: idempotency key so a replay never double-transfers the fee,
+        // even if it slips past the attorney_reviews(order_id) insert guard.
+        { idempotencyKey: `attyfee_${orderId}` },
+      );
       await auditLogRepo.insertEntry(supabase, {
         action: "attorney_review.fee_transferred",
         resource_type: "attorney_review",

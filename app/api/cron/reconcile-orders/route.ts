@@ -35,6 +35,11 @@ const EXPECTED_DOCS: Record<string, string[]> = {
 const RETRY_AFTER_MINUTES = 15;
 // Alert about anything still unfinished this long after payment.
 const ALERT_AFTER_MINUTES = 60;
+// A `pending` order with no Stripe session this long after creation never got a
+// checkout page built (BUG-9: session creation failed) — it is a dead orphan,
+// safe to delete. Well beyond the millisecond window of a normal in-flight
+// checkout, so a live request can never be caught.
+const ORPHAN_AFTER_MINUTES = 30;
 
 type Admin = ReturnType<typeof createAdminClient>;
 
@@ -141,6 +146,34 @@ export const GET = withRoute(async (req: NextRequest) => {
     }
   }
 
+  // ── BUG-9: sweep orphan pending orders ──────────────────────
+  // Orders left `pending` with no stripe_session_id (Stripe session creation
+  // failed). Excluded from the query above (it requires a session id), so they
+  // would otherwise accumulate forever. Count + log before deleting — never a
+  // silent mass delete.
+  let orphansDeleted = 0;
+  const orphanBefore = new Date(now - ORPHAN_AFTER_MINUTES * 60_000).toISOString();
+  const { data: orphans, error: orphanErr } = await admin
+    .from("orders")
+    .select("id")
+    .eq("status", "pending")
+    .is("stripe_session_id", null)
+    .lt("created_at", orphanBefore)
+    .limit(500);
+
+  if (orphanErr) {
+    console.error("[reconcile-orders] orphan query failed:", orphanErr);
+  } else if (orphans && orphans.length) {
+    const ids = orphans.map((o) => o.id);
+    console.log(`[reconcile-orders] deleting ${ids.length} orphan pending orders (BUG-9):`, ids);
+    const { error: delErr } = await admin.from("orders").delete().in("id", ids);
+    if (delErr) {
+      console.error("[reconcile-orders] orphan delete failed:", delErr);
+    } else {
+      orphansDeleted = ids.length;
+    }
+  }
+
   return ok({
     ok: true,
     checked: stuck?.length || 0,
@@ -148,5 +181,6 @@ export const GET = withRoute(async (req: NextRequest) => {
     advanced,
     generationTriggered,
     alerted,
+    orphansDeleted,
   });
 });

@@ -301,28 +301,35 @@ export async function handleDocumentCheckout(
           }
         }
 
-        await payoutRepo.insertAffiliatePayout(supabase, {
+        // BUG-23: the orders_included unique index makes this insert the single
+        // gate per order. Only the winning insert returns a row; a concurrent
+        // replay that loses the race gets null and must NOT touch the
+        // irreversible affiliate stats counter again.
+        const { data: insertedPayout } = await payoutRepo.insertAffiliatePayout(supabase, {
           affiliate_id: affiliateIdMeta,
           amount_cents: affCut,
           status: payoutStatus,
           stripe_transfer_id: transferId,
+          order_id: orderId,
           orders_included: [orderId],
           paid_at: payoutStatus === "sent" ? new Date().toISOString() : null,
         });
 
-        await affiliateRepo.incrementStats(supabase, affiliateIdMeta, affCut);
+        if (insertedPayout) {
+          await affiliateRepo.incrementStats(supabase, affiliateIdMeta, affCut);
 
-        await auditLogRepo.insertEntry(supabase, {
-          action: "affiliate.conversion",
-          resource_type: "order",
-          resource_id: orderId,
-          metadata: {
-            affiliate_id: affiliateIdMeta,
-            amount_cents: affCut,
-            transfer_id: transferId,
-            status: payoutStatus,
-          },
-        });
+          await auditLogRepo.insertEntry(supabase, {
+            action: "affiliate.conversion",
+            resource_type: "order",
+            resource_id: orderId,
+            metadata: {
+              affiliate_id: affiliateIdMeta,
+              amount_cents: affCut,
+              transfer_id: transferId,
+              status: payoutStatus,
+            },
+          });
+        }
       }
     } catch (affErr) {
       console.error("Affiliate payout failed:", affErr);

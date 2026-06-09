@@ -27,6 +27,12 @@ export function update(admin: Admin, orderId: string, patch: OrderUpdate) {
   return admin.from("orders").update(patch).eq("id", orderId);
 }
 
+// Hard-delete an order by id. Used to undo a just-created `pending` order when
+// Stripe Checkout session creation fails, so no orphan row is left (BUG-9).
+export function deleteById(admin: Admin, orderId: string) {
+  return admin.from("orders").delete().eq("id", orderId);
+}
+
 // Delivered documents whose delivery date is at or before `cutoff`.
 // Used by reminder crons to find clients eligible for nudges.
 // `delivered_at` lives on `documents`, not `orders`, so we query documents

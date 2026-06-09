@@ -12,8 +12,12 @@ export function insertPartnerPayout(admin: Admin, row: PayoutInsert) {
   return admin.from("payouts").insert(row);
 }
 
+// Insert an affiliate payout, returning the inserted row (or null on a unique
+// conflict — see the affiliate_payouts(orders_included) index from BUG-23).
+// Callers gate the irreversible stats counter on a non-null result so a
+// concurrent replay that loses the insert race does not double-count.
 export function insertAffiliatePayout(admin: Admin, row: AffiliatePayoutInsert) {
-  return admin.from("affiliate_payouts").insert(row);
+  return admin.from("affiliate_payouts").insert(row).select("id").maybeSingle();
 }
 
 // A partner's payouts (with orders_included) for the revenue page (B2).

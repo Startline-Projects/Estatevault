@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
+import type Stripe from "stripe";
 import { stripe } from "@/lib/stripe";
 import { calculateSplit } from "@/lib/stripe-payouts";
 import { AFFILIATE_COOKIE } from "@/lib/affiliate";
@@ -289,22 +290,35 @@ export async function createCheckoutSession(
   const origin = request.headers.get("origin") || "https://www.estatevault.us";
   const clientName = `${(intakeAnswers.firstName as string) || ""} ${(intakeAnswers.lastName as string) || ""}`.trim();
 
-  const session = await stripe.checkout.sessions.create({
-    mode: "payment",
-    line_items: lineItems,
-    customer_email: conflictEmail || (intakeAnswers.email as string) || undefined,
-    success_url: `${origin}${config.successPath}?session_id={CHECKOUT_SESSION_ID}`,
-    cancel_url: `${origin}${config.cancelPath}`,
-    metadata: {
-      order_id: order.id,
-      client_id: clientId,
-      product_type: config.productType,
-      attorney_review: attorneyReview ? "true" : "false",
-      partner_id: partnerId || "",
-      affiliate_id: affiliateId || "",
-      client_name: clientName,
-    },
-  });
+  // BUG-9: the order row already exists as `pending`. If Stripe fails to build
+  // the Checkout session (bad key, outage, network), undo that order so we never
+  // leave an orphan pending row with no stripe_session_id behind.
+  let session: Stripe.Checkout.Session;
+  try {
+    session = await stripe.checkout.sessions.create({
+      mode: "payment",
+      line_items: lineItems,
+      customer_email: conflictEmail || (intakeAnswers.email as string) || undefined,
+      success_url: `${origin}${config.successPath}?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${origin}${config.cancelPath}`,
+      metadata: {
+        order_id: order.id,
+        client_id: clientId,
+        product_type: config.productType,
+        attorney_review: attorneyReview ? "true" : "false",
+        partner_id: partnerId || "",
+        affiliate_id: affiliateId || "",
+        client_name: clientName,
+      },
+    });
+  } catch (stripeErr) {
+    await orderRepo.deleteById(supabase, order.id);
+    console.error("Stripe checkout session creation failed; rolled back order:", stripeErr);
+    return NextResponse.json(
+      { error: "Payment setup failed. Please try again." },
+      { status: 502 },
+    );
+  }
 
   if (affiliateId) {
     const { data: latestClick } = await affiliateClickRepo.findLatestUnconverted(supabase, affiliateId);

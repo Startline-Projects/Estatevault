@@ -154,8 +154,9 @@
 
   <details class="bug crit" open data-sev="crit">
     <summary><span class="badge crit">Critical</span><span class="id">BUG-6</span>
-      <span class="ttl">Set-password links a stranger's order &amp; documents to a new account</span><span class="chev">▶</span></summary>
+      <span class="ttl">Set-password links a stranger's order &amp; documents to a new account ✅ FIXED</span><span class="chev">▶</span></summary>
     <div class="body">
+      <div class="row"><div class="k">Status</div><div class="v"><b>Fixed</b> — removed the global 10-order orphan scan in <code>set-password</code>. Client↔profile linkage is owned by the Stripe webhook (keys on verified <code>customer_email</code> + <code>metadata.client_id</code>); set-password now only sets the account password.</div></div>
       <div class="row"><div class="k">In plain terms</div><div class="v">When someone finishes creating their account (set password) right after any guest purchase, the system grabs the <b>most recent unclaimed order from ANY customer</b> and attaches it to the new account. So a new user can inherit a different customer's order and generated documents (will, beneficiaries, personal info). Whoever sets their password first wins the race.</div></div>
       <div class="row"><div class="k">Where</div><div class="v"><code>app/api/auth/set-password/route.ts:67-87</code> — scans 10 most recent orders globally, no email/session filter.</div></div>
       <div class="row"><div class="k">Impact</div><div class="v">Cross-customer document &amp; PII disclosure; the real purchaser loses their order linkage.</div></div>
@@ -166,8 +167,9 @@
 
   <details class="bug crit" open data-sev="crit">
     <summary><span class="badge crit">Critical</span><span class="id">BUG-7</span>
-      <span class="ttl">Public download-zip leaks any customer's will/trust PDFs</span><span class="chev">▶</span></summary>
+      <span class="ttl">Public download-zip leaks any customer's will/trust PDFs — ✅ FIXED</span><span class="chev">▶</span></summary>
     <div class="body">
+      <div class="row"><div class="k">Status</div><div class="v">✅ Fixed — route deleted entirely. It was reachable only from the test-mode "Download Documents" button on the success pages, so we removed that button instead of hardening it. Removed: <code>download-zip/route.ts</code>, the <code>middleware.ts:162</code> allowlist entry, <code>downloadZip</code>/<code>getRaw</code> in <code>api-client/documents.ts</code>, and the test-ZIP blocks in <code>will/success/page.tsx</code> + <code>trust/success/page.tsx</code>. Endpoint now 404s; per-document <code>download-by-session</code> (Stripe session / owner-checked) remains for real downloads.</div></div>
       <div class="row"><div class="k">In plain terms</div><div class="v">The bulk-download endpoint has no login check and is on the public allowlist. Give it any order id and it streams that customer's actual Will/Trust/POA PDFs — full legal personal info — to anyone. The sibling single-download endpoint was secured; this one wasn't.</div></div>
       <div class="row"><div class="k">Where</div><div class="v"><code>app/api/documents/download-zip/route.ts:33-71</code>; public in <code>middleware.ts:162</code></div></div>
       <div class="row"><div class="k">Impact</div><div class="v">Anonymous cross-customer disclosure of the most sensitive product output (every non-sealed order).</div></div>
@@ -177,25 +179,27 @@
   </details>
 
   <details class="bug crit" open data-sev="crit">
-    <summary><span class="badge crit">Critical</span><span class="id">BUG-8</span>
-      <span class="ttl">Webhook marks event "done" before doing the work → failed orders never retry</span><span class="chev">▶</span></summary>
+    <summary><span class="badge crit">Critical</span><span class="badge" style="background:#1a7f37;color:#fff">✅ FIXED</span><span class="id">BUG-8</span>
+      <span class="ttl">Webhook marks event "done" before doing the work → failed orders never retry — ✅ FIXED</span><span class="chev">▶</span></summary>
     <div class="body">
       <div class="row"><div class="k">In plain terms</div><div class="v">The payment webhook records "I handled this event" <b>before</b> it actually fulfills the order. If fulfillment then fails halfway, Stripe's automatic retry sees the "already handled" marker and skips it — so the order is permanently stuck. This is worse than BUG-1: the safety net (retry) is disabled by the bug itself.</div></div>
       <div class="row"><div class="k">Where</div><div class="v"><code>app/api/webhooks/stripe/route.ts:42-49</code>; <code>stripeWebhookRepo.ts:8-14</code></div></div>
       <div class="row"><div class="k">Impact</div><div class="v">Customer charged, fulfillment frozen forever, auto-recovery silently consumed. Underlies BUG-23/65/66/68/69.</div></div>
       <div class="row check"><div class="k">Check on website</div><div class="v">In staging, break a write inside the doc-checkout handler, pay a checkout → charged but no documents; resending the Stripe event does nothing (returns "duplicate").</div></div>
       <div class="row fix"><div class="k">Fix</div><div class="v">Mark the event processed only AFTER the handler succeeds (or a received→processed two-phase state, or one transaction); on failure return non-2xx so Stripe redelivers. Add a reconciliation cron.</div></div>
+      <div class="row fix"><div class="k">Resolution</div><div class="v">Two-phase guard in <code>route.ts</code> + <code>stripeWebhookRepo.ts</code>: <code>claimEvent</code> claims the event as <code>processing</code> (only a prior <code>completed</code> row is a true duplicate); <code>markCompleted</code> runs only after the handler returns, <code>markFailed</code> + HTTP 500 on throw so Stripe redelivers into a clean re-run. <code>stripe_webhook_events</code> carries <code>status</code>/<code>completed_at</code>/<code>last_error</code>; <code>event_id</code> PK backs the claim. Reconcile cron (<code>app/api/cron/reconcile-orders/route.ts</code>, every 15 min) re-runs paid-but-unfulfilled orders. Verified live: 265 completed / 2 failed (retryable) / 0 poisoned. Handler re-runs are now safe per BUG-23 (per-side-effect idempotency).</div></div>
     </div>
   </details>
 
   <details class="bug high" data-sev="high">
-    <summary><span class="badge high">High</span><span class="id">BUG-9</span>
-      <span class="ttl">Stripe failure leaves an orphaned "pending" order</span><span class="chev">▶</span></summary>
+    <summary><span class="badge high">High</span><span class="badge" style="background:#1a7f37;color:#fff">✅ FIXED</span><span class="id">BUG-9</span>
+      <span class="ttl">Stripe failure leaves an orphaned "pending" order — ✅ FIXED</span><span class="chev">▶</span></summary>
     <div class="body">
       <div class="row"><div class="k">In plain terms</div><div class="v">At checkout the system saves the order in the database <b>first</b>, then asks Stripe to set up payment. If Stripe fails (bad key, outage, network blip), the request errors out — but the half-finished "pending" order is already saved with no payment attached. These junk orders pile up and pollute your reports; retries make duplicates.</div></div>
       <div class="row"><div class="k">Where</div><div class="v"><code>lib/checkout/createCheckoutSession.ts</code> (~line 226)</div></div>
       <div class="row check"><div class="k">How to check</div><div class="v">In staging, set an invalid <code>STRIPE_SECRET_KEY</code> and run a will/trust checkout → the request fails, but a <code>pending</code> order with no <code>stripe_session_id</code> appears in the <code>orders</code> table.</div></div>
       <div class="row fix"><div class="k">Fix</div><div class="v">Create the Stripe session first, then save the order — or wrap it and delete/mark-failed the order if Stripe errors. Add a job to expire stale pending orders.</div></div>
+      <div class="row fix"><div class="k">Resolution</div><div class="v">The Stripe <code>sessions.create()</code> call in <code>createCheckoutSession.ts</code> is wrapped in try/catch — on failure it deletes the just-created order (<code>orderRepo.deleteById</code>) and returns HTTP 502 with a friendly retry message, leaving no orphan. Safe because the order has nothing attached yet (payment/docs/payouts happen later). A cleanup sweep in <code>app/api/cron/reconcile-orders/route.ts</code> deletes <code>pending</code> orders with null <code>stripe_session_id</code> older than 30 min (logs ids first — no silent mass delete). Verified live on staging: the sweep matches a true orphan but NOT an abandoned-with-session order nor a fresh in-flight one.</div></div>
     </div>
   </details>
 
@@ -354,14 +358,15 @@
   </details>
 
   <details class="bug high" data-sev="high">
-    <summary><span class="badge high">High</span><span class="id">BUG-23</span>
-      <span class="ttl">Webhook side effects aren't individually idempotent</span><span class="chev">▶</span></summary>
+    <summary><span class="badge high">High</span><span class="badge" style="background:#1a7f37;color:#fff">✅ FIXED</span><span class="id">BUG-23</span>
+      <span class="ttl">Webhook side effects aren't individually idempotent — ✅ FIXED</span><span class="chev">▶</span></summary>
     <div class="body">
       <div class="row"><div class="k">In plain terms</div><div class="v">The records of payouts, affiliate lifetime earnings, document rows, and the attorney-review row have no duplicate protection of their own — the only thing stopping double-counting is the single webhook guard (BUG-8). Any re-run double-counts affiliate earnings and creates duplicate rows.</div></div>
       <div class="row"><div class="k">Where</div><div class="v"><code>lib/webhooks/stripe/handleDocumentCheckout.ts:178-184, 246-255, 287, 290-291</code></div></div>
       <div class="row"><div class="k">Impact</div><div class="v">Defense-in-depth gap; the monotonic affiliate earnings counter is the highest risk (un-reversible).</div></div>
       <div class="row check"><div class="k">Check on website</div><div class="v">Not reproducible from the UI today (the guard holds); confirm in staging by invoking the handler twice for one session → duplicate payout rows + doubled affiliate earnings.</div></div>
       <div class="row fix"><div class="k">Fix</div><div class="v">Unique constraints on payouts(transfer id) and documents(order_id, type); guard the affiliate increment against re-application; upsert the attorney-review row by order id.</div></div>
+      <div class="row fix"><div class="k">Resolution</div><div class="v">Migration <code>20260610_000_bug23_payout_idempotency.sql</code> dedups then adds unique indexes: <code>documents(order_id, document_type)</code>, <code>attorney_reviews(order_id)</code>, partial <code>payouts(stripe_transfer_id)</code> + <code>affiliate_payouts(stripe_transfer_id)</code>, and a webhook-only <code>affiliate_payouts.order_id</code> column with a partial unique index (the manual batch-payout route writes a multi-order array, leaves <code>order_id</code> null, untouched). The irreversible affiliate counter is gated on a winning insert — <code>insertAffiliatePayout</code> returns the row (null on conflict) and the counter/audit only run when a row comes back. Attorney-review fee transfer carries an <code>idempotencyKey</code>. Every side effect is now at-most-once under concurrent replay.</div></div>
     </div>
   </details>
 
