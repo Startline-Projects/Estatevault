@@ -112,24 +112,24 @@ export async function handleDocumentCheckout(
           });
         }
       }
+    }
 
-      if (profileId && clientId) {
-        const { data: clientRecord } = await supabase
-          .from("clients")
-          .select("id, profile_id")
-          .eq("id", clientId)
-          .single();
+    if (profileId && clientId) {
+      const { data: clientRecord } = await supabase
+        .from("clients")
+        .select("id, profile_id")
+        .eq("id", clientId)
+        .single();
 
-        if (clientRecord && !clientRecord.profile_id) {
-          await clientRepo.setProfileId(supabase, clientId, profileId);
-        } else if (!clientRecord) {
-          await clientRepo.create(supabase, {
-            id: clientId,
-            profile_id: profileId,
-            source: "direct",
-            state: "Michigan",
-          });
-        }
+      if (clientRecord && !clientRecord.profile_id) {
+        await clientRepo.setProfileId(supabase, clientId, profileId);
+      } else if (!clientRecord) {
+        await clientRepo.create(supabase, {
+          id: clientId,
+          profile_id: profileId,
+          source: "direct",
+          state: "Michigan",
+        });
       }
     }
   }
@@ -144,7 +144,9 @@ export async function handleDocumentCheckout(
       typeof session.payment_intent === "string" ? session.payment_intent : null,
   };
   if (quizForIntake) {
-    updatePayload.intake_data = quizForIntake.answers;
+    updatePayload.intake_data = customerEmail
+      ? { ...(quizForIntake.answers as Record<string, unknown>), email: customerEmail }
+      : quizForIntake.answers;
     updatePayload.quiz_session_id = quizForIntake.id;
   }
   await orderRepo.update(supabase, orderId, updatePayload);

@@ -162,7 +162,9 @@ export async function createCheckoutSession(
     attorney_cut: attorneyAmount,
     acknowledgment_signed: true,
     acknowledgment_signed_at: new Date().toISOString(),
-    intake_data: intakeAnswers as Json,
+    intake_data: (conflictEmail
+      ? { ...intakeAnswers, email: conflictEmail }
+      : intakeAnswers) as Json,
     complexity_flag: complexityFlag !== undefined ? complexityFlag : undefined,
     complexity_flag_reason: complexityReasons?.length ? complexityReasons.join("; ") : undefined,
   };

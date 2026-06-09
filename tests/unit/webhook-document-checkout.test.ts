@@ -22,6 +22,8 @@ const h = vi.hoisted(() => ({
   findIdAndNameByEmail: vi.fn(),
   audit: vi.fn(),
   addJob: vi.fn(),
+  clientSetProfileId: vi.fn(),
+  clientCreate: vi.fn(),
 }));
 
 vi.mock("@/lib/stripe-payouts", async (importActual) => {
@@ -49,15 +51,18 @@ vi.mock("@/lib/repos/server/profileRepo", () => ({
   findIdByEmailMaybe: vi.fn(async () => ({ data: { id: "prof_1" } })),
   upsert: vi.fn(),
 }));
-vi.mock("@/lib/repos/server/clientRepo", () => ({ setProfileId: vi.fn(), create: vi.fn() }));
+vi.mock("@/lib/repos/server/clientRepo", () => ({
+  setProfileId: (...a: unknown[]) => h.clientSetProfileId(...a),
+  create: (...a: unknown[]) => h.clientCreate(...a),
+}));
 vi.mock("@/lib/repos/server/affiliateRepo", () => ({ getStripeAccountById: vi.fn(), incrementStats: vi.fn() }));
 vi.mock("@/lib/repos/server/auditLogRepo", () => ({ insertEntry: (...a: unknown[]) => h.audit(...a) }));
 
 import { handleDocumentCheckout } from "@/lib/webhooks/stripe/handleDocumentCheckout";
 
-// The happy path (existing profile, no name update) makes no direct supabase
-// calls, so a trivial stub admin is enough.
-const admin = { from: () => ({ update: () => ({ eq: () => Promise.resolve({}) }) }) } as never;
+// Stub admin: handles update().eq() and select().eq().single()/is().single()
+const chainEnd = { single: () => Promise.resolve({ data: null }), eq: () => ({ single: () => Promise.resolve({ data: null }), is: () => ({ single: () => Promise.resolve({ data: null }) }) }) };
+const admin = { from: () => ({ update: () => ({ eq: () => Promise.resolve({}) }), select: () => chainEnd }) } as never;
 
 function session(amountTotal: number) {
   return {
@@ -149,5 +154,52 @@ describe("handleDocumentCheckout — revenue split (Rules 5+6, real calculateSpl
     await handleDocumentCheckout(admin, session(40000), meta("will"));
     expect(h.transferToPartner).not.toHaveBeenCalled();
     expect(h.insertPartnerPayout).not.toHaveBeenCalled();
+  });
+});
+
+describe("handleDocumentCheckout — client-profile linking (Bug 8)", () => {
+  function adminWithClient(clientData: { id: string; profile_id: string | null } | null) {
+    const clientChain = {
+      eq: () => ({
+        single: () => Promise.resolve({ data: clientData }),
+        is: () => ({ single: () => Promise.resolve({ data: clientData }) }),
+      }),
+    };
+    return {
+      from: () => ({
+        update: () => ({ eq: () => Promise.resolve({}) }),
+        select: () => clientChain,
+      }),
+    } as never;
+  }
+
+  it("existing profile + orphaned client → calls setProfileId", async () => {
+    h.findIdAndNameByEmail.mockResolvedValue({ data: { id: "prof_1", full_name: "Buyer One" } });
+    const testAdmin = adminWithClient({ id: "client_1", profile_id: null });
+
+    await handleDocumentCheckout(testAdmin, session(40000), meta("will"));
+
+    expect(h.clientSetProfileId).toHaveBeenCalledWith(testAdmin, "client_1", "prof_1");
+  });
+
+  it("existing profile + already-linked client → skips setProfileId", async () => {
+    h.findIdAndNameByEmail.mockResolvedValue({ data: { id: "prof_1", full_name: "Buyer One" } });
+    const testAdmin = adminWithClient({ id: "client_1", profile_id: "prof_1" });
+
+    await handleDocumentCheckout(testAdmin, session(40000), meta("will"));
+
+    expect(h.clientSetProfileId).not.toHaveBeenCalled();
+  });
+
+  it("no client record found → calls clientCreate as fallback", async () => {
+    h.findIdAndNameByEmail.mockResolvedValue({ data: { id: "prof_1", full_name: "Buyer One" } });
+    const testAdmin = adminWithClient(null);
+
+    await handleDocumentCheckout(testAdmin, session(40000), meta("will"));
+
+    expect(h.clientCreate).toHaveBeenCalledWith(
+      testAdmin,
+      expect.objectContaining({ id: "client_1", profile_id: "prof_1" }),
+    );
   });
 });

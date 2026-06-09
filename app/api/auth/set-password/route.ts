@@ -64,55 +64,57 @@ export const POST = withRoute(async (req: NextRequest) => {
       user_type: "client",
     });
 
-    const { data: recentOrder } = await admin
-      .from("orders")
-      .select("client_id")
-      .order("created_at", { ascending: false })
-      .limit(10);
-
-    if (recentOrder) {
-      for (const o of recentOrder) {
-        if (!o.client_id) continue;
-        const { data: clientRow } = await admin
-          .from("clients")
-          .select("id, profile_id")
-          .eq("id", o.client_id)
-          .is("profile_id", null)
-          .single();
-        if (clientRow) {
-          await admin.from("clients").update({ profile_id: resolvedUserId }).eq("id", clientRow.id);
-          break;
-        }
-      }
-    }
-
     await auditLogRepo.insertEntry(admin, {
       actor_id: resolvedUserId,
       action: "account.created_at_password_set",
       resource_type: "profile",
       resource_id: resolvedUserId,
     });
+  } else {
+    const { data: authUserData, error: getUserErr } = await admin.auth.admin.getUserById(resolvedUserId);
+    if (getUserErr || !authUserData?.user) return fail("User not found", 404);
+    if (authUserData.user.email?.toLowerCase() !== normalizedEmail) return fail("Email mismatch", 403);
 
-    return ok({ success: true });
+    const { error: updateErr } = await admin.auth.admin.updateUserById(resolvedUserId, { password });
+    if (updateErr) return fail("Failed to set password", 500);
+
+    if (fullName && typeof fullName === "string" && fullName.trim()) {
+      await admin.from("profiles").update({ full_name: fullName.trim() }).eq("id", resolvedUserId);
+    }
+
+    await auditLogRepo.insertEntry(admin, {
+      actor_id: resolvedUserId,
+      action: "account.password_set",
+      resource_type: "profile",
+      resource_id: resolvedUserId,
+    });
   }
 
-  const { data: authUserData, error: getUserErr } = await admin.auth.admin.getUserById(resolvedUserId);
-  if (getUserErr || !authUserData?.user) return fail("User not found", 404);
-  if (authUserData.user.email?.toLowerCase() !== normalizedEmail) return fail("Email mismatch", 403);
+  // Defense-in-depth: link any orphaned client for this email.
+  // intake_data is JSONB with an "email" key set by the webhook.
+  const { data: orphanOrders } = await admin
+    .from("orders")
+    .select("client_id")
+    .filter("intake_data->>email", "ilike", normalizedEmail)
+    .not("client_id", "is", null)
+    .order("created_at", { ascending: false })
+    .limit(5);
 
-  const { error: updateErr } = await admin.auth.admin.updateUserById(resolvedUserId, { password });
-  if (updateErr) return fail("Failed to set password", 500);
-
-  if (fullName && typeof fullName === "string" && fullName.trim()) {
-    await admin.from("profiles").update({ full_name: fullName.trim() }).eq("id", resolvedUserId);
+  if (orphanOrders) {
+    for (const o of orphanOrders) {
+      if (!o.client_id) continue;
+      const { data: clientRow } = await admin
+        .from("clients")
+        .select("id, profile_id")
+        .eq("id", o.client_id)
+        .is("profile_id", null)
+        .single();
+      if (clientRow) {
+        await admin.from("clients").update({ profile_id: resolvedUserId }).eq("id", clientRow.id);
+        break;
+      }
+    }
   }
-
-  await auditLogRepo.insertEntry(admin, {
-    actor_id: resolvedUserId,
-    action: "account.password_set",
-    resource_type: "profile",
-    resource_id: resolvedUserId,
-  });
 
   return ok({ success: true });
 });
