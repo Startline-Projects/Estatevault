@@ -1,0 +1,26 @@
+{
+  "skill_name": "bug-hunter",
+  "evals": [
+    {
+      "id": 0,
+      "name": "checkout-money-path",
+      "prompt": "Go through our will/trust checkout flow and find any bugs that could cause a customer to pay but not get their documents, or be charged the wrong amount. Log anything real to BUGS.md.",
+      "expected_output": "Report tracing checkout -> Stripe -> webhook -> fulfillment with file:line findings (severity-ranked), confirmed ones appended to BUGS.md continuing the BUG-N numbering.",
+      "files": []
+    },
+    {
+      "id": 1,
+      "name": "core-rules-audit",
+      "prompt": "Can you double-check that our prices and revenue splits are right everywhere, and that the hard stops and acknowledgment can't be skipped? Want to make sure nothing in the code contradicts the rules.",
+      "expected_output": "Findings cross-checked against lib/orders/pricing.ts and routing.ts; flags any file disagreeing with canonical prices/splits, any reachable bypass of hard stops / acknowledgment gate. Confirmed -> BUGS.md.",
+      "files": []
+    },
+    {
+      "id": 2,
+      "name": "vault-safety",
+      "prompt": "Take a look at the vault and tell me what could break it or leak someone's data.",
+      "expected_output": "Audit of components/vault + lib/crypto + vault repos for PIN/access-control/encryption/data-loss bugs with file:line. Confirmed -> BUGS.md, speculation kept in Needs-Verification.",
+      "files": []
+    }
+  ]
+}

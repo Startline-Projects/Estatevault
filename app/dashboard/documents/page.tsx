@@ -5,6 +5,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { getMyDocuments } from "@/lib/api-client/documents";
 import { PRICES, formatPrice } from "@/lib/orders/pricing";
+import LoadingScreen from "@/components/ui/LoadingScreen";
 
 const EXECUTION_GUIDES: Record<string, { title: string; steps: string[] }> = {
   will: {
@@ -191,7 +192,7 @@ export default function DocumentsPage() {
   }
 
   if (loading) {
-    return <div className="max-w-4xl space-y-4">{[1, 2, 3].map((i) => <div key={i} className="h-20 rounded-xl bg-gray-100 animate-pulse" />)}</div>;
+    return <LoadingScreen message="Loading your documents…" />;
   }
 
   const isGenerating = (latestOrder?.status === "generating" || latestOrder?.status === "paid") && !docsReady;

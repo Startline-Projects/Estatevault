@@ -258,17 +258,6 @@ export default function ProSettingsPage() {
     setTimeout(() => setSaveSuccess(""), 2000);
   }
 
-  async function saveReviewFee() {
-    if (!partner) return;
-    setSaving(true);
-    const feeInCents = Math.round(reviewFee * 100);
-    await updateMe({ custom_review_fee: feeInCents });
-    setPartner({ ...partner, custom_review_fee: feeInCents });
-    setSaving(false);
-    setSaveSuccess("attorney_review");
-    setTimeout(() => setSaveSuccess(""), 2000);
-  }
-
   async function saveVaultBrand() {
     if (!partner) return;
     setSaving(true);
@@ -754,31 +743,25 @@ export default function ProSettingsPage() {
       title: "Attorney Reviews",
       subtitle:
         partner.professional_type === "attorney" && partner.has_inhouse_estate_attorney
-          ? `Custom fee: $${reviewFee}`
+          ? `Fee: $${reviewFee} (set by EstateVault)`
           : "Handled by EstateVault",
       content:
         partner.professional_type === "attorney" && partner.has_inhouse_estate_attorney ? (
           <div className="space-y-4">
             <p className="text-sm text-charcoal/60">
               Your firm has an in-house estate planning attorney on staff. The attorney review fee
-              is paid to your firm&apos;s Stripe Connect account. You can adjust the fee charged to
-              your clients below.
+              is paid to your firm&apos;s Stripe Connect account. The fee is set by EstateVault —
+              contact your account manager to change it.
             </p>
             <div>
               <label className="block text-sm font-medium text-navy mb-1">
                 Attorney Review Fee
               </label>
               <div className="flex items-center gap-3">
-                <span className="text-sm font-medium text-charcoal/60">$</span>
-                <input
-                  type="number"
-                  min={100}
-                  max={1000}
-                  step={25}
-                  value={reviewFee}
-                  onChange={(e) => setReviewFee(Number(e.target.value))}
-                  className="w-32 min-h-[44px] rounded-xl border-2 border-gray-200 px-4 py-3 text-sm focus:border-gold focus:outline-none"
-                />
+                <span className="rounded-xl border-2 border-gray-200 bg-gray-50 px-4 py-3 text-sm font-medium text-charcoal">
+                  ${reviewFee}
+                </span>
+                <span className="text-xs text-charcoal/50">Set by EstateVault</span>
               </div>
               <p className="mt-1 text-xs text-charcoal/50">
                 Default is {formatPrice(PRICES.attorneyReview)}. This fee goes directly to your firm via Stripe Connect.
@@ -792,21 +775,6 @@ export default function ProSettingsPage() {
                 <li>• Full fee is transferred to your Stripe Connect account</li>
                 <li>• You pay your attorney via your own payroll</li>
               </ul>
-            </div>
-            <div className="flex gap-3 pt-2">
-              <button
-                onClick={saveReviewFee}
-                disabled={saving}
-                className="rounded-full bg-gold px-6 py-2 text-sm font-semibold text-white hover:bg-gold/90 disabled:opacity-50"
-              >
-                {saving ? "Saving..." : saveSuccess === "attorney_review" ? "Saved!" : "Save Fee"}
-              </button>
-              <button
-                onClick={cancelSection}
-                className="rounded-full border border-gray-300 px-6 py-2 text-sm font-medium text-charcoal/60 hover:bg-gray-50"
-              >
-                Cancel
-              </button>
             </div>
           </div>
         ) : (

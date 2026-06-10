@@ -1,11 +1,15 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
+import type Stripe from "stripe";
 import { stripe } from "@/lib/stripe";
 import { calculateSplit } from "@/lib/stripe-payouts";
 import { AFFILIATE_COOKIE } from "@/lib/affiliate";
 import { checkPlanConflict } from "@/lib/orders/plan-conflict";
+import { evaluateHardStop } from "@/lib/compliance/hardStop";
 import { createAdminClient } from "@/lib/api/auth";
 import { PRICES, PROMO_CODES } from "@/lib/orders/pricing";
+import { resolveReviewRouting } from "@/lib/attorney-review/routing";
+import { getPlatformDefaultReviewFee } from "@/lib/attorney-review/fee";
 import * as clientRepo from "@/lib/repos/server/clientRepo";
 import * as partnerRepo from "@/lib/repos/server/partnerRepo";
 import * as orderRepo from "@/lib/repos/server/orderRepo";
@@ -68,6 +72,24 @@ export async function createCheckoutSession(
 
   const supabase = createAdminClient();
 
+  // ── HARD STOP (Core Rule 4) ────────────────────────────
+  // Re-derive from intake answers server-side. Never trust a client flag, and
+  // never let any promo path (test/free/paid) bypass it. No order, no Stripe
+  // session — route the family to an attorney.
+  const hardStop = evaluateHardStop(intakeAnswers);
+  if (hardStop.halted) {
+    return NextResponse.json(
+      {
+        error:
+          "Based on your answers, your family's situation needs a licensed attorney. We can't generate this document automatically.",
+        hardStop: true,
+        reasons: hardStop.reasons,
+        referralPath: "/attorney-referral",
+      },
+      { status: 409 },
+    );
+  }
+
   if (!isTestCode && conflictEmail) {
     const conflict = await checkPlanConflict(supabase, conflictEmail, config.productType);
     if (conflict.action === "block") {
@@ -89,13 +111,38 @@ export async function createCheckoutSession(
   // ── GET OR CREATE CLIENT ───────────────────────────────
   let clientId: string;
 
-  if (userId) {
-    const { data: existingClient } = await clientRepo.getIdByProfile(supabase, userId);
+  // Resolve the profile to attach. A session can be orphaned after a data wipe:
+  // the `profiles` row (and even the `auth.users` record) may be gone. Self-heal
+  // where we can, and fall back to guest checkout when the account no longer exists
+  // — the verified email links it back on the success page.
+  let resolvedUserId: string | null = userId ?? null;
+  if (resolvedUserId) {
+    const { data: existingProfile } = await profileRepo.getMeById(supabase, resolvedUserId);
+    if (!existingProfile) {
+      const { data: authUser } = await supabase.auth.admin.getUserById(resolvedUserId);
+      if (authUser?.user) {
+        const meta = (authUser.user.user_metadata || {}) as Record<string, unknown>;
+        await profileRepo.upsert(supabase, {
+          id: resolvedUserId,
+          email: authUser.user.email || (conflictEmail ?? ""),
+          full_name: (meta.full_name as string) || `${(intakeAnswers.firstName as string) || ""} ${(intakeAnswers.lastName as string) || ""}`.trim(),
+          user_type: "client",
+        });
+      } else {
+        // Account fully wiped — proceed as a guest rather than dead-ending the user.
+        console.warn("Checkout: orphaned session, no profile or auth record; continuing as guest:", resolvedUserId);
+        resolvedUserId = null;
+      }
+    }
+  }
+
+  if (resolvedUserId) {
+    const { data: existingClient } = await clientRepo.getIdByProfile(supabase, resolvedUserId);
     if (existingClient) {
       clientId = existingClient.id;
     } else {
       const { data: newClient, error: clientError } = await clientRepo.create(supabase, {
-        profile_id: userId,
+        profile_id: resolvedUserId,
         source: partnerId ? "partner" : "direct",
         state: "Michigan",
         partner_id: partnerId || null,
@@ -120,7 +167,27 @@ export async function createCheckoutSession(
   }
 
   // ── AMOUNTS + SPLITS ──────────────────────────────────
-  const attorneyAmount = attorneyReview ? PRICES.attorneyReview : 0;
+  // Attorney review fee is admin-controlled (platform default in app_settings,
+  // optional per-partner override on partners.custom_review_fee — both clamped
+  // to ATTORNEY_REVIEW_FEE_RANGE). Charge exactly what routing will transfer so
+  // collected == paid out (BUG-4). Partners cannot set this.
+  let attorneyAmount = 0;
+  if (attorneyReview) {
+    const platformDefault = await getPlatformDefaultReviewFee(supabase);
+    if (partnerId) {
+      const { data: rInfo } = await partnerRepo.getReviewRoutingInfo(supabase, partnerId);
+      const pForRouting = rInfo
+        ? {
+            ...rInfo,
+            profile_id: rInfo.profile_id ?? "",
+            has_inhouse_estate_attorney: rInfo.has_inhouse_estate_attorney ?? false,
+          }
+        : null;
+      attorneyAmount = resolveReviewRouting(pForRouting, null, null, platformDefault).feeAmount;
+    } else {
+      attorneyAmount = platformDefault;
+    }
+  }
   const totalAmount = config.baseAmount + attorneyAmount;
 
   let evCut = config.defaultEvCut;
@@ -225,22 +292,35 @@ export async function createCheckoutSession(
   const origin = request.headers.get("origin") || "https://www.estatevault.us";
   const clientName = `${(intakeAnswers.firstName as string) || ""} ${(intakeAnswers.lastName as string) || ""}`.trim();
 
-  const session = await stripe.checkout.sessions.create({
-    mode: "payment",
-    line_items: lineItems,
-    customer_email: conflictEmail || (intakeAnswers.email as string) || undefined,
-    success_url: `${origin}${config.successPath}?session_id={CHECKOUT_SESSION_ID}`,
-    cancel_url: `${origin}${config.cancelPath}`,
-    metadata: {
-      order_id: order.id,
-      client_id: clientId,
-      product_type: config.productType,
-      attorney_review: attorneyReview ? "true" : "false",
-      partner_id: partnerId || "",
-      affiliate_id: affiliateId || "",
-      client_name: clientName,
-    },
-  });
+  // BUG-9: the order row already exists as `pending`. If Stripe fails to build
+  // the Checkout session (bad key, outage, network), undo that order so we never
+  // leave an orphan pending row with no stripe_session_id behind.
+  let session: Stripe.Checkout.Session;
+  try {
+    session = await stripe.checkout.sessions.create({
+      mode: "payment",
+      line_items: lineItems,
+      customer_email: conflictEmail || (intakeAnswers.email as string) || undefined,
+      success_url: `${origin}${config.successPath}?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${origin}${config.cancelPath}`,
+      metadata: {
+        order_id: order.id,
+        client_id: clientId,
+        product_type: config.productType,
+        attorney_review: attorneyReview ? "true" : "false",
+        partner_id: partnerId || "",
+        affiliate_id: affiliateId || "",
+        client_name: clientName,
+      },
+    });
+  } catch (stripeErr) {
+    await orderRepo.deleteById(supabase, order.id);
+    console.error("Stripe checkout session creation failed; rolled back order:", stripeErr);
+    return NextResponse.json(
+      { error: "Payment setup failed. Please try again." },
+      { status: 502 },
+    );
+  }
 
   if (affiliateId) {
     const { data: latestClick } = await affiliateClickRepo.findLatestUnconverted(supabase, affiliateId);
@@ -258,7 +338,7 @@ export async function createCheckoutSession(
   if (complexityFlag !== undefined) auditMeta.complexity_flag = complexityFlag;
 
   await supabase.from("audit_log").insert({
-    actor_id: userId || null,
+    actor_id: resolvedUserId,
     action: "checkout.started",
     resource_type: "order",
     resource_id: order.id,

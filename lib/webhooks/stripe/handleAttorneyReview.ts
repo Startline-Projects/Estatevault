@@ -1,5 +1,7 @@
 import { stripe } from "@/lib/stripe";
+import { getPlatformDefaultReviewFee } from "@/lib/attorney-review/fee";
 import * as partnerRepo from "@/lib/repos/server/partnerRepo";
+import * as orderRepo from "@/lib/repos/server/orderRepo";
 import * as profileRepo from "@/lib/repos/server/profileRepo";
 import * as attorneyReviewRepo from "@/lib/repos/server/attorneyReviewRepo";
 import * as auditLogRepo from "@/lib/repos/server/auditLogRepo";
@@ -34,11 +36,13 @@ export async function handleAttorneyReview(
 
   const { data: moProfile } = await profileRepo.findIdByEmailMaybe(supabase, INHOUSE_ATTORNEY_EMAIL);
   const { data: adminProfile } = await profileRepo.findIdByEmailMaybe(supabase, ESTATEVAULT_ADMIN_EMAIL);
+  const platformDefaultFee = await getPlatformDefaultReviewFee(supabase);
 
   const routing = resolveReviewRouting(
     partnerForRouting,
     moProfile?.id || null,
     adminProfile?.id || null,
+    platformDefaultFee,
   );
 
   await attorneyReviewRepo.insert(supabase, {
@@ -55,25 +59,41 @@ export async function handleAttorneyReview(
   });
 
   if (routing.feeDestination === "partner_admin" && partnerForRouting?.stripe_account_id) {
+    // Hard guard (BUG-4): never transfer more than the client actually paid for
+    // the attorney review on this order, even if routing data is stale.
+    const { data: orderRow } = await orderRepo.getAttorneyCut(supabase, orderId);
+    const collected = orderRow?.attorney_cut ?? 0;
+    const transferAmount = Math.min(routing.feeAmount, collected);
+    if (transferAmount <= 0) {
+      console.error(
+        `Attorney review transfer skipped for order ${orderId}: nothing collected (attorney_cut=${collected}).`,
+      );
+      return;
+    }
     try {
-      const transfer = await stripe.transfers.create({
-        amount: routing.feeAmount,
-        currency: "usd",
-        destination: partnerForRouting.stripe_account_id,
-        transfer_group: orderId,
-        metadata: {
-          type: "attorney_review_fee",
-          order_id: orderId,
-          reviewer_type: routing.reviewerType,
+      const transfer = await stripe.transfers.create(
+        {
+          amount: transferAmount,
+          currency: "usd",
+          destination: partnerForRouting.stripe_account_id,
+          transfer_group: orderId,
+          metadata: {
+            type: "attorney_review_fee",
+            order_id: orderId,
+            reviewer_type: routing.reviewerType,
+          },
         },
-      });
+        // BUG-23: idempotency key so a replay never double-transfers the fee,
+        // even if it slips past the attorney_reviews(order_id) insert guard.
+        { idempotencyKey: `attyfee_${orderId}` },
+      );
       await auditLogRepo.insertEntry(supabase, {
         action: "attorney_review.fee_transferred",
         resource_type: "attorney_review",
         resource_id: orderId,
         metadata: {
           destination: "partner_admin",
-          amount: routing.feeAmount,
+          amount: transferAmount,
           transfer_id: transfer.id,
           partner_id: routing.partnerId,
         },

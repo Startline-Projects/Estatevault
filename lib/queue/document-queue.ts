@@ -46,6 +46,11 @@ function sanitizeForRedis(obj: Record<string, unknown> | object): Record<string,
   return sanitized;
 }
 
+// Whether the Upstash queue is provisioned. When false, the queue is a no-op
+// and document generation runs via the synchronous success-page path
+// (processNow) and the daily /api/documents/process sweep instead.
+export const isQueueConfigured = !!redis;
+
 export async function addJob(job: DocumentJob): Promise<void> {
   if (!redis) {
     throw new Error("Redis not configured — cannot queue document job");

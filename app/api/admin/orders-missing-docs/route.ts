@@ -14,9 +14,14 @@ export const GET = withRoute(async (_req: NextRequest) => {
 
   const { data: orders, error: ordersErr } = await auth.admin
     .from("orders")
-    .select("id, client_id, product_type, status, order_type, created_at, attorney_review_requested")
+    .select(
+      "id, client_id, product_type, status, order_type, created_at, attorney_review_requested, stripe_session_id, stripe_payment_intent_id",
+    )
     .in("product_type", ["will", "trust"])
-    .in("status", ["generating", "review", "delivered"])
+    // Include paid-but-stuck states alongside in-flight ones:
+    //  - pending: paid (Stripe session/intent set) but webhook never advanced it (BUG-1)
+    //  - failed:  generation/queue failed (BUG-13)
+    .in("status", ["pending", "failed", "generating", "review", "delivered"])
     .order("created_at", { ascending: false })
     .limit(200);
 
@@ -59,18 +64,48 @@ export const GET = withRoute(async (_req: NextRequest) => {
     clientEmail: string | null;
     clientName: string | null;
     expected: string[];
+    present: string[];
     missing: string[];
     hasPendingRows: boolean;
     isAttorneyReview: boolean;
+    failureKind: "webhook_missed" | "queue_failed" | "partially_delivered" | "missing_docs";
   }> = [];
 
   for (const o of orders) {
+    // A paid order is one Stripe actually charged — has a session or payment
+    // intent on file. Unpaid abandoned `pending` carts are skipped.
+    const isPaid = !!(o.stripe_session_id || o.stripe_payment_intent_id);
+    // BUG-1: paid order webhook never advanced it past `pending`.
+    const webhookMissed = o.status === "pending" && isPaid;
+    // BUG-13: generation/queue failed.
+    const queueFailed = o.status === "failed";
+
     const expected = EXPECTED_DOCS[o.product_type] || [];
     const orderDocs = (docs || []).filter((d) => d.order_id === o.id);
     const ready = new Set(orderDocs.filter((d) => d.storage_path).map((d) => d.document_type));
+    const present = expected.filter((t) => ready.has(t));
     const missing = expected.filter((t) => !ready.has(t));
     const hasPendingRows = orderDocs.some((d) => !d.storage_path);
-    if (missing.length === 0 && !hasPendingRows) continue;
+
+    // Surface a row if it is a known stuck/failed state, or an in-flight order
+    // that is genuinely missing finished documents.
+    const isMissingDocs = missing.length > 0 || hasPendingRows;
+    if (!webhookMissed && !queueFailed && !isMissingDocs) continue;
+    // Skip unpaid `pending` carts that were simply abandoned.
+    if (o.status === "pending" && !isPaid) continue;
+
+    // "Partially delivered" = some PDFs made, some still missing — distinct from
+    // an order where none were produced.
+    const partial = present.length > 0 && missing.length > 0;
+    const failureKind: "webhook_missed" | "queue_failed" | "partially_delivered" | "missing_docs" =
+      webhookMissed
+        ? "webhook_missed"
+        : queueFailed
+          ? "queue_failed"
+          : partial
+            ? "partially_delivered"
+            : "missing_docs";
+
     const client = (o.client_id ? clientInfoMap.get(o.client_id) : null) || { email: null, fullName: null };
     result.push({
       orderId: o.id,
@@ -80,9 +115,11 @@ export const GET = withRoute(async (_req: NextRequest) => {
       clientEmail: client.email,
       clientName: client.fullName,
       expected,
+      present,
       missing,
       hasPendingRows,
       isAttorneyReview: !!o.attorney_review_requested,
+      failureKind,
     });
   }
 

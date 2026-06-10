@@ -96,6 +96,7 @@ export type Database = {
           amount_cents: number
           created_at: string | null
           id: string
+          order_id: string | null
           orders_included: Json | null
           paid_at: string | null
           status: string | null
@@ -106,6 +107,7 @@ export type Database = {
           amount_cents: number
           created_at?: string | null
           id?: string
+          order_id?: string | null
           orders_included?: Json | null
           paid_at?: string | null
           status?: string | null
@@ -116,6 +118,7 @@ export type Database = {
           amount_cents?: number
           created_at?: string | null
           id?: string
+          order_id?: string | null
           orders_included?: Json | null
           paid_at?: string | null
           status?: string | null
@@ -1751,19 +1754,28 @@ export type Database = {
       }
       stripe_webhook_events: {
         Row: {
+          completed_at: string | null
           event_id: string
           event_type: string
+          last_error: string | null
           processed_at: string
+          status: string
         }
         Insert: {
+          completed_at?: string | null
           event_id: string
           event_type: string
+          last_error?: string | null
           processed_at?: string
+          status?: string
         }
         Update: {
+          completed_at?: string | null
           event_id?: string
           event_type?: string
+          last_error?: string | null
           processed_at?: string
+          status?: string
         }
         Relationships: []
       }

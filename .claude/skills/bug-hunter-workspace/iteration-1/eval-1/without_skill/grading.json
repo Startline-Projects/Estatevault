@@ -1,0 +1,24 @@
+{
+ "expectations": [
+  {
+   "text": "Cross-checks prices/splits vs SSOT",
+   "passed": true,
+   "evidence": "Verified all splits sum to full price"
+  },
+  {
+   "text": "Flags hard-stop/acknowledgment bypassable",
+   "passed": true,
+   "evidence": "Both flagged; also caught  vs  enterprise-trust drift in khan-lawgroup"
+  },
+  {
+   "text": "file:line + severity",
+   "passed": true,
+   "evidence": "Severity-ranked with file:line"
+  },
+  {
+   "text": "Distinguishes confirmed bugs from intentional values",
+   "passed": true,
+   "evidence": "Checked & OK section + confirmOverride note"
+  }
+ ]
+}

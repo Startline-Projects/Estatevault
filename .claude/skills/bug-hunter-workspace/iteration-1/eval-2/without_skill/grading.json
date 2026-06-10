@@ -1,0 +1,24 @@
+{
+ "expectations": [
+  {
+   "text": "Finds cross-tenant data-leak path",
+   "passed": true,
+   "evidence": "High: farewell upload-complete unscoped storagePath, 7-day signed URL"
+  },
+  {
+   "text": "Flags PIN brute-force",
+   "passed": true,
+   "evidence": "Medium: pin/route.ts no limiter"
+  },
+  {
+   "text": "file:line + severity",
+   "passed": true,
+   "evidence": "Severity-ranked, file:line"
+  },
+  {
+   "text": "Separates confirmed from needs-verification",
+   "passed": false,
+   "evidence": "Has 'Solid' section but no explicit needs-verification bucket"
+  }
+ ]
+}

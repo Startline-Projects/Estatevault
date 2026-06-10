@@ -30,38 +30,6 @@ export default function VaultPinScreen({
   const hasPinError = pinError.length > 0;
   const pinErrorId = "pin-error-message";
 
-  // Loading screen while checking PIN status
-  if (screen === "pin-check") {
-    return (
-      <div className="max-w-md mx-auto py-16 text-center" role="status" aria-live="polite">
-        <span className="sr-only">Loading your vault</span>
-
-        {/* Lock badge with a rotating gold ring */}
-        <div className="relative mx-auto h-16 w-16">
-          <div className="absolute inset-0 rounded-full border-2 border-gold/15" />
-          <div className="absolute inset-0 rounded-full border-2 border-transparent border-t-gold animate-spin" />
-          <div className="absolute inset-1 rounded-full bg-gold/10 flex items-center justify-center">
-            <span className="text-2xl">🔐</span>
-          </div>
-        </div>
-
-        <h1 className="mt-6 text-lg font-bold text-navy">Unlocking your vault</h1>
-        <p className="mt-1 text-sm text-charcoal/50">Securing your private documents…</p>
-
-        {/* Skeleton tiles that mirror the vault grid forming */}
-        <div className="mt-10 grid grid-cols-2 gap-3" aria-hidden="true">
-          {[0, 1, 2, 3].map((i) => (
-            <div
-              key={i}
-              className="h-20 rounded-xl bg-gray-100 animate-pulse"
-              style={{ animationDelay: `${i * 120}ms` }}
-            />
-          ))}
-        </div>
-      </div>
-    );
-  }
-
   // Create PIN screen
   if (screen === "pin-create") {
     return (

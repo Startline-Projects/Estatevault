@@ -36,6 +36,21 @@ export function listRecent(admin: Admin, limit = 10) {
     .limit(limit);
 }
 
+// Entries for a resource + action since a cutoff (dedupe check for cron emails).
+export function findByResourceActionSince(
+  admin: Admin,
+  resourceId: string,
+  action: string,
+  sinceIso: string,
+) {
+  return admin
+    .from("audit_log")
+    .select("metadata, created_at")
+    .eq("resource_id", resourceId)
+    .eq("action", action)
+    .gte("created_at", sinceIso);
+}
+
 // Recent audit entries for a specific resource (B2 client detail activity).
 export function listByResource(admin: Admin, resourceId: string, limit = 20) {
   return admin

@@ -36,7 +36,10 @@ vi.mock("@/lib/stripe-payouts", async (importActual) => {
 });
 vi.mock("@/lib/config/appUrl", () => ({ getAppUrl: () => "http://test.local" }));
 vi.mock("@/lib/email", () => ({ sendWelcomeEmail: vi.fn() }));
-vi.mock("@/lib/queue/document-queue", () => ({ addJob: (...a: unknown[]) => h.addJob(...a) }));
+vi.mock("@/lib/queue/document-queue", () => ({
+  addJob: (...a: unknown[]) => h.addJob(...a),
+  isQueueConfigured: false,
+}));
 
 vi.mock("@/lib/repos/server/orderRepo", () => ({ update: (...a: unknown[]) => h.orderUpdate(...a) }));
 vi.mock("@/lib/repos/server/partnerRepo", () => ({ getStripeAndTier: (...a: unknown[]) => h.getStripeAndTier(...a) }));
@@ -60,9 +63,22 @@ vi.mock("@/lib/repos/server/auditLogRepo", () => ({ insertEntry: (...a: unknown[
 
 import { handleDocumentCheckout } from "@/lib/webhooks/stripe/handleDocumentCheckout";
 
-// Stub admin: handles update().eq() and select().eq().single()/is().single()
-const chainEnd = { single: () => Promise.resolve({ data: null }), eq: () => ({ single: () => Promise.resolve({ data: null }), is: () => ({ single: () => Promise.resolve({ data: null }) }) }) };
-const admin = { from: () => ({ update: () => ({ eq: () => Promise.resolve({}) }), select: () => chainEnd }) } as never;
+// Chainable supabase stub. Replay-safety reads (existing order/docs/payout/
+// review) all resolve empty, so the handler behaves as a first-time, fresh
+// order. Writes (.update().eq()) resolve OK.
+function makeAdmin() {
+  const builder: Record<string, unknown> = {};
+  const chain = () => builder;
+  builder.select = chain;
+  builder.eq = chain;
+  builder.contains = chain;
+  builder.update = chain;
+  // Terminal awaits: a bare `.eq()` chain (update) and explicit resolvers.
+  builder.maybeSingle = () => Promise.resolve({ data: null });
+  builder.then = (resolve: (v: unknown) => unknown) => resolve({ data: [] });
+  return { from: () => builder } as never;
+}
+const admin = makeAdmin();
 
 function session(amountTotal: number) {
   return {

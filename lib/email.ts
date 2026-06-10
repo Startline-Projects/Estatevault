@@ -554,6 +554,66 @@ export async function sendDunningEmail({
   }
 }
 
+export async function sendSubscriptionExpiryEmail({
+  to,
+  fullName,
+  partnerId,
+  daysRemaining,
+  expiryDate,
+  dashboardUrl,
+}: {
+  to: string;
+  fullName?: string | null;
+  partnerId?: string | null;
+  daysRemaining: number;
+  expiryDate?: string | null;
+  dashboardUrl: string;
+}) {
+  const sender = await getPartnerFrom(partnerId);
+  const whenLine = expiryDate
+    ? `on <strong>${escapeHtml(expiryDate)}</strong>`
+    : `in <strong>${daysRemaining} day${daysRemaining === 1 ? "" : "s"}</strong>`;
+  try {
+    await sendEmail({
+      from: sender.from,
+      replyTo: sender.replyTo,
+      to,
+      subject: `Your vault access ends ${expiryDate ? `on ${expiryDate}` : `in ${daysRemaining} day${daysRemaining === 1 ? "" : "s"}`}`,
+      html: `<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#f4f4f5;font-family:'Inter',Arial,sans-serif;">
+  <div style="max-width:600px;margin:0 auto;background:#ffffff;">
+    ${renderEmailHeader(sender.brand)}
+    <div style="padding:32px;">
+      <h2 style="margin:0 0 16px;font-size:22px;color:#1C3557;">Your vault access is ending soon</h2>
+      ${greetingHtml(fullName)}
+      <p style="margin:0 0 16px;font-size:14px;color:#2D2D2D;line-height:1.6;">
+        You cancelled your Vault subscription, so your access will end ${whenLine}.
+        After that you won't be able to upload documents, record farewell messages, or
+        download what's stored.
+      </p>
+      <p style="margin:0 0 16px;font-size:14px;color:#2D2D2D;line-height:1.6;">
+        To keep everything, resubscribe — your new year stacks on top of the time you've
+        already paid for, so you lose no days. If you'd rather not continue, sign in and
+        download your documents before access ends.
+      </p>
+      <div style="text-align:center;margin:32px 0;">
+        <a href="${dashboardUrl}" style="display:inline-block;background:#C9A84C;color:#ffffff;text-decoration:none;padding:14px 32px;border-radius:50px;font-size:14px;font-weight:600;">
+          Open My Vault
+        </a>
+      </div>
+    </div>
+    ${renderEmailFooter(sender.brand)}
+  </div>
+</body>
+</html>`,
+    });
+  } catch (e) {
+    console.error("Subscription-expiry email failed:", e);
+  }
+}
+
 export async function sendTrusteeUnlockEmail({
   to,
   unlockUrl,
@@ -792,5 +852,39 @@ export async function sendVetoAccessCancelledEmail({
     to,
     subject: "Vault access request cancelled",
     html: `<div style="font-family:Inter,sans-serif;max-width:500px;margin:0 auto;padding:32px;color:#2D2D2D;"><h1 style="color:#1C3557;">Request Cancelled</h1><p>The vault access request has been cancelled by the account owner. No further action is needed.</p><p style="color:#9ca3af;font-size:11px;margin-top:24px;">EstateVault</p></div>`,
+  });
+}
+
+// Admin alert for a paid order that could not be fulfilled (queue failure or a
+// reconcile-detected stuck order). Surfaces highest-trust failures (BUG-1 /
+// BUG-13) to the platform admin so they can retry from the admin screen.
+export async function sendFulfillmentFailureAlert({
+  orderId,
+  productType,
+  reason,
+  detail,
+}: {
+  orderId: string;
+  productType: string;
+  reason: string;
+  detail?: string;
+}) {
+  const { ESTATEVAULT_ADMIN_EMAIL } = await import("@/lib/attorney-review/routing");
+  const adminUrl = `${getAppUrl()}/sales/admin/regenerate-docs`;
+  await sendEmail({
+    from: DEFAULT_FROM,
+    to: ESTATEVAULT_ADMIN_EMAIL,
+    subject: `⚠️ Order fulfillment failed — ${productType} ${orderId}`,
+    html: `<div style="font-family:Inter,sans-serif;max-width:560px;margin:0 auto;padding:32px;color:#2D2D2D;">
+      <h1 style="color:#1C3557;">Order needs attention</h1>
+      <p>A paid <strong>${productType}</strong> order could not be fulfilled and is now marked <strong>failed</strong>.</p>
+      <table style="font-size:14px;margin:16px 0;">
+        <tr><td style="color:#6b7280;padding:2px 12px 2px 0;">Order ID</td><td>${orderId}</td></tr>
+        <tr><td style="color:#6b7280;padding:2px 12px 2px 0;">Reason</td><td>${reason}</td></tr>
+        ${detail ? `<tr><td style="color:#6b7280;padding:2px 12px 2px 0;">Detail</td><td>${detail}</td></tr>` : ""}
+      </table>
+      <p><a href="${adminUrl}" style="color:#C9A84C;">Open the admin fulfillment screen →</a></p>
+      <p style="color:#9ca3af;font-size:11px;margin-top:24px;">EstateVault</p>
+    </div>`,
   });
 }

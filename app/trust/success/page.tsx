@@ -255,7 +255,7 @@ function SuccessContent() {
                   className="w-full flex items-center justify-between rounded-lg bg-white/10 hover:bg-white/15 px-4 py-3 text-sm text-white transition-colors"
                 >
                   <span>{docTypeLabels[doc.document_type] || doc.document_type}</span>
-                  <span className="text-gold font-medium">Download PDF &darr;</span>
+                  <span className="text-gold font-medium">View Document &rarr;</span>
                 </button>
               ))}
             </div>

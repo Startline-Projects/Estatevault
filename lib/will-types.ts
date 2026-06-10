@@ -6,6 +6,7 @@ export interface WillIntake {
   state: string;
   maritalStatus: string;
   hasMinorChildren: string;
+  hasSpecialNeedsDependent: string;
   executorName: string;
   executorRelationship: string;
   successorExecutorName: string;
@@ -31,6 +32,7 @@ export const initialWillIntake: WillIntake = {
   state: "",
   maritalStatus: "",
   hasMinorChildren: "",
+  hasSpecialNeedsDependent: "",
   executorName: "",
   executorRelationship: "",
   successorExecutorName: "",

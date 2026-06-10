@@ -27,9 +27,20 @@
     {
       "path": "/api/cron/life-event-checkin",
       "schedule": "0 15 * * *"
+    },
+    {
+      "path": "/api/cron/reconcile-orders",
+      "schedule": "*/15 * * * *"
+    },
+    {
+      "path": "/api/cron/subscription-expiry-reminder",
+      "schedule": "0 13 * * *"
     }
   ],
   "functions": {
+    "app/api/cron/reconcile-orders/route.ts": {
+      "maxDuration": 300
+    },
     "app/api/documents/process/route.ts": {
       "maxDuration": 300
     },

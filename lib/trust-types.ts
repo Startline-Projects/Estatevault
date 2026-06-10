@@ -6,6 +6,7 @@ export interface TrustIntake {
   city: string;
   state: string;
   maritalStatus: string;
+  hasSpecialNeedsDependent: string;
   trustName: string;
   // Trustee
   primaryTrustee: string;
@@ -58,6 +59,7 @@ export const initialTrustIntake: TrustIntake = {
   city: "",
   state: "",
   maritalStatus: "",
+  hasSpecialNeedsDependent: "",
   trustName: "",
   primaryTrustee: "",
   trusteeName: "",

@@ -79,7 +79,7 @@ export const POST = withRoute(async (req: NextRequest) => {
   const { admin, user, client } = ctx;
 
   const { data: sub } = await clientRepo.getSubscriptionById(admin, client.id);
-  if (sub?.vault_subscription_status !== "active") {
+  if (!clientRepo.hasVaultAccess(sub?.vault_subscription_status, sub?.vault_subscription_expiry)) {
     return fail("Vault subscription required", 403);
   }
 

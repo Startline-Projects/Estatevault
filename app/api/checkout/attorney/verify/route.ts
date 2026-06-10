@@ -6,6 +6,7 @@ import { createAdminClient } from "@/lib/api/auth";
 import * as profileRepo from "@/lib/repos/server/profileRepo";
 import * as partnerRepo from "@/lib/repos/server/partnerRepo";
 import { attorneyVerifySchema } from "@/lib/validation/schemas";
+import { DEFAULT_ATTORNEY_REVIEW_FEE } from "@/lib/orders/pricing";
 
 /* ------------------------------------------------------------------ */
 /*  POST /api/checkout/attorney/verify                                */
@@ -44,7 +45,6 @@ export const POST = withRoute(async (request: Request) => {
     const password = clientPassword || "";
     const tier = meta.tier || "standard";
     const barNumber = meta.bar_number || "";
-    const reviewFee = parseInt(meta.review_fee || "300", 10);
     const firmName = meta.firm_name || "";
     const practiceArea = meta.practice_area || "";
     const firstName = meta.first_name || "";
@@ -118,7 +118,8 @@ export const POST = withRoute(async (request: Request) => {
         professional_type: "attorney",
         tier: normalizedTier,
         status: "pending_verification",
-        custom_review_fee: reviewFee * 100,
+        // Admin-controlled fee (BUG-4): seed platform default; partners can't set it.
+        custom_review_fee: DEFAULT_ATTORNEY_REVIEW_FEE,
         bar_number: barNumber,
         practice_areas: practiceArea ? [practiceArea] : [],
         one_time_fee_paid: true,
@@ -202,7 +203,7 @@ export const POST = withRoute(async (request: Request) => {
               <tr><td style="padding:4px 12px;font-weight:600;">Firm</td><td style="padding:4px 12px;">${firmName || "N/A"}</td></tr>
               <tr><td style="padding:4px 12px;font-weight:600;">Tier</td><td style="padding:4px 12px;">${tier}</td></tr>
               <tr><td style="padding:4px 12px;font-weight:600;">Bar #</td><td style="padding:4px 12px;">${barNumber}</td></tr>
-              <tr><td style="padding:4px 12px;font-weight:600;">Review Fee</td><td style="padding:4px 12px;">$${reviewFee}</td></tr>
+              <tr><td style="padding:4px 12px;font-weight:600;">Review Fee</td><td style="padding:4px 12px;">$${DEFAULT_ATTORNEY_REVIEW_FEE / 100} (admin-controlled)</td></tr>
               <tr><td style="padding:4px 12px;font-weight:600;">Amount Paid</td><td style="padding:4px 12px;">$${amount}</td></tr>
               <tr><td style="padding:4px 12px;font-weight:600;">Practice Area</td><td style="padding:4px 12px;">${practiceArea || "N/A"}</td></tr>
             </table>

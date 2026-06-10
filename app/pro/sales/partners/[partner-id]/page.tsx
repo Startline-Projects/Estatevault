@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { addPartnerNote, getPartnerDetail, setPartnerStatus, applyPartnerPromo } from "@/lib/api-client/sales";
+import { addPartnerNote, getPartnerDetail, setPartnerStatus, applyPartnerPromo, setPartnerReviewFee } from "@/lib/api-client/sales";
 
 type TabKey = "overview" | "performance" | "activity" | "notes";
 
@@ -21,6 +21,9 @@ interface PartnerDetail {
   updated_at: string;
   last_login: string | null;
   business_url: string;
+  professional_type?: string | null;
+  has_inhouse_estate_attorney?: boolean | null;
+  custom_review_fee?: number | null;
 }
 
 interface OnboardingStep {
@@ -112,6 +115,12 @@ export default function PartnerDetailPage() {
   // Actions
   const [toggling, setToggling] = useState(false);
 
+  // Attorney review fee (admin-only; dollars in the input, cents on the wire)
+  const [feeInput, setFeeInput] = useState(300);
+  const [feeSaving, setFeeSaving] = useState(false);
+  const [feeSaved, setFeeSaved] = useState(false);
+  const [feeError, setFeeError] = useState("");
+
   useEffect(() => {
     loadPartner();
   }, [partnerId]);
@@ -119,7 +128,9 @@ export default function PartnerDetailPage() {
   async function loadPartner() {
     const { data } = await getPartnerDetail(partnerId);
     if (data) {
-      setPartner(data.partner as unknown as PartnerDetail);
+      const pd = data.partner as unknown as PartnerDetail;
+      setPartner(pd);
+      setFeeInput(pd.custom_review_fee ? pd.custom_review_fee / 100 : 300);
       const p = data.performance;
       setMtdDocs(p.mtdDocs);
       setMtdRevenue(p.mtdRevenue);
@@ -180,6 +191,23 @@ export default function PartnerDetailPage() {
     }
     setPromoSaved(true);
     setPromoSaving(false);
+  }
+
+  async function handleSaveFee() {
+    if (!partner) return;
+    setFeeSaving(true);
+    setFeeSaved(false);
+    setFeeError("");
+    const cents = Math.round(feeInput * 100);
+    const { error } = await setPartnerReviewFee(partnerId, cents);
+    if (error) {
+      setFeeError(error || "Failed to update fee.");
+      setFeeSaving(false);
+      return;
+    }
+    setPartner((prev) => (prev ? { ...prev, custom_review_fee: cents } : prev));
+    setFeeSaved(true);
+    setFeeSaving(false);
   }
 
   function handleNudge() {
@@ -378,6 +406,38 @@ export default function PartnerDetailPage() {
               {promoSaved && <span className="text-sm text-green-600">&#10003; Applied, platform fee waived, partner skips Step 1</span>}
             </div>
           </div>
+
+          {/* Attorney Review Fee (admin-only; only meaningful for attorney partners
+              with an in-house reviewer). Server enforces admin + clamps to range. */}
+          {partner.professional_type === "attorney" && partner.has_inhouse_estate_attorney && (
+            <div className="bg-white rounded-xl border border-gray-200 p-6 lg:col-span-2">
+              <h3 className="text-sm font-semibold text-navy uppercase tracking-wider mb-1">Attorney Review Fee</h3>
+              <p className="text-xs text-gray-400 mb-3">
+                Charged to the client and transferred to this partner&apos;s Connect account. Range $150–$1,500.
+              </p>
+              <div className="flex items-center gap-3">
+                <span className="text-sm font-medium text-charcoal/60">$</span>
+                <input
+                  type="number"
+                  min={150}
+                  max={1500}
+                  step={25}
+                  value={feeInput}
+                  onChange={(e) => { setFeeInput(Number(e.target.value)); setFeeSaved(false); setFeeError(""); }}
+                  className="w-32 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gold/40 focus:border-gold"
+                />
+                <button
+                  onClick={handleSaveFee}
+                  disabled={feeSaving}
+                  className="px-5 py-2 rounded-lg bg-gold text-white text-sm font-semibold hover:bg-gold-600 transition disabled:opacity-50"
+                >
+                  {feeSaving ? "Saving..." : "Save Fee"}
+                </button>
+                {feeSaved && <span className="text-sm text-green-600">&#10003; Saved</span>}
+                {feeError && <span className="text-sm text-red-600">{feeError}</span>}
+              </div>
+            </div>
+          )}
         </div>
       )}
 

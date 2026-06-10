@@ -1,0 +1,24 @@
+{
+ "expectations": [
+  {
+   "text": "Identifies a paid-but-not-fulfilled failure mode",
+   "passed": true,
+   "evidence": "Critical idempotency + no-reconciliation findings"
+  },
+  {
+   "text": "Cross-checks amount vs pricing.ts SSOT",
+   "passed": true,
+   "evidence": "Verified baseAmount/attorneyReview from PRICES"
+  },
+  {
+   "text": "file:line + severity",
+   "passed": true,
+   "evidence": "Cites file:line, severity-ranked"
+  },
+  {
+   "text": "BUGS.md entries continue numbering, real file untouched",
+   "passed": true,
+   "evidence": "bugs-additions.md written; real file untouched"
+  }
+ ]
+}

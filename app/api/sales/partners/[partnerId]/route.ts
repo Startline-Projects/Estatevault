@@ -2,7 +2,7 @@ import { NextRequest } from "next/server";
 import { requireAuth } from "@/lib/api/auth";
 import { withRoute } from "@/lib/api/route";
 import { ok, fail } from "@/lib/api/response";
-import { salesPartnerStatusSchema } from "@/lib/validation/schemas";
+import { salesPartnerStatusSchema, adminPartnerFeeSchema } from "@/lib/validation/schemas";
 import * as partnerRepo from "@/lib/repos/server/partnerRepo";
 import * as orderRepo from "@/lib/repos/server/orderRepo";
 import * as auditLogRepo from "@/lib/repos/server/auditLogRepo";
@@ -84,7 +84,22 @@ export const PATCH = withRoute(async (req: NextRequest, ctx: Ctx) => {
   const partner = await loadOwned(auth, partnerId);
   if (!partner) return fail("partner not found", 404);
 
-  const parsed = salesPartnerStatusSchema.safeParse(await req.json().catch(() => null));
+  const body = await req.json().catch(() => null);
+  const isAdmin =
+    auth.profile.user_type === "admin" || auth.profile.user_type === "review_attorney";
+
+  // Admin-only: set this partner's attorney review fee (clamped at the schema
+  // boundary to ATTORNEY_REVIEW_FEE_RANGE). Partners cannot set their own (BUG-4).
+  const fee = adminPartnerFeeSchema.safeParse(body);
+  if (fee.success) {
+    if (!isAdmin) return fail("forbidden", 403);
+    await partnerRepo.update(auth.admin, partnerId, {
+      custom_review_fee: fee.data.custom_review_fee,
+    });
+    return ok({ success: true });
+  }
+
+  const parsed = salesPartnerStatusSchema.safeParse(body);
   if (!parsed.success) return fail("invalid payload", 400);
 
   await partnerRepo.update(auth.admin, partnerId, { status: parsed.data.status });

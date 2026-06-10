@@ -139,6 +139,12 @@ export function setPartnerStatus(partnerId: string, status: "active" | "suspende
   return patch(`/api/sales/partners/${partnerId}`, { status });
 }
 
+// Admin-only: set an attorney partner's review fee in cents (BUG-4). Clamped to
+// ATTORNEY_REVIEW_FEE_RANGE server-side; non-admins get 403.
+export function setPartnerReviewFee(partnerId: string, customReviewFeeCents: number): Promise<ApiResult<{ success: boolean }>> {
+  return patch(`/api/sales/partners/${partnerId}`, { custom_review_fee: customReviewFeeCents });
+}
+
 // Apply a promo code to a managed partner, comping the platform fee (B2).
 export function applyPartnerPromo(partnerId: string, promoCode: string): Promise<ApiResult<{ success: boolean }>> {
   return post(`/api/sales/partners/${partnerId}/apply-promo`, { promo_code: promoCode });

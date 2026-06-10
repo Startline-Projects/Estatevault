@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EstateVault — Full-Website Bug-Hunt Plan</title>
+<style>
+  :root{
+    --navy:#1C3557; --gold:#C9A84C; --charcoal:#2D2D2D; --white:#FFFFFF;
+    --crit:#B3261E; --high:#D97706; --med:#B58900;
+    --bg:#F5F6F8; --card:#FFFFFF; --line:#E3E6EB; --muted:#6B7280; --ok:#15803D;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:Inter,-apple-system,Segoe UI,Roboto,sans-serif;
+    background:var(--bg);color:var(--charcoal);line-height:1.55}
+  header{background:var(--navy);color:#fff;padding:38px 24px 30px}
+  .wrap{max-width:1000px;margin:0 auto;padding:0 20px}
+  header h1{margin:0;font-size:29px;font-weight:700;letter-spacing:-.02em}
+  header h1 .g{color:var(--gold)}
+  header p{margin:8px 0 0;color:#c8d2e0;font-size:15px}
+  .stats{display:flex;flex-wrap:wrap;gap:12px;margin-top:22px}
+  .stat{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);
+    border-radius:10px;padding:12px 16px;min-width:96px}
+  .stat .n{font-size:25px;font-weight:700;line-height:1;color:var(--gold)}
+  .stat .l{font-size:11.5px;color:#c8d2e0;margin-top:4px;text-transform:uppercase;letter-spacing:.04em}
+  main{padding:30px 0 60px}
+  .section-h{font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;
+    color:var(--muted);margin:34px 0 12px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:12px;
+    padding:20px 22px;margin-bottom:14px;box-shadow:0 1px 2px rgba(20,30,50,.04)}
+  .card h3{margin:0 0 10px;font-size:16px;color:var(--navy)}
+  .card p{margin:8px 0;font-size:14.5px}
+  .card ol{margin:8px 0;padding-left:20px}.card ol li{margin:6px 0;font-size:14.5px}
+  code{background:#f0f2f5;padding:1px 6px;border-radius:4px;font-size:13px;
+    font-family:ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--navy)}
+  /* domain table */
+  table{width:100%;border-collapse:collapse;background:#fff;border:1px solid var(--line);
+    border-radius:12px;overflow:hidden;font-size:13.5px}
+  th,td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{background:var(--navy);color:#fff;font-size:12px;text-transform:uppercase;letter-spacing:.04em}
+  tr:last-child td{border-bottom:none}
+  tr:nth-child(even) td{background:#fafbfc}
+  /* phases */
+  .phase{background:var(--card);border:1px solid var(--line);border-left-width:5px;
+    border-radius:12px;margin-bottom:13px;overflow:hidden}
+  .phase.crit{border-left-color:var(--crit)}.phase.high{border-left-color:var(--high)}
+  .phase.med{border-left-color:var(--med)}.phase.base{border-left-color:var(--navy)}
+  .phase summary{list-style:none;cursor:pointer;padding:15px 20px;display:flex;
+    align-items:center;gap:12px;user-select:none}
+  .phase summary::-webkit-details-marker{display:none}
+  .pnum{font-weight:700;color:var(--navy);font-size:13px;background:#eef1f5;
+    border-radius:6px;padding:3px 9px;white-space:nowrap}
+  .badge{font-size:10.5px;font-weight:700;color:#fff;padding:3px 8px;border-radius:6px;
+    text-transform:uppercase;letter-spacing:.04em;white-space:nowrap}
+  .badge.crit{background:var(--crit)}.badge.high{background:var(--high)}
+  .badge.med{background:var(--med)}.badge.base{background:var(--navy)}
+  .ptitle{font-weight:600;font-size:15.5px;flex:1}
+  .chev{color:var(--muted);transition:transform .2s;font-size:13px}
+  .phase[open] .chev{transform:rotate(90deg)}
+  .pbody{padding:2px 20px 18px;border-top:1px solid var(--line)}
+  .k{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin:13px 0 3px}
+  .pbody .v{font-size:14.5px}
+  .pill{display:inline-block;background:#eef1f5;border-radius:6px;padding:2px 8px;
+    font-size:12px;margin:2px 4px 2px 0;color:var(--navy);font-family:ui-monospace,Menlo,monospace}
+  .tag{display:inline-block;font-size:11px;font-weight:600;border-radius:999px;padding:2px 9px;margin-left:4px}
+  .tag.partial{background:#fff3d6;color:#8a6d12;border:1px solid #ecd9a0}
+  .tag.todo{background:#eef1f5;color:#445;border:1px solid #dde2ea}
+  .principles li{margin:7px 0;font-size:14.5px}
+  footer{text-align:center;color:var(--muted);font-size:12.5px;padding:24px}
+  a{color:var(--navy)}
+  .done-note{background:#f4f9f4;border:1px solid #cfe7cf;border-radius:9px;padding:12px 14px;font-size:14px}
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <h1>Estate<span class="g">Vault</span> — Full-Website Bug-Hunt Plan</h1>
+    <p>Systematic plan to find, confirm &amp; log every bug across the platform · updated 2026-06-05</p>
+    <div class="stats">
+      <div class="stat"><div class="n">~110</div><div class="l">Page routes</div></div>
+      <div class="stat"><div class="n">~150</div><div class="l">API routes</div></div>
+      <div class="stat"><div class="n">9</div><div class="l">Domains</div></div>
+      <div class="stat"><div class="n">4</div><div class="l">Cross-cutting</div></div>
+      <div class="stat"><div class="n">15</div><div class="l">Bugs so far</div></div>
+    </div>
+  </div>
+</header>
+<main class="wrap">
+
+  <p style="font-size:15px">
+    <b>Goal:</b> systematically find and confirm bugs across the whole platform, logging every confirmed one to
+    <a href="BUGS.md">BUGS.md</a> / <a href="BUGS.html">BUGS.html</a> until coverage is complete.<br>
+    <b>Method:</b> driven by the <code>bug-hunter</code> skill — one surface at a time, severity-ranked
+    (Critical &gt; High &gt; Medium &gt; Low), confirmed findings only.
+  </p>
+
+  <!-- Principles -->
+  <div class="section-h">Principles (apply to every phase)</div>
+  <div class="card">
+    <ol class="principles">
+      <li><b>Read before judging</b> — trace the real path (page → API route → repo → DB), don't guess.</li>
+      <li><b>Confirm, don't speculate</b> — write the repro. If a test already covers it, it's not a bug. Speculation → "Needs verification", not BUGS.md.</li>
+      <li><b>Server is the source of truth</b> — for every finding ask: can the client lie? Is the value re-derived server-side? Is identity from the session, not the request body?</li>
+      <li><b>Cross-check money against the SSOT</b> — <code>lib/orders/pricing.ts</code> + <code>lib/attorney-review/routing.ts</code>. Any other file disagreeing = bug.</li>
+      <li><b>Dedup</b> — re-confirming an existing BUG-N updates that entry; never duplicate.</li>
+      <li><b>Log as you go</b> — append confirmed findings per phase, continue the numbering, regenerate the HTML.</li>
+    </ol>
+  </div>
+
+  <!-- Domain map -->
+  <div class="section-h">Domain map — the whole surface, grouped</div>
+  <table>
+    <thead><tr><th>#</th><th>Domain</th><th>Key routes</th><th>Why it matters</th></tr></thead>
+    <tbody>
+      <tr><td>1</td><td><b>Money path</b></td><td><code>checkout/*</code>, <code>webhooks/stripe</code>, <code>documents/*</code>, <code>subscription/*</code>, <code>stripe/connect/*</code></td><td>Paid-but-nothing / wrong charge. Highest trust.</td></tr>
+      <tr><td>2</td><td><b>Core Rules</b></td><td>quiz, will, trust intake + checkout + webhook</td><td>Pricing, splits, hard stops, acknowledgment, no-legal-advice. Business law.</td></tr>
+      <tr><td>3</td><td><b>Vault &amp; crypto</b></td><td><code>vault/*</code>, <code>crypto/*</code>, <code>trustee/*</code>, <code>farewell/*</code></td><td>Data loss, encryption, cross-tenant leaks.</td></tr>
+      <tr><td>4</td><td><b>Auth &amp; sessions</b></td><td><code>auth/*</code>, <code>profile/me</code>, middleware</td><td>Account takeover, lockout, orphaned sessions, role escalation.</td></tr>
+      <tr><td>5</td><td><b>Client portal</b></td><td>dashboard/*, <code>client/*</code>, <code>documents/download*</code></td><td>Client A reads B; download authz; stuck states.</td></tr>
+      <tr><td>6</td><td><b>Partner / pro portal</b></td><td>pro/*, [partner-slug], <code>partner/*</code></td><td>Self-serve financial flags, branding/domain abuse, client scoping.</td></tr>
+      <tr><td>7</td><td><b>Sales / admin</b></td><td>sales/*, <code>admin/*</code></td><td>Privilege boundaries, commission math, lead leakage.</td></tr>
+      <tr><td>8</td><td><b>Attorney review</b></td><td><code>attorney/*</code>, <code>checkout/attorney</code></td><td>$300 routing (100% to attorney), SLA, doc upload authz.</td></tr>
+      <tr><td>9</td><td><b>Marketing / public</b></td><td><code>marketing/*</code>, <code>share</code>, <code>contact</code>, <code>quiz/*</code></td><td>Injection, partner-slug spoofing, lead spam, info leak.</td></tr>
+    </tbody>
+  </table>
+
+  <!-- Phases -->
+  <div class="section-h">Phased execution — run in this order</div>
+
+  <details class="phase base" open>
+    <summary><span class="pnum">Phase 0</span><span class="badge base">Baseline</span><span class="ptitle">Run once, before hunting</span><span class="chev">▶</span></summary>
+    <div class="pbody">
+      <div class="k">Do</div>
+      <ol>
+        <li><code>npm test</code> + <code>npm run test:e2e</code> — capture what's already green (don't re-report covered bugs).</li>
+        <li><code>npx tsc --noEmit</code> + <code>npm run lint</code> — surface type/lint-level real bugs.</li>
+        <li><code>npm run crypto:vectors:check</code> — confirm crypto vectors intact.</li>
+        <li>Grep price drift: <code>grep -rn -E "40000|60000|30000" app lib components</code>.</li>
+        <li>Re-verify BUG-1..BUG-15 still reproduce; close any now fixed.</li>
+      </ol>
+    </div>
+  </details>
+
+  <details class="phase crit">
+    <summary><span class="pnum">Phase 1</span><span class="badge crit">Critical</span><span class="ptitle">Money path<span class="tag partial">partial — BUG-1..4,8,11,14</span></span><span class="chev">▶</span></summary>
+    <div class="pbody">
+      <div class="k">Hunt</div><div class="v">Order/Stripe ordering (BUG-1), webhook idempotency + reconciliation (BUG-2), doc-gen failure handling (BUG-3/11), payout splits + double-pay, amount integrity, promo/test abuse (BUG-14), subscription lifecycle (cancel/sync/status), account linking on success (BUG-4), refund/chargeback.</div>
+      <div class="k">Key files</div>
+      <div class="v"><span class="pill">lib/checkout/*</span><span class="pill">lib/webhooks/stripe/*</span><span class="pill">lib/orders/*</span><span class="pill">lib/stripe-payouts.ts</span><span class="pill">app/api/checkout/*</span><span class="pill">app/api/subscription/*</span><span class="pill">app/api/documents/*</span></div>
+    </div>
+  </details>
+
+  <details class="phase crit">
+    <summary><span class="pnum">Phase 2</span><span class="badge crit">Critical</span><span class="ptitle">Core Rules<span class="tag partial">partial — BUG-8,9</span></span><span class="chev">▶</span></summary>
+    <div class="pbody">
+      <div class="k">Hunt</div><div class="v">Hard-stop enforcement on every entry (BUG-9), acknowledgment gate server-side (BUG-8), price/split drift vs SSOT, attorney-review $300 invariant, no-legal-advice copy ("Based on your answers", never "We recommend").</div>
+      <div class="k">Key files</div>
+      <div class="v"><span class="pill">app/quiz</span><span class="pill">app/will</span><span class="pill">app/trust</span><span class="pill">lib/trust-types.ts</span><span class="pill">lib/orders/pricing.ts</span><span class="pill">lib/attorney-review/routing.ts</span><span class="pill">document templates</span></div>
+    </div>
+  </details>
+
+  <details class="phase crit">
+    <summary><span class="pnum">Phase 3</span><span class="badge crit">Critical</span><span class="ptitle">Vault &amp; crypto<span class="tag partial">partial — BUG-10</span></span><span class="chev">▶</span></summary>
+    <div class="pbody">
+      <div class="k">Hunt</div><div class="v">Cross-tenant leaks via unscoped storage paths / signed URLs (BUG-10 pattern — check farewell, download-url, download-document, file-key, trustee routes), PIN brute-force/lockout, encryption + key zeroing, trustee invite/OTP lifecycle + expiry, backfill safety, data-loss on overwrite/delete, decrypt-failure masking.</div>
+      <div class="k">Key files</div>
+      <div class="v"><span class="pill">app/api/vault/*</span><span class="pill">app/api/crypto/*</span><span class="pill">app/api/trustee/*</span><span class="pill">app/api/farewell/*</span><span class="pill">lib/crypto/*</span></div>
+    </div>
+  </details>
+
+  <details class="phase high">
+    <summary><span class="pnum">Phase 4</span><span class="badge high">High</span><span class="ptitle">Auth &amp; sessions<span class="tag todo">not started</span></span><span class="chev">▶</span></summary>
+    <div class="pbody">
+      <div class="k">Hunt</div><div class="v">Session vs client-supplied identity (BUG-6 pattern across all routes), signOut/handoff pitfalls, verify-code/link replay + expiry + rate-limit, set-password/recovery abuse, orphaned-session handling (BUG-5), email-enumeration on check-email/check-verification, login-routing role leakage.</div>
+      <div class="k">Key files</div>
+      <div class="v"><span class="pill">app/api/auth/*</span><span class="pill">lib/auth/*</span><span class="pill">lib/supabase/middleware.ts</span><span class="pill">app/auth/*</span></div>
+    </div>
+  </details>
+
+  <details class="phase high">
+    <summary><span class="pnum">Phase 5</span><span class="badge high">High</span><span class="ptitle">Client portal<span class="tag partial">partial — BUG-5,6,7,15</span></span><span class="chev">▶</span></summary>
+    <div class="pbody">
+      <div class="k">Hunt</div><div class="v">Client A reads B (RLS assumptions), document download authz + attorney-review gate, settings/funding-checklist/mark-executed scoping, lost-state dead-ends (BUG-7/15), null derefs on optional profile/order fields.</div>
+      <div class="k">Key files</div>
+      <div class="v"><span class="pill">app/dashboard/**</span><span class="pill">app/api/client/*</span><span class="pill">app/api/documents/download*</span></div>
+    </div>
+  </details>
+
+  <details class="phase high">
+    <summary><span class="pnum">Phase 6</span><span class="badge high">High</span><span class="ptitle">Partner / pro portal<span class="tag todo">not started</span></span><span class="chev">▶</span></summary>
+    <div class="pbody">
+      <div class="k">Hunt</div><div class="v">Partner self-update can't set financial flags (verify whitelist holds), branding/logo/domain takeover (add-domain, verify-domain, vault-subdomain), partner sees only own clients, invite-client abuse, revenue math vs SSOT, partner vault-client checkout pricing.</div>
+      <div class="k">Key files</div>
+      <div class="v"><span class="pill">app/api/partner/*</span><span class="pill">app/api/partners/*</span><span class="pill">app/pro/**</span><span class="pill">app/[partner-slug]/**</span></div>
+    </div>
+  </details>
+
+  <details class="phase high">
+    <summary><span class="pnum">Phase 7</span><span class="badge high">High</span><span class="ptitle">Sales / admin<span class="tag todo">not started</span></span><span class="chev">▶</span></summary>
+    <div class="pbody">
+      <div class="k">Hunt</div><div class="v">Role boundaries (rep vs admin vs platform-admin), commission/payout math, create-partner/create-rep authz, prospect/lead cross-leak, affiliate payout/status authz, admin-only routes reachable by lower roles, regenerate-docs abuse.</div>
+      <div class="k">Key files</div>
+      <div class="v"><span class="pill">app/api/sales/*</span><span class="pill">app/api/admin/*</span><span class="pill">app/sales/**</span><span class="pill">app/pro/sales/**</span></div>
+    </div>
+  </details>
+
+  <details class="phase med">
+    <summary><span class="pnum">Phase 8</span><span class="badge med">Medium</span><span class="ptitle">Attorney review<span class="tag todo">not started</span></span><span class="chev">▶</span></summary>
+    <div class="pbody">
+      <div class="k">Hunt</div><div class="v">$300 routing 100%-to-attorney invariant, review assignment/approval authz, SLA logic, reviewed-doc upload authz + integrity, farewell-verification access, attorney sees only assigned reviews.</div>
+      <div class="k">Key files</div>
+      <div class="v"><span class="pill">app/api/attorney/*</span><span class="pill">app/api/checkout/attorney*</span><span class="pill">lib/attorney-review/*</span><span class="pill">app/attorney/**</span></div>
+    </div>
+  </details>
+
+  <details class="phase med">
+    <summary><span class="pnum">Phase 9</span><span class="badge med">Medium</span><span class="ptitle">Marketing / public<span class="tag todo">not started</span></span><span class="chev">▶</span></summary>
+    <div class="pbody">
+      <div class="k">Hunt</div><div class="v">Partner-slug spoofing/enumeration, marketing material generation (injection, path/access), share/contact lead spam + validation, quiz personalize abuse, info leak in public pages, CSP-report endpoint abuse.</div>
+      <div class="k">Key files</div>
+      <div class="v"><span class="pill">app/api/marketing/*</span><span class="pill">app/api/share</span><span class="pill">app/api/contact</span><span class="pill">app/api/quiz/*</span><span class="pill">app/[partner-slug]/**</span></div>
+    </div>
+  </details>
+
+  <!-- Cross-cutting -->
+  <div class="section-h">Cross-cutting passes — after the domains, across the whole codebase</div>
+  <div class="card">
+    <p><b>A. Auth/ownership sweep</b> — every API route: is identity from the session? is every row scoped to the caller? (catches the BUG-6/10 class everywhere at once).</p>
+    <p><b>B. Validation-boundary sweep</b> — every route parses body/params with Zod; no <code>.passthrough()</code> on data that drives documents/money (BUG-12 class); numeric bounds.</p>
+    <p><b>C. Race / idempotency sweep</b> — double-submit, concurrent webhook + success page, missing <code>await</code>, fire-and-forget writes with swallowed errors (BUG-11 class).</p>
+    <p><b>D. Error-handling sweep</b> — <code>catch {}</code> that hides failures; 200 returned on partial failure; unhandled rejections.</p>
+  </div>
+
+  <!-- Mechanics -->
+  <div class="section-h">Execution mechanics</div>
+  <div class="card">
+    <p><b>Parallelize:</b> one <code>bug-hunter</code> agent per domain; consolidate + dedupe reports before logging.</p>
+    <p><b>Two test accounts</b> (client A + client B) ready for cross-tenant checks (Domains 3/5/6).</p>
+    <p><b>Staging env</b> with toggles to force failures (bad Stripe key, Redis off, webhook disabled) for money-path repros.</p>
+    <p><b>Log discipline:</b> after each phase, append confirmed findings to <code>BUGS.md</code> (continue BUG-N) and regenerate <code>BUGS.html</code>.</p>
+  </div>
+
+  <!-- Tracker -->
+  <div class="section-h">Coverage tracker</div>
+  <table>
+    <thead><tr><th>Phase</th><th>Domain</th><th>Status</th><th>Already covered</th></tr></thead>
+    <tbody>
+      <tr><td>0</td><td>Baseline</td><td>☐ Not started</td><td>—</td></tr>
+      <tr><td>1</td><td>Money path</td><td>◐ Partial</td><td>BUG-1, 2, 3, 4, 8, 11, 14</td></tr>
+      <tr><td>2</td><td>Core Rules</td><td>◐ Partial</td><td>BUG-8, 9</td></tr>
+      <tr><td>3</td><td>Vault &amp; crypto</td><td>◐ Partial</td><td>BUG-10</td></tr>
+      <tr><td>4</td><td>Auth &amp; sessions</td><td>☐ Not started</td><td>—</td></tr>
+      <tr><td>5</td><td>Client portal</td><td>◐ Partial</td><td>BUG-5, 6, 7, 15</td></tr>
+      <tr><td>6</td><td>Partner / pro</td><td>☐ Not started</td><td>—</td></tr>
+      <tr><td>7</td><td>Sales / admin</td><td>☐ Not started</td><td>—</td></tr>
+      <tr><td>8</td><td>Attorney review</td><td>☐ Not started</td><td>—</td></tr>
+      <tr><td>9</td><td>Marketing / public</td><td>☐ Not started</td><td>—</td></tr>
+      <tr><td>A–D</td><td>Cross-cutting</td><td>☐ Not started</td><td>—</td></tr>
+    </tbody>
+  </table>
+
+  <div class="section-h">Done when</div>
+  <div class="done-note">Every phase + cross-cutting pass is complete, all confirmed bugs are logged in BUGS.md / BUGS.html, and re-running a phase surfaces nothing new.</div>
+
+</main>
+<footer>EstateVault bug-hunt plan · 2026-06-05 · source: <a href="BUG_HUNT_PLAN.md">BUG_HUNT_PLAN.md</a></footer>
+
+<script>
+  // expand-all on Phase header click handled by native <details>; nothing else needed
+</script>
+</body>
+</html>

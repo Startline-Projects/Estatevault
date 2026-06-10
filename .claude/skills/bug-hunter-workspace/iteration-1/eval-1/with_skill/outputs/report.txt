@@ -1,0 +1,94 @@
+# Bug Hunt — Core Rules (prices, splits, hard stops, acknowledgment) — 2026-06-04
+
+## Summary
+2 confirmed findings (both Critical — server-side enforcement gaps on Core Rules 3 & 4).
+Prices, revenue splits, and the attorney-review fee-routing invariant all check out
+against the lib/orders/pricing.ts / lib/attorney-review/routing.ts source of truth.
+The risk is not wrong numbers — it's that the two "cannot be skipped" gates
+(acknowledgment, hard stops) are enforced only in the browser.
+
+## Confirmed findings
+
+### Critical — Acknowledgment gate is client-side only; server never verifies it
+- Area: lib/checkout/createCheckoutSession.ts:188-189 and :351-352;
+  app/api/checkout/amendment/route.ts:50,89; intake at app/will/page.tsx:243-247,
+  app/trust/page.tsx:218-222.
+- What: Core Rule 3 requires the client to sign the acknowledgment before any document
+  is generated. The acknowledgment is enforced purely as a client-side stage transition
+  (<AcknowledgmentCard onContinue={() => setStage("intake")} />). On the server, every
+  order is written with acknowledgment_signed: true HARDCODED UNCONDITIONALLY — the
+  checkout never receives or validates proof of signing (willCheckoutSchema /
+  trustCheckoutSchema have no acknowledgment field), and the webhook
+  (handleDocumentCheckout.ts:141-150) flips the order to generating and creates
+  documents without checking it.
+- Impact: A direct POST to /api/checkout/will (or trust/amendment) with valid intake
+  answers produces a paid order recorded as "acknowledgment signed" and generates
+  documents, with the client never having signed. acknowledgment_signed_at is fabricated
+  server-side, so it is not evidence of anything. Breaks Rule 3.
+- Repro: curl -X POST /api/checkout/will with a valid intakeAnswers body and no UI
+  interaction → order row has acknowledgment_signed: true; on payment the webhook
+  generates documents. The acknowledgment screen was never rendered.
+- Fix: Require the client to send an explicit acknowledgment flag (add
+  acknowledgmentSigned: true to the Zod schema, 400 if absent) and set the column from
+  that input rather than hardcoding true. Better: persist the acknowledgment as its own
+  audited event tied to the client/session, and have the webhook refuse to advance an
+  order to generating unless that record exists.
+
+### Critical — Hard stops (Rule 4) have no server-side enforcement; trivially skippable
+- Area: Only client-side check: app/quiz/page.tsx:118-128,143-146 (checkHardStop() →
+  setScreen("hardstop")). No server equivalent in lib/checkout/createCheckoutSession.ts,
+  the checkout routes, or lib/webhooks/stripe/handleDocumentCheckout.ts.
+- What: Core Rule 4 requires that a special-needs dependent or an irrevocable trust halt
+  document generation and route to an attorney — "hardcoded, no override." The only
+  enforcement is the quiz component (browser). The /will and /trust intake flows are a
+  SEPARATE path from the quiz and run no hard-stop check; the server checkout and webhook
+  never inspect intake answers for these conditions. (The trust flow's checkComplexity()
+  in lib/trust-types.ts:102 flags multi-state real estate / business interests / unequal
+  splits — that is the override-able complexity flag, a different mechanism; it does not
+  cover special-needs or irrevocable and does not halt anything server-side.)
+- Impact: A user who reaches /will or /trust directly (skipping the quiz), or who passes
+  the quiz cleanly then enters a hard-stop condition during intake, pays and gets
+  auto-generated documents for exactly the scenarios the platform must refuse. No server
+  backstop, so "no override" is unenforceable.
+- Repro: Navigate straight to /trust (bypassing /quiz), complete intake with an
+  irrevocable-trust / special-needs situation, pay → webhook sets generating and
+  documents are produced. No hard stop fires.
+- Fix: Add a server-side hard-stop predicate keyed off the canonical intake fields
+  (special-needs dependent, irrevocable trust) and enforce it in createCheckoutSession
+  (reject / route to referral) AND as a guard in the document webhook before status →
+  generating. No-override regardless of any client flag (confirmOverride must not bypass).
+
+## Needs verification
+- /perspectives and attorney marketing pages show a $350 review fee
+  (app/perspectives/page.tsx:337,403; app/khan-lawgroup/page.tsx:21;
+  app/partners/attorneys/page.tsx:21,1086). This appears consistent with the routing
+  model: for an attorney partner with their own in-house reviewer (routing.ts Case 4) the
+  fee is the partner's own custom_review_fee (schema allows up to $1,000; review-network
+  page states "$150 to $1,500"), kept 100% by the attorney — NOT the platform's $300
+  add-on. Flagging only so a human confirms these pages are meant to depict the
+  attorney-partner custom-fee scenario; if any is meant to show the platform's
+  attorney-review price, $350 would be wrong (should be $300).
+
+## Checked & OK
+- Fixed prices — PRICES in lib/orders/pricing.ts (will 40000, trust 60000, attorney
+  review 30000, amendment 5000, vault/yr 9900) are the single source. Every server
+  checkout derives unit_amount / amount_total from PRICES
+  (createCheckoutSession.ts:148-149,231,242; amendment/route.ts:84,100;
+  vault-subscription/route.ts:151). No server route hardcodes a divergent price; client
+  cannot influence the charged amount.
+- Revenue splits — calculateSplit (lib/stripe-payouts.ts:4-18) reads only from
+  PARTNER_SPLITS / AFFILIATE_SPLITS. Standard will 30000 / trust 40000, enterprise 35000
+  / 45000; ev + partner sum to full price for every tier. Webhook payout
+  (handleDocumentCheckout.ts:159-202) recomputes from calculateSplit, not client data.
+- Attorney-review fee routing (3.6 invariant) — resolveReviewRouting (routing.ts:40-92)
+  sends $300 to EstateVault in Cases 1-3 and uses custom_review_fee only in Case 4. A
+  forged custom_review_fee cannot redirect the EstateVault-routed fee.
+- Partner self-update can't set financial flags — partnerSelfUpdateSchema
+  (schemas.ts:522-549) omits one_time_fee_paid, platform_fee_amount, tier,
+  partner_revenue_pct. custom_review_fee allowed but only matters in Case 4 and is
+  bounded (0-100000 cents).
+- No-legal-advice copy — quiz/result use "Based on your answers…" (perspectives:476,
+  khan-lawgroup:718). The "I recommend you get a trust" string in
+  app/pro/marketing/page.tsx:30 is an explicit ✗ "don't say this" training example.
+- Existing tests green — pricing.test.ts, calculate-split.test.ts,
+  checkout-schemas.test.ts all pass (35 tests).

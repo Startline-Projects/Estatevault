@@ -7,6 +7,7 @@ import { getLatestQuiz } from "@/lib/api-client/clientAccount";
 import { type WillIntake, initialWillIntake } from "@/lib/will-types";
 import PartnerThemedShell, { BrandedLoadingWordmark } from "@/components/partner/PartnerThemedShell";
 import AcknowledgmentCard from "@/components/intake/AcknowledgmentCard";
+import HardStopCard from "@/components/quiz/HardStopCard";
 import ChoiceTile from "@/components/quiz/ChoiceTile";
 import YesNoTiles from "@/components/quiz/YesNoTiles";
 import TextInput from "@/components/quiz/TextInput";
@@ -21,6 +22,7 @@ export default function WillPage() {
   const router = useRouter();
   const [partnerParam, setPartnerParam] = useState("");
   const [stage, setStage] = useState<Stage>("acknowledgment");
+  const [hardStopped, setHardStopped] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
 
   // Intake
@@ -107,7 +109,8 @@ export default function WillPage() {
           intake.dateOfBirth !== "" &&
           intake.dateOfBirth <= maxDob &&
           intake.city.trim() !== "" &&
-          intake.hasMinorChildren !== ""
+          intake.hasMinorChildren !== "" &&
+          intake.hasSpecialNeedsDependent !== ""
         );
       case "executor":
         return (
@@ -172,6 +175,11 @@ export default function WillPage() {
 
   function handleContinue() {
     if (!isCardComplete() || hasPartialName) return;
+    // Hard stop (Core Rule 4) — special-needs dependent halts generation.
+    if (intake.hasSpecialNeedsDependent === "Yes") {
+      setHardStopped(true);
+      return;
+    }
     if (activeCardId === "review") {
       // Save intake to sessionStorage and go to checkout
       const intakeJson = JSON.stringify(intake);
@@ -231,6 +239,14 @@ export default function WillPage() {
   ];
 
   // ── REDIRECTING ───────────────────────────────────────────────
+  if (hardStopped) {
+    return (
+      <PartnerThemedShell showHeader={false}>
+        <HardStopCard />
+      </PartnerThemedShell>
+    );
+  }
+
   if (stage === "redirecting") {
     return (
       <PartnerThemedShell showHeader={false}>
@@ -360,6 +376,15 @@ export default function WillPage() {
                       : {}),
                   })
                 }
+              />
+            </div>
+            <div className="mt-5">
+              <QuestionLabel required>
+                Do you have a dependent with special needs?
+              </QuestionLabel>
+              <YesNoTiles
+                value={intake.hasSpecialNeedsDependent}
+                onChange={(v) => update({ hasSpecialNeedsDependent: v })}
               />
             </div>
           </>

@@ -1,0 +1,24 @@
+{
+ "expectations": [
+  {
+   "text": "Cross-checks prices/splits vs SSOT",
+   "passed": true,
+   "evidence": "Verified against PARTNER_SPLITS/AFFILIATE_SPLITS and routing.ts 3.6 invariant"
+  },
+  {
+   "text": "Flags hard-stop/acknowledgment bypassable",
+   "passed": true,
+   "evidence": "Both Critical: client-side only, server hardcodes acknowledgment_signed:true"
+  },
+  {
+   "text": "file:line + severity",
+   "passed": true,
+   "evidence": "quiz/page.tsx:118-146, createCheckoutSession.ts:188-189 etc"
+  },
+  {
+   "text": "Distinguishes confirmed bugs from intentional values",
+   "passed": true,
+   "evidence": "Notes 'I recommend' string is a training example,  page is Case 4"
+  }
+ ]
+}

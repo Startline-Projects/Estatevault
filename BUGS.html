@@ -1,0 +1,957 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EstateVault — Bug Report</title>
+<style>
+  :root{
+    --navy:#1C3557; --gold:#C9A84C; --charcoal:#2D2D2D; --white:#FFFFFF;
+    --crit:#B3261E; --high:#D97706; --med:#B58900; --low:#2563EB; --ok:#15803D;
+    --bg:#F5F6F8; --card:#FFFFFF; --line:#E3E6EB; --muted:#6B7280;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:Inter,-apple-system,Segoe UI,Roboto,sans-serif;
+    background:var(--bg);color:var(--charcoal);line-height:1.55}
+  header{background:var(--navy);color:#fff;padding:38px 24px 30px}
+  .wrap{max-width:980px;margin:0 auto;padding:0 20px}
+  header h1{margin:0;font-size:30px;font-weight:700;letter-spacing:-.02em}
+  header h1 .g{color:var(--gold)}
+  header p{margin:8px 0 0;color:#c8d2e0;font-size:15px}
+  .stats{display:flex;flex-wrap:wrap;gap:12px;margin-top:22px}
+  .stat{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);
+    border-radius:10px;padding:12px 16px;min-width:104px}
+  .stat .n{font-size:26px;font-weight:700;line-height:1}
+  .stat .l{font-size:12px;color:#c8d2e0;margin-top:4px;text-transform:uppercase;letter-spacing:.04em}
+  .stat.c .n{color:#ff9b94}.stat.h .n{color:#ffc77a}.stat.m .n{color:#ffe89a}
+  main{padding:30px 0 60px}
+  .controls{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 22px}
+  .filter{border:1px solid var(--line);background:#fff;border-radius:999px;
+    padding:7px 15px;font-size:13px;font-weight:600;cursor:pointer;color:var(--charcoal)}
+  .filter.active{background:var(--navy);color:#fff;border-color:var(--navy)}
+  .bug{background:var(--card);border:1px solid var(--line);border-left-width:5px;
+    border-radius:12px;margin-bottom:14px;overflow:hidden;box-shadow:0 1px 2px rgba(20,30,50,.04)}
+  .bug.crit{border-left-color:var(--crit)} .bug.high{border-left-color:var(--high)}
+  .bug.med{border-left-color:var(--med)}  .bug.low{border-left-color:var(--low)}
+  .bug summary{list-style:none;cursor:pointer;padding:16px 20px;display:flex;
+    align-items:center;gap:12px;user-select:none}
+  .bug summary::-webkit-details-marker{display:none}
+  .badge{font-size:11px;font-weight:700;color:#fff;padding:3px 9px;border-radius:6px;
+    text-transform:uppercase;letter-spacing:.04em;white-space:nowrap}
+  .badge.crit{background:var(--crit)}.badge.high{background:var(--high)}
+  .badge.med{background:var(--med)}.badge.low{background:var(--low)}
+  .id{font-weight:700;color:var(--navy);font-size:14px;white-space:nowrap}
+  .ttl{font-weight:600;font-size:15.5px;flex:1}
+  .chev{color:var(--muted);transition:transform .2s;font-size:13px}
+  .bug[open] .chev{transform:rotate(90deg)}
+  .body{padding:4px 20px 20px;border-top:1px solid var(--line)}
+  .row{margin:13px 0}
+  .k{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;
+    color:var(--muted);margin-bottom:3px}
+  .v{font-size:14.5px}
+  .v code{background:#f0f2f5;padding:1px 6px;border-radius:4px;font-size:13px;
+    font-family:ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--navy)}
+  .check{background:#f4f9f4;border:1px solid #cfe7cf;border-radius:9px;padding:12px 14px}
+  .check .k{color:var(--ok)}
+  .fix{background:#fbf7ec;border:1px solid #ece0c2;border-radius:9px;padding:12px 14px}
+  .fix .k{color:#9a7b1f}
+  .section-h{font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;
+    color:var(--muted);margin:30px 0 12px}
+  .sound{background:#fff;border:1px solid var(--line);border-radius:12px;padding:18px 20px}
+  .sound li{margin:5px 0;font-size:14px}
+  .reconf{font-size:13.5px;color:var(--muted)}
+  .reconf code{background:#f0f2f5;padding:1px 5px;border-radius:4px}
+  footer{text-align:center;color:var(--muted);font-size:12.5px;padding:24px}
+  a{color:var(--navy)}
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <h1>Estate<span class="g">Vault</span> — Bug Report</h1>
+    <p>Flows audited: Create Will · Create Trust · Client Portal &nbsp;·&nbsp; 2026-06-04</p>
+    <div class="stats">
+      <div class="stat c"><div class="n">8</div><div class="l">Critical</div></div>
+      <div class="stat h"><div class="n">17</div><div class="l">High</div></div>
+      <div class="stat m"><div class="n">38</div><div class="l">Medium</div></div>
+      <div class="stat"><div class="n">6</div><div class="l">Low</div></div>
+      <div class="stat"><div class="n">69</div><div class="l">Total</div></div>
+    </div>
+  </div>
+</header>
+<main class="wrap">
+
+  <div class="controls">
+    <span class="filter active" data-f="all">All</span>
+    <span class="filter" data-f="crit">Critical</span>
+    <span class="filter" data-f="high">High</span>
+    <span class="filter" data-f="med">Medium</span>
+  </div>
+
+  <div id="list">
+  <details class="bug crit" open data-sev="crit">
+    <summary><span class="badge crit">Critical</span><span class="badge" style="background:#1a7f37;color:#fff">✅ FIXED</span><span class="id">BUG-1</span>
+      <span class="ttl">Webhook miss = paid but never fulfilled</span><span class="chev">▶</span></summary>
+    <div class="body">
+      <div class="row"><div class="k">In plain terms</div><div class="v">Payment is confirmed by a single message from Stripe (the "webhook"). If that message is missed, delayed, or errors, the card is charged but the order never moves forward and documents never generate. Customer paid, gets nothing — the highest-trust failure.</div></div>
+      <div class="row"><div class="k">Where</div><div class="v">Stripe webhook handler</div></div>
+      <div class="row check"><div class="k">How to check</div><div class="v">In staging, disable the webhook endpoint, then complete a test payment → the order stays stuck <code>pending</code>/<code>paid</code> and no documents appear.</div></div>
+      <div class="row fix"><div class="k">Fix</div><div class="v">Make the handler idempotent and retried; add a reconciliation job that polls Stripe for completed sessions whose orders are still pending; alert on paid-but-unfulfilled orders past a threshold. (Closely related to new BUG-13.)</div></div>
+      <div class="row fix"><div class="k">Resolution (2026-06-09)</div><div class="v">Webhook is now idempotent — <code>claimEvent(event.id)</code> dedups true duplicates while re-running crashed/partial attempts, then marks completed/failed. Reconciliation cron <code>app/api/cron/reconcile-orders/route.ts</code> checks the end result (are the PDFs there?) independent of generation path: re-dispatches the replay-safe handler for paid orders that never ran, triggers generation for orders stuck in <code>generating</code>, and alerts admin on anything unfinished past 60&nbsp;min. Admin <code>retry-fulfillment</code> route for manual recovery. (Commit 1b7274f.)</div></div>
+    </div>
+  </details>
+
+  <details class="bug crit" open data-sev="crit">
+    <summary><span class="badge crit">Critical</span><span class="id">BUG-2</span>
+      <span class="ttl">Acknowledgment signature is faked server-side</span><span class="chev">▶</span></summary>
+    <div class="body">
+      <div class="row"><div class="k">In plain terms</div><div class="v">Before anyone gets documents they're supposed to check an "I understand this isn't legal advice" box. The system always records that they signed it — even when the box was never shown. Your records claim a signature that never happened.</div></div>
+      <div class="row"><div class="k">Where</div><div class="v"><code>lib/checkout/createCheckoutSession.ts:188-189</code> (also :351-352, :416-420); <code>app/will/checkout/page.tsx</code></div></div>
+      <div class="row"><div class="k">Impact</div><div class="v">Documents generate for customers who never acknowledged; the order record is fabricated proof. Compliance + legal exposure (Core Rule 3).</div></div>
+      <div class="row check"><div class="k">Check on website</div><div class="v">Start a will, go to checkout with a real card — you're never shown an "agree" step on the pay path. Then look at the order in the dashboard / Supabase <code>orders</code> table: <code>acknowledgment_signed = true</code> anyway.</div></div>
+      <div class="row fix"><div class="k">Fix</div><div class="v">Require a real <code>acknowledged: boolean</code> in the checkout schema; reject when false; set the column from that value, not a hardcoded <code>true</code>. Show the acknowledgment on the paid path.</div></div>
+    </div>
+  </details>
+
+  <details class="bug crit" open data-sev="crit">
+    <summary><span class="badge crit">Critical</span><span class="badge" style="background:#1a7f37;color:#fff">✅ FIXED</span><span class="id">BUG-3</span>
+      <span class="ttl">Hard stops (safety brake) not enforced on the purchase paths</span><span class="chev">▶</span></summary>
+    <div class="body">
+      <div class="row"><div class="k">In plain terms</div><div class="v">Some cases (special-needs child, irrevocable trust) must stop and go to a real attorney — "no override." That stop only lives in the quiz page as browser state. Customers can start a will or trust straight from the homepage/footer, where the risky questions are never asked, and nothing on the server re-checks. So a family that legally needs an attorney can pay and get do-it-yourself documents.</div></div>
+      <div class="row"><div class="k">Where</div><div class="v"><code>app/quiz/page.tsx:118-128</code> (only place it exists); <code>app/will/page.tsx</code>, <code>app/trust/page.tsx</code>; no check in <code>createCheckoutSession.ts</code> or <code>handleDocumentCheckout.ts:274-322</code></div></div>
+      <div class="row"><div class="k">Impact</div><div class="v">The advertised "cannot be overridden" safeguard doesn't exist on the paid paths. The webhook is the last possible checkpoint and does no stop check (Core Rule 4).</div></div>
+      <div class="row check"><div class="k">Check on website</div><div class="v">From the homepage click <b>Trust</b> (not the quiz) → go through every intake screen → it never asks about a special-needs dependent or irrevocable trust → reach checkout → it lets you pay. The "see an attorney" screen never appears.</div></div>
+      <div class="row fix"><div class="k">Fix</div><div class="v">Ask the hard-stop questions inside <code>/will</code> and <code>/trust</code>, AND re-derive them from the intake answers server-side in checkout and again in the webhook before generating — block with an attorney referral. Never trust a client flag.</div></div>
+      <div class="row fix"><div class="k">Resolution (2026-06-09)</div><div class="v">Hardcoded logic centralized in <code>lib/compliance/hardStop.ts</code> (<code>evaluateHardStop</code>) and enforced server-side at two checkpoints, never trusting a client flag: <code>createCheckoutSession.ts</code> halts before payment (returns the stop + reasons → attorney referral), and <code>handleDocumentCheckout.ts</code> re-derives from the intake answers before queueing generation. Hard-stop questions now render in both <code>/will</code> and <code>/trust</code>. Test: <code>tests/unit/hard-stop.test.ts</code>.</div></div>
+    </div>
+  </details>
+
+  <details class="bug crit" open data-sev="crit">
+    <summary><span class="badge crit">Critical</span><span class="badge" style="background:#1a7f37;color:#fff">✅ FIXED</span><span class="id">BUG-4</span>
+      <span class="ttl">Platform pays out more attorney-review fee than it collected</span><span class="chev">▶</span></summary>
+    <div class="body">
+      <div class="row"><div class="k">In plain terms</div><div class="v">The customer always pays a fixed <b>$300</b> for attorney review. But an attorney partner can set their own "review fee" to $1,000+, and the system pays the partner that full amount — so EstateVault pays out $1,000 while only collecting $300. <b>Direct money loss of $700+ per review.</b> A safety range exists in the code but is never actually used.</div></div>
+      <div class="row"><div class="k">Where</div><div class="v"><code>lib/attorney-review/routing.ts:88</code>; <code>lib/webhooks/stripe/handleAttorneyReview.ts:57-69</code>; <code>lib/checkout/createCheckoutSession.ts:148</code>; <code>ATTORNEY_REVIEW_FEE_RANGE</code> in <code>pricing.ts:27</code> is referenced nowhere.</div></div>
+      <div class="row"><div class="k">Impact</div><div class="v">Net loss out of platform funds on every attorney-reviewed order where the partner set a high custom fee.</div></div>
+      <div class="row check"><div class="k">Check on website</div><div class="v">As an attorney partner go to <b>Pro → Settings</b>, set the review fee to $1,000, save. Have a test client buy a Will with Attorney Review (pays $300). In <b>Stripe → Connect → that partner → Transfers</b>, the fee transfer is $1,000 vs the $300 collected.</div></div>
+      <div class="row fix"><div class="k">Fix</div><div class="v">Clamp the custom fee to the defined range at every save point; never transfer more than was collected — if a partner's fee exceeds $300, charge that at client checkout instead of the fixed price.</div></div>
+      <div class="row fix"><div class="k">Resolution (2026-06-09)</div><div class="v">Fee is now <b>admin-controlled</b>; partners cannot set it. Removed <code>custom_review_fee</code> from the partner self-update schema and <code>review_fee</code> from attorney signup. Admin sets a per-partner fee (<code>PATCH /api/sales/partners/[partnerId]</code>, admin-only, clamped) and the platform default (<code>POST /api/admin/attorney-review-fee</code>, stored in <code>app_settings</code>). <code>resolveReviewRouting</code> clamps via <code>clampAttorneyReviewFee()</code>; checkout charges the <b>resolved</b> fee so collected == transferred; webhook hard-caps the transfer at <code>min(fee, order.attorney_cut)</code>. Covered by <code>pricing.test.ts</code> + <code>security-rule-guards.test.ts</code>.</div></div>
+    </div>
+  </details>
+
+  <details class="bug crit" open data-sev="crit">
+    <summary><span class="badge crit">Critical</span><span class="badge" style="background:#1a7f37;color:#fff">✅ FIXED</span><span class="id">BUG-5</span>
+      <span class="ttl">Cancelling vault subscription revokes paid access immediately</span><span class="chev">▶</span></summary>
+    <div class="body">
+      <div class="row"><div class="k">In plain terms</div><div class="v">A customer who paid for a full year and cancels in month 2 instantly loses vault uploads, farewell messages, and downloads — for the 10 months they already paid for. The code even comments "don't revoke access mid-period," then does exactly that.</div></div>
+      <div class="row"><div class="k">Where</div><div class="v"><code>app/api/subscription/cancel/route.ts:22-29</code>; gates check only <code>status === "active"</code> (<code>subscription/status</code>, <code>vault/upload-url</code>, <code>vault/farewell</code>, <code>vault/download-document</code>), never the expiry date.</div></div>
+      <div class="row"><div class="k">Impact</div><div class="v">Paid-for value silently revoked → refund / chargeback risk.</div></div>
+      <div class="row check"><div class="k">Check on website</div><div class="v">Subscribe to the vault → click Cancel Subscription → immediately try to upload a document or record a farewell → you're blocked, despite paying through term end.</div></div>
+      <div class="row fix"><div class="k">Fix</div><div class="v">On cancel keep access active until the expiry date (let Stripe's end-of-period event flip it). Gate on "active OR expiry in the future."</div></div>
+      <div class="row fix"><div class="k">Resolution (2026-06-09)</div><div class="v">Added <code>clientRepo.hasVaultAccess(status, expiry)</code> — true when <code>status === "active"</code> OR <code>status === "cancelled" &amp;&amp; expiry &gt; now</code>. All four gates now call it (<code>subscription/status</code>, <code>vault/upload-url</code>, <code>vault/farewell</code>, <code>vault/download-document</code>). Cancel still flips status to <code>cancelled</code> for the cancel-pending UI, but access holds until <code>vault_subscription_expiry</code>. Covered by <code>vault-access.test.ts</code>.</div></div>
+    </div>
+  </details>
+
+  <details class="bug crit" open data-sev="crit">
+    <summary><span class="badge crit">Critical</span><span class="id">BUG-6</span>
+      <span class="ttl">Set-password links a stranger's order &amp; documents to a new account ✅ FIXED</span><span class="chev">▶</span></summary>
+    <div class="body">
+      <div class="row"><div class="k">Status</div><div class="v"><b>Fixed</b> — removed the global 10-order orphan scan in <code>set-password</code>. Client↔profile linkage is owned by the Stripe webhook (keys on verified <code>customer_email</code> + <code>metadata.client_id</code>); set-password now only sets the account password.</div></div>
+      <div class="row"><div class="k">In plain terms</div><div class="v">When someone finishes creating their account (set password) right after any guest purchase, the system grabs the <b>most recent unclaimed order from ANY customer</b> and attaches it to the new account. So a new user can inherit a different customer's order and generated documents (will, beneficiaries, personal info). Whoever sets their password first wins the race.</div></div>
+      <div class="row"><div class="k">Where</div><div class="v"><code>app/api/auth/set-password/route.ts:67-87</code> — scans 10 most recent orders globally, no email/session filter.</div></div>
+      <div class="row"><div class="k">Impact</div><div class="v">Cross-customer document &amp; PII disclosure; the real purchaser loses their order linkage.</div></div>
+      <div class="row check"><div class="k">Check on website</div><div class="v">Two browsers. A: do a guest will purchase, don't set a password. B: sign up a fresh account via email-verify and set a password. Log into B's dashboard → it shows A's order/documents.</div></div>
+      <div class="row fix"><div class="k">Fix</div><div class="v">Link only the client whose record matches the verified email (store email on the guest order at checkout), or link strictly by the client id from the verified checkout session. Remove the global 10-order scan.</div></div>
+    </div>
+  </details>
+
+  <details class="bug crit" open data-sev="crit">
+    <summary><span class="badge crit">Critical</span><span class="id">BUG-7</span>
+      <span class="ttl">Public download-zip leaks any customer's will/trust PDFs — ✅ FIXED</span><span class="chev">▶</span></summary>
+    <div class="body">
+      <div class="row"><div class="k">Status</div><div class="v">✅ Fixed — route deleted entirely. It was reachable only from the test-mode "Download Documents" button on the success pages, so we removed that button instead of hardening it. Removed: <code>download-zip/route.ts</code>, the <code>middleware.ts:162</code> allowlist entry, <code>downloadZip</code>/<code>getRaw</code> in <code>api-client/documents.ts</code>, and the test-ZIP blocks in <code>will/success/page.tsx</code> + <code>trust/success/page.tsx</code>. Endpoint now 404s; per-document <code>download-by-session</code> (Stripe session / owner-checked) remains for real downloads.</div></div>
+      <div class="row"><div class="k">In plain terms</div><div class="v">The bulk-download endpoint has no login check and is on the public allowlist. Give it any order id and it streams that customer's actual Will/Trust/POA PDFs — full legal personal info — to anyone. The sibling single-download endpoint was secured; this one wasn't.</div></div>
+      <div class="row"><div class="k">Where</div><div class="v"><code>app/api/documents/download-zip/route.ts:33-71</code>; public in <code>middleware.ts:162</code></div></div>
+      <div class="row"><div class="k">Impact</div><div class="v">Anonymous cross-customer disclosure of the most sensitive product output (every non-sealed order).</div></div>
+      <div class="row check"><div class="k">Check on website</div><div class="v">Do a normal (unsealed) will checkout in browser A; note the <code>order_id</code> in the success URL. In incognito (logged out) open <code>/api/documents/download-zip?order_id=&lt;that id&gt;&first_name=x&last_name=y</code> → the PDFs download with no login.</div></div>
+      <div class="row fix"><div class="k">Fix</div><div class="v">Require a matching Stripe session or authenticated ownership; remove from the public allowlist. Never serve real documents from an unauthenticated admin-client route.</div></div>
+    </div>
+  </details>
+
+  <details class="bug crit" open data-sev="crit">
+    <summary><span class="badge crit">Critical</span><span class="badge" style="background:#1a7f37;color:#fff">✅ FIXED</span><span class="id">BUG-8</span>
+      <span class="ttl">Webhook marks event "done" before doing the work → failed orders never retry — ✅ FIXED</span><span class="chev">▶</span></summary>
+    <div class="body">
+      <div class="row"><div class="k">In plain terms</div><div class="v">The payment webhook records "I handled this event" <b>before</b> it actually fulfills the order. If fulfillment then fails halfway, Stripe's automatic retry sees the "already handled" marker and skips it — so the order is permanently stuck. This is worse than BUG-1: the safety net (retry) is disabled by the bug itself.</div></div>
+      <div class="row"><div class="k">Where</div><div class="v"><code>app/api/webhooks/stripe/route.ts:42-49</code>; <code>stripeWebhookRepo.ts:8-14</code></div></div>
+      <div class="row"><div class="k">Impact</div><div class="v">Customer charged, fulfillment frozen forever, auto-recovery silently consumed. Underlies BUG-23/65/66/68/69.</div></div>
+      <div class="row check"><div class="k">Check on website</div><div class="v">In staging, break a write inside the doc-checkout handler, pay a checkout → charged but no documents; resending the Stripe event does nothing (returns "duplicate").</div></div>
+      <div class="row fix"><div class="k">Fix</div><div class="v">Mark the event processed only AFTER the handler succeeds (or a received→processed two-phase state, or one transaction); on failure return non-2xx so Stripe redelivers. Add a reconciliation cron.</div></div>
+      <div class="row fix"><div class="k">Resolution</div><div class="v">Two-phase guard in <code>route.ts</code> + <code>stripeWebhookRepo.ts</code>: <code>claimEvent</code> claims the event as <code>processing</code> (only a prior <code>completed</code> row is a true duplicate); <code>markCompleted</code> runs only after the handler returns, <code>markFailed</code> + HTTP 500 on throw so Stripe redelivers into a clean re-run. <code>stripe_webhook_events</code> carries <code>status</code>/<code>completed_at</code>/<code>last_error</code>; <code>event_id</code> PK backs the claim. Reconcile cron (<code>app/api/cron/reconcile-orders/route.ts</code>, every 15 min) re-runs paid-but-unfulfilled orders. Verified live: 265 completed / 2 failed (retryable) / 0 poisoned. Handler re-runs are now safe per BUG-23 (per-side-effect idempotency).</div></div>
+    </div>
+  </details>
+
+  <details class="bug high" data-sev="high">
+    <summary><span class="badge high">High</span><span class="badge" style="background:#1a7f37;color:#fff">✅ FIXED</span><span class="id">BUG-9</span>
+      <span class="ttl">Stripe failure leaves an orphaned "pending" order — ✅ FIXED</span><span class="chev">▶</span></summary>
+    <div class="body">
+      <div class="row"><div class="k">In plain terms</div><div class="v">At checkout the system saves the order in the database <b>first</b>, then asks Stripe to set up payment. If Stripe fails (bad key, outage, network blip), the request errors out — but the half-finished "pending" order is already saved with no payment attached. These junk orders pile up and pollute your reports; retries make duplicates.</div></div>
+      <div class="row"><div class="k">Where</div><div class="v"><code>lib/checkout/createCheckoutSession.ts</code> (~line 226)</div></div>
+      <div class="row check"><div class="k">How to check</div><div class="v">In staging, set an invalid <code>STRIPE_SECRET_KEY</code> and run a will/trust checkout → the request fails, but a <code>pending</code> order with no <code>stripe_session_id</code> appears in the <code>orders</code> table.</div></div>
+      <div class="row fix"><div class="k">Fix</div><div class="v">Create the Stripe session first, then save the order — or wrap it and delete/mark-failed the order if Stripe errors. Add a job to expire stale pending orders.</div></div>
+      <div class="row fix"><div class="k">Resolution</div><div class="v">The Stripe <code>sessions.create()</code> call in <code>createCheckoutSession.ts</code> is wrapped in try/catch — on failure it deletes the just-created order (<code>orderRepo.deleteById</code>) and returns HTTP 502 with a friendly retry message, leaving no orphan. Safe because the order has nothing attached yet (payment/docs/payouts happen later). A cleanup sweep in <code>app/api/cron/reconcile-orders/route.ts</code> deletes <code>pending</code> orders with null <code>stripe_session_id</code> older than 30 min (logs ids first — no silent mass delete). Verified live on staging: the sweep matches a true orphan but NOT an abandoned-with-session order nor a fresh in-flight one.</div></div>
+    </div>
+  </details>
+
+  <details class="bug high" data-sev="high">
+    <summary><span class="badge high">High</span><span class="id">BUG-10</span>
+      <span class="ttl">Document generation failure leaves the order stuck forever</span><span class="chev">▶</span></summary>
+    <div class="body">
+      <div class="row"><div class="k">In plain terms</div><div class="v">After payment the order is marked "generating" and the AI builds the documents. If that AI step fails (API error, timeout, rate limit), the documents stay stuck and nothing retries or flags it. Customer paid, no usable output, no one notices.</div></div>
+      <div class="row"><div class="k">Where</div><div class="v">Doc-gen pipeline (Claude API) + <code>documents</code> table</div></div>
+      <div class="row check"><div class="k">How to check</div><div class="v">In staging, force the Claude API call to fail during generation → the <code>documents</code> rows stay <code>pending</code>/<code>generating</code> indefinitely with no retry.</div></div>
+      <div class="row fix"><div class="k">Fix</div><div class="v">Retry with backoff; add an admin alert/dashboard for orders stuck in <code>generating</code>; allow a manual re-trigger. (Closely related to the new BUG-13.)</div></div>
+    </div>
+  </details>
+
+  <details class="bug high" data-sev="high">
+    <summary><span class="badge high">High</span><span class="id">BUG-11</span>
+      <span class="ttl">Account linking failure locks out a paying customer</span><span class="chev">▶</span></summary>
+    <div class="body">
+      <div class="row"><div class="k">In plain terms</div><div class="v">After payment, the success page creates/links the customer's login account and sets their password. If that step fails, the customer has paid but can't log in — and so can't reach the documents they bought.</div></div>
+      <div class="row"><div class="k">Where</div><div class="v"><code>components/success/PasswordSetup.tsx</code> + the set-password API</div></div>
+      <div class="row check"><div class="k">How to check</div><div class="v">Force the set-password / profile-upsert to fail on the success page after a guest checkout → the customer ends up paid but with no working login.</div></div>
+      <div class="row fix"><div class="k">Fix</div><div class="v">Make account linking idempotent and retryable; provide a clear "finish account setup" recovery path; ensure the order is recoverable by verified email.</div></div>
+    </div>
+  </details>
+
+  <details class="bug high" data-sev="high">
+    <summary><span class="badge high">High</span><span class="id">BUG-12</span>
+      <span class="ttl">Cross-customer farewell video leak (privacy)</span><span class="chev">▶</span></summary>
+    <div class="body">
+      <div class="row"><div class="k">In plain terms</div><div class="v">Any logged-in customer can request another customer's private farewell video and get a working 7-day download link — no relationship, no permission, no PIN. The code only checks the video is "unlocked," never that the requester is an actual trustee.</div></div>
+      <div class="row"><div class="k">Where</div><div class="v"><code>app/api/vault/farewell/[id]/signed-url/route.ts:30-44</code></div></div>
+      <div class="row"><div class="k">Impact</div><div class="v">Confidentiality breach of the most personal vault item. Real trustees already have a separate, secured route, so this branch grants nothing legitimate.</div></div>
+      <div class="row check"><div class="k">Check on website</div><div class="v">Two test accounts. Get account B's farewell video to "unlocked." Log in as unrelated account A → request <code>GET /api/vault/farewell/&lt;B's message id&gt;/signed-url</code> → you get a working link to B's video. Should be 403.</div></div>
+      <div class="row fix"><div class="k">Fix</div><div class="v">Remove the non-owner branch — require <code>message.client_id === client.id</code>, else 404. Trustees use their own route.</div></div>
+    </div>
+  </details>
+
+  <details class="bug high" data-sev="high">
+    <summary><span class="badge high">High</span><span class="id">BUG-13</span>
+      <span class="ttl">Document-generation failure swallowed — paid, no documents, no alert</span><span class="chev">▶</span></summary>
+    <div class="body">
+      <div class="row"><div class="k">In plain terms</div><div class="v">After payment, document-making is handed to a background worker. If that handoff fails, the code logs it quietly and tells Stripe "all good." Customer is charged, the partner is even paid their cut — but no documents are ever made, and nobody is alerted.</div></div>
+      <div class="row"><div class="k">Where</div><div class="v"><code>lib/webhooks/stripe/handleDocumentCheckout.ts:294-322</code></div></div>
+      <div class="row"><div class="k">Impact</div><div class="v">Customer charged, partner paid, order frozen in <code>generating</code> forever. No retry, no reconciliation, no alert. Highest-trust failure (related to BUG-1/BUG-10).</div></div>
+      <div class="row check"><div class="k">Check on website</div><div class="v">In staging, break the queue (unset the Redis/Upstash env vars), then complete a paid checkout → success page appears, but no documents ever show in the dashboard and no error is displayed.</div></div>
+      <div class="row fix"><div class="k">Fix</div><div class="v">On queue failure, mark order/documents <code>failed</code> (not pending), emit an alert, don't return success. Add a reconciliation job that retries paid-but-unfulfilled orders.</div></div>
+    </div>
+  </details>
+
+  <details class="bug high" data-sev="high">
+    <summary><span class="badge high">High</span><span class="id">BUG-14</span>
+      <span class="ttl">Vault double-billing: re-subscribe only blocked while "active"</span><span class="chev">▶</span></summary>
+    <div class="body">
+      <div class="row"><div class="k">In plain terms</div><div class="v">The "you're already subscribed" block only triggers when status is exactly "active." A customer who cancelled (but whose Stripe sub is still alive) or is past-due can subscribe again and end up with <b>two</b> annual subscriptions — double-charged.</div></div>
+      <div class="row"><div class="k">Where</div><div class="v"><code>app/api/checkout/vault-subscription/route.ts:95-96,126-128</code></div></div>
+      <div class="row"><div class="k">Impact</div><div class="v">Customer charged $99/yr twice; the second subscription overwrites the first, orphaning it.</div></div>
+      <div class="row check"><div class="k">Check on website</div><div class="v">Subscribe → cancel → immediately start the subscribe flow again from the vault page → it lets you pay. In <b>Stripe → Customers → that customer → Subscriptions</b> you'll see two active annual subs.</div></div>
+      <div class="row fix"><div class="k">Fix</div><div class="v">Block when the client has any live subscription id (or active/cancelled/past-due with an unexpired period); reactivate the existing one instead of creating a new one.</div></div>
+    </div>
+  </details>
+
+  <details class="bug high" data-sev="high">
+    <summary><span class="badge high">High</span><span class="id">BUG-15</span>
+      <span class="ttl">Partner payout silently lost when Connect account isn't payable</span><span class="chev">▶</span></summary>
+    <div class="body">
+      <div class="row"><div class="k">In plain terms</div><div class="v">If a partner has connected Stripe but hasn't finished onboarding (transfers not enabled yet), paying them throws an error that's quietly logged. The code then skips the fallback that would record the money as "owed" — so the payout vanishes with no record to reconcile.</div></div>
+      <div class="row"><div class="k">Where</div><div class="v"><code>lib/webhooks/stripe/handleDocumentCheckout.ts:154-213</code>; <code>lib/stripe-payouts.ts:27</code></div></div>
+      <div class="row"><div class="k">Impact</div><div class="v">Partner is owed money but there's no <code>sent</code> or <code>pending</code> payout row to catch it. Money silently unpaid. (Different from BUG-13, which is the document queue.)</div></div>
+      <div class="row check"><div class="k">Check on website</div><div class="v">Connect a partner but stop Stripe onboarding before "transfers" is enabled. Buy a Will through that partner's link → no payout appears in the revenue dashboard / <code>payouts</code> table; Stripe logs show the transfer error.</div></div>
+      <div class="row fix"><div class="k">Fix</div><div class="v">Check the account is payable before transferring; if not, write a <code>pending</code> payout row instead of attempting and dropping it. Always record a pending payout in the catch.</div></div>
+    </div>
+  </details>
+
+  <details class="bug high" data-sev="high">
+    <summary><span class="badge high">High</span><span class="id">BUG-16</span>
+      <span class="ttl">Attorney signup verify endpoint is unauthenticated &amp; replayable</span><span class="chev">▶</span></summary>
+    <div class="body">
+      <div class="row"><div class="k">In plain terms</div><div class="v">The endpoint that finishes an attorney signup takes a Stripe <code>session_id</code> (which appears right in the success URL), has no login check, and no "already processed" guard. Anyone who sees that id can re-submit it — re-creating/overwriting the partner record, resetting their fee/tier, even setting a password.</div></div>
+      <div class="row"><div class="k">Where</div><div class="v"><code>app/api/checkout/attorney/verify/route.ts:14-134</code></div></div>
+      <div class="row"><div class="k">Impact</div><div class="v">Unauthenticated, replayable account-mutation keyed on a guessable/observable id; can undo later admin changes and reset credentials.</div></div>
+      <div class="row check"><div class="k">Check on website</div><div class="v">After an attorney signup completes, reload the welcome page (or resend the verify POST in DevTools) → the partner record is re-created/overwritten each time; no guard.</div></div>
+      <div class="row fix"><div class="k">Fix</div><div class="v">Make it idempotent (record processed session ids / return success without mutating if the partner already exists); don't let the request body set a password on an existing account.</div></div>
+    </div>
+  </details>
+
+  <details class="bug high" data-sev="high">
+    <summary><span class="badge high">High</span><span class="id">BUG-17</span>
+      <span class="ttl">Vault PIN can be reset without knowing the current PIN</span><span class="chev">▶</span></summary>
+    <div class="body">
+      <div class="row"><div class="k">In plain terms</div><div class="v">The PIN is a second lock on top of the password. But the "create PIN" action overwrites an existing PIN without asking for the old one. Anyone with just the session (borrowed device, stolen cookie) can re-set the PIN to their own value and walk in.</div></div>
+      <div class="row"><div class="k">Where</div><div class="v"><code>app/api/vault/pin/route.ts:38-44</code> (create never checks if a PIN exists; only "change" requires the old PIN).</div></div>
+      <div class="row"><div class="k">Impact</div><div class="v">The PIN's whole protection (a secret separate from the session) is defeated.</div></div>
+      <div class="row check"><div class="k">Check on website</div><div class="v">Set a vault PIN. In DevTools → Network resend the PIN-<i>create</i> request with a different 6-digit value (not the change flow). Re-open the vault — the new PIN works, you were never asked for the old one.</div></div>
+      <div class="row fix"><div class="k">Fix</div><div class="v">In "create", reject (409) if a PIN already exists and force the "change" flow (which requires the current PIN).</div></div>
+    </div>
+  </details>
+
+  <details class="bug high" data-sev="high">
+    <summary><span class="badge high">High</span><span class="id">BUG-18</span>
+      <span class="ttl">"Add review attorney" can hijack any existing user's account</span><span class="chev">▶</span></summary>
+    <div class="body">
+      <div class="row"><div class="k">In plain terms</div><div class="v">A partner can enter any existing account's email into the "add in-house review attorney" form, and the system converts that account into a review-attorney managed by the partner — overwriting their name and role. Works on other partners, clients, even staff.</div></div>
+      <div class="row"><div class="k">Where</div><div class="v"><code>app/api/partners/create-review-attorney/route.ts:27-46</code></div></div>
+      <div class="row"><div class="k">Impact</div><div class="v">Role tampering + profile corruption of accounts the partner has no relationship with.</div></div>
+      <div class="row check"><div class="k">Check on website</div><div class="v">As an attorney partner, in the add-review-attorney form enter any other existing account's email → in Supabase <code>profiles</code> the target's <code>user_type</code> flips to <code>review_attorney</code> and <code>managed_by_admin</code> is set to you.</div></div>
+      <div class="row fix"><div class="k">Fix</div><div class="v">Only attach an existing profile if it's unclaimed or already this partner's review attorney; never overwrite role/name/manager on a profile the partner doesn't own.</div></div>
+    </div>
+  </details>
+
+  <details class="bug high" data-sev="high">
+    <summary><span class="badge high">High</span><span class="id">BUG-19</span>
+      <span class="ttl">Any sales rep can read any other rep's private partner notes</span><span class="chev">▶</span></summary>
+    <div class="body">
+      <div class="row"><div class="k">In plain terms</div><div class="v">The notes endpoint returns a partner's private internal notes to any sales rep who passes the partner's id — it never checks the rep owns that partner. Reps can read each other's confidential deal notes.</div></div>
+      <div class="row"><div class="k">Where</div><div class="v"><code>app/api/sales/partner-notes/route.ts:7-16</code> (no ownership scoping, unlike the sibling <code>partners/[partnerId]</code> route).</div></div>
+      <div class="row"><div class="k">Impact</div><div class="v">Confidentiality breach across the sales team — pricing posture, objections, internal warnings.</div></div>
+      <div class="row check"><div class="k">Check on website</div><div class="v">As a sales rep, grab a partner id you don't own from <code>/sales/partners</code>, then in the console <code>fetch('/api/sales/partner-notes?partnerId=&lt;other-id&gt;')</code> → the other rep's notes come back.</div></div>
+      <div class="row fix"><div class="k">Fix</div><div class="v">Scope the GET like <code>partners/[partnerId]</code>: verify <code>partner.created_by === auth.user.id</code> for non-admins.</div></div>
+    </div>
+  </details>
+
+  <details class="bug high" data-sev="high">
+    <summary><span class="badge high">High</span><span class="id">BUG-20</span>
+      <span class="ttl">Equal-shares math produces percentages that don't add to 100%</span><span class="chev">▶</span></summary>
+    <div class="body">
+      <div class="row"><div class="k">In plain terms</div><div class="v">When an estate is split equally among beneficiaries, the document rounds the percentages wrong: 6 people → "17% each" (=102%), 7 → "14%" (=98%). The legally-incoherent number is fed straight into the AI that drafts the will/trust.</div></div>
+      <div class="row"><div class="k">Where</div><div class="v"><code>lib/documents/templates/michigan-will.ts:119</code>; <code>michigan-revocable-trust.ts:121</code></div></div>
+      <div class="row"><div class="k">Impact</div><div class="v">Paid ($400/$600) document can over- or under-distribute the estate. Same class as BUG-29, different defect.</div></div>
+      <div class="row check"><div class="k">Check on website</div><div class="v">Start a Will at <code>/will</code>, add 6 beneficiaries, choose "split equally" → the generated will divides the residue in shares totaling 102%. Try 7 → 98%.</div></div>
+      <div class="row fix"><div class="k">Fix</div><div class="v">Say "in equal shares" instead of a per-head percentage, or compute exact fractions that sum to 100%.</div></div>
+    </div>
+  </details>
+
+  <details class="bug high" data-sev="high">
+    <summary><span class="badge high">High</span><span class="id">BUG-21</span>
+      <span class="ttl">Attorney can email "documents approved" to another attorney's client</span><span class="chev">▶</span></summary>
+    <div class="body">
+      <div class="row"><div class="k">In plain terms</div><div class="v">The "notify client" endpoint doesn't check that the review belongs to you. Any review attorney can pass another attorney's case id and fire a real "your documents are approved & ready" email to that client — a false approval signal, with no rate limit.</div></div>
+      <div class="row"><div class="k">Where</div><div class="v"><code>app/api/attorney/notify-client/route.ts:10-34</code> (the sibling approve/review routes do check ownership; this one doesn't)</div></div>
+      <div class="row"><div class="k">Impact</div><div class="v">Cross-attorney action on another's case; client-facing email abuse / false approvals.</div></div>
+      <div class="row check"><div class="k">Check on website</div><div class="v">Log in as one review attorney; in DevTools resend notify-client with a <code>reviewId</code> from a case you're not assigned to → the other client receives an "approved/ready" email.</div></div>
+      <div class="row fix"><div class="k">Fix</div><div class="v">Require <code>review.attorney_id === auth.user.id</code> for non-admins before sending; add a rate limit.</div></div>
+    </div>
+  </details>
+
+  <details class="bug high" data-sev="high">
+    <summary><span class="badge high">High</span><span class="id">BUG-22</span>
+      <span class="ttl">Unescaped HTML in partner-access emails (injection against staff)</span><span class="chev">▶</span></summary>
+    <div class="body">
+      <div class="row"><div class="k">In plain terms</div><div class="v">The public "request partner access" form drops whatever you type straight into the emails sent to the sales team — no escaping, no length limit. Someone can submit HTML/links (or an image payload) that renders in staff inboxes, and the same unsanitized text is stored and re-shown.</div></div>
+      <div class="row"><div class="k">Where</div><div class="v"><code>app/api/professionals/request-access/route.ts:70-83, :110</code>; schema <code>schemas.ts:412-424</code> (the sibling contact route escapes; this one doesn't)</div></div>
+      <div class="row"><div class="k">Impact</div><div class="v">HTML-injection / phishing against staff; stored content re-renders elsewhere; oversized-payload spam.</div></div>
+      <div class="row check"><div class="k">Check on website</div><div class="v">On <code>/professionals</code> submit the form with <code>&lt;b&gt;BOLD&lt;/b&gt;</code> in the company-name field → the sales notification email renders it bold (not literal), confirming no escaping.</div></div>
+      <div class="row fix"><div class="k">Fix</div><div class="v">Escape every interpolated field (reuse the contact route's helper); add max-length bounds to all string fields.</div></div>
+    </div>
+  </details>
+
+  <details class="bug high" data-sev="high">
+    <summary><span class="badge high">High</span><span class="badge" style="background:#1a7f37;color:#fff">✅ FIXED</span><span class="id">BUG-23</span>
+      <span class="ttl">Webhook side effects aren't individually idempotent — ✅ FIXED</span><span class="chev">▶</span></summary>
+    <div class="body">
+      <div class="row"><div class="k">In plain terms</div><div class="v">The records of payouts, affiliate lifetime earnings, document rows, and the attorney-review row have no duplicate protection of their own — the only thing stopping double-counting is the single webhook guard (BUG-8). Any re-run double-counts affiliate earnings and creates duplicate rows.</div></div>
+      <div class="row"><div class="k">Where</div><div class="v"><code>lib/webhooks/stripe/handleDocumentCheckout.ts:178-184, 246-255, 287, 290-291</code></div></div>
+      <div class="row"><div class="k">Impact</div><div class="v">Defense-in-depth gap; the monotonic affiliate earnings counter is the highest risk (un-reversible).</div></div>
+      <div class="row check"><div class="k">Check on website</div><div class="v">Not reproducible from the UI today (the guard holds); confirm in staging by invoking the handler twice for one session → duplicate payout rows + doubled affiliate earnings.</div></div>
+      <div class="row fix"><div class="k">Fix</div><div class="v">Unique constraints on payouts(transfer id) and documents(order_id, type); guard the affiliate increment against re-application; upsert the attorney-review row by order id.</div></div>
+      <div class="row fix"><div class="k">Resolution</div><div class="v">Migration <code>20260610_000_bug23_payout_idempotency.sql</code> dedups then adds unique indexes: <code>documents(order_id, document_type)</code>, <code>attorney_reviews(order_id)</code>, partial <code>payouts(stripe_transfer_id)</code> + <code>affiliate_payouts(stripe_transfer_id)</code>, and a webhook-only <code>affiliate_payouts.order_id</code> column with a partial unique index (the manual batch-payout route writes a multi-order array, leaves <code>order_id</code> null, untouched). The irreversible affiliate counter is gated on a winning insert — <code>insertAffiliatePayout</code> returns the row (null on conflict) and the counter/audit only run when a row comes back. Attorney-review fee transfer carries an <code>idempotencyKey</code>. Every side effect is now at-most-once under concurrent replay.</div></div>
+    </div>
+  </details>
+
+  <details class="bug high" data-sev="high">
+    <summary><span class="badge high">High</span><span class="id">BUG-24</span>
+      <span class="ttl">Document-records insert failure ignored (paid, no documents)</span><span class="chev">▶</span></summary>
+    <div class="body">
+      <div class="row"><div class="k">In plain terms</div><div class="v">If saving the document rows fails, the code doesn't notice — it still queues generation and reports success. The order is "generating" with no documents to generate, the partner's already paid, and nobody is alerted. (Different failure point than BUG-13 and BUG-10.)</div></div>
+      <div class="row"><div class="k">Where</div><div class="v"><code>lib/webhooks/stripe/handleDocumentCheckout.ts:287</code></div></div>
+      <div class="row"><div class="k">Impact</div><div class="v">Paid order stuck with zero document rows; silent.</div></div>
+      <div class="row check"><div class="k">Check on website</div><div class="v">In staging induce a documents-insert failure (e.g. break the FK), pay a checkout → success page + partner payout, but the dashboard never shows documents and no error appears.</div></div>
+      <div class="row fix"><div class="k">Fix</div><div class="v">Check the insert error; on failure mark the order failed, alert, don't queue. Reconcile generating orders with no document rows.</div></div>
+    </div>
+  </details>
+
+  <details class="bug high" data-sev="high">
+    <summary><span class="badge high">High</span><span class="id">BUG-25</span>
+      <span class="ttl">Attorney-review fee transfer failure silently lost</span><span class="chev">▶</span></summary>
+    <div class="body">
+      <div class="row"><div class="k">In plain terms</div><div class="v">When the $300 review fee should go to an attorney partner but the transfer fails (e.g. their Stripe isn't fully set up), the error is just logged — no "owed" record is written. The money is never sent and there's no trace to reconcile. (BUG-15 covered the regular partner cut, not this fee.)</div></div>
+      <div class="row"><div class="k">Where</div><div class="v"><code>lib/webhooks/stripe/handleAttorneyReview.ts:57-84</code></div></div>
+      <div class="row"><div class="k">Impact</div><div class="v">Client charged for review; the reviewer's fee vanishes with only a log line.</div></div>
+      <div class="row check"><div class="k">Check on website</div><div class="v">Connect an attorney partner but stop onboarding before "transfers" is enabled; buy a Will with Attorney Review through them → Stripe logs show the transfer error, no fee record exists in the app.</div></div>
+      <div class="row fix"><div class="k">Fix</div><div class="v">Check payability before transferring; on failure write a pending fee/payout record so it's reconcilable.</div></div>
+    </div>
+  </details>
+
+  <details class="bug med" data-sev="med">
+    <summary><span class="badge med">Medium</span><span class="id">BUG-26</span>
+      <span class="ttl">"Failed to create client record" (largely fixed — verify)</span><span class="chev">▶</span></summary>
+    <div class="body">
+      <div class="row"><div class="k">In plain terms</div><div class="v">A logged-in session pointing at a user with no <code>profiles</code> row (a wiped or half-finished account) used to crash checkout with a database foreign-key error. Self-healing was added (recreate the profile, or fall back to guest), and the dashboard now signs out orphaned sessions. Mostly fixed — just needs a regression test and re-verification across will/trust/vault.</div></div>
+      <div class="row"><div class="k">Where</div><div class="v"><code>lib/checkout/createCheckoutSession.ts</code>, <code>app/dashboard/layout.tsx</code></div></div>
+      <div class="row check"><div class="k">How to check</div><div class="v">Wipe a test user's <code>profiles</code> row, keep the browser session, attempt checkout → should now self-heal instead of throwing the FK error.</div></div>
+      <div class="row fix"><div class="k">Fix</div><div class="v">Remaining: add a regression test for the orphaned-session path; confirm it works across will, trust, and vault.</div></div>
+    </div>
+  </details>
+
+  <details class="bug med" data-sev="med">
+    <summary><span class="badge med">Medium</span><span class="id">BUG-27</span>
+      <span class="ttl">Will checkout trusts the customer ID sent by the browser</span><span class="chev">▶</span></summary>
+    <div class="body">
+      <div class="row"><div class="k">In plain terms</div><div class="v">The will checkout takes the <code>userId</code> from the data the browser sends, instead of from the logged-in session the server already knows. Someone could send a different person's <code>userId</code> and attach an order to an account they don't own. No data leak today, but it's an integrity hole. (The amendment checkout already does this correctly — it verifies against the session.)</div></div>
+      <div class="row"><div class="k">Where</div><div class="v"><code>lib/validation/schemas.ts:121</code>, will checkout route</div></div>
+      <div class="row check"><div class="k">How to check</div><div class="v">POST to <code>/api/checkout/will</code> with a <code>userId</code> belonging to another account → the order attaches to that account.</div></div>
+      <div class="row fix"><div class="k">Fix</div><div class="v">Ignore <code>body.userId</code>; derive the real user from the verified server session (<code>requireAuth()</code> / <code>getUser()</code>) and use only that.</div></div>
+    </div>
+  </details>
+
+  <details class="bug med" data-sev="med">
+    <summary><span class="badge med">Medium</span><span class="id">BUG-28</span>
+      <span class="ttl">Intake answers barely validated at the server</span><span class="chev">▶</span></summary>
+    <div class="body">
+      <div class="row"><div class="k">In plain terms</div><div class="v">The system barely checks what's submitted. A direct call with no beneficiaries, shares totaling 30%, a giant blob of text, or text designed to trick the AI will still build a document. The "shares must total 100%" rule only lives in the browser.</div></div>
+      <div class="row"><div class="k">Where</div><div class="v"><code>lib/validation/schemas.ts:100-117</code> (<code>.passthrough()</code>); consumed in <code>michigan-will.ts</code></div></div>
+      <div class="row"><div class="k">Impact</div><div class="v">Garbage or malicious intake reaches the database and the AI prompt; documents built from invalid data.</div></div>
+      <div class="row check"><div class="k">Check on website</div><div class="v">DevTools → Network → resend a checkout POST with an empty/garbage <code>intakeAnswers</code> → order + document still created.</div></div>
+      <div class="row fix"><div class="k">Fix</div><div class="v">Tighten the schema: require ≥1 beneficiary + executor, relationship enums, numeric <code>share</code> 0–100 with a server-side 100% sum check, max lengths on free text. Re-validate before generating.</div></div>
+    </div>
+  </details>
+
+  <details class="bug med" data-sev="med">
+    <summary><span class="badge med">Medium</span><span class="id">BUG-29</span>
+      <span class="ttl">Trust accepts a distribution age under 18</span><span class="chev">▶</span></summary>
+    <div class="body">
+      <div class="row"><div class="k">In plain terms</div><div class="v">The "hold money until age X" field blocks anything over 99 but accepts low values like 0 or 5. That produces a nonsense trust — a person is a legal adult at 18.</div></div>
+      <div class="row"><div class="k">Where</div><div class="v"><code>app/trust/page.tsx:471-479</code></div></div>
+      <div class="row"><div class="k">Impact</div><div class="v">Customer pays for a legally incoherent document ("hold until age 5").</div></div>
+      <div class="row check"><div class="k">Check on website</div><div class="v"><code>/trust</code> → answer you have minor children → distribution age → <b>Other</b> → type <code>5</code> (or <code>0</code>) → it's accepted.</div></div>
+      <div class="row fix"><div class="k">Fix</div><div class="v">Enforce a minimum (≥18) in the custom-age handler and in the card-complete check.</div></div>
+    </div>
+  </details>
+
+  <details class="bug med" data-sev="med">
+    <summary><span class="badge med">Medium</span><span class="id">BUG-30</span>
+      <span class="ttl">TEST promo generates real documents for $0 with weak guards</span><span class="chev">▶</span></summary>
+    <div class="body">
+      <div class="row"><div class="k">In plain terms</div><div class="v">There's an internal TEST code that generates real documents for free. The guard limiting it is weak — if the switch is ever left on in production, people could mint free real documents (up to 50/hour).</div></div>
+      <div class="row"><div class="k">Where</div><div class="v"><code>lib/checkout/createCheckoutSession.ts:298-400</code> (<code>handleTestPromo</code>)</div></div>
+      <div class="row"><div class="k">Impact</div><div class="v">Free real-document generation if the flag is left active; origin allowlist bypassable when headers are absent.</div></div>
+      <div class="row check"><div class="k">Check on website</div><div class="v">Only reproducible if <code>test_promo_code</code> is on — enter <code>TEST</code> at checkout and confirm documents generate with no payment. Verify the flag is forced <b>off</b> in production.</div></div>
+      <div class="row fix"><div class="k">Fix</div><div class="v">Treat empty/unknown origin as untrusted; scope the rate limit per IP/email; ensure prod has the flag off; emit watermarked output for test orders.</div></div>
+    </div>
+  </details>
+
+  <details class="bug med" data-sev="med">
+    <summary><span class="badge med">Medium</span><span class="id">BUG-31</span>
+      <span class="ttl">Partner "trust" earnings advertised as $500, actual payout is $450</span><span class="chev">▶</span></summary>
+    <div class="body">
+      <div class="row"><div class="k">In plain terms</div><div class="v">The partner-recruitment pages tell Professional-tier partners they earn <b>$500 per trust</b> — both the feature list and the live earnings calculator. But the system actually pays them <b>$450</b> (the real source-of-truth figure). Partners are promised $50 more per trust than they get.</div></div>
+      <div class="row"><div class="k">Where</div><div class="v"><code>app/khan-lawgroup/page.tsx:22, :157</code>; <code>app/partners/attorneys/page.tsx:22, :152</code>; <code>app/partners/attorneys/CLAUDE.md:13</code>. Truth: <code>lib/orders/pricing.ts:43</code> (enterprise trust partner = 45000 = $450).</div></div>
+      <div class="row"><div class="k">Impact</div><div class="v">Partner trust / dispute risk — they're paid $50/trust less than advertised. Not a direct money loss to the platform (the webhook pays the correct $450). The will figures ($300/$350) are correct; only the professional trust figure drifts.</div></div>
+      <div class="row check"><div class="k">Check on website</div><div class="v">Open <code>/khan-lawgroup</code> or <code>/partners/attorneys</code> → toggle the earnings calculator to <b>Professional</b> → "per trust" shows <b>$500</b>; the Professional bullet reads <b>"$500/trust + your review fee"</b>. Compare to <code>lib/orders/pricing.ts:43</code> = $450.</div></div>
+      <div class="row fix"><div class="k">Fix</div><div class="v">Change the four <code>500</code> occurrences (2 calculator lines, 2 feature strings) + the doc line to <code>450</code>. Ideally derive from <code>PARTNER_SPLITS.trust.enterprise.partner</code> so it can't drift again.</div></div>
+    </div>
+  </details>
+
+  <details class="bug med" data-sev="med">
+    <summary><span class="badge med">Medium</span><span class="id">BUG-32</span>
+      <span class="ttl">Expired vault subscription keeps full access</span><span class="chev">▶</span></summary>
+    <div class="body">
+      <div class="row"><div class="k">In plain terms</div><div class="v">The subscription's expiry date is saved but never actually checked. If a renewal payment is missed and the "ended" event doesn't arrive, the customer keeps full vault access forever without paying.</div></div>
+      <div class="row"><div class="k">Where</div><div class="v"><code>lib/repos/server/clientRepo.ts:146</code>; all gates check only <code>status === "active"</code>; no cron downgrades expired subs.</div></div>
+      <div class="row"><div class="k">Impact</div><div class="v">Free vault access after a subscription ends; lost recurring revenue; nothing reconciles it.</div></div>
+      <div class="row check"><div class="k">Check on website</div><div class="v">Requires DB state — in staging set a client's expiry to a past date while status stays "active" → vault upload/farewell/download still succeed.</div></div>
+      <div class="row fix"><div class="k">Fix</div><div class="v">Gate on "active AND expiry in the future"; add a cron that downgrades expired subs and re-checks Stripe.</div></div>
+    </div>
+  </details>
+
+  <details class="bug med" data-sev="med">
+    <summary><span class="badge med">Medium</span><span class="badge" style="background:#1a7f37;color:#fff">✅ FIXED</span><span class="id">BUG-33</span>
+      <span class="ttl">Attorney "review fee" input has no upper limit (feeds BUG-4)</span><span class="chev">▶</span></summary>
+    <div class="body">
+      <div class="row"><div class="k">In plain terms</div><div class="v">The review-fee field at attorney signup accepts any number with no maximum. It's stored and later paid out — this is the input that makes BUG-4 possible.</div></div>
+      <div class="row"><div class="k">Where</div><div class="v"><code>lib/validation/schemas.ts:163</code> (<code>nonnegative().optional()</code>); <code>app/api/checkout/attorney/route.ts:84,157</code></div></div>
+      <div class="row"><div class="k">Impact</div><div class="v">Garbage/excessive fees persisted on partner records + metadata; surface in dashboards and (via BUG-4) real payouts.</div></div>
+      <div class="row check"><div class="k">Check on website</div><div class="v">In the attorney signup form (or DevTools) submit an absurd review fee → accepted with no validation error.</div></div>
+      <div class="row fix"><div class="k">Fix</div><div class="v">Bound the field to the defined $150–$1,500 range, validated at every save site.</div></div>
+      <div class="row fix"><div class="k">Resolution (2026-06-09)</div><div class="v">Input vector removed — <code>review_fee</code> deleted from the attorney signup schema and no longer read in <code>attorney/route.ts</code> or <code>verify/route.ts</code> (new partners seed the platform default). The only remaining write path is admin-set and clamped via <code>adminPartnerFeeSchema</code>. See BUG-4 resolution.</div></div>
+    </div>
+  </details>
+
+  <details class="bug med" data-sev="med">
+    <summary><span class="badge med">Medium</span><span class="id">BUG-34</span>
+      <span class="ttl">Renewal webhook can reactivate a cancelled subscription</span><span class="chev">▶</span></summary>
+    <div class="body">
+      <div class="row"><div class="k">In plain terms</div><div class="v">When a renewal payment succeeds, the system flips the subscription back to "active" and adds a year — without checking whether the customer had cancelled. An out-of-order or retried event can resurrect a cancelled subscription.</div></div>
+      <div class="row"><div class="k">Where</div><div class="v"><code>app/api/webhooks/stripe/route.ts:52-70</code>; <code>lib/repos/server/clientRepo.ts:140-148</code></div></div>
+      <div class="row"><div class="k">Impact</div><div class="v">Status drift between Stripe and the database; a cancelled customer can show as active (or vice-versa); the sync job won't correct a wrongly-active record.</div></div>
+      <div class="row check"><div class="k">Check on website</div><div class="v">N/A in normal use (event ordering) — reproduce in staging by replaying a renewal invoice event with the Stripe CLI for a cancelled customer.</div></div>
+      <div class="row fix"><div class="k">Fix</div><div class="v">On renewal, confirm the Stripe sub is genuinely active before reactivating; set expiry from the invoice's real period end, not blindly +1 year.</div></div>
+    </div>
+  </details>
+
+  <details class="bug med" data-sev="med">
+    <summary><span class="badge med">Medium</span><span class="id">BUG-35</span>
+      <span class="ttl">No lockout on PIN verify (brute-forceable)</span><span class="chev">▶</span></summary>
+    <div class="body">
+      <div class="row"><div class="k">In plain terms</div><div class="v">There's no limit on wrong PIN attempts. A 6-digit PIN can be guessed by hammering the verify endpoint — every other sensitive vault route is rate-limited, this one isn't.</div></div>
+      <div class="row"><div class="k">Where</div><div class="v"><code>app/api/vault/pin/route.ts:46-54</code> (no rate limiter)</div></div>
+      <div class="row"><div class="k">Impact</div><div class="v">An attacker with a valid session can brute-force the PIN.</div></div>
+      <div class="row check"><div class="k">Check on website</div><div class="v">From a logged-in session submit wrong PINs repeatedly via the network panel — never locked out or throttled.</div></div>
+      <div class="row fix"><div class="k">Fix</div><div class="v">Add a per-user limiter + failed-attempt lockout (mirror the trustee OTP cap).</div></div>
+    </div>
+  </details>
+
+  <details class="bug med" data-sev="med">
+    <summary><span class="badge med">Medium</span><span class="id">BUG-36</span>
+      <span class="ttl">Farewell storage path not scoped to the owner</span><span class="chev">▶</span></summary>
+    <div class="body">
+      <div class="row"><div class="k">In plain terms</div><div class="v">A customer can set their farewell video's stored-file path to anything — including pointing at another customer's folder — and then get a 7-day download link to it. Same family as BUG-12, on the owner's own write path. (Requires guessing the victim's random file id.)</div></div>
+      <div class="row"><div class="k">Where</div><div class="v"><code>app/api/vault/farewell/upload-complete/route.ts:21-35</code>; <code>farewell/route.ts:110,210</code>; schemas accept <code>storagePath</code> as a free string.</div></div>
+      <div class="row"><div class="k">Impact</div><div class="v">Potential cross-tenant read of farewell videos; broken storage hygiene.</div></div>
+      <div class="row check"><div class="k">Check on website</div><div class="v">Create a farewell message, then in DevTools resend the PATCH/upload-complete with a <code>storagePath</code> outside your own <code>vault/&lt;your id&gt;/</code> folder — it's accepted.</div></div>
+      <div class="row fix"><div class="k">Fix</div><div class="v">Require client-supplied <code>storagePath</code> to start with <code>vault/&lt;client.id&gt;/</code> at every write point (reuse the download-url check).</div></div>
+    </div>
+  </details>
+
+  <details class="bug med" data-sev="med">
+    <summary><span class="badge med">Medium</span><span class="id">BUG-37</span>
+      <span class="ttl">Farewell upload-complete / view not behind the paywall</span><span class="chev">▶</span></summary>
+    <div class="body">
+      <div class="row"><div class="k">In plain terms</div><div class="v">Creating and uploading a farewell video checks for an active subscription, but finishing the upload and viewing it don't. A lapsed/never-subscribed customer with an existing message can still attach and view videos.</div></div>
+      <div class="row"><div class="k">Where</div><div class="v"><code>app/api/vault/farewell/upload-complete/route.ts</code> and <code>farewell/[id]/signed-url/route.ts</code> (no subscription check).</div></div>
+      <div class="row"><div class="k">Impact</div><div class="v">Inconsistent paywall on the farewell feature.</div></div>
+      <div class="row check"><div class="k">Check on website</div><div class="v">Let a vault subscription lapse, then attach/view an existing farewell video — still works.</div></div>
+      <div class="row fix"><div class="k">Fix</div><div class="v">Add the same subscription gate to both routes (with BUG-5/22's "gate on expiry too" in mind).</div></div>
+    </div>
+  </details>
+
+  <details class="bug med" data-sev="med">
+    <summary><span class="badge med">Medium</span><span class="id">BUG-38</span>
+      <span class="ttl">Email verification code is brute-forceable</span><span class="chev">▶</span></summary>
+    <div class="body">
+      <div class="row"><div class="k">In plain terms</div><div class="v">The 6-digit email code has a 5-try limit, but requesting a new code resets the counter, and you can request 5 new codes a minute — so ~25 guesses a minute. A guessed code lets you create/take over an account. The trustee OTP path already fixed this; the email path didn't.</div></div>
+      <div class="row"><div class="k">Where</div><div class="v"><code>app/api/auth/verify-code/route.ts:9-31</code>; resend resets attempts in <code>lib/auth/emailVerification.ts</code>.</div></div>
+      <div class="row"><div class="k">Impact</div><div class="v">Targeted OTP guessing; chains with BUG-40 into account takeover.</div></div>
+      <div class="row check"><div class="k">Check on website</div><div class="v">In DevTools repeatedly POST wrong codes to <code>/api/auth/verify-code</code>, re-requesting a code every 5 failures — guessing continues indefinitely.</div></div>
+      <div class="row fix"><div class="k">Fix</div><div class="v">Rate-limit verify-code per email + IP; cap fresh-code resends (mirror the trustee OTP cap).</div></div>
+    </div>
+  </details>
+
+  <details class="bug med" data-sev="med">
+    <summary><span class="badge med">Medium</span><span class="id">BUG-39</span>
+      <span class="ttl">check-email leaks who has an account + their name &amp; products</span><span class="chev">▶</span></summary>
+    <div class="body">
+      <div class="row"><div class="k">In plain terms</div><div class="v">An open, unauthenticated endpoint tells anyone whether an email has an account, plus the holder's full name and which products they own (will/trust/vault). Great for targeted phishing. Other endpoints were carefully built NOT to leak this — this one does.</div></div>
+      <div class="row"><div class="k">Where</div><div class="v"><code>app/api/auth/check-email/route.ts:9-54</code> (public, no rate limit)</div></div>
+      <div class="row"><div class="k">Impact</div><div class="v">Account enumeration + PII disclosure for estate-planning customers.</div></div>
+      <div class="row check"><div class="k">Check on website</div><div class="v">On the signup/login email step, watch the <code>/api/auth/check-email</code> call; submit a known customer email → full name + product flags returned.</div></div>
+      <div class="row fix"><div class="k">Fix</div><div class="v">Require a verified session/step-up before returning name/product flags; rate-limit per IP; keep responses uniform.</div></div>
+    </div>
+  </details>
+
+  <details class="bug med" data-sev="med">
+    <summary><span class="badge med">Medium</span><span class="id">BUG-40</span>
+      <span class="ttl">Password reset happens silently with no notification</span><span class="chev">▶</span></summary>
+    <div class="body">
+      <div class="row"><div class="k">In plain terms</div><div class="v">Resetting an existing account's password via the email-code flow requires no current password and sends no "your password changed" alert. Combined with the guessable code (BUG-38), this becomes the takeover step — and the real owner never gets a warning.</div></div>
+      <div class="row"><div class="k">Where</div><div class="v"><code>app/api/auth/set-password/route.ts:99-117</code></div></div>
+      <div class="row"><div class="k">Impact</div><div class="v">Silent credential reset; no out-of-band safety net.</div></div>
+      <div class="row check"><div class="k">Check on website</div><div class="v">Use verify-email + set-password for an email that already has an account → password changes, no notification email arrives.</div></div>
+      <div class="row fix"><div class="k">Fix</div><div class="v">Send a "your password was changed" email on every reset; route existing-account changes through the recovery-link flow.</div></div>
+    </div>
+  </details>
+
+  <details class="bug med" data-sev="med">
+    <summary><span class="badge med">Medium</span><span class="id">BUG-41</span>
+      <span class="ttl">Partner branding lookup is open to query injection</span><span class="chev">▶</span></summary>
+    <div class="body">
+      <div class="row"><div class="k">In plain terms</div><div class="v">A public endpoint builds a database filter by pasting the <code>domain</code> query parameter in raw. A crafted value can inject extra filter conditions. The same bug class was already fixed elsewhere in the code — but not here.</div></div>
+      <div class="row"><div class="k">Where</div><div class="v"><code>app/api/partners/branding/route.ts:9,19</code></div></div>
+      <div class="row"><div class="k">Impact</div><div class="v">Read-only filter injection on a public endpoint (limited to branding columns).</div></div>
+      <div class="row check"><div class="k">Check on website</div><div class="v">Hit <code>/api/partners/branding?domain=</code> with comma/parenthesis payloads → response selects by the injected predicate, not the domain.</div></div>
+      <div class="row fix"><div class="k">Fix</div><div class="v">Sanitize <code>domain</code> with the existing middleware allowlist, or split into two exact-match queries.</div></div>
+    </div>
+  </details>
+
+  <details class="bug med" data-sev="med">
+    <summary><span class="badge med">Medium</span><span class="id">BUG-42</span>
+      <span class="ttl">Add-domain reports success even when the claim failed</span><span class="chev">▶</span></summary>
+    <div class="body">
+      <div class="row"><div class="k">In plain terms</div><div class="v">When a partner adds a custom domain, the code doesn't check whether the database save worked. If the domain is already taken by another partner, the save fails — but the partner is still told "success." Their whitelabel site won't actually work, and the audit log lies.</div></div>
+      <div class="row"><div class="k">Where</div><div class="v"><code>app/api/partner/add-domain/route.ts:71-72</code> (and DELETE :97-99)</div></div>
+      <div class="row"><div class="k">Impact</div><div class="v">Silent misconfiguration + misleading audit trail; Vercel registration for arbitrary domains with no ownership proof.</div></div>
+      <div class="row check"><div class="k">Check on website</div><div class="v">Two enterprise partners; A submits a custom domain B already saved → A's UI shows success but <code>partners.custom_domain</code> for A is unchanged.</div></div>
+      <div class="row fix"><div class="k">Fix</div><div class="v">Check the update error and fail on it; pre-check the domain isn't owned by another partner; register with Vercel only after the DB claim succeeds.</div></div>
+    </div>
+  </details>
+
+  <details class="bug med" data-sev="med">
+    <summary><span class="badge med">Medium</span><span class="id">BUG-43</span>
+      <span class="ttl">Partner can enroll arbitrary existing accounts as their clients</span><span class="chev">▶</span></summary>
+    <div class="body">
+      <div class="row"><div class="k">In plain terms</div><div class="v">A partner can "add a client" using any existing account's email, and the system links that account to the partner — no consent, no role check. Creates fake client relationships.</div></div>
+      <div class="row"><div class="k">Where</div><div class="v"><code>app/api/partner/clients/route.ts:49-84</code></div></div>
+      <div class="row"><div class="k">Impact</div><div class="v">Spurious client records under a partner; enrollment abuse.</div></div>
+      <div class="row check"><div class="k">Check on website</div><div class="v">In Pro → Clients, "add" a client using an existing account's email you don't own → a clients row appears under your partner.</div></div>
+      <div class="row fix"><div class="k">Fix</div><div class="v">Only auto-link an existing profile if it's unclaimed or already this partner's client; otherwise require an invite/accept handshake.</div></div>
+    </div>
+  </details>
+
+  <details class="bug med" data-sev="med">
+    <summary><span class="badge med">Medium</span><span class="id">BUG-44</span>
+      <span class="ttl">Sales commission default rate inconsistent (5% shown vs 50% paid)</span><span class="chev">▶</span></summary>
+    <div class="body">
+      <div class="row"><div class="k">In plain terms</div><div class="v">When a rep has no commission rate set, different parts of the app assume different defaults — 5% in the admin list, but 50% in the commission math. So owed commission can be 10× what the admin sees.</div></div>
+      <div class="row"><div class="k">Where</div><div class="v"><code>my-platform-commission/route.ts:41</code> &amp; <code>commission/route.ts:37</code> (0.5) vs <code>reps/route.ts:26</code> (0.05)</div></div>
+      <div class="row"><div class="k">Impact</div><div class="v">Overstated commission liability; rep disputes.</div></div>
+      <div class="row check"><div class="k">Check on website</div><div class="v">With a rep that has no commission_rate, compare the rep's "My Commission" figure to the rate shown in the admin Sales Rep list — they imply different rates.</div></div>
+      <div class="row fix"><div class="k">Fix</div><div class="v">Use one shared default constant everywhere; ideally make the column NOT NULL with a default.</div></div>
+    </div>
+  </details>
+
+  <details class="bug med" data-sev="med">
+    <summary><span class="badge med">Medium</span><span class="id">BUG-45</span>
+      <span class="ttl">"My Commission" ignores the rep's actual rate (hardcoded 5%)</span><span class="chev">▶</span></summary>
+    <div class="body">
+      <div class="row"><div class="k">In plain terms</div><div class="v">The rep's order-revenue commission is always computed at 5%, ignoring whatever rate the admin actually set. Changing a rep's rate has no effect on this view.</div></div>
+      <div class="row"><div class="k">Where</div><div class="v"><code>app/api/sales/my-commission/route.ts:8,48,73</code>; <code>overview/route.ts:33</code></div></div>
+      <div class="row"><div class="k">Impact</div><div class="v">Admin-configured rates not honored; under/over-statement and disputes.</div></div>
+      <div class="row check"><div class="k">Check on website</div><div class="v">As admin change a rep's commission rate; as that rep open "My Commission" — the order-revenue commission is unchanged (still 5%).</div></div>
+      <div class="row fix"><div class="k">Fix</div><div class="v">Pull the rate from one source of truth (the stored rate) and apply consistently.</div></div>
+    </div>
+  </details>
+
+  <details class="bug med" data-sev="med">
+    <summary><span class="badge med">Medium</span><span class="id">BUG-46</span>
+      <span class="ttl">Free-document kill-switch state is readable by anyone</span><span class="chev">▶</span></summary>
+    <div class="body">
+      <div class="row"><div class="k">In plain terms</div><div class="v">The admin endpoint that reports whether the free-document TEST promo is on has no login check and is publicly allowed. An attacker can poll it to detect the moment it's left on in production, then exploit BUG-30 to mint free documents.</div></div>
+      <div class="row"><div class="k">Where</div><div class="v"><code>app/api/admin/test-promo/route.ts:9-20</code> (GET, no auth); public in <code>middleware.ts:162</code></div></div>
+      <div class="row"><div class="k">Impact</div><div class="v">Unauthenticated disclosure of the free-document kill-switch state.</div></div>
+      <div class="row check"><div class="k">Check on website</div><div class="v">In an incognito window (logged out) visit <code>/api/admin/test-promo</code> → it returns the active state.</div></div>
+      <div class="row fix"><div class="k">Fix</div><div class="v">Require admin for GET (or remove from the public allowlist); checkout should read the setting server-side.</div></div>
+    </div>
+  </details>
+
+  <details class="bug med" data-sev="med">
+    <summary><span class="badge med">Medium</span><span class="id">BUG-47</span>
+      <span class="ttl">Amendment checkout also fakes the acknowledgment signature</span><span class="chev">▶</span></summary>
+    <div class="body">
+      <div class="row"><div class="k">In plain terms</div><div class="v">Like BUG-2 but on the amendment product: the amendment order always records "acknowledgment signed: true" even though no agree-box is ever shown.</div></div>
+      <div class="row"><div class="k">Where</div><div class="v"><code>app/api/checkout/amendment/route.ts:50-51</code> (free) and <code>:89-90</code> (paid)</div></div>
+      <div class="row"><div class="k">Impact</div><div class="v">Amended documents generated for clients who never acknowledged; fabricated record (Core Rule 3).</div></div>
+      <div class="row check"><div class="k">Check on website</div><div class="v"><code>/dashboard/amendment</code> → submit a change → never shown an "agree" box; the <code>orders</code> row shows <code>acknowledgment_signed = true</code>.</div></div>
+      <div class="row fix"><div class="k">Fix</div><div class="v">Require a real acknowledgment input in the amendment schema + UI; set the column from it.</div></div>
+    </div>
+  </details>
+
+  <details class="bug med" data-sev="med">
+    <summary><span class="badge med">Medium</span><span class="id">BUG-48</span>
+      <span class="ttl">"We recommend" copy in trust intake (no-legal-advice violation)</span><span class="chev">▶</span></summary>
+    <div class="body">
+      <div class="row"><div class="k">In plain terms</div><div class="v">The platform must never say "We recommend" — it gives the impression of legal advice. The trust intake says exactly that when you pick "Business interests."</div></div>
+      <div class="row"><div class="k">Where</div><div class="v"><code>app/trust/page.tsx:575</code></div></div>
+      <div class="row"><div class="k">Impact</div><div class="v">Direct violation of the hardcoded no-legal-advice voice rule on a paid funnel screen.</div></div>
+      <div class="row check"><div class="k">Check on website</div><div class="v">Start a Trust, on the assets question check "Business interests" → the warning box says "We recommend adding attorney review."</div></div>
+      <div class="row fix"><div class="k">Fix</div><div class="v">Reword neutrally: "Attorney review is available to ensure your business provisions are correctly drafted."</div></div>
+    </div>
+  </details>
+
+  <details class="bug med" data-sev="med">
+    <summary><span class="badge med">Medium</span><span class="id">BUG-49</span>
+      <span class="ttl">"We recommend" / "best for you" copy in dashboard life-events</span><span class="chev">▶</span></summary>
+    <div class="body">
+      <div class="row"><div class="k">In plain terms</div><div class="v">The logged-in life-events tool tells clients "We recommend attorney review" and "which strategy is best for you" — advisory language the no-legal-advice rule bans.</div></div>
+      <div class="row"><div class="k">Where</div><div class="v"><code>app/dashboard/life-events/page.tsx:9,12,13,15</code></div></div>
+      <div class="row"><div class="k">Impact</div><div class="v">No-legal-advice violations shown directly to paying clients.</div></div>
+      <div class="row check"><div class="k">Check on website</div><div class="v">In the dashboard open "Has anything changed in your life?", tick the business + assets events → the advisory wording appears.</div></div>
+      <div class="row fix"><div class="k">Fix</div><div class="v">Replace with answer-framed neutral copy.</div></div>
+    </div>
+  </details>
+
+  <details class="bug med" data-sev="med">
+    <summary><span class="badge med">Medium</span><span class="id">BUG-50</span>
+      <span class="ttl">"We recommend" copy in pro marketing page</span><span class="chev">▶</span></summary>
+    <div class="body">
+      <div class="row"><div class="k">In plain terms</div><div class="v">Partner-distributed marketing copy uses "We recommend a quick annual review" — same banned advisory voice.</div></div>
+      <div class="row"><div class="k">Where</div><div class="v"><code>app/pro/marketing/page.tsx:78</code> (the ✗-examples at :30-31 are intentional and fine)</div></div>
+      <div class="row"><div class="k">Impact</div><div class="v">Recommendation-voice violation in partner-facing marketing.</div></div>
+      <div class="row check"><div class="k">Check on website</div><div class="v">Open the pro marketing materials page → the annual-review blurb uses "We recommend."</div></div>
+      <div class="row fix"><div class="k">Fix</div><div class="v">Reword: "An annual review helps keep your plan current."</div></div>
+    </div>
+  </details>
+
+  <details class="bug med" data-sev="med">
+    <summary><span class="badge med">Medium</span><span class="id">BUG-51</span>
+      <span class="ttl">Trust can silently drop a named successor trustee</span><span class="chev">▶</span></summary>
+    <div class="body">
+      <div class="row"><div class="k">In plain terms</div><div class="v">If a client names both a "second successor trustee" and a list of additional trustees, the document-building logic skips one of the named people — leaving a named fiduciary out of the trust entirely.</div></div>
+      <div class="row"><div class="k">Where</div><div class="v"><code>lib/documents/templates/michigan-revocable-trust.ts:85, :109</code></div></div>
+      <div class="row"><div class="k">Impact</div><div class="v">A missing fiduciary in a legal document.</div></div>
+      <div class="row check"><div class="k">Check on website</div><div class="v">Hard via the standard UI; reachable via direct API since intake is unvalidated (BUG-28). Supply both <code>secondSuccessorTrusteeName</code> and a 2-item additional list → the first additional name is dropped.</div></div>
+      <div class="row fix"><div class="k">Fix</div><div class="v">Only seed the second successor from the array when no explicit value exists, and slice accordingly; otherwise render the full array.</div></div>
+    </div>
+  </details>
+
+  <details class="bug med" data-sev="med">
+    <summary><span class="badge med">Medium</span><span class="id">BUG-52</span>
+      <span class="ttl">Attorney can set any review status (no state machine)</span><span class="chev">▶</span></summary>
+    <div class="body">
+      <div class="row"><div class="k">In plain terms</div><div class="v">The review-status update accepts any text. An attorney can set a review to "approved" directly — skipping the proper approve flow that unlocks the client's documents and writes the audit log. Or set a nonsense status that hides the case from overdue tracking.</div></div>
+      <div class="row"><div class="k">Where</div><div class="v"><code>app/api/attorney/reviews/[reviewId]/route.ts:17-25</code>; schema <code>schemas.ts:488-490</code></div></div>
+      <div class="row"><div class="k">Impact</div><div class="v">Bypasses unlock side-effects + audit; corrupts SLA/pipeline state.</div></div>
+      <div class="row check"><div class="k">Check on website</div><div class="v">On the review pipeline, intercept the status-update request, change <code>status</code> to <code>approved</code> → accepted; compare to the proper Approve button which unlocks the order.</div></div>
+      <div class="row fix"><div class="k">Fix</div><div class="v">Use an enum of valid statuses + enforce legal transitions; terminal decisions must go through the approve route.</div></div>
+    </div>
+  </details>
+
+  <details class="bug med" data-sev="med">
+    <summary><span class="badge med">Medium</span><span class="id">BUG-53</span>
+      <span class="ttl">Attorney approve is repeatable &amp; needs no reviewed document</span><span class="chev">▶</span></summary>
+    <div class="body">
+      <div class="row"><div class="k">In plain terms</div><div class="v">Approving a review can be done over and over (re-sending the "documents delivered" email each time), and can be done even when no reviewed document was ever uploaded — so the paid $300 review can be "delivered" with nothing to show for it.</div></div>
+      <div class="row"><div class="k">Where</div><div class="v"><code>app/api/attorney/approve/route.ts:30-51</code></div></div>
+      <div class="row"><div class="k">Impact</div><div class="v">Duplicate client emails; paid review marked complete with no deliverable.</div></div>
+      <div class="row check"><div class="k">Check on website</div><div class="v">Open an assigned review, click Approve without uploading a reviewed document → client unlocked/emailed. Click Approve again → another delivery email.</div></div>
+      <div class="row fix"><div class="k">Fix</div><div class="v">Reject if already in a terminal state; require at least one document with a reviewed file before unlocking.</div></div>
+    </div>
+  </details>
+
+  <details class="bug med" data-sev="med">
+    <summary><span class="badge med">Medium</span><span class="id">BUG-54</span>
+      <span class="ttl">Attorney-review role permissions inconsistent across routes</span><span class="chev">▶</span></summary>
+    <div class="body">
+      <div class="row"><div class="k">In plain terms</div><div class="v">Different review endpoints accept different role sets. A user typed "attorney" can see the queue and change statuses but can't fetch documents or approve; an admin can approve but can't see the queue. No role works end-to-end.</div></div>
+      <div class="row"><div class="k">Where</div><div class="v">queue routes use <code>["review_attorney","attorney"]</code>; action routes use <code>["review_attorney","admin"]</code></div></div>
+      <div class="row"><div class="k">Impact</div><div class="v">Broken workflow / dead-end UI; a role can mutate status but is denied the matching decision capability.</div></div>
+      <div class="row check"><div class="k">Check on website</div><div class="v">Compare an <code>attorney</code> vs <code>review_attorney</code> login — the <code>attorney</code> sees the reviews list but every document/approve action fails.</div></div>
+      <div class="row fix"><div class="k">Fix</div><div class="v">Standardize the role list across all attorney-review routes; decide admin queue access uniformly.</div></div>
+    </div>
+  </details>
+
+  <details class="bug med" data-sev="med">
+    <summary><span class="badge med">Medium</span><span class="id">BUG-55</span>
+      <span class="ttl">Public contact form fails (401) for logged-out visitors</span><span class="chev">▶</span></summary>
+    <div class="body">
+      <div class="row"><div class="k">In plain terms</div><div class="v">The <code>/api/contact</code> endpoint isn't on the public allowlist, so the contact form on the public page is rejected with 401 for exactly the anonymous visitors it's meant for. Leads are silently lost.</div></div>
+      <div class="row"><div class="k">Where</div><div class="v"><code>lib/supabase/middleware.ts:162</code></div></div>
+      <div class="row"><div class="k">Impact</div><div class="v">Broken public funnel / lost leads.</div></div>
+      <div class="row check"><div class="k">Check on website</div><div class="v">In incognito open <code>/contact</code>, fill + submit → it fails with 401 in the Network tab instead of sending.</div></div>
+      <div class="row fix"><div class="k">Fix</div><div class="v">Add <code>"/api/contact"</code> to the public allowlist.</div></div>
+    </div>
+  </details>
+
+  <details class="bug med" data-sev="med">
+    <summary><span class="badge med">Medium</span><span class="id">BUG-56</span>
+      <span class="ttl">All CSP violation reports are dropped (401)</span><span class="chev">▶</span></summary>
+    <div class="body">
+      <div class="row"><div class="k">In plain terms</div><div class="v">Browsers send security (CSP) violation reports to <code>/api/csp-report</code>, but that path isn't allowlisted so every report is rejected. The team gets zero security telemetry and can never safely tighten CSP.</div></div>
+      <div class="row"><div class="k">Where</div><div class="v"><code>lib/supabase/middleware.ts:162</code>; wired in <code>next.config.mjs:22,38</code></div></div>
+      <div class="row"><div class="k">Impact</div><div class="v">Security-visibility gap.</div></div>
+      <div class="row check"><div class="k">Check on website</div><div class="v">Load a public page logged out, cause a blocked inline script → the <code>/api/csp-report</code> POST returns 401 in DevTools.</div></div>
+      <div class="row fix"><div class="k">Fix</div><div class="v">Add <code>"/api/csp-report"</code> to the public allowlist.</div></div>
+    </div>
+  </details>
+
+  <details class="bug med" data-sev="med">
+    <summary><span class="badge med">Medium</span><span class="id">BUG-57</span>
+      <span class="ttl">No rate limiting on public lead / AI-cost endpoints</span><span class="chev">▶</span></summary>
+    <div class="body">
+      <div class="row"><div class="k">In plain terms</div><div class="v">Several public endpoints have no throttle. The worst is quiz-personalize, which calls the paid Claude API on every request — a scripted loop runs up your AI bill. Others enable lead-table and email spam, and spawn Stripe Connect accounts.</div></div>
+      <div class="row"><div class="k">Where</div><div class="v"><code>quiz/personalize</code>, <code>contact</code>, <code>professionals/request-access</code>, <code>affiliate/signup</code>, <code>csp-report</code> (none rate-limited; contrast <code>share/route.ts</code>)</div></div>
+      <div class="row"><div class="k">Impact</div><div class="v">Paid-API cost abuse; lead/email spam.</div></div>
+      <div class="row check"><div class="k">Check on website</div><div class="v">Resend the quiz-personalize or contact request rapidly in DevTools → never throttled (no 429).</div></div>
+      <div class="row fix"><div class="k">Fix</div><div class="v">Add per-IP rate limiting to each; cap the quiz-answers size and whitelist consumed keys before building the AI prompt.</div></div>
+    </div>
+  </details>
+
+  <details class="bug med" data-sev="med">
+    <summary><span class="badge med">Medium</span><span class="id">BUG-58</span>
+      <span class="ttl">Script-card download: partner name injected into response header</span><span class="chev">▶</span></summary>
+    <div class="body">
+      <div class="row"><div class="k">In plain terms</div><div class="v">The script-card PDF puts the partner's company name straight into the download header with no sanitizing. A quote or newline in the name corrupts the header / breaks the filename.</div></div>
+      <div class="row"><div class="k">Where</div><div class="v"><code>app/api/marketing/script-card/route.ts:124</code></div></div>
+      <div class="row"><div class="k">Impact</div><div class="v">Header corruption; latent header-injection class on a generated document.</div></div>
+      <div class="row check"><div class="k">Check on website</div><div class="v">As a partner set the company name to include a double-quote, download the Script Card → the saved filename is broken/truncated.</div></div>
+      <div class="row fix"><div class="k">Fix</div><div class="v">Strip quotes/CR/LF/control chars, or use RFC 5987 filename encoding with a slug.</div></div>
+    </div>
+  </details>
+
+  <details class="bug med" data-sev="med">
+    <summary><span class="badge med">Medium</span><span class="id">BUG-59</span>
+      <span class="ttl">farewell/verify has no input validation</span><span class="chev">▶</span></summary>
+    <div class="body">
+      <div class="row"><div class="k">In plain terms</div><div class="v">This public endpoint doesn't validate its input at all. A bad <code>clientId</code> is passed straight into database queries and the file path, causing server errors and compounding the cert-upload issue (BUG-67).</div></div>
+      <div class="row"><div class="k">Where</div><div class="v"><code>app/api/farewell/verify/route.ts:21-26</code></div></div>
+      <div class="row"><div class="k">Impact</div><div class="v">500s instead of clean errors; unvalidated value flows into a storage path. (No cross-tenant read — the blind-index gate still applies.)</div></div>
+      <div class="row check"><div class="k">Check on website</div><div class="v">On the public farewell-verify form, intercept the submit and replace <code>clientId</code> with junk text → the request 500s instead of a clean validation error.</div></div>
+      <div class="row fix"><div class="k">Fix</div><div class="v">Add a Zod schema (clientId as UUID, email validated, cert type/size) and validate before any DB call.</div></div>
+    </div>
+  </details>
+
+  <details class="bug med" data-sev="med">
+    <summary><span class="badge med">Medium</span><span class="id">BUG-60</span>
+      <span class="ttl">Guest client creation race → duplicate client records</span><span class="chev">▶</span></summary>
+    <div class="body">
+      <div class="row"><div class="k">In plain terms</div><div class="v">When two purchases for the same new guest email arrive at nearly the same time, both create a separate customer record. The person's orders then split across two records, so their dashboard shows only one purchase.</div></div>
+      <div class="row"><div class="k">Where</div><div class="v"><code>lib/webhooks/stripe/resolveOrCreateGuestClient.ts:77-87</code>; <code>handleDocumentCheckout.ts:116-133</code></div></div>
+      <div class="row"><div class="k">Impact</div><div class="v">Split orders/documents; "where's my other document?" support load. (Related to BUG-6's class.)</div></div>
+      <div class="row check"><div class="k">Check on website</div><div class="v">Hard via normal timing; in staging replay two guest checkouts for one new email concurrently → two client rows share the same profile.</div></div>
+      <div class="row fix"><div class="k">Fix</div><div class="v">Add a unique constraint on client(profile_id) and use upsert; never read-then-insert for client creation.</div></div>
+    </div>
+  </details>
+
+  <details class="bug med" data-sev="med">
+    <summary><span class="badge med">Medium</span><span class="id">BUG-61</span>
+      <span class="ttl">Amendment partner payout lost when Connect account isn't payable</span><span class="chev">▶</span></summary>
+    <div class="body">
+      <div class="row"><div class="k">In plain terms</div><div class="v">Same as BUG-15 but on the amendment product: if the partner's payout transfer fails, no "owed" record is written, so the money is silently unpaid.</div></div>
+      <div class="row"><div class="k">Where</div><div class="v"><code>lib/webhooks/stripe/handleAmendmentCheckout.ts:33-63</code></div></div>
+      <div class="row"><div class="k">Impact</div><div class="v">Partner owed an amendment cut, transfer fails, no reconcilable record.</div></div>
+      <div class="row check"><div class="k">Check on website</div><div class="v">Connect a partner but stop onboarding before "transfers" is enabled, buy an amendment through them → no payout for the order; Stripe logs show the error.</div></div>
+      <div class="row fix"><div class="k">Fix</div><div class="v">Always write a pending payout on transfer failure; check payability before transferring.</div></div>
+    </div>
+  </details>
+
+  <details class="bug med" data-sev="med">
+    <summary><span class="badge med">Medium</span><span class="id">BUG-62</span>
+      <span class="ttl">Order status update not checked in webhook handlers</span><span class="chev">▶</span></summary>
+    <div class="body">
+      <div class="row"><div class="k">In plain terms</div><div class="v">The webhook flips the order to "generating" but never checks if that save worked. If it fails, the handler still pays the partner and queues documents while the order stays "pending" — the status no longer reflects reality.</div></div>
+      <div class="row"><div class="k">Where</div><div class="v"><code>handleDocumentCheckout.ts:150</code>; <code>handleAmendmentCheckout.ts:16-20</code></div></div>
+      <div class="row"><div class="k">Impact</div><div class="v">Order status diverges from reality; fulfillment can run against the wrong/no order. (BUG-42 class.)</div></div>
+      <div class="row check"><div class="k">Check on website</div><div class="v">Hard via UI (needs DB fault injection); in staging tamper with the order_id in metadata → order stays "pending" while a payout row appears.</div></div>
+      <div class="row fix"><div class="k">Fix</div><div class="v">Check the update error; on failure abort fulfillment, alert, return non-200 (with the BUG-8 fix so Stripe retries).</div></div>
+    </div>
+  </details>
+
+  <details class="bug med" data-sev="med">
+    <summary><span class="badge med">Medium</span><span class="id">BUG-63</span>
+      <span class="ttl">Partner platform-fee upgrade applied without checking the write</span><span class="chev">▶</span></summary>
+    <div class="body">
+      <div class="row"><div class="k">In plain terms</div><div class="v">When a partner pays their one-time platform fee, the webhook flips their account to paid/upgraded but never checks the save worked. If it fails, the partner is charged but stays locked on the pre-payment step — and the audit log falsely says it succeeded.</div></div>
+      <div class="row"><div class="k">Where</div><div class="v"><code>app/api/webhooks/stripe/route.ts:127-132</code></div></div>
+      <div class="row"><div class="k">Impact</div><div class="v">Partner charged but not upgraded/unblocked; misleading audit trail; no retry. (BUG-42 class.)</div></div>
+      <div class="row check"><div class="k">Check on website</div><div class="v">In staging complete a partner platform-fee checkout with a stale partner_id (or induce an update error) → partner stays on the pre-payment onboarding step despite a successful charge.</div></div>
+      <div class="row fix"><div class="k">Fix</div><div class="v">Check the update error; on failure don't write the success audit and return non-200 so Stripe retries.</div></div>
+    </div>
+  </details>
+
+  <details class="bug low" data-sev="med">
+    <summary><span class="badge low">Low</span><span class="id">BUG-64</span>
+      <span class="ttl">Lost intake at checkout → 400 dead-end</span><span class="chev">▶</span></summary>
+    <div class="body">
+      <div class="row"><div class="k">In plain terms</div><div class="v">Intake answers live in the browser's temporary memory. If they're cleared or expire, checkout submits empty answers and gets a 400 error — a confusing dead-end where the user reached checkout but can't pay. (This is the server-side cousin of the new BUG-65.)</div></div>
+      <div class="row"><div class="k">Where</div><div class="v"><code>app/trust/checkout/page.tsx</code>, <code>app/will/checkout/page.tsx</code> (read <code>sessionStorage</code>)</div></div>
+      <div class="row check"><div class="k">How to check</div><div class="v">On a checkout page, clear <code>sessionStorage</code>, click Proceed → <code>Missing intake answers</code> 400.</div></div>
+      <div class="row fix"><div class="k">Fix</div><div class="v">Detect missing intake earlier and redirect to the quiz with a friendly message instead of failing at submit.</div></div>
+    </div>
+  </details>
+
+  <details class="bug low" data-sev="med">
+    <summary><span class="badge low">Low</span><span class="id">BUG-65</span>
+      <span class="ttl">Lost intake silently dumps the user back to start, mid-payment</span><span class="chev">▶</span></summary>
+    <div class="body">
+      <div class="row"><div class="k">In plain terms</div><div class="v">Answers are kept in the browser's temporary memory. If it clears (refresh, new tab), a customer who already verified email and clicked "Proceed to Payment" sees a spinner and is silently kicked back to the start — no explanation. They likely leave.</div></div>
+      <div class="row"><div class="k">Where</div><div class="v"><code>app/will/checkout/page.tsx:61-62</code> (mount) and <code>:166-171</code> (pay handlers)</div></div>
+      <div class="row"><div class="k">Impact</div><div class="v">Lost sales at the worst moment; verified-email state lost. (BUG-64 is the server-side version of the same root cause.)</div></div>
+      <div class="row check"><div class="k">Check on website</div><div class="v">Start a will → reach <code>/will/checkout</code> → verify email → DevTools → Application → Session Storage → delete <code>willIntake</code> → click <b>Proceed to Payment</b> → spinner flickers, then silent bounce to <code>/will</code> start.</div></div>
+      <div class="row fix"><div class="k">Fix</div><div class="v">Detect missing intake on mount and show an explicit "your session expired — please restart" message; reset the loading state; preserve verified-email state.</div></div>
+    </div>
+  </details>
+
+  <details class="bug low" data-sev="med">
+    <summary><span class="badge low">Low</span><span class="id">BUG-66</span>
+      <span class="ttl">Trustee invite link never actually expires</span><span class="chev">▶</span></summary>
+    <div class="body">
+      <div class="row"><div class="k">In plain terms</div><div class="v">The trustee invite email says the link expires in 7 days, but it never does and can be reused. A forwarded or stale link works forever.</div></div>
+      <div class="row"><div class="k">Where</div><div class="v"><code>lib/repos/server/trusteeRepo.ts:43-49</code>; <code>app/api/vault/trustees/route.ts:162-208</code></div></div>
+      <div class="row"><div class="k">Impact</div><div class="v">The stated 7-day guarantee is false; an active trustee can later request emergency vault access. Token is an unguessable UUID, so limited.</div></div>
+      <div class="row check"><div class="k">Check on website</div><div class="v">Use a trustee invite link well after 7 days — it still confirms.</div></div>
+      <div class="row fix"><div class="k">Fix</div><div class="v">Reject when older than 7 days; clear the token on confirm so it can't be replayed.</div></div>
+    </div>
+  </details>
+
+  <details class="bug low" data-sev="med">
+    <summary><span class="badge low">Low</span><span class="id">BUG-67</span>
+      <span class="ttl">Death-certificate uploads can overwrite each other (unauthenticated)</span><span class="chev">▶</span></summary>
+    <div class="body">
+      <div class="row"><div class="k">In plain terms</div><div class="v">The death-certificate upload uses a filename that can collide and overwrites by default, on an unauthenticated route. Someone passing the trustee-email check could overwrite a legitimate certificate.</div></div>
+      <div class="row"><div class="k">Where</div><div class="v"><code>app/api/farewell/verify/route.ts:119-123</code> (<code>Date.now()</code> path, <code>upsert:true</code>, unsanitized extension)</div></div>
+      <div class="row"><div class="k">Impact</div><div class="v">Overwrite-enabled, unauthenticated storage write into the death-certificates bucket. Low (requires passing the blind-index lookup; cert is admin-reviewed).</div></div>
+      <div class="row check"><div class="k">Check on website</div><div class="v">N/A (storage internals) — reproduce in staging with two rapid cert submissions.</div></div>
+      <div class="row fix"><div class="k">Fix</div><div class="v">Use a random UUID in the path, set <code>upsert:false</code>, whitelist the file extension.</div></div>
+    </div>
+  </details>
+
+  <details class="bug low" data-sev="med">
+    <summary><span class="badge low">Low</span><span class="id">BUG-68</span>
+      <span class="ttl">Marketing flyer/one-pager interpolate partner fields without escaping</span><span class="chev">▶</span></summary>
+    <div class="body">
+      <div class="row"><div class="k">In plain terms</div><div class="v">The flyer/one-pager generators paste partner branding fields (including the accent color, which lands inside a style block) into HTML without escaping. A partner can inject markup/CSS into their own document — and it'd be worse if those fields are ever set by someone else.</div></div>
+      <div class="row"><div class="k">Where</div><div class="v"><code>app/api/marketing/flyer/route.ts:38,71,72</code>; <code>one-pager/route.ts:40,80</code></div></div>
+      <div class="row"><div class="k">Impact</div><div class="v">Self-XSS / CSS-injection scoped to the partner's own document today; higher if branding is set cross-user (see BUG-41/37).</div></div>
+      <div class="row check"><div class="k">Check on website</div><div class="v">As a partner set the accent color / company name to an HTML/CSS payload, open the flyer endpoint → markup/styles are injected.</div></div>
+      <div class="row fix"><div class="k">Fix</div><div class="v">HTML-escape all interpolated text; validate the accent color against a strict hex regex.</div></div>
+    </div>
+  </details>
+
+  <details class="bug low" data-sev="med">
+    <summary><span class="badge low">Low</span><span class="id">BUG-69</span>
+      <span class="ttl">Add-domain DELETE has no validation → removes the wrong domain</span><span class="chev">▶</span></summary>
+    <div class="body">
+      <div class="row"><div class="k">In plain terms</div><div class="v">The "remove domain" action doesn't validate its input. An empty/garbage request silently removes the partner's subdomain instead of rejecting.</div></div>
+      <div class="row"><div class="k">Where</div><div class="v"><code>app/api/partner/add-domain/route.ts:92</code></div></div>
+      <div class="row"><div class="k">Impact</div><div class="v">Owner-scoped (no cross-tenant impact), but a malformed request removes the wrong domain. Footgun.</div></div>
+      <div class="row check"><div class="k">Check on website</div><div class="v">As a partner with both a subdomain and custom domain, fire the domain-delete with an empty body in DevTools → the subdomain is removed even though you didn't target it.</div></div>
+      <div class="row fix"><div class="k">Fix</div><div class="v">Validate the DELETE body with an enum of domain types; reject when absent/invalid.</div></div>
+    </div>
+  </details>
+
+  </div>
+
+  <div class="section-h">Checked &amp; sound (no action needed)</div>
+  <p style="color:var(--muted);font-size:13.5px;margin:-4px 0 14px">These areas were audited and found correct — here's <i>why</i> each is safe, so you know it was actually checked.</p>
+  <div class="sound">
+    <ul>
+      <li><b>Prices &amp; revenue splits are correct everywhere.</b> Every charge is calculated on the server from one source-of-truth file (<code>lib/orders/pricing.ts</code>); the browser can't change the amount. Standard/enterprise splits match the rules and always add up to the full price.</li>
+      <li><b>Partners can't be double-paid.</b> Each payout uses a unique key (e.g. <code>transfer_partner_&lt;orderId&gt;</code>), so even if Stripe retries, the partner is paid only once.</li>
+      <li><b>The Stripe webhook ignores duplicate events.</b> Repeated/retried notifications for the same event are detected and skipped, so fulfillment doesn't run twice.</li>
+      <li><b>Clients, partners and admins are kept apart.</b> The database enforces row-level security (each user only sees their own rows) and the app redirects each role to its own portal — a client can't reach <code>/pro</code> or <code>/sales</code>.</li>
+      <li><b>Document downloads check ownership.</b> A download is only allowed if the document belongs to the logged-in client, and the attorney-review gate blocks download until review is delivered.</li>
+      <li><b>Vault items are locked to each owner.</b> Every vault read/edit is scoped to the logged-in client; a stale session with no profile is signed out automatically (BUG-26 handling).</li>
+      <li><b>The "complexity" flag is display-only — by design, not a bug.</b> It only shows the customer a suggestion; it doesn't gate anything, so it doesn't need server enforcement. (Per your confirmation.)</li>
+    </ul>
+  </div>
+
+</main>
+<footer>EstateVault internal bug report · generated 2026-06-04 · source: <a href="BUGS.md">BUGS.md</a></footer>
+
+<script>
+  const filters=document.querySelectorAll('.filter');
+  const bugs=document.querySelectorAll('#list .bug');
+  filters.forEach(f=>f.addEventListener('click',()=>{
+    filters.forEach(x=>x.classList.remove('active'));
+    f.classList.add('active');
+    const v=f.dataset.f;
+    bugs.forEach(b=>{
+      const show = v==='all' || b.dataset.sev===v;
+      b.style.display = show ? '' : 'none';
+      if(show && v!=='all') b.open=true;
+    });
+  });
+</script>
+</body>
+</html>

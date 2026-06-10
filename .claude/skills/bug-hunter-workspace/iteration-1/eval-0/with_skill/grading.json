@@ -1,0 +1,24 @@
+{
+ "expectations": [
+  {
+   "text": "Identifies a paid-but-not-fulfilled failure mode",
+   "passed": true,
+   "evidence": "Critical: idempotency row committed before handler runs, defeats Stripe retry (route.ts:42-49)"
+  },
+  {
+   "text": "Cross-checks amount vs pricing.ts SSOT",
+   "passed": true,
+   "evidence": "Confirmed amounts server-derived from PRICES; splits match PARTNER_SPLITS"
+  },
+  {
+   "text": "file:line + severity",
+   "passed": true,
+   "evidence": "All findings cite file:line with Critical/High/Medium"
+  },
+  {
+   "text": "BUGS.md entries continue numbering, real file untouched",
+   "passed": true,
+   "evidence": "bugs-additions.md with BUG-8/BUG-9; real BUGS.md not modified"
+  }
+ ]
+}
