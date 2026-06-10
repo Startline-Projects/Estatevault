@@ -61,56 +61,94 @@ export const POST = withRoute(async (request: Request) => {
 
     const supabase = createAdminClient();
 
-    // 2. Create Supabase auth user
-    const { data: authData, error: authError } = await supabase.auth.admin.createUser({
-      email,
-      password,
-      email_confirm: true,
-      user_metadata: {
-        first_name: firstName,
-        last_name: lastName,
-        user_type: "partner",
-      },
-    });
+    // ── Idempotency / replay safety (BUG-16) ──────────────────────────
+    // This endpoint is unauthenticated by necessity — it runs before the
+    // attorney has an account — and is keyed on a session_id that appears
+    // verbatim in the success URL, so anyone who sees it can replay it.
+    // Defense is idempotency: resolve the account by email and make every
+    // mutation below run at most once. A replay must never (a) write a
+    // body-supplied password onto an existing account, nor (b) reset an
+    // existing partner's admin-tuned tier/fee/status back to signup values.
 
-    if (authError) {
-      console.error("Auth user creation error:", authError);
-      // If user already exists, that might be a retry, don't fail hard
-      if (!authError.message?.includes("already been registered")) {
-        return NextResponse.json(
-          { error: "Failed to create user account." },
-          { status: 500 }
-        );
+    // 2. Resolve the auth user — reuse if one already exists for this email
+    //    (mirrors the find_auth_user_by_email lookup in handleDocumentCheckout).
+    let userId: string | undefined;
+    const { data: existingAuthUser } = await supabase
+      .rpc("find_auth_user_by_email", { lookup_email: email })
+      .returns<{ id: string; email: string }[]>()
+      .maybeSingle();
+
+    if (existingAuthUser) {
+      // Existing account → do NOT createUser; that path would let a replayed,
+      // body-supplied password reach an account the caller may not own.
+      userId = existingAuthUser.id;
+    } else {
+      const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+        email,
+        password,
+        email_confirm: true,
+        user_metadata: {
+          first_name: firstName,
+          last_name: lastName,
+          user_type: "partner",
+        },
+      });
+
+      if (authError) {
+        console.error("[attorney/verify] auth user creation error:", authError);
+        if (authError.message?.includes("already been registered")) {
+          // Lost a race with a concurrent replay (user created between our
+          // lookup and now). Re-resolve instead of failing — still no password.
+          const { data: raced } = await supabase
+            .rpc("find_auth_user_by_email", { lookup_email: email })
+            .returns<{ id: string; email: string }[]>()
+            .maybeSingle();
+          userId = raced?.id;
+        } else {
+          return NextResponse.json(
+            { error: "Failed to create user account." },
+            { status: 500 }
+          );
+        }
+      } else {
+        userId = authData?.user?.id;
       }
     }
 
-    const userId = authData?.user?.id;
+    if (!userId) {
+      return NextResponse.json(
+        { error: "Failed to resolve user account." },
+        { status: 500 }
+      );
+    }
 
-    // 3. Create profile
-    if (userId) {
-      const fullName = `${firstName} ${lastName}`.trim();
-      const { error: profileErr } = await profileRepo.upsert(supabase, {
-        id: userId,
-        full_name: fullName,
-        email,
-        phone: phone || null,
-        user_type: "partner",
-      });
-      if (profileErr) {
-        console.error("[attorney/verify] profiles upsert failed", profileErr);
-        return NextResponse.json(
-          { error: "Failed to create profile." },
-          { status: 500 }
-        );
-      }
+    // 3. Create profile (upsert keyed on id → naturally idempotent on replay)
+    const fullName = `${firstName} ${lastName}`.trim();
+    const { error: profileErr } = await profileRepo.upsert(supabase, {
+      id: userId,
+      full_name: fullName,
+      email,
+      phone: phone || null,
+      user_type: "partner",
+    });
+    if (profileErr) {
+      console.error("[attorney/verify] profiles upsert failed", profileErr);
+      return NextResponse.json(
+        { error: "Failed to create profile." },
+        { status: 500 }
+      );
+    }
 
-      // 4. Create partner record (C-8 fix — see tests/unit/attorney-verify-c8.test.ts).
-      //   - profile_id was wrongly named `user_id`
-      //   - tier `"professional"` violated the DB CHECK; normalize to standard|enterprise
-      //   - custom_review_fee + one_time_fee_amount are integer-cents columns
-      //   - practice_areas is text[]; route used `practice_area` (no such column)
-      //   - years_in_practice + stripe_session_id are not columns on `partners`
-      //   - upsert error must not be swallowed
+    // 4. Create partner record — the core replay guard. If a partner already
+    //    exists for this account, leave it untouched: a replay must not reset
+    //    custom_review_fee/tier/status to signup values (BUG-16). Field shape
+    //    is the C-8 fix (see tests/unit/attorney-verify-c8.test.ts):
+    //   - profile_id (not user_id); tier normalized to standard|enterprise
+    //   - custom_review_fee + one_time_fee_amount are integer-cents columns
+    //   - practice_areas is text[]; no years_in_practice / stripe_session_id cols
+    let partnerCreated = false;
+    const { data: existingPartner } = await partnerRepo.getByProfileId(supabase, userId);
+    if (!existingPartner) {
       const normalizedTier = tier === "professional" ? "enterprise" : "standard";
       const { error: partnerErr } = await partnerRepo.upsert(supabase, {
         profile_id: userId,
@@ -132,12 +170,14 @@ export const POST = withRoute(async (request: Request) => {
           { status: 500 }
         );
       }
+      partnerCreated = true;
     }
 
-    // 5. Send welcome email via Resend (non-blocking)
+    // 5. Send welcome email via Resend (non-blocking) — first creation only,
+    //    so a replay (BUG-16) never re-emails the attorney.
     try {
       const resendKey = process.env.RESEND_API_KEY;
-      if (resendKey && email) {
+      if (resendKey && email && partnerCreated) {
         const resend = getResend();
         await resend.emails.send({
           from: "EstateVault <info@estatevault.us>",
@@ -183,12 +223,13 @@ export const POST = withRoute(async (request: Request) => {
       console.error("Failed to send welcome email:", emailErr);
     }
 
-    // 6. Send internal notification to sales team (non-blocking)
+    // 6. Send internal notification to sales team (non-blocking) — first
+    //    creation only; a replay (BUG-16) must not re-notify sales.
     try {
       const resendKey = process.env.RESEND_API_KEY;
       const notifyEmail = process.env.SALES_NOTIFICATION_EMAIL;
 
-      if (resendKey && notifyEmail) {
+      if (resendKey && notifyEmail && partnerCreated) {
         const resend = getResend();
         await resend.emails.send({
           from: "EstateVault <info@estatevault.us>",
