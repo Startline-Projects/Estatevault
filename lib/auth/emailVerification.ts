@@ -171,3 +171,18 @@ export async function consumeVerifiedToken(email: string, token: string): Promis
   await delEntry(e);
   return true;
 }
+
+// BUG-11: validate a verified token WITHOUT consuming it. Lets a caller (e.g.
+// set-password) gate on a valid token but defer the single-use burn until the
+// work actually succeeds, so a transient failure (auth create down) doesn't
+// lock the paying customer out of a retry. Still purges expired tokens.
+export async function peekVerifiedToken(email: string, token: string): Promise<boolean> {
+  const e = normalize(email);
+  const entry = await getEntry(e);
+  if (!entry?.verifiedToken || !entry.verifiedExpiresAt) return false;
+  if (entry.verifiedExpiresAt < Date.now()) {
+    await delEntry(e);
+    return false;
+  }
+  return entry.verifiedToken === token;
+}

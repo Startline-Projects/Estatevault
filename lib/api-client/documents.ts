@@ -1,4 +1,4 @@
-import { get, post, getRaw, publicGet, getSoft, type ApiResult } from "./client";
+import { get, post, publicGet, getSoft, type ApiResult } from "./client";
 
 export type CheckStatusResult = {
   ready?: boolean;
@@ -29,14 +29,6 @@ export function downloadBySession(params: {
   order_id?: string;
 }): Promise<ApiResult<DownloadBySessionResult>> {
   return getSoft("/api/documents/download-by-session", params);
-}
-
-export function downloadZip(params: {
-  order_id: string;
-  first_name?: string;
-  last_name?: string;
-}): Promise<Response> {
-  return getRaw("/api/documents/download-zip", params);
 }
 
 export function regenerateMissing(orderId: string): Promise<ApiResult<unknown>> {

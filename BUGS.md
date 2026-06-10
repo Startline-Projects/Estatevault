@@ -112,22 +112,26 @@ Tracking doc for checkout + fulfillment failure modes. Severity: Critical > High
 ---
 
 ## BUG-10 — Document generation failure = paid, no documents
+- **Status:** ✅ FIXED (2026-06-10)
 - **Severity:** High
 - **Area:** Doc-gen pipeline (Claude API) + `documents` table
 - **What:** Order paid + marked `generating`, but AI generation fails (API error, timeout, rate limit). Documents stay `pending`/`generating` indefinitely.
 - **Impact:** Paid, no usable output. No auto-retry surfaces it.
 - **Repro:** Force Claude API call to fail during generation → stuck `documents` rows.
 - **Fix:** Retry with backoff. Admin alert/dashboard for orders stuck in `generating`. Manual re-trigger.
+- **Resolution:** Failure is now honest and recoverable. (1) On a Claude/gen error the worker marks that document `failed` and does **not** advance the order to `delivered` — it stays `generating` so a safety net can catch it (`app/api/documents/process/route.ts:202-212` and the queue path `:331-353`). (2) Auto-retry: `app/api/cron/reconcile-orders/route.ts` runs every 15 min (`vercel.json` cron `*/15 * * * *`), finds orders stuck in `generating`/`failed`/`pending` with missing PDFs and re-fires `process-now`, which re-runs all doc types for the order so previously `failed` docs regenerate. (3) Admin alert: `sendFulfillmentFailureAlert` for anything unfinished past 60 min. (4) Admin dashboard: `app/api/admin/orders-missing-docs/route.ts` lists every stuck order with a `failureKind` tag. (5) Manual re-trigger: `app/api/admin/retry-fulfillment/route.ts` (one-click) + `regenerate-missing`. Same fulfillment safety net as BUG-1/BUG-13.
 
 ---
 
 ## BUG-11 — Account linking failure on success page locks out paying customer
+- **Status:** ✅ FIXED (2026-06-10)
 - **Severity:** High
 - **Area:** `components/success/PasswordSetup.tsx` + set-password API
 - **What:** After payment, success page creates/links the auth account + sets password. If profile/auth-user creation fails here, customer paid but can't log in.
 - **Impact:** Paid customer with no access to their documents.
 - **Repro:** Force set-password / profile-upsert to fail on success page after guest checkout.
 - **Fix:** Make linking idempotent + retryable. Clear "finish account setup" recovery path. Ensure order recoverable by verified email.
+- **Resolution:** (1) `set-password` is idempotent — it looks up the profile by email and, if found, only updates the password (`updateUserById`) rather than re-creating; re-runs are safe. (2) Retryable — 4× profile lookup (2s apart) waits for the Stripe webhook to create the profile before falling back to `createUser` + profile upsert. (3) Order↔client linkage is owned by the webhook keyed on verified `customer_email` + `metadata.client_id` (set-password no longer scans/claims orders — see BUG-6), so the paid order is always recoverable by the verified email. (4) `PasswordSetup.tsx` validates the live session via `getUser()` (auth-server check, not just the cookie); a wiped/deleted user purges the stale session and falls back to the set-password API, fixing the "cookie exists but account gone" lockout. (5) BUG-11 token-burn closed: `set-password` now `peekVerifiedToken()`s at the gate and only `consumeVerifiedToken()`s at a successful return, so a transient `createUser` failure leaves the verified token usable for an immediate retry instead of forcing email re-verification.
 
 ---
 
