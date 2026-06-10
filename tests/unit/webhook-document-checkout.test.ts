@@ -15,6 +15,7 @@ const h = vi.hoisted(() => ({
   getStripeAndTier: vi.fn(),
   transferToPartner: vi.fn(),
   transferToAffiliate: vi.fn(),
+  getAccountStatus: vi.fn(),
   insertPartnerPayout: vi.fn(),
   insertAffiliatePayout: vi.fn(),
   insertMany: vi.fn(),
@@ -30,6 +31,7 @@ vi.mock("@/lib/stripe-payouts", async (importActual) => {
     calculateSplit: actual.calculateSplit, // REAL split math
     transferToPartner: (...a: unknown[]) => h.transferToPartner(...a),
     transferToAffiliate: (...a: unknown[]) => h.transferToAffiliate(...a),
+    getAccountStatus: (...a: unknown[]) => h.getAccountStatus(...a),
   };
 });
 vi.mock("@/lib/config/appUrl", () => ({ getAppUrl: () => "http://test.local" }));
@@ -100,6 +102,8 @@ beforeEach(() => {
   h.findIdAndNameByEmail.mockResolvedValue({ data: { id: "prof_1", full_name: "Buyer One" } });
   h.getLatestAnswers.mockResolvedValue({ data: { id: "quiz_1", answers: { a: 1 } } });
   h.transferToPartner.mockResolvedValue({ id: "tr_1" });
+  // Default: connected accounts are fully payable (transfers capability active).
+  h.getAccountStatus.mockResolvedValue({ transfers_active: true });
 });
 
 describe("handleDocumentCheckout — document set per product", () => {

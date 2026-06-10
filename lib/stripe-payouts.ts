@@ -140,5 +140,9 @@ export async function getAccountStatus(accountId: string) {
     charges_enabled: account.charges_enabled,
     payouts_enabled: account.payouts_enabled,
     details_submitted: account.details_submitted,
+    // Destination transfers require the `transfers` capability to be active.
+    // `details_submitted`/`payouts_enabled` can be true while transfers is
+    // still pending/inactive, so gate received-money checks on this (BUG-15).
+    transfers_active: account.capabilities?.transfers === 'active',
   }
 }
