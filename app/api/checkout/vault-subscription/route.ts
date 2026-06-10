@@ -10,6 +10,43 @@ import * as clientRepo from "@/lib/repos/server/clientRepo";
 import { vaultSubscriptionCheckoutSchema } from "@/lib/validation/schemas";
 import { PRICES } from "@/lib/orders/pricing";
 
+// Handle a re-subscribe against a client that already has a subscription row.
+// Returns a response to short-circuit with, or null to fall through to a fresh
+// Stripe Checkout. Reactivating the live subscription (instead of creating a
+// second one) is what closes the double-billing / orphaned-sub hole (BUG-14).
+async function applyResubscribe(
+  supabase: ReturnType<typeof createAdminClient>,
+  clientId: string,
+  sub: { vault_subscription_status: string | null; vault_subscription_stripe_id: string | null },
+  successUrl: string,
+): Promise<NextResponse | null> {
+  switch (clientRepo.resubscribeDecision(sub.vault_subscription_status, sub.vault_subscription_stripe_id)) {
+    case "block":
+      return NextResponse.json({ error: "Already subscribed" }, { status: 400 });
+    case "past_due":
+      return NextResponse.json(
+        { error: "Your subscription has a past-due payment. Update your payment method to continue." },
+        { status: 409 },
+      );
+    case "reactivate": {
+      // A live sub is set to cancel at period end — just resume it. No new
+      // subscription, no charge now; billing continues at the normal renewal.
+      const stripeId = sub.vault_subscription_stripe_id as string;
+      await stripe.subscriptions.update(stripeId, { cancel_at_period_end: false });
+      await clientRepo.updateVaultSubscription(supabase, clientId, { vault_subscription_status: "active" });
+      await supabase.from("audit_log").insert({
+        action: "subscription.reactivated",
+        resource_type: "client",
+        resource_id: clientId,
+        metadata: { subscription_id: stripeId },
+      });
+      return NextResponse.json({ url: successUrl });
+    }
+    default:
+      return null;
+  }
+}
+
 export const POST = withRoute(async (request: Request) => {
   try {
     const raw = await request.json().catch(() => ({}));
@@ -34,6 +71,12 @@ export const POST = withRoute(async (request: Request) => {
       partnerStripeAccountId = partner?.stripe_account_id ?? null;
       partnerRevenuePct = partner?.partner_revenue_pct ?? 0;
     }
+
+    const successPath = partnerSlug
+      ? `/auth/vault-pin?partner=${partnerSlug}`
+      : "/dashboard/vault?subscribed=true";
+    const cancelPath = partnerSlug ? `/${partnerSlug}/vault` : "/dashboard/vault";
+    const successUrl = `${origin}${successPath}`;
 
     // Try to get authenticated user when needed.
     // In partner vault signup we already pass guest email, so session lookup is optional.
@@ -97,11 +140,9 @@ export const POST = withRoute(async (request: Request) => {
       if (profileId) {
         const { data: existingClient } = await clientRepo.findIdAndSubByProfileMaybe(supabase, profileId);
 
-        if (existingClient?.vault_subscription_status === "active") {
-          return NextResponse.json({ error: "Already subscribed" }, { status: 400 });
-        }
-
         if (existingClient?.id) {
+          const early = await applyResubscribe(supabase, existingClient.id, existingClient, successUrl);
+          if (early) return early;
           clientId = existingClient.id;
           existingExpiry = existingClient.vault_subscription_expiry;
         } else {
@@ -129,21 +170,14 @@ export const POST = withRoute(async (request: Request) => {
         client = newClient;
       }
 
-      if (client?.vault_subscription_status === "active") {
-        return NextResponse.json({ error: "Already subscribed" }, { status: 400 });
+      if (client?.id) {
+        const early = await applyResubscribe(supabase, client.id, client, successUrl);
+        if (early) return early;
       }
 
       clientId = client?.id ?? null;
       existingExpiry = client?.vault_subscription_expiry ?? null;
     }
-
-    const successPath = partnerSlug
-      ? `/auth/vault-pin?partner=${partnerSlug}`
-      : "/dashboard/vault?subscribed=true";
-
-    const cancelPath = partnerSlug
-      ? `/${partnerSlug}/vault`
-      : "/dashboard/vault";
 
     // Stack a resubscribe onto remaining paid time: defer the first charge until
     // the current access ends (Stripe `trial_end`), so billing — and the new

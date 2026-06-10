@@ -24,6 +24,24 @@ export function hasVaultAccess(
   return false;
 }
 
+// Decide what a vault re-subscribe request should do, given the client's current
+// subscription state. Prevents creating a SECOND Stripe subscription while a live
+// one still exists — which double-bills and orphans the first (BUG-14). The
+// Stripe id is non-null whenever the subscription is still live: it is only
+// cleared on `customer.subscription.deleted` (see cancelVaultByStripeId).
+//   "block"      — already active; reject as a duplicate subscribe.
+//   "reactivate" — cancel-pending sub still live; resume it (cancel_at_period_end:false), no new charge.
+//   "past_due"   — sub live but a payment is failing; don't create a new one, fix payment instead.
+//   "create"     — no live sub (never subscribed, or the term fully lapsed); a new checkout is correct.
+export function resubscribeDecision(
+  status: string | null | undefined,
+  stripeId: string | null | undefined,
+): "block" | "reactivate" | "past_due" | "create" {
+  if (status === "active") return "block";
+  if (stripeId) return status === "past_due" ? "past_due" : "reactivate";
+  return "create";
+}
+
 // Subscription status + expiry for a known client id.
 export function getSubscriptionById(admin: Admin, clientId: string) {
   return admin
@@ -37,7 +55,7 @@ export function getSubscriptionById(admin: Admin, clientId: string) {
 export function findIdAndSubByProfile(admin: Admin, profileId: string) {
   return admin
     .from("clients")
-    .select("id, vault_subscription_status, vault_subscription_expiry")
+    .select("id, vault_subscription_status, vault_subscription_expiry, vault_subscription_stripe_id")
     .eq("profile_id", profileId)
     .single();
 }
@@ -46,7 +64,7 @@ export function findIdAndSubByProfile(admin: Admin, profileId: string) {
 export function findIdAndSubByProfileMaybe(admin: Admin, profileId: string) {
   return admin
     .from("clients")
-    .select("id, vault_subscription_status, vault_subscription_expiry")
+    .select("id, vault_subscription_status, vault_subscription_expiry, vault_subscription_stripe_id")
     .eq("profile_id", profileId)
     .maybeSingle();
 }
@@ -99,7 +117,7 @@ export function create(admin: Admin, row: ClientInsert) {
 
 // Variant returning the subscription status + expiry alongside the id.
 export function createReturningWithSub(admin: Admin, row: ClientInsert) {
-  return admin.from("clients").insert(row).select("id, vault_subscription_status, vault_subscription_expiry").single();
+  return admin.from("clients").insert(row).select("id, vault_subscription_status, vault_subscription_expiry, vault_subscription_stripe_id").single();
 }
 
 // Link an existing client row to a profile after the auth user is created.
