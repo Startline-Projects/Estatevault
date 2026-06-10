@@ -24,14 +24,10 @@ export const GET = withRoute(async (
     return fail("Message not found", 404);
   }
 
-  // Owner can always view their own messages
-  const isOwner = message.client_id === client.id;
-
-  if (!isOwner) {
-    // Non-owner can only view unlocked messages
-    if (message.vault_farewell_status !== "unlocked") {
-      return fail("Video is locked", 403);
-    }
+  // Only the owner may mint a signed URL here. Trustees use their own
+  // authenticated surface (/api/trustee/vault/*). Do not 403 — hide existence.
+  if (message.client_id !== client.id) {
+    return fail("Message not found", 404);
   }
 
   // Never generate signed URLs for deleted/replaced/expired messages
@@ -50,10 +46,10 @@ export const GET = withRoute(async (
   // Audit log
   await admin.from("audit_log").insert({
     actor_id: user.id,
-    action: isOwner ? "farewell.owner_viewed" : "farewell.trustee_viewed",
+    action: "farewell.owner_viewed",
     resource_type: "farewell_message",
     resource_id: messageId,
-    metadata: { viewed_as: isOwner ? "owner" : "trustee" },
+    metadata: { viewed_as: "owner" },
   });
 
   return ok({ signedUrl: urlData.signedUrl });
