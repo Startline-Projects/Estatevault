@@ -582,7 +582,7 @@
   </details>
 
   <details class="bug med" data-sev="med">
-    <summary><span class="badge med">Medium</span><span class="id">BUG-40</span>
+    <summary><span class="badge med">Medium</span><span class="badge" style="background:#1a7f37;color:#fff">✅ FIXED</span><span class="id">BUG-40</span>
       <span class="ttl">Password reset happens silently with no notification</span><span class="chev">▶</span></summary>
     <div class="body">
       <div class="row"><div class="k">In plain terms</div><div class="v">Resetting an existing account's password via the email-code flow requires no current password and sends no "your password changed" alert. Combined with the guessable code (BUG-38), this becomes the takeover step — and the real owner never gets a warning.</div></div>
@@ -590,6 +590,7 @@
       <div class="row"><div class="k">Impact</div><div class="v">Silent credential reset; no out-of-band safety net.</div></div>
       <div class="row check"><div class="k">Check on website</div><div class="v">Use verify-email + set-password for an email that already has an account → password changes, no notification email arrives.</div></div>
       <div class="row fix"><div class="k">Fix</div><div class="v">Send a "your password was changed" email on every reset; route existing-account changes through the recovery-link flow.</div></div>
+      <div class="row fix"><div class="k">Resolution (2026-06-12)</div><div class="v">Added <code>sendPasswordChangedEmail()</code> to <code>lib/email.ts</code> with partner branding support. Existing-account branch of <code>set-password</code> now sends "your password was changed — contact support if not you" notification after successful update. Fire-and-forget pattern (try/catch, non-blocking). Email uses <code>resolveSenderForEmail</code> for correct white-label branding.</div></div>
     </div>
   </details>
 

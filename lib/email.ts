@@ -855,6 +855,46 @@ export async function sendVetoAccessCancelledEmail({
   });
 }
 
+export async function sendPasswordChangedEmail({
+  to,
+  partnerId,
+}: {
+  to: string;
+  partnerId?: string | null;
+}) {
+  const sender = await resolveSenderForEmail({ email: to, partnerId });
+  try {
+    await sendEmail({
+      from: sender.from,
+      replyTo: sender.replyTo,
+      to,
+      subject: "Your password was changed",
+      html: `<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#f4f4f5;font-family:'Inter',Arial,sans-serif;">
+  <div style="max-width:600px;margin:0 auto;background:#ffffff;">
+    ${renderEmailHeader(sender.brand)}
+    <div style="padding:32px;">
+      <h2 style="margin:0 0 16px;font-size:22px;color:#1C3557;">Your password was changed</h2>
+      <p style="margin:0 0 16px;font-size:14px;color:#2D2D2D;line-height:1.6;">
+        The password for your EstateVault account (<strong>${escapeHtml(to)}</strong>) was successfully changed.
+      </p>
+      <p style="margin:0 0 16px;font-size:14px;color:#2D2D2D;line-height:1.6;">
+        If you did not make this change, please contact our support team immediately at
+        <a href="mailto:support@estatevault.us" style="color:#1C3557;font-weight:600;">support@estatevault.us</a>.
+      </p>
+    </div>
+    ${renderEmailFooter(sender.brand)}
+  </div>
+</body>
+</html>`,
+    });
+  } catch (e) {
+    console.error("Password-changed notification email failed:", e);
+  }
+}
+
 // Admin alert for a paid order that could not be fulfilled (queue failure or a
 // reconcile-detected stuck order). Surfaces highest-trust failures (BUG-1 /
 // BUG-13) to the platform admin so they can retry from the admin screen.
