@@ -452,14 +452,15 @@
   </details>
 
   <details class="bug med" data-sev="med">
-    <summary><span class="badge med">Medium</span><span class="id">BUG-30</span>
-      <span class="ttl">TEST promo generates real documents for $0 with weak guards</span><span class="chev">▶</span></summary>
+    <summary><span class="badge med">Medium</span><span class="badge" style="background:#1a7f37;color:#fff">✅ FIXED</span><span class="id">BUG-30</span>
+      <span class="ttl">TEST promo generates real documents for $0 with weak guards ✅ FIXED</span><span class="chev">▶</span></summary>
     <div class="body">
       <div class="row"><div class="k">In plain terms</div><div class="v">There's an internal TEST code that generates real documents for free. The guard limiting it is weak — if the switch is ever left on in production, people could mint free real documents (up to 50/hour).</div></div>
       <div class="row"><div class="k">Where</div><div class="v"><code>lib/checkout/createCheckoutSession.ts:298-400</code> (<code>handleTestPromo</code>)</div></div>
       <div class="row"><div class="k">Impact</div><div class="v">Free real-document generation if the flag is left active; origin allowlist bypassable when headers are absent.</div></div>
       <div class="row check"><div class="k">Check on website</div><div class="v">Only reproducible if <code>test_promo_code</code> is on — enter <code>TEST</code> at checkout and confirm documents generate with no payment. Verify the flag is forced <b>off</b> in production.</div></div>
       <div class="row fix"><div class="k">Fix</div><div class="v">Treat empty/unknown origin as untrusted; scope the rate limit per IP/email; ensure prod has the flag off; emit watermarked output for test orders.</div></div>
+      <div class="row fix"><div class="k">Resolution (2026-06-12)</div><div class="v">Empty/unknown origin now rejected (must match estatevault.us or localhost). Global rate limit lowered to 15/hour. Per-IP rate limit added (5/hour, keyed on <code>x-forwarded-for</code> first value). IP recorded in audit_log metadata for traceability.</div></div>
     </div>
   </details>
 
