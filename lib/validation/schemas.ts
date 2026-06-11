@@ -272,6 +272,9 @@ const trustIntakeSchema = z.object({
 ).refine(
   (d) => d.hasContingentBeneficiary !== "Yes" || d.contingentBeneficiaries.length === 0 || d.contingentEqualShares === "Yes" || sharesSum100(d.contingentBeneficiaries),
   { message: "Contingent beneficiary shares must total 100%", path: ["contingentBeneficiaries"] },
+).refine(
+  (d) => !d.distributionAge || parseInt(d.distributionAge, 10) >= 18,
+  { message: "Distribution age must be at least 18", path: ["distributionAge"] },
 );
 
 type _QuizSchemaCheck = z.infer<typeof quizAnswersSchema> extends QuizAnswers ? true : never;

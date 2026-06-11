@@ -155,6 +155,7 @@ export default function TrustPage() {
           }
         }
         if (hasMinorChildren && !intake.distributionAge) return false;
+        if (hasMinorChildren && parseInt(intake.distributionAge, 10) < 18) return false;
         return true;
       }
       case "guardian":
@@ -487,13 +488,17 @@ export default function TrustPage() {
                       <TextInput
                         value={intake.distributionAge}
                         onChange={(v) => {
-                          const digits = v.replace(/[^0-9]/g, "");
-                          if (digits.length > 0 && parseInt(digits, 10) > 99) {
-                            setCustomAgeError("Age must be under 99.");
+                          const digits = v.replace(/[^0-9]/g, "").slice(0, 2);
+                          const num = parseInt(digits, 10);
+                          if (digits.length > 0 && num > 99) {
+                            setCustomAgeError("Age must be 99 or under.");
                             update({ distributionAge: "99" });
+                          } else if (digits.length === 2 && num < 18) {
+                            setCustomAgeError("Must be at least 18.");
+                            update({ distributionAge: digits });
                           } else {
                             setCustomAgeError("");
-                            update({ distributionAge: digits.slice(0, 2) });
+                            update({ distributionAge: digits });
                           }
                         }}
                         placeholder="Enter custom age (e.g., 35)"

@@ -439,14 +439,15 @@
   </details>
 
   <details class="bug med" data-sev="med">
-    <summary><span class="badge med">Medium</span><span class="id">BUG-29</span>
-      <span class="ttl">Trust accepts a distribution age under 18</span><span class="chev">▶</span></summary>
+    <summary><span class="badge med">Medium</span><span class="badge" style="background:#1a7f37;color:#fff">✅ FIXED</span><span class="id">BUG-29</span>
+      <span class="ttl">Trust accepts a distribution age under 18 ✅ FIXED</span><span class="chev">▶</span></summary>
     <div class="body">
       <div class="row"><div class="k">In plain terms</div><div class="v">The "hold money until age X" field blocks anything over 99 but accepts low values like 0 or 5. That produces a nonsense trust — a person is a legal adult at 18.</div></div>
       <div class="row"><div class="k">Where</div><div class="v"><code>app/trust/page.tsx:471-479</code></div></div>
       <div class="row"><div class="k">Impact</div><div class="v">Customer pays for a legally incoherent document ("hold until age 5").</div></div>
       <div class="row check"><div class="k">Check on website</div><div class="v"><code>/trust</code> → answer you have minor children → distribution age → <b>Other</b> → type <code>5</code> (or <code>0</code>) → it's accepted.</div></div>
       <div class="row fix"><div class="k">Fix</div><div class="v">Enforce a minimum (≥18) in the custom-age handler and in the card-complete check.</div></div>
+      <div class="row fix"><div class="k">Resolution (2026-06-12)</div><div class="v">Client-side: custom age input shows "Must be at least 18" for values &lt;18; card-complete check rejects &lt;18. Server-side: <code>trustIntakeSchema.refine()</code> validates <code>distributionAge &gt;= 18</code> for any non-empty value.</div></div>
     </div>
   </details>
 
