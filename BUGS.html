@@ -504,14 +504,15 @@
   </details>
 
   <details class="bug med" data-sev="med">
-    <summary><span class="badge med">Medium</span><span class="id">BUG-34</span>
-      <span class="ttl">Renewal webhook can reactivate a cancelled subscription</span><span class="chev">▶</span></summary>
+    <summary><span class="badge med">Medium</span><span class="badge" style="background:#1a7f37;color:#fff">✅ FIXED</span><span class="id">BUG-34</span>
+      <span class="ttl">Renewal webhook can reactivate a cancelled subscription ✅ FIXED</span><span class="chev">▶</span></summary>
     <div class="body">
       <div class="row"><div class="k">In plain terms</div><div class="v">When a renewal payment succeeds, the system flips the subscription back to "active" and adds a year — without checking whether the customer had cancelled. An out-of-order or retried event can resurrect a cancelled subscription.</div></div>
       <div class="row"><div class="k">Where</div><div class="v"><code>app/api/webhooks/stripe/route.ts:52-70</code>; <code>lib/repos/server/clientRepo.ts:140-148</code></div></div>
       <div class="row"><div class="k">Impact</div><div class="v">Status drift between Stripe and the database; a cancelled customer can show as active (or vice-versa); the sync job won't correct a wrongly-active record.</div></div>
       <div class="row check"><div class="k">Check on website</div><div class="v">N/A in normal use (event ordering) — reproduce in staging by replaying a renewal invoice event with the Stripe CLI for a cancelled customer.</div></div>
       <div class="row fix"><div class="k">Fix</div><div class="v">On renewal, confirm the Stripe sub is genuinely active before reactivating; set expiry from the invoice's real period end, not blindly +1 year.</div></div>
+      <div class="row fix"><div class="k">Resolution (2026-06-12)</div><div class="v">Renewal handler now calls <code>stripe.subscriptions.retrieve()</code> and only activates when <code>sub.status === "active"</code>. Expiry set from the invoice line item's real <code>period.end</code> instead of blindly +1 year. Non-active subscriptions are logged and skipped.</div></div>
     </div>
   </details>
 
