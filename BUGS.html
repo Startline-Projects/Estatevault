@@ -478,14 +478,15 @@
   </details>
 
   <details class="bug med" data-sev="med">
-    <summary><span class="badge med">Medium</span><span class="id">BUG-32</span>
-      <span class="ttl">Expired vault subscription keeps full access</span><span class="chev">▶</span></summary>
+    <summary><span class="badge med">Medium</span><span class="badge" style="background:#1a7f37;color:#fff">✅ FIXED</span><span class="id">BUG-32</span>
+      <span class="ttl">Expired vault subscription keeps full access ✅ FIXED</span><span class="chev">▶</span></summary>
     <div class="body">
       <div class="row"><div class="k">In plain terms</div><div class="v">The subscription's expiry date is saved but never actually checked. If a renewal payment is missed and the "ended" event doesn't arrive, the customer keeps full vault access forever without paying.</div></div>
       <div class="row"><div class="k">Where</div><div class="v"><code>lib/repos/server/clientRepo.ts:146</code>; all gates check only <code>status === "active"</code>; no cron downgrades expired subs.</div></div>
       <div class="row"><div class="k">Impact</div><div class="v">Free vault access after a subscription ends; lost recurring revenue; nothing reconciles it.</div></div>
       <div class="row check"><div class="k">Check on website</div><div class="v">Requires DB state — in staging set a client's expiry to a past date while status stays "active" → vault upload/farewell/download still succeed.</div></div>
       <div class="row fix"><div class="k">Fix</div><div class="v">Gate on "active AND expiry in the future"; add a cron that downgrades expired subs and re-checks Stripe.</div></div>
+      <div class="row fix"><div class="k">Resolution (2026-06-12)</div><div class="v"><code>hasVaultAccess</code> now checks expiry when status is "active" — returns false if expiry + 3-day grace is past. Reconcile cron sweeps clients with <code>status=active</code> + expired + 3-day grace and flips them to "expired". Backwards-compatible: null expiry still grants access (legacy records).</div></div>
     </div>
   </details>
 
