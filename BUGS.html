@@ -530,7 +530,7 @@
   </details>
 
   <details class="bug med" data-sev="med">
-    <summary><span class="badge med">Medium</span><span class="id">BUG-36</span>
+    <summary><span class="badge med">Medium</span><span class="id">BUG-36</span><span class="badge" style="background:var(--ok);margin-left:8px">✅ FIXED</span>
       <span class="ttl">Farewell storage path not scoped to the owner</span><span class="chev">▶</span></summary>
     <div class="body">
       <div class="row"><div class="k">In plain terms</div><div class="v">A customer can set their farewell video's stored-file path to anything — including pointing at another customer's folder — and then get a 7-day download link to it. Same family as BUG-12, on the owner's own write path. (Requires guessing the victim's random file id.)</div></div>
@@ -538,6 +538,7 @@
       <div class="row"><div class="k">Impact</div><div class="v">Potential cross-tenant read of farewell videos; broken storage hygiene.</div></div>
       <div class="row check"><div class="k">Check on website</div><div class="v">Create a farewell message, then in DevTools resend the PATCH/upload-complete with a <code>storagePath</code> outside your own <code>vault/&lt;your id&gt;/</code> folder — it's accepted.</div></div>
       <div class="row fix"><div class="k">Fix</div><div class="v">Require client-supplied <code>storagePath</code> to start with <code>vault/&lt;client.id&gt;/</code> at every write point (reuse the download-url check).</div></div>
+      <div class="row"><div class="k">Resolution</div><div class="v">Added shared <code>isValidStoragePath()</code> in <code>lib/api/storage.ts</code> — validates <code>vault/&lt;clientId&gt;/</code> prefix and rejects path traversal (<code>..</code>, null bytes). Applied at all 3 write points: upload-complete, POST create, PATCH update.</div></div>
     </div>
   </details>
 
