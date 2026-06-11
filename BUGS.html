@@ -556,7 +556,7 @@
   </details>
 
   <details class="bug med" data-sev="med">
-    <summary><span class="badge med">Medium</span><span class="id">BUG-38</span>
+    <summary><span class="badge med">Medium</span><span class="id">BUG-38</span><span class="badge" style="background:var(--ok);margin-left:8px">✅ FIXED</span>
       <span class="ttl">Email verification code is brute-forceable</span><span class="chev">▶</span></summary>
     <div class="body">
       <div class="row"><div class="k">In plain terms</div><div class="v">The 6-digit email code has a 5-try limit, but requesting a new code resets the counter, and you can request 5 new codes a minute — so ~25 guesses a minute. A guessed code lets you create/take over an account. The trustee OTP path already fixed this; the email path didn't.</div></div>
@@ -564,6 +564,7 @@
       <div class="row"><div class="k">Impact</div><div class="v">Targeted OTP guessing; chains with BUG-40 into account takeover.</div></div>
       <div class="row check"><div class="k">Check on website</div><div class="v">In DevTools repeatedly POST wrong codes to <code>/api/auth/verify-code</code>, re-requesting a code every 5 failures — guessing continues indefinitely.</div></div>
       <div class="row fix"><div class="k">Fix</div><div class="v">Rate-limit verify-code per email + IP; cap fresh-code resends (mirror the trustee OTP cap).</div></div>
+      <div class="row"><div class="k">Resolution</div><div class="v">Three-layer defense: (1) IP rate limit 30/15min on verify, (2) per-email rate limit 10/15min on verify, (3) resend cap 3/hour (replacing 5/min). Also <code>storeCode()</code> now preserves attempts with decay (−2) instead of resetting to zero. Effective: ~2.8 years to brute-force.</div></div>
     </div>
   </details>
 

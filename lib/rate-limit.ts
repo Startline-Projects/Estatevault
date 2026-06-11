@@ -38,6 +38,14 @@ export const cryptoRotateRateLimit = makeLimiter('rl:crypto:rotate', Ratelimit.s
 // 5 attempts per 15 min = ~2000 days to exhaust 1M combos. Keyed per user id.
 export const vaultPinRateLimit = makeLimiter('rl:vault:pin', Ratelimit.slidingWindow(5, '15 m'))
 
+// Email verification — global verify attempt cap per email (BUG-38).
+// 10 attempts / 15 min regardless of resends = ~2.8 years to exhaust 1M combos.
+export const emailVerifyRateLimit = makeLimiter('rl:email:verify', Ratelimit.slidingWindow(10, '15 m'))
+// Email verification — resend cap per email (BUG-38). Mirrors trustee OTP.
+export const emailResendRateLimit = makeLimiter('rl:email:resend', Ratelimit.slidingWindow(3, '1 h'))
+// Email verification — IP-level spray cap (BUG-38). Loose to avoid shared-NAT issues.
+export const emailVerifyIpRateLimit = makeLimiter('rl:email:verify:ip', Ratelimit.slidingWindow(30, '15 m'))
+
 // Trustee OTP resend — a new code resets the per-code attempt counter, so cap
 // resends to stop unlimited fresh guess batches (H-4). Keyed per request id.
 export const trusteeOtpResendRateLimit = makeLimiter('rl:trustee:otp', Ratelimit.slidingWindow(3, '1 h'))
