@@ -5,7 +5,7 @@ import { createAdminClient } from "@/lib/api/auth";
 import { withRoute } from "@/lib/api/route";
 import { ok, fail } from "@/lib/api/response";
 import { authSetPasswordSchema } from "@/lib/validation/schemas";
-import { consumeVerifiedToken } from "@/lib/auth/emailVerification";
+import { consumeVerifiedToken, peekVerifiedToken } from "@/lib/auth/emailVerification";
 import { authRateLimit } from "@/lib/rate-limit";
 import * as auditLogRepo from "@/lib/repos/server/auditLogRepo";
 
@@ -22,7 +22,11 @@ export const POST = withRoute(async (req: NextRequest) => {
   const { success } = await authRateLimit.limit(normalizedEmail);
   if (!success) return fail("Too many attempts. Please wait and try again.", 429);
 
-  if (!verifiedToken || !(await consumeVerifiedToken(normalizedEmail, verifiedToken))) {
+  // BUG-11: validate the token but DON'T consume it yet. The single-use burn
+  // happens only at a successful return below, so a transient failure (e.g.
+  // auth-user creation down) leaves the token usable for an immediate retry
+  // instead of forcing the paying customer to re-verify their email.
+  if (!verifiedToken || !(await peekVerifiedToken(normalizedEmail, verifiedToken))) {
     return fail("Please verify your email first.", 403);
   }
 
@@ -64,57 +68,42 @@ export const POST = withRoute(async (req: NextRequest) => {
       user_type: "client",
     });
 
+    // NOTE: do NOT link orphaned clients here (was BUG-6). The old global
+    // "10 most-recent orders" scan claimed ANY null-profile_id client — a
+    // stranger's guest purchase included — leaking their orders/documents/PII.
+    // Client↔profile linkage is owned by the Stripe webhook, which keys on the
+    // verified customer_email + the real session's metadata.client_id. That is
+    // the only trustworthy join; this route only sets the account password.
+
     await auditLogRepo.insertEntry(admin, {
       actor_id: resolvedUserId,
       action: "account.created_at_password_set",
       resource_type: "profile",
       resource_id: resolvedUserId,
     });
-  } else {
-    const { data: authUserData, error: getUserErr } = await admin.auth.admin.getUserById(resolvedUserId);
-    if (getUserErr || !authUserData?.user) return fail("User not found", 404);
-    if (authUserData.user.email?.toLowerCase() !== normalizedEmail) return fail("Email mismatch", 403);
 
-    const { error: updateErr } = await admin.auth.admin.updateUserById(resolvedUserId, { password });
-    if (updateErr) return fail("Failed to set password", 500);
-
-    if (fullName && typeof fullName === "string" && fullName.trim()) {
-      await admin.from("profiles").update({ full_name: fullName.trim() }).eq("id", resolvedUserId);
-    }
-
-    await auditLogRepo.insertEntry(admin, {
-      actor_id: resolvedUserId,
-      action: "account.password_set",
-      resource_type: "profile",
-      resource_id: resolvedUserId,
-    });
+    await consumeVerifiedToken(normalizedEmail, verifiedToken);
+    return ok({ success: true });
   }
 
-  // Defense-in-depth: link any orphaned client for this email.
-  // intake_data is JSONB with an "email" key set by the webhook.
-  const { data: orphanOrders } = await admin
-    .from("orders")
-    .select("client_id")
-    .filter("intake_data->>email", "ilike", normalizedEmail)
-    .not("client_id", "is", null)
-    .order("created_at", { ascending: false })
-    .limit(5);
+  const { data: authUserData, error: getUserErr } = await admin.auth.admin.getUserById(resolvedUserId);
+  if (getUserErr || !authUserData?.user) return fail("User not found", 404);
+  if (authUserData.user.email?.toLowerCase() !== normalizedEmail) return fail("Email mismatch", 403);
 
-  if (orphanOrders) {
-    for (const o of orphanOrders) {
-      if (!o.client_id) continue;
-      const { data: clientRow } = await admin
-        .from("clients")
-        .select("id, profile_id")
-        .eq("id", o.client_id)
-        .is("profile_id", null)
-        .single();
-      if (clientRow) {
-        await admin.from("clients").update({ profile_id: resolvedUserId }).eq("id", clientRow.id);
-        break;
-      }
-    }
+  const { error: updateErr } = await admin.auth.admin.updateUserById(resolvedUserId, { password });
+  if (updateErr) return fail("Failed to set password", 500);
+
+  if (fullName && typeof fullName === "string" && fullName.trim()) {
+    await admin.from("profiles").update({ full_name: fullName.trim() }).eq("id", resolvedUserId);
   }
 
+  await auditLogRepo.insertEntry(admin, {
+    actor_id: resolvedUserId,
+    action: "account.password_set",
+    resource_type: "profile",
+    resource_id: resolvedUserId,
+  });
+
+  await consumeVerifiedToken(normalizedEmail, verifiedToken);
   return ok({ success: true });
 });

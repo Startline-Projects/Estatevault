@@ -57,8 +57,8 @@ export function getIdForOwner(admin: Admin, messageId: string, clientId: string)
     .single();
 }
 
-// Fetch a single message by id (owner check is applied by the caller — the
-// signed-url route serves unlocked messages to non-owners too).
+// Fetch a single message by id. The owner check is applied by the caller; the
+// signed-url route mints URLs for the owner only (non-owners get 404 — BUG-12).
 export function getById(admin: Admin, messageId: string) {
   return admin
     .from("farewell_messages")

@@ -2,7 +2,12 @@ import Stripe from "stripe";
 import { getAppUrl } from "@/lib/config/appUrl";
 import { sendWelcomeEmail } from "@/lib/email";
 import { isQueueConfigured } from "@/lib/queue/document-queue";
-import { calculateSplit, transferToPartner, transferToAffiliate } from "@/lib/stripe-payouts";
+import {
+  calculateSplit,
+  transferToPartner,
+  transferToAffiliate,
+  getAccountStatus,
+} from "@/lib/stripe-payouts";
 import * as clientRepo from "@/lib/repos/server/clientRepo";
 import * as profileRepo from "@/lib/repos/server/profileRepo";
 import * as orderRepo from "@/lib/repos/server/orderRepo";
@@ -205,16 +210,50 @@ export async function handleDocumentCheckout(
   // transfer partner/affiliate money twice (BUG-1 replay safety).
   const partnerId = metadata.partner_id;
   if (partnerId && !payoutAlreadySent) {
+    const { data: partner } = await partnerRepo.getStripeAndTier(supabase, partnerId);
+    const { evCut, partnerCut } = calculateSplit(
+      productType,
+      (partner?.tier as "standard" | "enterprise") || "standard",
+    );
+
+    // Record the owed cut as a `pending` payout (no transfer). Used whenever we
+    // cannot send right now: no Connect account, account not payable, transfer
+    // returned null, or the transfer threw. The partner stays reconcilable
+    // instead of the money silently vanishing (BUG-15). Guarded so the catch
+    // never double-writes after a `sent` row already landed.
+    let payoutRecorded = false;
+    const recordPending = async () => {
+      if (payoutRecorded) return;
+      await orderRepo.update(supabase, orderId, { ev_cut: evCut, partner_cut: partnerCut });
+      await payoutRepo.insertPartnerPayout(supabase, {
+        partner_id: partnerId,
+        amount: partnerCut,
+        status: "pending",
+        orders_included: [orderId],
+      });
+      payoutRecorded = true;
+    };
+
     try {
-      const { data: partner } = await partnerRepo.getStripeAndTier(supabase, partnerId);
+      if (partnerCut <= 0) {
+        // Nothing owed — leave no payout row.
+      } else if (!partner?.stripe_account_id) {
+        await recordPending();
+      } else {
+        // Connect account exists — but it can only RECEIVE a transfer once the
+        // `transfers` capability is active. Check before attempting so an
+        // incomplete/under-review account writes a `pending` IOU instead of
+        // throwing into the catch with no record (BUG-15).
+        let transfersActive = false;
+        try {
+          transfersActive = (await getAccountStatus(partner.stripe_account_id)).transfers_active;
+        } catch (statusError) {
+          console.error("Connect account status check failed:", statusError);
+        }
 
-      if (partner?.stripe_account_id && partner.tier) {
-        const { evCut, partnerCut } = calculateSplit(
-          productType,
-          partner.tier as "standard" | "enterprise",
-        );
-
-        if (partnerCut > 0) {
+        if (!transfersActive) {
+          await recordPending();
+        } else {
           const transfer = await transferToPartner(
             partner.stripe_account_id,
             partnerCut,
@@ -235,6 +274,7 @@ export async function handleDocumentCheckout(
               stripe_transfer_id: transfer.id,
               orders_included: [orderId],
             });
+            payoutRecorded = true;
             await auditLogRepo.insertEntry(supabase, {
               action: "payout.sent",
               resource_type: "payout",
@@ -245,23 +285,20 @@ export async function handleDocumentCheckout(
                 transfer_id: transfer.id,
               },
             });
+          } else {
+            // Transfer skipped/failed without throwing — still owe the partner.
+            await recordPending();
           }
         }
-      } else if (partnerId) {
-        const { evCut, partnerCut } = calculateSplit(
-          productType,
-          (partner?.tier as "standard" | "enterprise") || "standard",
-        );
-        await orderRepo.update(supabase, orderId, { ev_cut: evCut, partner_cut: partnerCut });
-        await payoutRepo.insertPartnerPayout(supabase, {
-          partner_id: partnerId,
-          amount: partnerCut,
-          status: "pending",
-          orders_included: [orderId],
-        });
       }
     } catch (payoutError) {
       console.error("Partner payout failed:", payoutError);
+      // BUG-15: never drop the owed cut on error — leave a reconcilable IOU.
+      try {
+        await recordPending();
+      } catch (pendingError) {
+        console.error("Failed to record pending partner payout:", pendingError);
+      }
     }
   }
 

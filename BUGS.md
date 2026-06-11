@@ -112,26 +112,31 @@ Tracking doc for checkout + fulfillment failure modes. Severity: Critical > High
 ---
 
 ## BUG-10 — Document generation failure = paid, no documents
+- **Status:** ✅ FIXED (2026-06-10)
 - **Severity:** High
 - **Area:** Doc-gen pipeline (Claude API) + `documents` table
 - **What:** Order paid + marked `generating`, but AI generation fails (API error, timeout, rate limit). Documents stay `pending`/`generating` indefinitely.
 - **Impact:** Paid, no usable output. No auto-retry surfaces it.
 - **Repro:** Force Claude API call to fail during generation → stuck `documents` rows.
 - **Fix:** Retry with backoff. Admin alert/dashboard for orders stuck in `generating`. Manual re-trigger.
+- **Resolution:** Failure is now honest and recoverable. (1) On a Claude/gen error the worker marks that document `failed` and does **not** advance the order to `delivered` — it stays `generating` so a safety net can catch it (`app/api/documents/process/route.ts:202-212` and the queue path `:331-353`). (2) Auto-retry: `app/api/cron/reconcile-orders/route.ts` runs every 15 min (`vercel.json` cron `*/15 * * * *`), finds orders stuck in `generating`/`failed`/`pending` with missing PDFs and re-fires `process-now`, which re-runs all doc types for the order so previously `failed` docs regenerate. (3) Admin alert: `sendFulfillmentFailureAlert` for anything unfinished past 60 min. (4) Admin dashboard: `app/api/admin/orders-missing-docs/route.ts` lists every stuck order with a `failureKind` tag. (5) Manual re-trigger: `app/api/admin/retry-fulfillment/route.ts` (one-click) + `regenerate-missing`. Same fulfillment safety net as BUG-1/BUG-13.
 
 ---
 
 ## BUG-11 — Account linking failure on success page locks out paying customer
+- **Status:** ✅ FIXED (2026-06-10)
 - **Severity:** High
 - **Area:** `components/success/PasswordSetup.tsx` + set-password API
 - **What:** After payment, success page creates/links the auth account + sets password. If profile/auth-user creation fails here, customer paid but can't log in.
 - **Impact:** Paid customer with no access to their documents.
 - **Repro:** Force set-password / profile-upsert to fail on success page after guest checkout.
 - **Fix:** Make linking idempotent + retryable. Clear "finish account setup" recovery path. Ensure order recoverable by verified email.
+- **Resolution:** (1) `set-password` is idempotent — it looks up the profile by email and, if found, only updates the password (`updateUserById`) rather than re-creating; re-runs are safe. (2) Retryable — 4× profile lookup (2s apart) waits for the Stripe webhook to create the profile before falling back to `createUser` + profile upsert. (3) Order↔client linkage is owned by the webhook keyed on verified `customer_email` + `metadata.client_id` (set-password no longer scans/claims orders — see BUG-6), so the paid order is always recoverable by the verified email. (4) `PasswordSetup.tsx` validates the live session via `getUser()` (auth-server check, not just the cookie); a wiped/deleted user purges the stale session and falls back to the set-password API, fixing the "cookie exists but account gone" lockout. (5) BUG-11 token-burn closed: `set-password` now `peekVerifiedToken()`s at the gate and only `consumeVerifiedToken()`s at a successful return, so a transient `createUser` failure leaves the verified token usable for an immediate retry instead of forcing email re-verification.
 
 ---
 
-## BUG-12 — Cross-customer farewell video leak
+## BUG-12 — Cross-customer farewell video leak — ✅ FIXED
+- **Status:** ✅ FIXED (2026-06-10) — removed the non-owner branch. Route now requires `message.client_id === client.id`, else returns 404 (hides existence). Audit log always `farewell.owner_viewed`. Trustees use their own authenticated route (`/api/trustee/vault/*`).
 - **Severity:** High (confidentiality)
 - **Area:** `app/api/vault/farewell/[id]/signed-url/route.ts:30-44`
 - **What:** The route authenticates any logged-in client, then if the caller is not the owner it only checks `message.vault_farewell_status === "unlocked"` — it never verifies the caller is a trustee of (or has any relationship to) the message's owner. It then mints a 7-day signed download URL and logs the access as `farewell.trustee_viewed`. Real trustees use a separate, properly authenticated surface (`/api/trustee/vault/*`), so this non-owner branch grants no legitimate capability.
@@ -143,17 +148,20 @@ Tracking doc for checkout + fulfillment failure modes. Severity: Critical > High
 ---
 
 ## BUG-13 — Document-generation queue failure is swallowed (paid, no documents, no alert)
+- **Status:** ✅ FIXED (2026-06-10)
 - **Severity:** High
-- **Area:** `lib/webhooks/stripe/handleDocumentCheckout.ts:294-322`
+- **Area:** `lib/webhooks/stripe/handleDocumentCheckout.ts:374-418`
 - **What:** Queueing the generation job is wrapped in a try/catch that only `console.error`s. If `addJob` throws (Redis/Upstash down or unconfigured), the webhook still returns `200 ok`. By then document records exist as `pending` and the partner/affiliate have already been paid out (earlier in the same handler). No retry, no admin alert, no reconciliation.
 - **Impact:** Customer charged, partner paid, documents never generated, order frozen in `generating` — and nothing surfaces it. Highest-trust failure (same family as BUG-1/BUG-10).
 - **Repro:** Unset `UPSTASH_REDIS_*`, complete a paid checkout → webhook 200s, order stuck, queue empty.
 - **Check on website:** In staging, break the queue (unset Redis env vars), pay a checkout → success page appears, but no documents ever show in the dashboard and no error is displayed.
 - **Fix:** On queue failure, mark order/documents `failed` (not `pending`), emit an alert, don't return success. Add a reconciliation job that finds paid-but-unfulfilled orders and retries.
+- **Resolution:** The Upstash queue is now explicitly **optional / best-effort** and never the fulfillment path of record. (1) Generation actually runs via the synchronous success-page path (`processNow`) and the daily `/api/documents/process` sweep, so an `addJob` throw is expected and no longer fatal — the catch logs and continues instead of failing the order (`lib/webhooks/stripe/handleDocumentCheckout.ts:374-418`, gated on `isQueueConfigured`). (2) The real "paid but no documents" safety net is the reconcile cron `app/api/cron/reconcile-orders/route.ts` (every 15 min, `vercel.json` `*/15 * * * *`): it checks the end result (are the finished PDFs there?) independent of generation path, finds orders stuck in `generating`/`failed`/`pending` with missing PDFs, re-fires `process-now`, and alerts the admin via `sendFulfillmentFailureAlert` for anything unfinished past 60 min (`route.ts:84-85,136-142`). (3) Admin dashboard `app/api/admin/orders-missing-docs/route.ts` + manual `app/api/admin/retry-fulfillment/route.ts` for recovery. Same fulfillment safety net as BUG-1/BUG-10.
 
 ---
 
 ## BUG-14 — Vault double-billing: re-subscribe only blocked while status is "active"
+- **Status:** ✅ FIXED (2026-06-10)
 - **Severity:** High
 - **Area:** `app/api/checkout/vault-subscription/route.ts:95-96,126-128`
 - **What:** The "Already subscribed" guard fires only when `status === "active"`. A customer whose status is `"cancelled"` (cancel_at_period_end — Stripe sub still live) or `"past_due"` passes the guard and creates a SECOND Stripe subscription. No check against an existing live `vault_subscription_stripe_id`.
@@ -161,17 +169,20 @@ Tracking doc for checkout + fulfillment failure modes. Severity: Critical > High
 - **Repro:** Subscribe → cancel → start vault checkout again → no block → second subscription created.
 - **Check on website:** Subscribe, cancel, immediately start subscribe again from the vault page — it lets you pay again. In **Stripe → Customers → that customer → Subscriptions** you see two active annual subs.
 - **Fix:** Block when the client has any live `vault_subscription_stripe_id` (or status active/cancelled/past_due with unexpired period); reactivate the existing sub instead of creating a new one.
+- **Resolution:** Re-subscribe now branches on `clientRepo.resubscribeDecision(status, stripe_id)` instead of checking only `status === "active"`. The Stripe id is non-null while the sub is live (only `customer.subscription.deleted` clears it via `cancelVaultByStripeId`), so the decision is: `active` → block (`Already subscribed`); live id + `cancelled` (cancel-pending) → **reactivate** the existing sub (`stripe.subscriptions.update(id, {cancel_at_period_end:false})`, flip status `active`, return the success URL — no second sub, no charge now, billing resumes at the normal renewal); live id + `past_due` → 409, fix payment (no duplicate sub); no live id → fresh checkout (genuinely lapsed/new). Both the guest (`app/api/checkout/vault-subscription/route.ts` partner-signup path) and authenticated paths share one `applyResubscribe()` helper; the three reads (`findIdAndSubByProfile`, `findIdAndSubByProfileMaybe`, `createReturningWithSub`) now select `vault_subscription_stripe_id`. UX: `components/dashboard/SubscriptionBanner.tsx` now labels the cancel-pending CTA **"Reactivate"** (header "Auto-renewal off") with "no charge until {expiry}" copy — it resumes the live sub — and keeps **"Resubscribe"** only once access has truly ended (a real new purchase). Tests: `bug14-vault-resubscribe.test.ts`.
 
 ---
 
 ## BUG-15 — Partner payout silently lost when Connect account exists but isn't payable
+- **Status:** ✅ FIXED (2026-06-10)
 - **Severity:** High
-- **Area:** `lib/webhooks/stripe/handleDocumentCheckout.ts:154-213` (connected branch + outer catch :210); `lib/stripe-payouts.ts:27`
+- **Area:** `lib/webhooks/stripe/handleDocumentCheckout.ts` (partner payout block); `lib/stripe-payouts.ts:getAccountStatus`
 - **What:** When a partner has a `stripe_account_id` but the Connect account's `transfers` capability isn't active (onboarding incomplete/under review/restricted), `transferToPartner` throws. Control jumps to the outer `catch` which only `console.error`s. Because the code took the connected branch, it never reaches the `else` that writes `ev_cut/partner_cut` and inserts a `pending` payout row → no transfer, no payout record, cuts left at defaults. (Distinct from BUG-13, which is the doc-gen queue.)
 - **Impact:** Partner owed money, but no `sent` or `pending` payout row exists to reconcile against. Money silently unpaid; only a log line. Connect status is never checked before transferring.
 - **Repro:** Partner with `stripe_account_id` whose onboarding is incomplete (`details_submitted:false`); a client buys through them; webhook 200s; `payouts` table has no row for the order.
 - **Check on website:** Connect a partner but stop Stripe onboarding before "transfers" is enabled. Buy a Will through that partner's link → no payout appears in the revenue dashboard / `payouts` table; Stripe logs show the transfer error.
 - **Fix:** Check the account is payable (reuse `getAccountStatus`) before transferring; if not, write a `pending` payout row instead of attempting and dropping. In the catch, always record a `pending` payout for the owed amount.
+- **Resolution:** (1) `getAccountStatus` now returns `transfers_active` (`account.capabilities?.transfers === 'active'`) — the precise gate for *receiving* a destination transfer (`details_submitted`/`payouts_enabled` can be true while transfers is still pending). (2) The partner payout block computes the owed split once up front and defines a single `recordPending()` helper (writes `ev_cut/partner_cut` + a `pending` payout, guarded so it never double-writes after a `sent` row). (3) Branch: no `stripe_account_id` → pending; account present but `transfers_active === false` (or the status check throws) → pending, no transfer attempted; payable → transfer, then `sent` payout on success or pending if the transfer returns null. (4) The outer `catch` now always calls `recordPending()` — an owed cut is never dropped. Replay safety unchanged (whole block still gated on `!payoutAlreadySent`). Tests: `bug15-partner-payout-pending.test.ts` (inactive capability, status-check throw, transfer throw, transfer-null, payable no-regression); `getAccountStatus` added to the `webhook-document-checkout.test.ts` mock.
 
 ---
 
@@ -186,7 +197,8 @@ Tracking doc for checkout + fulfillment failure modes. Severity: Critical > High
 
 ---
 
-## BUG-17 — Vault PIN can be reset without knowing the current PIN
+## BUG-17 — Vault PIN can be reset without knowing the current PIN ✅ FIXED
+- **Status:** ✅ FIXED (2026-06-11)
 - **Severity:** High
 - **Area:** `app/api/vault/pin/route.ts:38-44` (`action: "create"`)
 - **What:** The `create` action hashes and writes `vault_pin_hash` unconditionally — it never checks whether a PIN already exists. `change` correctly requires the old PIN (`bcrypt.compare` at :60); `create` does not. Any authenticated client session can POST `{action:"create", pin:"000000"}` and silently overwrite the existing PIN.
@@ -194,6 +206,7 @@ Tracking doc for checkout + fulfillment failure modes. Severity: Critical > High
 - **Repro:** With a session that already has a PIN, `POST /api/vault/pin {action:"create", pin:"123456"}` → 200; old PIN no longer works.
 - **Check on website:** Set a vault PIN. In DevTools → Network resend the PIN-create request with a different 6-digit value (not the change flow). Re-open the vault — the new PIN works, you were never asked for the original.
 - **Fix:** In `create`, read `vault_pin_hash` first; if one exists, reject (409) and force `change` (which requires the current PIN).
+- **Resolution (2026-06-11):** `create` now selects `vault_pin_hash` before writing; if a hash already exists it returns `fail("PIN already set; use change to update it", 409)` and never overwrites. First-time setup (no existing hash) is unchanged. Mirrors the existing guard pattern used by `verify`/`change` in the same route. Overwriting an existing PIN now requires the `change` flow, which `bcrypt.compare`s the current PIN first. See `app/api/vault/pin/route.ts` (`action: "create"`).
 
 ---
 

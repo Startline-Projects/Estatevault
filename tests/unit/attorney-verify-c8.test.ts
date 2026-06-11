@@ -32,6 +32,9 @@ vi.mock("resend", () => ({
 vi.mock("@/lib/api/auth", () => ({
   createAdminClient: () => ({
     auth: { admin: { createUser: adminCreateUser } },
+    // BUG-16 replay guard: route resolves the auth user by email first.
+    // Default = no existing user → createUser path runs (the C-8 create flow).
+    rpc: () => ({ returns: () => ({ maybeSingle: () => Promise.resolve({ data: null }) }) }),
   }),
 }));
 
@@ -40,6 +43,8 @@ vi.mock("@/lib/repos/server/profileRepo", () => ({
 }));
 vi.mock("@/lib/repos/server/partnerRepo", () => ({
   upsert: (...args: unknown[]) => partnerUpsertSpy(...args),
+  // BUG-16 replay guard: default = no existing partner → upsert path runs.
+  getByProfileId: () => Promise.resolve({ data: null }),
 }));
 
 // Route imports the mocks above.

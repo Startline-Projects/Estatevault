@@ -156,8 +156,10 @@ export default function SubscriptionBanner({ onStatusLoaded, status: statusProp 
     const expiryDate = sub.expiry ? new Date(sub.expiry).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" }) : "";
     const stillActive = sub.cancelAtPeriodEnd || sub.canUseFarewell;
     const nearExpiry = stillActive && sub.daysRemaining !== null && sub.daysRemaining <= 30;
-    // Resubscribing while access is still live stacks the new year on top of the
-    // remaining paid time (handled server-side), so no days are lost.
+    // While access is still live the subscription is only set to cancel at period
+    // end — the button resumes that same subscription (server-side, no new charge).
+    // Once access has ended it is a genuine new purchase. Label/copy reflect which.
+    const ctaLabel = stillActive ? "Reactivate" : "Resubscribe";
     if (nearExpiry) {
       return (
         <div className="rounded-xl bg-amber-50 border border-amber-300 p-4">
@@ -165,11 +167,11 @@ export default function SubscriptionBanner({ onStatusLoaded, status: statusProp 
             Vault access ends in {sub.daysRemaining} day{sub.daysRemaining === 1 ? "" : "s"}{expiryDate ? ` (${expiryDate})` : ""}
           </p>
           <p className="mt-1 text-xs text-amber-800">
-            After that you&apos;ll lose access to uploads, farewell messages, and downloads. Resubscribe to keep everything, or download your documents from the categories below before access ends.
+            After that you&apos;ll lose access to uploads, farewell messages, and downloads. Reactivate to keep everything — you won&apos;t be charged now, billing just resumes{expiryDate ? ` on ${expiryDate}` : " at your renewal date"}. Or download your documents from the categories below before access ends.
           </p>
           <div className="mt-3">
             <button onClick={handleSubscribe} disabled={subscribing} className="text-xs font-medium px-3 py-1.5 rounded-lg bg-gold text-white hover:bg-gold-600 transition-colors disabled:opacity-50">
-              {subscribing ? "Loading..." : "Resubscribe"}
+              {subscribing ? "Loading..." : ctaLabel}
             </button>
           </div>
         </div>
@@ -178,13 +180,15 @@ export default function SubscriptionBanner({ onStatusLoaded, status: statusProp 
     return (
       <div className="rounded-xl bg-gray-50 border border-gray-200 p-4 flex items-center justify-between">
         <div>
-          <p className="text-sm font-semibold text-charcoal">Subscription Cancelled</p>
+          <p className="text-sm font-semibold text-charcoal">
+            {stillActive ? "Auto-renewal off" : "Subscription Cancelled"}
+          </p>
           {stillActive
-            ? expiryDate && <p className="text-xs text-gray-500">Access continues until {expiryDate}</p>
+            ? expiryDate && <p className="text-xs text-gray-500">Access continues until {expiryDate} — reactivate anytime, no charge until then.</p>
             : <p className="text-xs text-gray-500">Your vault access has ended.</p>}
         </div>
         <button onClick={handleSubscribe} disabled={subscribing} className="text-xs font-medium px-3 py-1.5 rounded-lg bg-gold text-white hover:bg-gold-600 transition-colors disabled:opacity-50">
-          {subscribing ? "Loading..." : "Resubscribe"}
+          {subscribing ? "Loading..." : ctaLabel}
         </button>
       </div>
     );

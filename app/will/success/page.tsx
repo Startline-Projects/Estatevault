@@ -6,7 +6,7 @@ import { useSearchParams } from "next/navigation";
 import AnimatedCheckmark from "@/components/success/AnimatedCheckmark";
 import PasswordSetup from "@/components/success/PasswordSetup";
 import PartnerThemedShell, { BrandedLoadingWordmark } from "@/components/partner/PartnerThemedShell";
-import { processNow, checkStatus, downloadBySession, downloadZip } from "@/lib/api-client/documents";
+import { processNow, checkStatus, downloadBySession } from "@/lib/api-client/documents";
 import { verifySession } from "@/lib/api-client/checkout";
 
 type Step = { label: string; status: "done" | "active" | "pending" };
@@ -286,41 +286,6 @@ function SuccessContent() {
                 </button>
               ))}
             </div>
-          </div>
-        )}
-
-        {/* Test mode: ZIP download button */}
-        {isTest && orderId && (
-          <div className="mt-6">
-            <button
-              onClick={async () => {
-                const intake = sessionStorage.getItem("willIntake") || sessionStorage.getItem("trustIntake");
-                const parsed = intake ? JSON.parse(intake) : {};
-                const fn = parsed.firstName || "Test";
-                const ln = parsed.lastName || "User";
-                const zipName = `Test ${fn} ${ln}.zip`;
-                // Sealed PDFs cannot be zipped server-side (server has no key).
-                // Fall back to per-document downloads via the list above.
-                const hasSealed = documents.some((d) => d.sealed);
-                if (hasSealed) {
-                  setError("Your documents are encrypted. Use the buttons below to download each one. Set up your vault passphrase first if prompted.");
-                  return;
-                }
-                const res = await downloadZip({ order_id: orderId, first_name: fn, last_name: ln });
-                if (!res.ok) return;
-                const blob = await res.blob();
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement("a");
-                a.href = url;
-                a.download = zipName;
-                a.click();
-                URL.revokeObjectURL(url);
-              }}
-              disabled={!docsReady || documents.filter((d) => d.storage_path).length === 0}
-              className="w-full min-h-[48px] rounded-full bg-gold py-3.5 text-base font-semibold text-white hover:bg-gold/90 transition-colors shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {docsReady && documents.filter((d) => d.storage_path).length > 0 ? "Download Documents" : "Preparing your documents..."}
-            </button>
           </div>
         )}
 
