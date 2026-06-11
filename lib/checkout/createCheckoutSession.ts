@@ -119,18 +119,22 @@ export async function createCheckoutSession(
   if (resolvedUserId) {
     const { data: existingProfile } = await profileRepo.getMeById(supabase, resolvedUserId);
     if (!existingProfile) {
-      const { data: authUser } = await supabase.auth.admin.getUserById(resolvedUserId);
-      if (authUser?.user) {
-        const meta = (authUser.user.user_metadata || {}) as Record<string, unknown>;
-        await profileRepo.upsert(supabase, {
-          id: resolvedUserId,
-          email: authUser.user.email || (conflictEmail ?? ""),
-          full_name: (meta.full_name as string) || `${(intakeAnswers.firstName as string) || ""} ${(intakeAnswers.lastName as string) || ""}`.trim(),
-          user_type: "client",
-        });
-      } else {
-        // Account fully wiped — proceed as a guest rather than dead-ending the user.
-        console.warn("Checkout: orphaned session, no profile or auth record; continuing as guest:", resolvedUserId);
+      try {
+        const { data: authUser } = await supabase.auth.admin.getUserById(resolvedUserId);
+        if (authUser?.user) {
+          const meta = (authUser.user.user_metadata || {}) as Record<string, unknown>;
+          await profileRepo.upsert(supabase, {
+            id: resolvedUserId,
+            email: authUser.user.email || (conflictEmail ?? ""),
+            full_name: (meta.full_name as string) || `${(intakeAnswers.firstName as string) || ""} ${(intakeAnswers.lastName as string) || ""}`.trim(),
+            user_type: "client",
+          });
+        } else {
+          console.warn("Checkout: orphaned session, no profile or auth record; continuing as guest:", resolvedUserId);
+          resolvedUserId = null;
+        }
+      } catch (err) {
+        console.warn("Checkout: auth lookup failed, continuing as guest:", resolvedUserId, err);
         resolvedUserId = null;
       }
     }

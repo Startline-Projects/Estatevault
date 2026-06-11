@@ -402,13 +402,14 @@
   </details>
 
   <details class="bug med" data-sev="med">
-    <summary><span class="badge med">Medium</span><span class="id">BUG-26</span>
-      <span class="ttl">"Failed to create client record" (largely fixed — verify)</span><span class="chev">▶</span></summary>
+    <summary><span class="badge med">Medium</span><span class="badge" style="background:#1a7f37;color:#fff">✅ FIXED</span><span class="id">BUG-26</span>
+      <span class="ttl">"Failed to create client record" (largely fixed — verify) ✅ FIXED</span><span class="chev">▶</span></summary>
     <div class="body">
       <div class="row"><div class="k">In plain terms</div><div class="v">A logged-in session pointing at a user with no <code>profiles</code> row (a wiped or half-finished account) used to crash checkout with a database foreign-key error. Self-healing was added (recreate the profile, or fall back to guest), and the dashboard now signs out orphaned sessions. Mostly fixed — just needs a regression test and re-verification across will/trust/vault.</div></div>
       <div class="row"><div class="k">Where</div><div class="v"><code>lib/checkout/createCheckoutSession.ts</code>, <code>app/dashboard/layout.tsx</code></div></div>
       <div class="row check"><div class="k">How to check</div><div class="v">Wipe a test user's <code>profiles</code> row, keep the browser session, attempt checkout → should now self-heal instead of throwing the FK error.</div></div>
       <div class="row fix"><div class="k">Fix</div><div class="v">Remaining: add a regression test for the orphaned-session path; confirm it works across will, trust, and vault.</div></div>
+      <div class="row fix"><div class="k">Resolution (2026-06-12)</div><div class="v">Added try/catch around <code>getUserById</code> in the orphaned-session path so network errors degrade gracefully to guest checkout instead of crashing. Regression test <code>tests/unit/bug26-orphaned-session.test.ts</code> covers 4 scenarios: (a) self-heal when auth user exists, (b) guest fallback when auth user wiped, (c) graceful degradation on network timeout, (d) upsert race condition. Dashboard orphan signout verified.</div></div>
     </div>
   </details>
 
