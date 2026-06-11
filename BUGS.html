@@ -621,7 +621,7 @@
   </details>
 
   <details class="bug med" data-sev="med">
-    <summary><span class="badge med">Medium</span><span class="id">BUG-43</span>
+    <summary><span class="badge med">Medium</span><span class="badge" style="background:#1a7f37;color:#fff">✅ FIXED</span><span class="id">BUG-43</span>
       <span class="ttl">Partner can enroll arbitrary existing accounts as their clients</span><span class="chev">▶</span></summary>
     <div class="body">
       <div class="row"><div class="k">In plain terms</div><div class="v">A partner can "add a client" using any existing account's email, and the system links that account to the partner — no consent, no role check. Creates fake client relationships.</div></div>
@@ -629,6 +629,7 @@
       <div class="row"><div class="k">Impact</div><div class="v">Spurious client records under a partner; enrollment abuse.</div></div>
       <div class="row check"><div class="k">Check on website</div><div class="v">In Pro → Clients, "add" a client using an existing account's email you don't own → a clients row appears under your partner.</div></div>
       <div class="row fix"><div class="k">Fix</div><div class="v">Only auto-link an existing profile if it's unclaimed or already this partner's client; otherwise require an invite/accept handshake.</div></div>
+      <div class="row fix"><div class="k">Resolution (2026-06-12)</div><div class="v">Existing profiles now checked for any prior client association. If already this partner's client → idempotent 200. If associated with any other partner (or direct) → 409 rejection. Only truly unclaimed profiles (no client row) can be enrolled. Enforces single-partner-per-profile invariant matching <code>get_client_id()</code> schema assumption.</div></div>
     </div>
   </details>
 

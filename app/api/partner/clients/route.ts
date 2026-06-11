@@ -46,10 +46,23 @@ export const POST = withRoute(async (req: NextRequest) => {
   if (!ownsPartner) return fail("forbidden", 403);
 
   let profileId: string;
-  const { data: existingProfile } = await auth.admin.from("profiles").select("id").eq("email", email).single();
+  const { data: existingProfile } = await auth.admin.from("profiles").select("id").eq("email", email).maybeSingle();
 
   if (existingProfile) {
     profileId = existingProfile.id;
+
+    const { data: existingClient } = await auth.admin
+      .from("clients")
+      .select("id, partner_id")
+      .eq("profile_id", profileId)
+      .maybeSingle();
+
+    if (existingClient) {
+      if (existingClient.partner_id === partnerId) {
+        return ok({ clientId: existingClient.id, profileId });
+      }
+      return fail("This email is already associated with an existing account", 409);
+    }
   } else {
     const { data: newUser, error: createErr } = await auth.admin.auth.admin.createUser({
       email,
@@ -67,21 +80,14 @@ export const POST = withRoute(async (req: NextRequest) => {
     }
   }
 
-  const { data: existingClient } = await auth.admin.from("clients").select("id").eq("profile_id", profileId).eq("partner_id", partnerId).single();
-
-  let clientId: string;
-  if (existingClient) {
-    clientId = existingClient.id;
-  } else {
-    const { data: newClient, error: clientErr } = await auth.admin.from("clients").insert({
-      profile_id: profileId,
-      partner_id: partnerId,
-      source: "partner",
-      state: "Michigan",
-    }).select("id").single();
-    if (clientErr || !newClient) return fail("Failed to create client", 500);
-    clientId = newClient.id;
-  }
+  const { data: newClient, error: clientErr } = await auth.admin.from("clients").insert({
+    profile_id: profileId,
+    partner_id: partnerId,
+    source: "partner",
+    state: "Michigan",
+  }).select("id").single();
+  if (clientErr || !newClient) return fail("Failed to create client", 500);
+  const clientId = newClient.id;
 
   await auth.admin.from("audit_log").insert({ actor_id: auth.user.id, action: action === "invite" ? "client.invited" : "client.session_started", resource_type: "client", resource_id: clientId, metadata: { partner_id: partnerId, client_email: email } });
 
