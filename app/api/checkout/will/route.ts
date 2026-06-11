@@ -3,6 +3,7 @@ import { willCheckoutSchema } from "@/lib/validation/schemas";
 import { createCheckoutSession } from "@/lib/checkout/createCheckoutSession";
 import { PRICES, EV_DEFAULT_CUT } from "@/lib/orders/pricing";
 import { NextResponse } from "next/server";
+import { createClient } from "@/lib/supabase/server";
 import type { ProductConfig } from "@/lib/checkout/createCheckoutSession";
 
 const WILL_CONFIG: ProductConfig = {
@@ -34,5 +35,19 @@ export const POST = withRoute(async (request: Request) => {
       { status: 400 },
     );
   }
-  return createCheckoutSession(request, WILL_CONFIG, parsed.data);
+
+  // BUG-27: Never trust body.userId — derive from server session.
+  let sessionUserId: string | null = null;
+  try {
+    const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) sessionUserId = user.id;
+  } catch {
+    // Auth failure → proceed as guest
+  }
+
+  return createCheckoutSession(request, WILL_CONFIG, {
+    ...parsed.data,
+    userId: sessionUserId,
+  });
 });

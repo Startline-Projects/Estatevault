@@ -414,13 +414,14 @@
   </details>
 
   <details class="bug med" data-sev="med">
-    <summary><span class="badge med">Medium</span><span class="id">BUG-27</span>
-      <span class="ttl">Will checkout trusts the customer ID sent by the browser</span><span class="chev">▶</span></summary>
+    <summary><span class="badge med">Medium</span><span class="badge" style="background:#1a7f37;color:#fff">✅ FIXED</span><span class="id">BUG-27</span>
+      <span class="ttl">Will checkout trusts the customer ID sent by the browser ✅ FIXED</span><span class="chev">▶</span></summary>
     <div class="body">
       <div class="row"><div class="k">In plain terms</div><div class="v">The will checkout takes the <code>userId</code> from the data the browser sends, instead of from the logged-in session the server already knows. Someone could send a different person's <code>userId</code> and attach an order to an account they don't own. No data leak today, but it's an integrity hole. (The amendment checkout already does this correctly — it verifies against the session.)</div></div>
       <div class="row"><div class="k">Where</div><div class="v"><code>lib/validation/schemas.ts:121</code>, will checkout route</div></div>
       <div class="row check"><div class="k">How to check</div><div class="v">POST to <code>/api/checkout/will</code> with a <code>userId</code> belonging to another account → the order attaches to that account.</div></div>
       <div class="row fix"><div class="k">Fix</div><div class="v">Ignore <code>body.userId</code>; derive the real user from the verified server session (<code>requireAuth()</code> / <code>getUser()</code>) and use only that.</div></div>
+      <div class="row fix"><div class="k">Resolution (2026-06-12)</div><div class="v">Removed <code>userId</code> from both <code>willCheckoutSchema</code> and <code>trustCheckoutSchema</code>. Both route handlers now resolve the session user server-side via <code>createClient().auth.getUser()</code> (with try/catch for graceful guest fallback) and override <code>parsed.data</code> before passing to <code>createCheckoutSession</code>. Body-supplied userId is fully ignored.</div></div>
     </div>
   </details>
 

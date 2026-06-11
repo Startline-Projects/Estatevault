@@ -258,7 +258,6 @@ type _TrustSchemaCheck = z.infer<typeof trustIntakeSchema> extends TrustIntake ?
 
 // POST /api/checkout/will
 export const willCheckoutSchema = z.object({
-  userId: z.string().nullable().optional(),
   attorneyReview: z.boolean().optional().default(false),
   intakeAnswers: willIntakeSchema,
   promoCode: z.string().max(64).optional(),
@@ -269,7 +268,6 @@ export const willCheckoutSchema = z.object({
 
 // POST /api/checkout/trust — adds trust-specific fields
 export const trustCheckoutSchema = z.object({
-  userId: z.string().nullable().optional(),
   attorneyReview: z.boolean().optional().default(false),
   intakeAnswers: trustIntakeSchema,
   complexityFlag: z.boolean().optional(),
