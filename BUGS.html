@@ -595,7 +595,7 @@
   </details>
 
   <details class="bug med" data-sev="med">
-    <summary><span class="badge med">Medium</span><span class="id">BUG-41</span>
+    <summary><span class="badge med">Medium</span><span class="badge" style="background:#1a7f37;color:#fff">✅ FIXED</span><span class="id">BUG-41</span>
       <span class="ttl">Partner branding lookup is open to query injection</span><span class="chev">▶</span></summary>
     <div class="body">
       <div class="row"><div class="k">In plain terms</div><div class="v">A public endpoint builds a database filter by pasting the <code>domain</code> query parameter in raw. A crafted value can inject extra filter conditions. The same bug class was already fixed elsewhere in the code — but not here.</div></div>
@@ -603,6 +603,7 @@
       <div class="row"><div class="k">Impact</div><div class="v">Read-only filter injection on a public endpoint (limited to branding columns).</div></div>
       <div class="row check"><div class="k">Check on website</div><div class="v">Hit <code>/api/partners/branding?domain=</code> with comma/parenthesis payloads → response selects by the injected predicate, not the domain.</div></div>
       <div class="row fix"><div class="k">Fix</div><div class="v">Sanitize <code>domain</code> with the existing middleware allowlist, or split into two exact-match queries.</div></div>
+      <div class="row fix"><div class="k">Resolution (2026-06-12)</div><div class="v">Replaced unsafe <code>.or()</code> string interpolation with two parallel <code>.eq()</code> queries via <code>Promise.all</code> — one for <code>subdomain</code>, one for <code>custom_domain</code>. Parameterized queries eliminate injection class entirely regardless of input content.</div></div>
     </div>
   </details>
 
