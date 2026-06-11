@@ -517,7 +517,7 @@
   </details>
 
   <details class="bug med" data-sev="med">
-    <summary><span class="badge med">Medium</span><span class="id">BUG-35</span>
+    <summary><span class="badge med">Medium</span><span class="id">BUG-35</span><span class="badge" style="background:var(--ok);margin-left:8px">✅ FIXED</span>
       <span class="ttl">No lockout on PIN verify (brute-forceable)</span><span class="chev">▶</span></summary>
     <div class="body">
       <div class="row"><div class="k">In plain terms</div><div class="v">There's no limit on wrong PIN attempts. A 6-digit PIN can be guessed by hammering the verify endpoint — every other sensitive vault route is rate-limited, this one isn't.</div></div>
@@ -525,6 +525,7 @@
       <div class="row"><div class="k">Impact</div><div class="v">An attacker with a valid session can brute-force the PIN.</div></div>
       <div class="row check"><div class="k">Check on website</div><div class="v">From a logged-in session submit wrong PINs repeatedly via the network panel — never locked out or throttled.</div></div>
       <div class="row fix"><div class="k">Fix</div><div class="v">Add a per-user limiter + failed-attempt lockout (mirror the trustee OTP cap).</div></div>
+      <div class="row"><div class="k">Resolution</div><div class="v">Added <code>vaultPinRateLimit</code> (5 attempts / 15 min sliding window via Upstash Redis) to both verify and change actions. Failed attempts logged as <code>vault.pin_failed</code> in audit_log. Unified error message "PIN verification failed" on both wrong PIN (422) and lockout (429).</div></div>
     </div>
   </details>
 

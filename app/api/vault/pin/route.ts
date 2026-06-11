@@ -4,6 +4,7 @@ import { requireAuth } from "@/lib/api/auth";
 import { withRoute } from "@/lib/api/route";
 import { ok, fail } from "@/lib/api/response";
 import { vaultPinSchema } from "@/lib/validation/schemas";
+import { vaultPinRateLimit } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
 
@@ -47,20 +48,30 @@ export const POST = withRoute(async (request: NextRequest) => {
 
   if (action === "verify") {
     if (!pin) return fail("PIN required", 400);
+    const { success: allowed } = await vaultPinRateLimit.limit(`pin:${user.id}`);
+    if (!allowed) return fail("PIN verification failed", 429);
     const { data: profile } = await admin.from("profiles").select("vault_pin_hash").eq("id", user.id).single();
     if (!profile?.vault_pin_hash) return fail("No PIN set", 400);
     const valid = await bcrypt.compare(pin, profile.vault_pin_hash);
-    if (!valid) return fail("Incorrect PIN", 422);
+    if (!valid) {
+      await admin.from("audit_log").insert({ actor_id: user.id, action: "vault.pin_failed", resource_type: "profile", resource_id: user.id, metadata: { trigger: "verify" } });
+      return fail("PIN verification failed", 422);
+    }
     await admin.from("audit_log").insert({ actor_id: user.id, action: "vault.accessed", resource_type: "profile", resource_id: user.id });
     return ok({ success: true });
   }
 
   if (action === "change") {
     if (!pin || !newPin || newPin.length !== 6) return fail("Invalid input", 400);
+    const { success: allowed } = await vaultPinRateLimit.limit(`pin:${user.id}`);
+    if (!allowed) return fail("PIN verification failed", 429);
     const { data: profile } = await admin.from("profiles").select("vault_pin_hash").eq("id", user.id).single();
     if (!profile?.vault_pin_hash) return fail("No PIN set", 400);
     const valid = await bcrypt.compare(pin, profile.vault_pin_hash);
-    if (!valid) return fail("Current PIN incorrect", 422);
+    if (!valid) {
+      await admin.from("audit_log").insert({ actor_id: user.id, action: "vault.pin_failed", resource_type: "profile", resource_id: user.id, metadata: { trigger: "change" } });
+      return fail("PIN verification failed", 422);
+    }
     const hash = await bcrypt.hash(newPin, 10);
     await admin.from("profiles").update({ vault_pin_hash: hash }).eq("id", user.id);
     await admin.from("audit_log").insert({ actor_id: user.id, action: "vault.pin_changed", resource_type: "profile", resource_id: user.id });

@@ -34,6 +34,10 @@ export const cryptoRecoveryRateLimit = makeLimiter('rl:crypto:recovery', Ratelim
 export const cryptoBootstrapRateLimit = makeLimiter('rl:crypto:bootstrap', Ratelimit.slidingWindow(5, '1 h'))
 export const cryptoRotateRateLimit = makeLimiter('rl:crypto:rotate', Ratelimit.slidingWindow(5, '1 h'))
 
+// Vault PIN verify/change — 6-digit PIN is brute-forceable without a lockout.
+// 5 attempts per 15 min = ~2000 days to exhaust 1M combos. Keyed per user id.
+export const vaultPinRateLimit = makeLimiter('rl:vault:pin', Ratelimit.slidingWindow(5, '15 m'))
+
 // Trustee OTP resend — a new code resets the per-code attempt counter, so cap
 // resends to stop unlimited fresh guess batches (H-4). Keyed per request id.
 export const trusteeOtpResendRateLimit = makeLimiter('rl:trustee:otp', Ratelimit.slidingWindow(3, '1 h'))
