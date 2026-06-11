@@ -46,6 +46,10 @@ export const emailResendRateLimit = makeLimiter('rl:email:resend', Ratelimit.sli
 // Email verification — IP-level spray cap (BUG-38). Loose to avoid shared-NAT issues.
 export const emailVerifyIpRateLimit = makeLimiter('rl:email:verify:ip', Ratelimit.slidingWindow(30, '15 m'))
 
+// check-email endpoint — prevent bulk enumeration (BUG-39).
+export const checkEmailIpRateLimit = makeLimiter('rl:check-email:ip', Ratelimit.slidingWindow(10, '1 m'))
+export const checkEmailTargetRateLimit = makeLimiter('rl:check-email:target', Ratelimit.slidingWindow(5, '5 m'))
+
 // Trustee OTP resend — a new code resets the per-code attempt counter, so cap
 // resends to stop unlimited fresh guess batches (H-4). Keyed per request id.
 export const trusteeOtpResendRateLimit = makeLimiter('rl:trustee:otp', Ratelimit.slidingWindow(3, '1 h'))

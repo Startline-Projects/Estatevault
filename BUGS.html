@@ -569,7 +569,7 @@
   </details>
 
   <details class="bug med" data-sev="med">
-    <summary><span class="badge med">Medium</span><span class="id">BUG-39</span>
+    <summary><span class="badge med">Medium</span><span class="id">BUG-39</span><span class="badge" style="background:var(--ok);margin-left:8px">✅ FIXED</span>
       <span class="ttl">check-email leaks who has an account + their name &amp; products</span><span class="chev">▶</span></summary>
     <div class="body">
       <div class="row"><div class="k">In plain terms</div><div class="v">An open, unauthenticated endpoint tells anyone whether an email has an account, plus the holder's full name and which products they own (will/trust/vault). Great for targeted phishing. Other endpoints were carefully built NOT to leak this — this one does.</div></div>
@@ -577,6 +577,7 @@
       <div class="row"><div class="k">Impact</div><div class="v">Account enumeration + PII disclosure for estate-planning customers.</div></div>
       <div class="row check"><div class="k">Check on website</div><div class="v">On the signup/login email step, watch the <code>/api/auth/check-email</code> call; submit a known customer email → full name + product flags returned.</div></div>
       <div class="row fix"><div class="k">Fix</div><div class="v">Require a verified session/step-up before returning name/product flags; rate-limit per IP; keep responses uniform.</div></div>
+      <div class="row"><div class="k">Resolution</div><div class="v">Stripped all PII — endpoint now returns only <code>{ exists: boolean }</code>. Added two-tier rate limit: per-IP (10/min) + per-target-email (5/5min). Removed name/orders queries. Updated frontend banner to generic "account exists" message without PII.</div></div>
     </div>
   </details>
 
