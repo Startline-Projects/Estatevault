@@ -8,8 +8,7 @@ import { createClient } from "@/lib/supabase/client";
 import PartnerThemedShell, { usePartnerBranding } from "@/components/partner/PartnerThemedShell";
 import EmailVerifyGate from "@/components/auth/EmailVerifyGate";
 import { PRICES, formatPrice } from "@/lib/orders/pricing";
-import { getTestPromo } from "@/lib/api-client/sales";
-import { checkConflict as checkConflictApi, checkoutWill } from "@/lib/api-client/checkout";
+import { checkConflict as checkConflictApi, checkoutWill, validatePromoCode } from "@/lib/api-client/checkout";
 
 function BrandedWordmark({ className = "" }: { className?: string }) {
   const branding = usePartnerBranding();
@@ -88,22 +87,18 @@ export default function WillCheckoutPage() {
 
   async function handleApplyPromo() {
     const code = promoCode.toUpperCase();
-    if (code === "FREE134") {
-      setPromoApplied(true); setIsTestMode(false); setAttorneyReview(false); setError("");
-    } else if (code === "TEST") {
-      // Validate server-side, don't expose test logic in client JS
-      try {
-        const { data, error: err } = await getTestPromo();
-        if (err || !data) { setError("This code is not valid"); setPromoApplied(false); return; }
-        if (data.active) {
-          setPromoApplied(true); setIsTestMode(true); setAttorneyReview(false); setError("");
-        } else {
-          setError("This code is not valid"); setPromoApplied(false);
-        }
-      } catch { setError("This code is not valid"); setPromoApplied(false); }
-    } else {
-      setError("Invalid promo code."); setPromoApplied(false);
-    }
+    try {
+      const { data, error: err } = await validatePromoCode(code);
+      if (err || !data) { setError("This code is not valid"); setPromoApplied(false); return; }
+      if (data.valid) {
+        setPromoApplied(true);
+        setIsTestMode(code === "TEST");
+        setAttorneyReview(false);
+        setError("");
+      } else {
+        setError("Invalid promo code."); setPromoApplied(false);
+      }
+    } catch { setError("This code is not valid"); setPromoApplied(false); }
   }
 
   function handlePromoSubmit() {

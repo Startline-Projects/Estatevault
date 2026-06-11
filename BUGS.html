@@ -660,7 +660,7 @@
   </details>
 
   <details class="bug med" data-sev="med">
-    <summary><span class="badge med">Medium</span><span class="id">BUG-46</span>
+    <summary><span class="badge med">Medium</span><span class="badge" style="background:#1a7f37;color:#fff">✅ FIXED</span><span class="id">BUG-46</span>
       <span class="ttl">Free-document kill-switch state is readable by anyone</span><span class="chev">▶</span></summary>
     <div class="body">
       <div class="row"><div class="k">In plain terms</div><div class="v">The admin endpoint that reports whether the free-document TEST promo is on has no login check and is publicly allowed. An attacker can poll it to detect the moment it's left on in production, then exploit BUG-30 to mint free documents.</div></div>
@@ -668,6 +668,7 @@
       <div class="row"><div class="k">Impact</div><div class="v">Unauthenticated disclosure of the free-document kill-switch state.</div></div>
       <div class="row check"><div class="k">Check on website</div><div class="v">In an incognito window (logged out) visit <code>/api/admin/test-promo</code> → it returns the active state.</div></div>
       <div class="row fix"><div class="k">Fix</div><div class="v">Require admin for GET (or remove from the public allowlist); checkout should read the setting server-side.</div></div>
+      <div class="row fix"><div class="k">Resolution (2026-06-12)</div><div class="v">Added <code>requireAuth(["admin"])</code> to GET handler, removed <code>/api/admin/test-promo</code> from public allowlist. Created new <code>POST /api/checkout/validate-promo</code> route (under already-public <code>/api/checkout</code> prefix) that validates promo codes server-side and returns only <code>{ valid: boolean }</code>. Checkout pages updated to use new endpoint — no longer exposes kill-switch state to unauthenticated users.</div></div>
     </div>
   </details>
 

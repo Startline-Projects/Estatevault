@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { createAdminClient, requireAuth } from "@/lib/api/auth";
+import { requireAuth } from "@/lib/api/auth";
 import { withRoute } from "@/lib/api/route";
 import { ok, fail } from "@/lib/api/response";
 import { adminTestPromoSchema } from "@/lib/validation/schemas";
@@ -7,8 +7,10 @@ import * as appSettingsRepo from "@/lib/repos/server/appSettingsRepo";
 import * as auditLogRepo from "@/lib/repos/server/auditLogRepo";
 
 export const GET = withRoute(async (_req: NextRequest) => {
-  const admin = createAdminClient();
-  const { data, error } = await appSettingsRepo.getByKey(admin, "test_promo_code");
+  const auth = await requireAuth(["admin"]);
+  if ("error" in auth) return auth.error;
+
+  const { data, error } = await appSettingsRepo.getByKey(auth.admin, "test_promo_code");
 
   if (error) {
     console.error("app_settings read error:", error.message);
