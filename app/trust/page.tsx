@@ -595,7 +595,7 @@ export default function TrustPage() {
             )}
             {intake.assetTypes.includes("Business interests") && (
               <div className="mt-4 rounded-lg bg-amber-50 border border-amber-200 px-4 py-3 text-xs text-amber-800 leading-relaxed">
-                Business interests in a trust require careful structuring. We recommend adding attorney review to ensure your business provisions are correctly drafted.
+                Business interests in a trust require careful structuring. Attorney review is available to ensure your business provisions are correctly drafted.
               </div>
             )}
           </>
