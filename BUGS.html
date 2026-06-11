@@ -292,7 +292,7 @@
   </details>
 
   <details class="bug high" data-sev="high">
-    <summary><span class="badge high">High</span><span class="id">BUG-17</span>
+    <summary><span class="badge high">High</span><span class="badge" style="background:#1a7f37;color:#fff">✅ FIXED</span><span class="id">BUG-17</span>
       <span class="ttl">Vault PIN can be reset without knowing the current PIN</span><span class="chev">▶</span></summary>
     <div class="body">
       <div class="row"><div class="k">In plain terms</div><div class="v">The PIN is a second lock on top of the password. But the "create PIN" action overwrites an existing PIN without asking for the old one. Anyone with just the session (borrowed device, stolen cookie) can re-set the PIN to their own value and walk in.</div></div>
@@ -300,6 +300,7 @@
       <div class="row"><div class="k">Impact</div><div class="v">The PIN's whole protection (a secret separate from the session) is defeated.</div></div>
       <div class="row check"><div class="k">Check on website</div><div class="v">Set a vault PIN. In DevTools → Network resend the PIN-<i>create</i> request with a different 6-digit value (not the change flow). Re-open the vault — the new PIN works, you were never asked for the old one.</div></div>
       <div class="row fix"><div class="k">Fix</div><div class="v">In "create", reject (409) if a PIN already exists and force the "change" flow (which requires the current PIN).</div></div>
+      <div class="row fix"><div class="k">Resolution (2026-06-11)</div><div class="v"><code>create</code> now reads <code>vault_pin_hash</code> before writing; if a hash already exists it returns <code>fail("PIN already set; use change to update it", 409)</code> and never overwrites. First-time setup (no existing hash) is unchanged. Overwriting an existing PIN now requires the <code>change</code> flow, which <code>bcrypt.compare</code>s the current PIN first. See <code>app/api/vault/pin/route.ts</code> (<code>action: "create"</code>).</div></div>
     </div>
   </details>
 

@@ -37,6 +37,8 @@ export const POST = withRoute(async (request: NextRequest) => {
 
   if (action === "create") {
     if (!pin || pin.length !== 6) return fail("PIN must be 6 digits", 400);
+    const { data: existing } = await admin.from("profiles").select("vault_pin_hash").eq("id", user.id).single();
+    if (existing?.vault_pin_hash) return fail("PIN already set; use change to update it", 409);
     const hash = await bcrypt.hash(pin, 10);
     await admin.from("profiles").update({ vault_pin_hash: hash }).eq("id", user.id);
     await admin.from("audit_log").insert({ actor_id: user.id, action: "vault.pin_created", resource_type: "profile", resource_id: user.id });

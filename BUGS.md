@@ -197,7 +197,8 @@ Tracking doc for checkout + fulfillment failure modes. Severity: Critical > High
 
 ---
 
-## BUG-17 — Vault PIN can be reset without knowing the current PIN
+## BUG-17 — Vault PIN can be reset without knowing the current PIN ✅ FIXED
+- **Status:** ✅ FIXED (2026-06-11)
 - **Severity:** High
 - **Area:** `app/api/vault/pin/route.ts:38-44` (`action: "create"`)
 - **What:** The `create` action hashes and writes `vault_pin_hash` unconditionally — it never checks whether a PIN already exists. `change` correctly requires the old PIN (`bcrypt.compare` at :60); `create` does not. Any authenticated client session can POST `{action:"create", pin:"000000"}` and silently overwrite the existing PIN.
@@ -205,6 +206,7 @@ Tracking doc for checkout + fulfillment failure modes. Severity: Critical > High
 - **Repro:** With a session that already has a PIN, `POST /api/vault/pin {action:"create", pin:"123456"}` → 200; old PIN no longer works.
 - **Check on website:** Set a vault PIN. In DevTools → Network resend the PIN-create request with a different 6-digit value (not the change flow). Re-open the vault — the new PIN works, you were never asked for the original.
 - **Fix:** In `create`, read `vault_pin_hash` first; if one exists, reject (409) and force `change` (which requires the current PIN).
+- **Resolution (2026-06-11):** `create` now selects `vault_pin_hash` before writing; if a hash already exists it returns `fail("PIN already set; use change to update it", 409)` and never overwrites. First-time setup (no existing hash) is unchanged. Mirrors the existing guard pattern used by `verify`/`change` in the same route. Overwriting an existing PIN now requires the `change` flow, which `bcrypt.compare`s the current PIN first. See `app/api/vault/pin/route.ts` (`action: "create"`).
 
 ---
 
