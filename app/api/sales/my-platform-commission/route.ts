@@ -3,6 +3,7 @@ import { requireAuth } from "@/lib/api/auth";
 import { withRoute } from "@/lib/api/route";
 import { ok } from "@/lib/api/response";
 import { PARTNER_PLATFORM_FEE } from "@/lib/orders/pricing";
+import { DEFAULT_COMMISSION_RATE } from "@/lib/sales/constants";
 import * as partnerRepo from "@/lib/repos/server/partnerRepo";
 import * as profileRepo from "@/lib/repos/server/profileRepo";
 
@@ -38,7 +39,7 @@ export const GET = withRoute(async (req: NextRequest) => {
   if ("error" in auth) return auth.error;
 
   const { data: prof } = await profileRepo.getCommissionRateById(auth.admin, auth.user.id);
-  const rate = prof?.commission_rate ?? 0.5;
+  const rate = prof?.commission_rate ?? DEFAULT_COMMISSION_RATE;
 
   const { data: partnersRaw } = await partnerRepo.listForRepCommission(auth.admin, auth.user.id);
   const partners = (partnersRaw ?? []) as PartnerRow[];

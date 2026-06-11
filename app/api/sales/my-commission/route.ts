@@ -4,8 +4,7 @@ import { withRoute } from "@/lib/api/route";
 import { ok } from "@/lib/api/response";
 import * as partnerRepo from "@/lib/repos/server/partnerRepo";
 import * as orderRepo from "@/lib/repos/server/orderRepo";
-
-const COMMISSION_RATE = 0.05;
+import { DEFAULT_DEFAULT_COMMISSION_RATE } from "@/lib/sales/constants";
 
 function getMonthLabel(date: Date): string {
   return date.toLocaleDateString("en-US", { month: "long", year: "numeric" });
@@ -45,7 +44,7 @@ export const GET = withRoute(async (req: NextRequest) => {
   revenueByPartner.forEach((cents, partnerId) => {
     const dollars = cents / 100;
     totalMtdRevenue += dollars;
-    breakdown.push({ partnerName: partnerMap.get(partnerId) || "Unknown", mtdRevenue: dollars, commission: dollars * COMMISSION_RATE });
+    breakdown.push({ partnerName: partnerMap.get(partnerId) || "Unknown", mtdRevenue: dollars, commission: dollars * DEFAULT_COMMISSION_RATE });
   });
   for (const p of myPartners) {
     if (!revenueByPartner.has(p.id)) breakdown.push({ partnerName: p.company_name || "Unknown", mtdRevenue: 0, commission: 0 });
@@ -65,10 +64,10 @@ export const GET = withRoute(async (req: NextRequest) => {
     history.push({
       month: getMonthLabel(mDate),
       partnerRevenue,
-      commission: partnerRevenue * COMMISSION_RATE,
+      commission: partnerRevenue * DEFAULT_COMMISSION_RATE,
       status: i === 0 ? "Pending" : "Paid",
     });
   }
 
-  return ok({ breakdown, mtdCommission: totalMtdRevenue * COMMISSION_RATE, history });
+  return ok({ breakdown, mtdCommission: totalMtdRevenue * DEFAULT_COMMISSION_RATE, history });
 });

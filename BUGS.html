@@ -634,7 +634,7 @@
   </details>
 
   <details class="bug med" data-sev="med">
-    <summary><span class="badge med">Medium</span><span class="id">BUG-44</span>
+    <summary><span class="badge med">Medium</span><span class="badge" style="background:#1a7f37;color:#fff">✅ FIXED</span><span class="id">BUG-44</span>
       <span class="ttl">Sales commission default rate inconsistent (5% shown vs 50% paid)</span><span class="chev">▶</span></summary>
     <div class="body">
       <div class="row"><div class="k">In plain terms</div><div class="v">When a rep has no commission rate set, different parts of the app assume different defaults — 5% in the admin list, but 50% in the commission math. So owed commission can be 10× what the admin sees.</div></div>
@@ -642,6 +642,7 @@
       <div class="row"><div class="k">Impact</div><div class="v">Overstated commission liability; rep disputes.</div></div>
       <div class="row check"><div class="k">Check on website</div><div class="v">With a rep that has no commission_rate, compare the rep's "My Commission" figure to the rate shown in the admin Sales Rep list — they imply different rates.</div></div>
       <div class="row fix"><div class="k">Fix</div><div class="v">Use one shared default constant everywhere; ideally make the column NOT NULL with a default.</div></div>
+      <div class="row fix"><div class="k">Resolution (2026-06-12)</div><div class="v">Created <code>lib/sales/constants.ts</code> with <code>DEFAULT_COMMISSION_RATE = 0.05</code>. Replaced all 5 route references (commission, my-platform-commission, reps, my-commission, overview) with this single source of truth. The <code>0.5</code> values were decimal-point typos (10× overstatement).</div></div>
     </div>
   </details>
 

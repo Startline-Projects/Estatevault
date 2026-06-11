@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { requireAuth } from "@/lib/api/auth";
 import { withRoute } from "@/lib/api/route";
 import { ok } from "@/lib/api/response";
+import { DEFAULT_COMMISSION_RATE } from "@/lib/sales/constants";
 import * as partnerRepo from "@/lib/repos/server/partnerRepo";
 import * as orderRepo from "@/lib/repos/server/orderRepo";
 import * as profileRepo from "@/lib/repos/server/profileRepo";
@@ -30,7 +31,7 @@ export const GET = withRoute(async (req: NextRequest) => {
   const orders = ordersRaw ?? [];
 
   const mtdRevenue = orders.reduce((s, o) => s + (o.amount_total || 0), 0) / 100;
-  const mtdCommission = mtdRevenue * 0.05;
+  const mtdCommission = mtdRevenue * DEFAULT_COMMISSION_RATE;
 
   const threeDaysAgo = new Date();
   threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
