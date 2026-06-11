@@ -426,14 +426,15 @@
   </details>
 
   <details class="bug med" data-sev="med">
-    <summary><span class="badge med">Medium</span><span class="id">BUG-28</span>
-      <span class="ttl">Intake answers barely validated at the server</span><span class="chev">▶</span></summary>
+    <summary><span class="badge med">Medium</span><span class="badge" style="background:#1a7f37;color:#fff">✅ FIXED</span><span class="id">BUG-28</span>
+      <span class="ttl">Intake answers barely validated at the server ✅ FIXED</span><span class="chev">▶</span></summary>
     <div class="body">
       <div class="row"><div class="k">In plain terms</div><div class="v">The system barely checks what's submitted. A direct call with no beneficiaries, shares totaling 30%, a giant blob of text, or text designed to trick the AI will still build a document. The "shares must total 100%" rule only lives in the browser.</div></div>
       <div class="row"><div class="k">Where</div><div class="v"><code>lib/validation/schemas.ts:100-117</code> (<code>.passthrough()</code>); consumed in <code>michigan-will.ts</code></div></div>
       <div class="row"><div class="k">Impact</div><div class="v">Garbage or malicious intake reaches the database and the AI prompt; documents built from invalid data.</div></div>
       <div class="row check"><div class="k">Check on website</div><div class="v">DevTools → Network → resend a checkout POST with an empty/garbage <code>intakeAnswers</code> → order + document still created.</div></div>
       <div class="row fix"><div class="k">Fix</div><div class="v">Tighten the schema: require ≥1 beneficiary + executor, relationship enums, numeric <code>share</code> 0–100 with a server-side 100% sum check, max lengths on free text. Re-validate before generating.</div></div>
+      <div class="row fix"><div class="k">Resolution (2026-06-12)</div><div class="v">Share field now validates as numeric 0–100 (regex + parseFloat). Both <code>willIntakeSchema</code> and <code>trustIntakeSchema</code> have <code>.refine()</code> checks: beneficiary shares must sum to 100% (±0.02 epsilon for rounding) unless <code>beneficiariesEqualShares === "Yes"</code>. Same for contingent beneficiaries. All fields already had min/max lengths, enum relationships, and <code>.min(1)</code> on required arrays.</div></div>
     </div>
   </details>
 
