@@ -608,7 +608,7 @@
   </details>
 
   <details class="bug med" data-sev="med">
-    <summary><span class="badge med">Medium</span><span class="id">BUG-42</span>
+    <summary><span class="badge med">Medium</span><span class="badge" style="background:#1a7f37;color:#fff">✅ FIXED</span><span class="id">BUG-42</span>
       <span class="ttl">Add-domain reports success even when the claim failed</span><span class="chev">▶</span></summary>
     <div class="body">
       <div class="row"><div class="k">In plain terms</div><div class="v">When a partner adds a custom domain, the code doesn't check whether the database save worked. If the domain is already taken by another partner, the save fails — but the partner is still told "success." Their whitelabel site won't actually work, and the audit log lies.</div></div>
@@ -616,6 +616,7 @@
       <div class="row"><div class="k">Impact</div><div class="v">Silent misconfiguration + misleading audit trail; Vercel registration for arbitrary domains with no ownership proof.</div></div>
       <div class="row check"><div class="k">Check on website</div><div class="v">Two enterprise partners; A submits a custom domain B already saved → A's UI shows success but <code>partners.custom_domain</code> for A is unchanged.</div></div>
       <div class="row fix"><div class="k">Fix</div><div class="v">Check the update error and fail on it; pre-check the domain isn't owned by another partner; register with Vercel only after the DB claim succeeds.</div></div>
+      <div class="row fix"><div class="k">Resolution (2026-06-12)</div><div class="v">Added pre-check query (409 if domain claimed by another partner), error check on DB update with Vercel rollback on failure, and error check on DELETE handler. Order: pre-check → Vercel register → DB claim → rollback if DB fails.</div></div>
     </div>
   </details>
 
