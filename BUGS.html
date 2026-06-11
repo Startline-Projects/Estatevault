@@ -543,7 +543,7 @@
   </details>
 
   <details class="bug med" data-sev="med">
-    <summary><span class="badge med">Medium</span><span class="id">BUG-37</span>
+    <summary><span class="badge med">Medium</span><span class="id">BUG-37</span><span class="badge" style="background:var(--ok);margin-left:8px">✅ FIXED</span>
       <span class="ttl">Farewell upload-complete / view not behind the paywall</span><span class="chev">▶</span></summary>
     <div class="body">
       <div class="row"><div class="k">In plain terms</div><div class="v">Creating and uploading a farewell video checks for an active subscription, but finishing the upload and viewing it don't. A lapsed/never-subscribed customer with an existing message can still attach and view videos.</div></div>
@@ -551,6 +551,7 @@
       <div class="row"><div class="k">Impact</div><div class="v">Inconsistent paywall on the farewell feature.</div></div>
       <div class="row check"><div class="k">Check on website</div><div class="v">Let a vault subscription lapse, then attach/view an existing farewell video — still works.</div></div>
       <div class="row fix"><div class="k">Fix</div><div class="v">Add the same subscription gate to both routes (with BUG-5/22's "gate on expiry too" in mind).</div></div>
+      <div class="row"><div class="k">Resolution</div><div class="v">Added <code>getSubscriptionById</code> + <code>hasVaultAccess</code> gate to both upload-complete and signed-url routes. Uses same 3-day grace period and cancelled-until-expiry logic as all other vault gates.</div></div>
     </div>
   </details>
 
