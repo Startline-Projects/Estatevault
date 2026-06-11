@@ -19,7 +19,7 @@ const STANDARD_FEATURES = [
 const PROFESSIONAL_FEATURES: Array<{ text: string; strong?: boolean }> = [
   { text: 'Everything in Standard, plus:', strong: true },
   { text: '$350/will + your review fee' },
-  { text: '$500/trust + your review fee' },
+  { text: '$450/trust + your review fee' },
   { text: '10 team seats included' },
   { text: 'Commission hierarchy for associates' },
   { text: 'Priority placement in referral network' },
@@ -154,7 +154,7 @@ export default function AttorneyPartnerPage() {
 
   const productSplit =
     calcProduct === 'trust'
-      ? calcTier === 'standard' ? 400 : 500
+      ? calcTier === 'standard' ? 400 : 450
       : calcTier === 'standard' ? 300 : 350;
   const platformFee = promoActive ? 0 : calcTier === 'standard' ? 1200 : 6000;
   const productEarnings = productSplit * calcVolume;

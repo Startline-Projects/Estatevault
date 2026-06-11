@@ -465,14 +465,15 @@
   </details>
 
   <details class="bug med" data-sev="med">
-    <summary><span class="badge med">Medium</span><span class="id">BUG-31</span>
-      <span class="ttl">Partner "trust" earnings advertised as $500, actual payout is $450</span><span class="chev">▶</span></summary>
+    <summary><span class="badge med">Medium</span><span class="badge" style="background:#1a7f37;color:#fff">✅ FIXED</span><span class="id">BUG-31</span>
+      <span class="ttl">Partner "trust" earnings advertised as $500, actual payout is $450 ✅ FIXED</span><span class="chev">▶</span></summary>
     <div class="body">
       <div class="row"><div class="k">In plain terms</div><div class="v">The partner-recruitment pages tell Professional-tier partners they earn <b>$500 per trust</b> — both the feature list and the live earnings calculator. But the system actually pays them <b>$450</b> (the real source-of-truth figure). Partners are promised $50 more per trust than they get.</div></div>
       <div class="row"><div class="k">Where</div><div class="v"><code>app/khan-lawgroup/page.tsx:22, :157</code>; <code>app/partners/attorneys/page.tsx:22, :152</code>; <code>app/partners/attorneys/CLAUDE.md:13</code>. Truth: <code>lib/orders/pricing.ts:43</code> (enterprise trust partner = 45000 = $450).</div></div>
       <div class="row"><div class="k">Impact</div><div class="v">Partner trust / dispute risk — they're paid $50/trust less than advertised. Not a direct money loss to the platform (the webhook pays the correct $450). The will figures ($300/$350) are correct; only the professional trust figure drifts.</div></div>
       <div class="row check"><div class="k">Check on website</div><div class="v">Open <code>/khan-lawgroup</code> or <code>/partners/attorneys</code> → toggle the earnings calculator to <b>Professional</b> → "per trust" shows <b>$500</b>; the Professional bullet reads <b>"$500/trust + your review fee"</b>. Compare to <code>lib/orders/pricing.ts:43</code> = $450.</div></div>
       <div class="row fix"><div class="k">Fix</div><div class="v">Change the four <code>500</code> occurrences (2 calculator lines, 2 feature strings) + the doc line to <code>450</code>. Ideally derive from <code>PARTNER_SPLITS.trust.enterprise.partner</code> so it can't drift again.</div></div>
+      <div class="row fix"><div class="k">Resolution (2026-06-12)</div><div class="v">Changed all 4 occurrences to $450: feature bullets in <code>/khan-lawgroup</code> and <code>/partners/attorneys</code>, calculator logic in both pages, and the CLAUDE.md doc reference. Now matches <code>PARTNER_SPLITS.trust.enterprise.partner = 45000</code>.</div></div>
     </div>
   </details>
 
