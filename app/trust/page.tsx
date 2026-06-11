@@ -38,7 +38,7 @@ const ALL_POA_POWERS = [
 const relOptions = ["Spouse/Partner", "Adult Child", "Sibling", "Parent", "Friend", "Other"];
 const maritalOptions = ["Single", "Married", "Divorced", "Widowed"];
 const benRelOptions = ["Spouse/Partner", "Child", "Parent", "Sibling", "Other"];
-const execRelOptions = ["Spouse/Partner", "Adult Child", "Sibling", "Parent", "Other"];
+const execRelOptions = ["Spouse/Partner", "Adult Child", "Sibling", "Parent", "Friend", "Other"];
 
 export default function TrustPage() {
   const router = useRouter();
@@ -132,7 +132,7 @@ export default function TrustPage() {
       case "about":
         return intake.firstName.trim() !== "" && intake.lastName.trim() !== "" && intake.dateOfBirth !== "" && intake.dateOfBirth <= maxDob && intake.city.trim() !== "" && intake.hasMinorChildren !== "" && intake.hasSpecialNeedsDependent !== "";
       case "trustee":
-        return intake.primaryTrustee !== "" && (intake.primaryTrustee === "Myself" || intake.trusteeName.trim() !== "") && intake.successorTrusteeName.trim() !== "" && intake.successorTrusteeRelationship !== "";
+        return intake.primaryTrustee !== "" && (intake.primaryTrustee === "Myself" || intake.trusteeName.trim() !== "") && intake.successorTrusteeName.trim() !== "" && intake.successorTrusteeRelationship !== "" && intake.additionalSuccessorTrustees.every(st => !st.name.trim() || st.relationship !== "");
       case "beneficiaries": {
         if (intake.beneficiaries.length === 0) return false;
         if (intake.beneficiaries.some((b) => !b.name.trim() || !b.relationship)) return false;

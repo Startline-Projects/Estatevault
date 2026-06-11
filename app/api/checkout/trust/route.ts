@@ -24,8 +24,9 @@ export const POST = withRoute(async (request: Request) => {
   const body = await request.json();
   const parsed = trustCheckoutSchema.safeParse(body);
   if (!parsed.success) {
+    const issues = parsed.error.issues.map(i => `${i.path.join(".")}: ${i.message}`);
     return NextResponse.json(
-      { error: "Missing intake answers", details: parsed.error.flatten() },
+      { error: `Validation failed — ${issues.join("; ")}`, details: parsed.error.format() },
       { status: 400 },
     );
   }

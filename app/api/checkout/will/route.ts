@@ -24,8 +24,13 @@ export const POST = withRoute(async (request: Request) => {
   const body = await request.json();
   const parsed = willCheckoutSchema.safeParse(body);
   if (!parsed.success) {
+    const flat = parsed.error.flatten();
+    const fields = Object.keys(flat.fieldErrors);
+    const msg = fields.length
+      ? `Intake validation failed on: ${fields.join(", ")}`
+      : "Missing intake answers";
     return NextResponse.json(
-      { error: "Missing intake answers", details: parsed.error.flatten() },
+      { error: msg, details: flat },
       { status: 400 },
     );
   }
