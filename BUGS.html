@@ -647,7 +647,7 @@
   </details>
 
   <details class="bug med" data-sev="med">
-    <summary><span class="badge med">Medium</span><span class="id">BUG-45</span>
+    <summary><span class="badge med">Medium</span><span class="badge" style="background:#1a7f37;color:#fff">✅ FIXED</span><span class="id">BUG-45</span>
       <span class="ttl">"My Commission" ignores the rep's actual rate (hardcoded 5%)</span><span class="chev">▶</span></summary>
     <div class="body">
       <div class="row"><div class="k">In plain terms</div><div class="v">The rep's order-revenue commission is always computed at 5%, ignoring whatever rate the admin actually set. Changing a rep's rate has no effect on this view.</div></div>
@@ -655,6 +655,7 @@
       <div class="row"><div class="k">Impact</div><div class="v">Admin-configured rates not honored; under/over-statement and disputes.</div></div>
       <div class="row check"><div class="k">Check on website</div><div class="v">As admin change a rep's commission rate; as that rep open "My Commission" — the order-revenue commission is unchanged (still 5%).</div></div>
       <div class="row fix"><div class="k">Fix</div><div class="v">Pull the rate from one source of truth (the stored rate) and apply consistently.</div></div>
+      <div class="row fix"><div class="k">Resolution (2026-06-12)</div><div class="v">Both <code>my-commission</code> and <code>overview</code> routes now fetch the rep's stored <code>commission_rate</code> via <code>profileRepo.getCommissionRateById()</code> and use it for all commission math. <code>DEFAULT_COMMISSION_RATE</code> only used as null-fallback. Matches pattern already used by <code>my-platform-commission</code>.</div></div>
     </div>
   </details>
 

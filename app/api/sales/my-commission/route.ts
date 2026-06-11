@@ -4,7 +4,8 @@ import { withRoute } from "@/lib/api/route";
 import { ok } from "@/lib/api/response";
 import * as partnerRepo from "@/lib/repos/server/partnerRepo";
 import * as orderRepo from "@/lib/repos/server/orderRepo";
-import { DEFAULT_DEFAULT_COMMISSION_RATE } from "@/lib/sales/constants";
+import * as profileRepo from "@/lib/repos/server/profileRepo";
+import { DEFAULT_COMMISSION_RATE } from "@/lib/sales/constants";
 
 function getMonthLabel(date: Date): string {
   return date.toLocaleDateString("en-US", { month: "long", year: "numeric" });
@@ -15,6 +16,9 @@ function getMonthLabel(date: Date): string {
 export const GET = withRoute(async (req: NextRequest) => {
   const auth = await requireAuth(["sales_rep", "admin", "review_attorney"], req);
   if ("error" in auth) return auth.error;
+
+  const { data: prof } = await profileRepo.getCommissionRateById(auth.admin, auth.user.id);
+  const rate = prof?.commission_rate ?? DEFAULT_COMMISSION_RATE;
 
   const { data: partners } = await partnerRepo.listManagedForDashboard(auth.admin, auth.user.id);
   const myPartners = partners ?? [];
@@ -44,7 +48,7 @@ export const GET = withRoute(async (req: NextRequest) => {
   revenueByPartner.forEach((cents, partnerId) => {
     const dollars = cents / 100;
     totalMtdRevenue += dollars;
-    breakdown.push({ partnerName: partnerMap.get(partnerId) || "Unknown", mtdRevenue: dollars, commission: dollars * DEFAULT_COMMISSION_RATE });
+    breakdown.push({ partnerName: partnerMap.get(partnerId) || "Unknown", mtdRevenue: dollars, commission: dollars * rate });
   });
   for (const p of myPartners) {
     if (!revenueByPartner.has(p.id)) breakdown.push({ partnerName: p.company_name || "Unknown", mtdRevenue: 0, commission: 0 });
@@ -64,10 +68,10 @@ export const GET = withRoute(async (req: NextRequest) => {
     history.push({
       month: getMonthLabel(mDate),
       partnerRevenue,
-      commission: partnerRevenue * DEFAULT_COMMISSION_RATE,
+      commission: partnerRevenue * rate,
       status: i === 0 ? "Pending" : "Paid",
     });
   }
 
-  return ok({ breakdown, mtdCommission: totalMtdRevenue * DEFAULT_COMMISSION_RATE, history });
+  return ok({ breakdown, mtdCommission: totalMtdRevenue * rate, history });
 });
