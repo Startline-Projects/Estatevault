@@ -310,6 +310,7 @@ export const amendmentCheckoutSchema = z.object({
   userId: z.string().min(1, "userId is required"),
   changeType: z.string().min(1).max(200),
   description: z.string().min(1).max(4000),
+  acknowledgmentSigned: z.literal(true),
 });
 
 // POST /api/checkout/vault-subscription — partner/guest vault signup

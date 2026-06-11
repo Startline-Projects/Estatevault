@@ -673,7 +673,7 @@
   </details>
 
   <details class="bug med" data-sev="med">
-    <summary><span class="badge med">Medium</span><span class="id">BUG-47</span>
+    <summary><span class="badge med">Medium</span><span class="badge" style="background:#1a7f37;color:#fff">✅ FIXED</span><span class="id">BUG-47</span>
       <span class="ttl">Amendment checkout also fakes the acknowledgment signature</span><span class="chev">▶</span></summary>
     <div class="body">
       <div class="row"><div class="k">In plain terms</div><div class="v">Like BUG-2 but on the amendment product: the amendment order always records "acknowledgment signed: true" even though no agree-box is ever shown.</div></div>
@@ -681,6 +681,7 @@
       <div class="row"><div class="k">Impact</div><div class="v">Amended documents generated for clients who never acknowledged; fabricated record (Core Rule 3).</div></div>
       <div class="row check"><div class="k">Check on website</div><div class="v"><code>/dashboard/amendment</code> → submit a change → never shown an "agree" box; the <code>orders</code> row shows <code>acknowledgment_signed = true</code>.</div></div>
       <div class="row fix"><div class="k">Fix</div><div class="v">Require a real acknowledgment input in the amendment schema + UI; set the column from it.</div></div>
+      <div class="row fix"><div class="k">Resolution (2026-06-12)</div><div class="v">Added <code>acknowledgmentSigned: z.literal(true)</code> to <code>amendmentCheckoutSchema</code> — Zod rejects unless explicitly <code>true</code>. Route uses parsed value instead of hardcoded <code>true</code>. Amendment UI now shows acknowledgment checkbox (no-legal-advice disclaimer) that must be checked before submit. Client type updated.</div></div>
     </div>
   </details>
 

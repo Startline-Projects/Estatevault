@@ -25,6 +25,7 @@ export function checkoutAmendment(body: {
   userId: string;
   changeType: string;
   description: string;
+  acknowledgmentSigned: true;
 }): Promise<ApiResult<CheckoutUrlResult | { redirect: string }>> {
   return post("/api/checkout/amendment", body);
 }
