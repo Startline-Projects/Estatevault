@@ -96,7 +96,7 @@ export function updateCommissionRate(admin: Admin, repId: string, rate: number) 
 export function findByEmail(admin: Admin, email: string) {
   return admin
     .from("profiles")
-    .select("id, user_type")
+    .select("id, user_type, managed_by_admin")
     .eq("email", email)
     .maybeSingle();
 }

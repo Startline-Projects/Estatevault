@@ -28,12 +28,20 @@ export const POST = withRoute(async (req: NextRequest) => {
   const { data: authMatch } = !existingProfile
     ? await auth.admin.rpc("find_auth_user_by_email", { lookup_email: normalizedEmail }).returns<{ id: string; email: string }[]>().maybeSingle()
     : { data: null };
-  const existingUserId = existingProfile?.id || authMatch?.id;
-
   let profileId: string;
 
-  if (existingUserId) {
-    profileId = existingUserId;
+  if (existingProfile) {
+    // BUG-18 guard: never overwrite a profile the partner doesn't own.
+    // Attach only when the email is unclaimed (no role yet) or is already a
+    // review_attorney managed by this same partner.
+    const isUnclaimed = !existingProfile.user_type;
+    const isOwnAttorney =
+      existingProfile.user_type === "review_attorney" &&
+      existingProfile.managed_by_admin === partner.profile_id;
+    if (!isUnclaimed && !isOwnAttorney) {
+      return fail("That email is already associated with another EstateVault account.", 409);
+    }
+    profileId = existingProfile.id;
     await auth.admin
       .from("profiles")
       .update({
@@ -44,6 +52,18 @@ export const POST = withRoute(async (req: NextRequest) => {
         managed_by_admin: partner.profile_id,
       })
       .eq("id", profileId);
+  } else if (authMatch?.id) {
+    // Auth user exists without a profile row — unclaimed; create the profile.
+    profileId = authMatch.id;
+    await profileRepo.upsert(auth.admin, {
+      id: profileId,
+      email: normalizedEmail,
+      full_name: attorneyName || null,
+      user_type: "review_attorney",
+      bar_number: barNumber || null,
+      is_payroll: false,
+      managed_by_admin: partner.profile_id,
+    });
   } else {
     const { data: newUser, error: authError } = await auth.admin.auth.admin.createUser({
       email: normalizedEmail,

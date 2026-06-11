@@ -210,7 +210,7 @@ Tracking doc for checkout + fulfillment failure modes. Severity: Critical > High
 
 ---
 
-## BUG-18 — `create-review-attorney` overwrites any existing user's profile (account hijack)
+## BUG-18 — `create-review-attorney` overwrites any existing user's profile (account hijack) — ✅ FIXED
 - **Severity:** High
 - **Area:** `app/api/partners/create-review-attorney/route.ts:27-46`
 - **What:** Route only verifies the caller owns `partnerId`. It then looks up the target by email and, if a profile exists, blindly UPDATEs it: `user_type: "review_attorney"`, `managed_by_admin: <this partner>`, overwriting `full_name`/`bar_number`. No check that the target email is unclaimed, belongs to the partner, or isn't another role.
@@ -218,10 +218,12 @@ Tracking doc for checkout + fulfillment failure modes. Severity: Critical > High
 - **Repro:** As partner P, `POST /api/partners/create-review-attorney {partnerId:P, attorneyEmail:"<existing user>", attorneyName:"Hijack", barNumber:"000"}` → victim's row flips to review_attorney managed by P.
 - **Check on website:** As an attorney partner, in the "add in-house review attorney" form enter any other existing account's email → confirm in `profiles` that the target's `user_type` flips and `managed_by_admin` is set to you.
 - **Fix:** Only attach an existing profile when unclaimed or already a review attorney managed by this partner; never overwrite `user_type`/`managed_by_admin`/`full_name` on a profile the partner doesn't own.
+- **Resolution (2026-06-11):** The existing-profile branch is now guarded. `findByEmail` also returns `managed_by_admin`; the route attaches an existing profile only when it is unclaimed (`!user_type`) or already a `review_attorney` whose `managed_by_admin === partner.profile_id`. Any other existing account returns `fail("That email is already associated with another EstateVault account.", 409)` and is never overwritten. A bare auth user with no profile row now creates a fresh profile instead of silently no-op'ing. See `app/api/partners/create-review-attorney/route.ts` and `lib/repos/server/profileRepo.ts:findByEmail`.
 
 ---
 
-## BUG-19 — Cross-rep leak: any sales rep can read any partner's private notes (IDOR)
+## BUG-19 — Cross-rep leak: any sales rep can read any partner's private notes (IDOR) — ✅ FIXED
+- **Status:** ✅ FIXED (2026-06-12)
 - **Severity:** High
 - **Area:** `app/api/sales/partner-notes/route.ts:7-16` (GET)
 - **What:** GET takes `?partnerId=` and returns all `sales_partner_notes` for that partner with NO ownership scoping. The sibling `partners/[partnerId]` route correctly enforces `partner.created_by === auth.user.id` for non-admins; the notes endpoint does not.
@@ -229,10 +231,12 @@ Tracking doc for checkout + fulfillment failure modes. Severity: Critical > High
 - **Repro:** As rep A, `GET /api/sales/partner-notes?partnerId=<partner B created>` → 200 with B's notes.
 - **Check on website:** As a sales rep, on `/sales/partners` grab any partner id you don't own, then `fetch('/api/sales/partner-notes?partnerId=<other-id>')` → other rep's notes returned.
 - **Fix:** Scope the GET like `partners/[partnerId]`: for non-admin, verify `partner.created_by === auth.user.id` before returning; else 404/empty.
+- **Resolution (2026-06-12):** Added `ownsPartner(auth, partnerId)` (mirrors `loadOwned` in `sales/partners/[partnerId]/route.ts`): admin passes; non-admin rep passes only when `partnerRepo.getById(...).created_by === auth.user.id`. GET now returns empty notes and never queries the table for an unowned partner; POST returns 404 and writes nothing — both read and write IDOR closed. Test: `tests/unit/bug19-partner-notes-idor.test.ts`.
 
 ---
 
-## BUG-20 — Equal-shares math emits percentages that don't sum to 100% into the legal document
+## BUG-20 — Equal-shares math emits percentages that don't sum to 100% into the legal document — ✅ FIXED
+- **Status:** ✅ FIXED (2026-06-12)
 - **Severity:** High
 - **Area:** `lib/documents/templates/michigan-will.ts:119`; `lib/documents/templates/michigan-revocable-trust.ts:121`
 - **What:** For equal shares among >1 beneficiaries the prompt builds `Equal shares (${(100/n).toFixed(n===3?2:0)}% each)`. Only n=3 is special-cased. For other counts `100/n` rounds to 0 decimals: 6 → "17% each" (=102%), 7 → "14%" (=98%), 8 → "13%" (=104%); even n=3 "33.33%" sums to 99.99%. This wrong percentage is injected verbatim into the Claude drafting prompt.
@@ -240,6 +244,7 @@ Tracking doc for checkout + fulfillment failure modes. Severity: Critical > High
 - **Repro:** Will/Trust intake with 6 beneficiaries, equal shares → prompt contains "Equal shares (17% each)".
 - **Check on website:** Start a Will at `/will`, add 6 beneficiaries, choose "split equally" → generated will divides the residue in shares totaling 102%. Try 7 → 98%.
 - **Fix:** Don't emit a per-head percentage — say "in equal shares" and let the residuary clause divide equally; or compute exact fractions summing to 100%.
+- **Resolution (2026-06-12):** Fixed in **two locations**. (1) Claude path — both prompt builders (`michigan-will.ts`, `michigan-revocable-trust.ts`) now emit `Equal shares — divided equally among all ${beneficiaries.length} beneficiaries` (no fabricated per-head %), letting the residuary clause split evenly. (2) react-pdf path — the same defect lived in `lib/documents/intake-adapter.ts` as `Math.floor(100/count)` (undershoots: 3→99%, 6→96%); the will template `will-michigan-v1.1.0.txt` prints `{{share_percent}}% to {{full_name}}` per beneficiary, and `PDF_RENDERER=react-pdf` makes the Will package render from that template (no AI). Replaced with a largest-remainder split (`equalShareSplit`) so whole-percent shares always sum to exactly 100 (3→[34,33,33], 6→[17,17,17,17,16,16]), for both primary and contingent beneficiaries. Custom-% path untouched in both. Test: `tests/unit/bug20-equal-shares.test.ts` (29 cases). **Note:** the two paths now express equal shares differently — Claude says "divided equally", react-pdf prints integer percents summing to 100 — both legally coherent; Will → react-pdf, Trust → Claude.
 
 ---
 
@@ -254,7 +259,8 @@ Tracking doc for checkout + fulfillment failure modes. Severity: Critical > High
 
 ---
 
-## BUG-22 — Unescaped HTML email injection in professionals/request-access (unauth, stored)
+## BUG-22 — Unescaped HTML email injection in professionals/request-access (unauth, stored) — ✅ FIXED
+- **Status:** ✅ FIXED (2026-06-12)
 - **Severity:** High
 - **Area:** `app/api/professionals/request-access/route.ts:70-83, :110`; schema `lib/validation/schemas.ts:412-424`
 - **What:** `firstName`, `lastName`, `email`, `phone`, `companyName`, `professionalType`, `clientCount`, `referralSource` are interpolated RAW into two `resend.emails.send` HTML bodies with no escaping. The sibling `contact` route HTML-escapes its fields; this one doesn't. Schema has no length caps; endpoint is unauthenticated/public. Values are also stored unsanitized in `professional_leads` and re-rendered.
@@ -262,6 +268,7 @@ Tracking doc for checkout + fulfillment failure modes. Severity: Critical > High
 - **Repro:** `POST /api/professionals/request-access` with `companyName:"<img src=x onerror=alert(1)>"` → 200; both emails send unescaped.
 - **Check on website:** On `/professionals` submit the partner-access form with `<b>BOLD</b>` in company-name → the sales notification email renders it bold (not literal), confirming no escaping.
 - **Fix:** Apply the `escape()` helper from `contact/route.ts` to every interpolated field; add `.max(...)` bounds to all string fields in `professionalRequestAccessSchema`.
+- **Resolution (2026-06-12):** Exported the existing `escapeHtml` from `lib/email.ts` and applied it to every interpolated lead field in both emails (sales notification + confirmation). The `contact` route now imports the same shared helper instead of its own inline copy — killing the escape-drift that was the root cause. Added `.max()` bounds to all string fields in `professionalRequestAccessSchema` (names 100, email 200, company/referral 200, phone 40, bar 60, practice areas capped, fee bounded). Test: `tests/unit/bug22-request-access-escape.test.ts`. (Per-IP rate limiting on this public endpoint is tracked separately as BUG-57.)
 
 ---
 
@@ -277,7 +284,8 @@ Tracking doc for checkout + fulfillment failure modes. Severity: Critical > High
 
 ---
 
-## BUG-24 — Document-records insert failure is ignored; generation still queues (paid, no documents)
+## BUG-24 — Document-records insert failure is ignored; generation still queues (paid, no documents) — ✅ FIXED
+- **Status:** ✅ FIXED (2026-06-12)
 - **Severity:** High
 - **Area:** `lib/webhooks/stripe/handleDocumentCheckout.ts:287`; `lib/repos/server/documentRepo.ts:11`
 - **What:** `documentRepo.insertMany(...)` returns `{data, error}` but the result is never checked. If the bulk insert fails, the handler still queues the gen job and returns 200; the event is marked processed (no retry).
@@ -285,10 +293,12 @@ Tracking doc for checkout + fulfillment failure modes. Severity: Critical > High
 - **Repro:** Force the `documents` insert to fail during a paid checkout webhook → 200, order `generating`, zero document rows.
 - **Check on website:** In staging induce a `documents` insert failure (e.g. break the FK), pay a checkout → success page + partner payout, but the dashboard never shows documents and no error is raised.
 - **Fix:** Capture `{error}` from `insertMany`; on error mark the order `failed`, alert, and don't queue. Reconcile orders `generating` with zero document rows.
+- **Resolution (2026-06-12):** `documentRepo.insertMany(...)` result is now captured and the handler `throw`s on error instead of continuing to queue. The webhook two-phase guard (BUG-8) then marks the event failed and returns non-200, so Stripe redelivers into a clean re-run — replay-safe (existing-doc-type filter skips already-created rows; payouts idempotent per BUG-23). Stuck orders are also caught by the reconcile cron + admin alert (BUG-1/10/13). Note: independent of `PDF_RENDERER` (the blank rows are created in the webhook, upstream of the renderer). Test: `tests/unit/webhook-document-checkout.test.ts` ("BUG-24 … insert failure → throws, never queues"). Also repaired 14 stale mocks across `webhook-document-checkout`, `bug15-partner-payout-pending`, and `webhook-fulfillment-reliability` tests (missing `.single()` after Yahia's `b986d95` client-link change + the new `{error}` insert shape).
 
 ---
 
-## BUG-25 — Attorney-review fee transfer failure silently lost; no payout/fee record
+## BUG-25 — Attorney-review fee transfer failure silently lost; no payout/fee record — ✅ FIXED
+- **Status:** ✅ FIXED (2026-06-12)
 - **Severity:** High
 - **Area:** `lib/webhooks/stripe/handleAttorneyReview.ts:57-84`
 - **What:** When the fee destination is `partner_admin` with a `stripe_account_id`, it calls `stripe.transfers.create` directly; on failure it only `console.error`s. Unlike the doc/vault payout paths there's no `payouts` fallback row for the owed fee, and the Connect account's transfer capability is never checked. BUG-15 covers only the document partner cut, not this attorney-fee transfer.
@@ -296,6 +306,7 @@ Tracking doc for checkout + fulfillment failure modes. Severity: Critical > High
 - **Repro:** Attorney partner with an incomplete Connect account; client buys will/trust + attorney review → 200, attorney_review row created, no fee transfer, no payout row.
 - **Check on website:** Connect an attorney partner but stop onboarding before "transfers" is enabled; buy a Will with Attorney Review through them → Stripe logs show the transfer error, no fee record exists in the app.
 - **Fix:** Check payability (reuse `getAccountStatus`) before transferring; on failure/unpayable write a `pending` payout/fee record, mirroring `handleVaultSubscriptionCheckout`.
+- **Resolution (2026-06-12):** Mirrors the BUG-15 fix. The partner-admin fee block now gates on `getAccountStatus(acctId).transfers_active` before transferring, and a `recordPendingFee()` helper writes a `pending` payout IOU for every can't-send case — no Connect account, capability inactive, status-check throws, transfer returns null, or throws (outer catch always records pending). On success writes a `sent` payout row with `stripe_transfer_id`. Kept the BUG-4 cap (`min(fee, attorney_cut)`) + BUG-23 idempotency key (`attyfee_<orderId>`); replay-safe via the caller's `!existingReview` guard. Uses the existing `payouts` table (no migration), reconcilable by partner like the document cut. Test: `tests/unit/bug25-attorney-fee-pending.test.ts` (7 cases). Note: a partner who is both the doc partner and the in-house reviewer will have two payout rows for one order (doc cut + review fee) — both correct, distinguished by amount + audit action.
 
 ---
 

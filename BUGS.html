@@ -280,7 +280,7 @@
   </details>
 
   <details class="bug high" data-sev="high">
-    <summary><span class="badge high">High</span><span class="id">BUG-16</span>
+    <summary><span class="badge high">High</span><span class="badge" style="background:#1a7f37;color:#fff">✅ FIXED</span><span class="id">BUG-16</span>
       <span class="ttl">Attorney signup verify endpoint is unauthenticated &amp; replayable</span><span class="chev">▶</span></summary>
     <div class="body">
       <div class="row"><div class="k">In plain terms</div><div class="v">The endpoint that finishes an attorney signup takes a Stripe <code>session_id</code> (which appears right in the success URL), has no login check, and no "already processed" guard. Anyone who sees that id can re-submit it — re-creating/overwriting the partner record, resetting their fee/tier, even setting a password.</div></div>
@@ -288,6 +288,7 @@
       <div class="row"><div class="k">Impact</div><div class="v">Unauthenticated, replayable account-mutation keyed on a guessable/observable id; can undo later admin changes and reset credentials.</div></div>
       <div class="row check"><div class="k">Check on website</div><div class="v">After an attorney signup completes, reload the welcome page (or resend the verify POST in DevTools) → the partner record is re-created/overwritten each time; no guard.</div></div>
       <div class="row fix"><div class="k">Fix</div><div class="v">Make it idempotent (record processed session ids / return success without mutating if the partner already exists); don't let the request body set a password on an existing account.</div></div>
+      <div class="row fix"><div class="k">Resolution (2026-06-11)</div><div class="v">Endpoint is now idempotent (commit <code>3d7fb7f</code>). It resolves the auth user by email and never calls <code>createUser</code> for an existing account, so a replayed body-supplied password can't land; the profile is upserted by id; and the partner record is created only when none exists — a replay leaves an existing partner's admin-tuned fee/tier/status untouched. Welcome + sales emails fire only on first creation. Test: <code>tests/unit/bug16-attorney-verify-replay.test.ts</code>.</div></div>
     </div>
   </details>
 
@@ -305,19 +306,20 @@
   </details>
 
   <details class="bug high" data-sev="high">
-    <summary><span class="badge high">High</span><span class="id">BUG-18</span>
-      <span class="ttl">"Add review attorney" can hijack any existing user's account</span><span class="chev">▶</span></summary>
+    <summary><span class="badge high">High</span><span class="badge" style="background:#1a7f37;color:#fff">✅ FIXED</span><span class="id">BUG-18</span>
+      <span class="ttl">"Add review attorney" can hijack any existing user's account — ✅ FIXED</span><span class="chev">▶</span></summary>
     <div class="body">
       <div class="row"><div class="k">In plain terms</div><div class="v">A partner can enter any existing account's email into the "add in-house review attorney" form, and the system converts that account into a review-attorney managed by the partner — overwriting their name and role. Works on other partners, clients, even staff.</div></div>
       <div class="row"><div class="k">Where</div><div class="v"><code>app/api/partners/create-review-attorney/route.ts:27-46</code></div></div>
       <div class="row"><div class="k">Impact</div><div class="v">Role tampering + profile corruption of accounts the partner has no relationship with.</div></div>
-      <div class="row check"><div class="k">Check on website</div><div class="v">As an attorney partner, in the add-review-attorney form enter any other existing account's email → in Supabase <code>profiles</code> the target's <code>user_type</code> flips to <code>review_attorney</code> and <code>managed_by_admin</code> is set to you.</div></div>
+      <div class="row check"><div class="k">Check on website</div><div class="v">On <code>pro.estatevault.com</code> as an <b>attorney</b> partner, onboarding <b>Step 3 ("Your Pricing")</b> → <b>"In-House Attorney Review"</b> card → <b>"Yes, we have an estate attorney"</b> → <b>Email Address</b> field → enter another existing account's email → Continue. (<code>app/pro/onboarding/step-3/page.tsx:53</code> calls <code>createReviewAttorney</code>.) After the fix the request now returns <code>409</code> and the target <code>profiles</code> row is untouched.</div></div>
       <div class="row fix"><div class="k">Fix</div><div class="v">Only attach an existing profile if it's unclaimed or already this partner's review attorney; never overwrite role/name/manager on a profile the partner doesn't own.</div></div>
+      <div class="row fix"><div class="k">Resolution (2026-06-11)</div><div class="v">The existing-profile branch is now guarded. <code>findByEmail</code> also returns <code>managed_by_admin</code>; the route attaches an existing profile only when it is unclaimed (<code>!user_type</code>) or already a <code>review_attorney</code> with <code>managed_by_admin === partner.profile_id</code>. Any other existing account returns <code>fail("That email is already associated with another EstateVault account.", 409)</code> and is never overwritten. A bare auth user with no profile row now creates a fresh profile instead of silently no-op'ing. See <code>app/api/partners/create-review-attorney/route.ts</code> and <code>lib/repos/server/profileRepo.ts</code> (<code>findByEmail</code>). Typecheck + lint pass.</div></div>
     </div>
   </details>
 
   <details class="bug high" data-sev="high">
-    <summary><span class="badge high">High</span><span class="id">BUG-19</span>
+    <summary><span class="badge high">High</span><span class="badge" style="background:#1a7f37;color:#fff">✅ FIXED</span><span class="id">BUG-19</span>
       <span class="ttl">Any sales rep can read any other rep's private partner notes</span><span class="chev">▶</span></summary>
     <div class="body">
       <div class="row"><div class="k">In plain terms</div><div class="v">The notes endpoint returns a partner's private internal notes to any sales rep who passes the partner's id — it never checks the rep owns that partner. Reps can read each other's confidential deal notes.</div></div>
@@ -325,11 +327,12 @@
       <div class="row"><div class="k">Impact</div><div class="v">Confidentiality breach across the sales team — pricing posture, objections, internal warnings.</div></div>
       <div class="row check"><div class="k">Check on website</div><div class="v">As a sales rep, grab a partner id you don't own from <code>/sales/partners</code>, then in the console <code>fetch('/api/sales/partner-notes?partnerId=&lt;other-id&gt;')</code> → the other rep's notes come back.</div></div>
       <div class="row fix"><div class="k">Fix</div><div class="v">Scope the GET like <code>partners/[partnerId]</code>: verify <code>partner.created_by === auth.user.id</code> for non-admins.</div></div>
+      <div class="row fix"><div class="k">Resolution (2026-06-12)</div><div class="v">Added an <code>ownsPartner(auth, partnerId)</code> guard (mirrors <code>loadOwned</code> in <code>sales/partners/[partnerId]/route.ts</code>): admins pass; a non-admin rep passes only when <code>partnerRepo.getById(...).created_by === auth.user.id</code>. <b>GET</b> now returns empty notes (and never queries the table) for a partner the rep doesn't own; <b>POST</b> returns 404 and writes nothing — closing both the read and write IDOR. Test: <code>tests/unit/bug19-partner-notes-idor.test.ts</code> (5 cases: owner/non-owner/admin × read, owner/non-owner × write).</div></div>
     </div>
   </details>
 
   <details class="bug high" data-sev="high">
-    <summary><span class="badge high">High</span><span class="id">BUG-20</span>
+    <summary><span class="badge high">High</span><span class="badge" style="background:#1a7f37;color:#fff">✅ FIXED</span><span class="id">BUG-20</span>
       <span class="ttl">Equal-shares math produces percentages that don't add to 100%</span><span class="chev">▶</span></summary>
     <div class="body">
       <div class="row"><div class="k">In plain terms</div><div class="v">When an estate is split equally among beneficiaries, the document rounds the percentages wrong: 6 people → "17% each" (=102%), 7 → "14%" (=98%). The legally-incoherent number is fed straight into the AI that drafts the will/trust.</div></div>
@@ -337,6 +340,7 @@
       <div class="row"><div class="k">Impact</div><div class="v">Paid ($400/$600) document can over- or under-distribute the estate. Same class as BUG-29, different defect.</div></div>
       <div class="row check"><div class="k">Check on website</div><div class="v">Start a Will at <code>/will</code>, add 6 beneficiaries, choose "split equally" → the generated will divides the residue in shares totaling 102%. Try 7 → 98%.</div></div>
       <div class="row fix"><div class="k">Fix</div><div class="v">Say "in equal shares" instead of a per-head percentage, or compute exact fractions that sum to 100%.</div></div>
+      <div class="row fix"><div class="k">Resolution (2026-06-12)</div><div class="v"><b>Two locations.</b> (1) <b>Claude path</b> — both prompt builders (<code>michigan-will.ts</code>, <code>michigan-revocable-trust.ts</code>) now emit <code>Equal shares — divided equally among all N beneficiaries</code> (no fabricated per-head %), letting the residuary clause split evenly. (2) <b>react-pdf path</b> — the same defect lived in <code>lib/documents/intake-adapter.ts</code> as <code>Math.floor(100/count)</code>, which <b>undershoots</b> (3→99%, 6→96%); the will template (<code>will-michigan-v1.1.0.txt</code>) prints <code>{{share_percent}}% to {{full_name}}</code> per beneficiary. Since <code>PDF_RENDERER=react-pdf</code> makes the Will package render from this template (no AI), this path mattered. Replaced with a largest-remainder split (<code>equalShareSplit</code>) so whole-percent shares always sum to exactly 100 (3→[34,33,33], 6→[17,17,17,17,16,16]), for both primary and contingent beneficiaries. Custom-% path untouched in both. Test: <code>tests/unit/bug20-equal-shares.test.ts</code> (29 cases: Claude will+trust no "NN% each"; adapter primary+contingent n=1..11 sum to 100; custom-% + single-beneficiary regressions).</div></div>
     </div>
   </details>
 
@@ -353,7 +357,7 @@
   </details>
 
   <details class="bug high" data-sev="high">
-    <summary><span class="badge high">High</span><span class="id">BUG-22</span>
+    <summary><span class="badge high">High</span><span class="badge" style="background:#1a7f37;color:#fff">✅ FIXED</span><span class="id">BUG-22</span>
       <span class="ttl">Unescaped HTML in partner-access emails (injection against staff)</span><span class="chev">▶</span></summary>
     <div class="body">
       <div class="row"><div class="k">In plain terms</div><div class="v">The public "request partner access" form drops whatever you type straight into the emails sent to the sales team — no escaping, no length limit. Someone can submit HTML/links (or an image payload) that renders in staff inboxes, and the same unsanitized text is stored and re-shown.</div></div>
@@ -361,6 +365,7 @@
       <div class="row"><div class="k">Impact</div><div class="v">HTML-injection / phishing against staff; stored content re-renders elsewhere; oversized-payload spam.</div></div>
       <div class="row check"><div class="k">Check on website</div><div class="v">On <code>/professionals</code> submit the form with <code>&lt;b&gt;BOLD&lt;/b&gt;</code> in the company-name field → the sales notification email renders it bold (not literal), confirming no escaping.</div></div>
       <div class="row fix"><div class="k">Fix</div><div class="v">Escape every interpolated field (reuse the contact route's helper); add max-length bounds to all string fields.</div></div>
+      <div class="row fix"><div class="k">Resolution (2026-06-12)</div><div class="v">The private <code>escapeHtml</code> in <code>lib/email.ts</code> is now exported and applied to every interpolated lead field (name, email, phone, company, type, client count, referral) in both the sales-notification and confirmation emails. The <code>contact</code> route now imports the same shared helper instead of its own inline copy — removing the "one route escapes, the other doesn't" drift that was the root cause. All string fields in <code>professionalRequestAccessSchema</code> got <code>.max()</code> bounds (names 100, email 200, company/referral 200, phone 40, bar 60, practice areas capped, fee bounded). Test: <code>tests/unit/bug22-request-access-escape.test.ts</code> (payloads in companyName/firstName render escaped; oversized field → 400, nothing sent).</div></div>
     </div>
   </details>
 
@@ -378,7 +383,7 @@
   </details>
 
   <details class="bug high" data-sev="high">
-    <summary><span class="badge high">High</span><span class="id">BUG-24</span>
+    <summary><span class="badge high">High</span><span class="badge" style="background:#1a7f37;color:#fff">✅ FIXED</span><span class="id">BUG-24</span>
       <span class="ttl">Document-records insert failure ignored (paid, no documents)</span><span class="chev">▶</span></summary>
     <div class="body">
       <div class="row"><div class="k">In plain terms</div><div class="v">If saving the document rows fails, the code doesn't notice — it still queues generation and reports success. The order is "generating" with no documents to generate, the partner's already paid, and nobody is alerted. (Different failure point than BUG-13 and BUG-10.)</div></div>
@@ -386,11 +391,12 @@
       <div class="row"><div class="k">Impact</div><div class="v">Paid order stuck with zero document rows; silent.</div></div>
       <div class="row check"><div class="k">Check on website</div><div class="v">In staging induce a documents-insert failure (e.g. break the FK), pay a checkout → success page + partner payout, but the dashboard never shows documents and no error appears.</div></div>
       <div class="row fix"><div class="k">Fix</div><div class="v">Check the insert error; on failure mark the order failed, alert, don't queue. Reconcile generating orders with no document rows.</div></div>
+      <div class="row fix"><div class="k">Resolution (2026-06-12)</div><div class="v">The <code>documentRepo.insertMany(...)</code> result is now captured and, on error, the handler <code>throw</code>s instead of continuing. The webhook's two-phase guard (BUG-8) then marks the event failed and returns non-200, so Stripe redelivers into a clean re-run — replay-safe because the existing-doc-type filter skips already-created rows and partner/affiliate payouts are idempotent (BUG-23). A genuinely stuck order is also caught by the reconcile cron + admin alert (BUG-1/10/13). Test: <code>tests/unit/webhook-document-checkout.test.ts</code> ("BUG-24 … insert failure → throws, never queues"). Also repaired 14 stale mocks in <code>webhook-document-checkout</code> / <code>bug15-partner-payout-pending</code> / <code>webhook-fulfillment-reliability</code> tests (missing <code>.single()</code> after Yahia's client-link change, plus the new <code>{error}</code> insert shape).</div></div>
     </div>
   </details>
 
   <details class="bug high" data-sev="high">
-    <summary><span class="badge high">High</span><span class="id">BUG-25</span>
+    <summary><span class="badge high">High</span><span class="badge" style="background:#1a7f37;color:#fff">✅ FIXED</span><span class="id">BUG-25</span>
       <span class="ttl">Attorney-review fee transfer failure silently lost</span><span class="chev">▶</span></summary>
     <div class="body">
       <div class="row"><div class="k">In plain terms</div><div class="v">When the $300 review fee should go to an attorney partner but the transfer fails (e.g. their Stripe isn't fully set up), the error is just logged — no "owed" record is written. The money is never sent and there's no trace to reconcile. (BUG-15 covered the regular partner cut, not this fee.)</div></div>
@@ -398,6 +404,7 @@
       <div class="row"><div class="k">Impact</div><div class="v">Client charged for review; the reviewer's fee vanishes with only a log line.</div></div>
       <div class="row check"><div class="k">Check on website</div><div class="v">Connect an attorney partner but stop onboarding before "transfers" is enabled; buy a Will with Attorney Review through them → Stripe logs show the transfer error, no fee record exists in the app.</div></div>
       <div class="row fix"><div class="k">Fix</div><div class="v">Check payability before transferring; on failure write a pending fee/payout record so it's reconcilable.</div></div>
+      <div class="row fix"><div class="k">Resolution (2026-06-12)</div><div class="v">Mirrors the BUG-15 fix. The partner-admin fee block now checks <code>getAccountStatus(acctId).transfers_active</code> before transferring, and a <code>recordPendingFee()</code> helper writes a <code>pending</code> payout IOU for <b>every</b> can't-send case — no Connect account, capability inactive, status check throws, transfer returns null, or transfer throws (the outer catch always records pending). On success it writes a <code>sent</code> payout row with the <code>stripe_transfer_id</code>. Kept the BUG-4 cap (<code>min(fee, attorney_cut)</code>) and the BUG-23 idempotency key (<code>attyfee_&lt;orderId&gt;</code>); replay-safe via the caller's <code>!existingReview</code> guard. Uses the existing <code>payouts</code> table (no migration), reconcilable by partner like the document cut. Test: <code>tests/unit/bug25-attorney-fee-pending.test.ts</code> (7 cases: inactive capability, status throw, no account, transfer throw, payable → sent, zero-collected no-op, platform-kept no payout).</div></div>
     </div>
   </details>
 
@@ -432,6 +439,7 @@
       <div class="row"><div class="k">Impact</div><div class="v">Garbage or malicious intake reaches the database and the AI prompt; documents built from invalid data.</div></div>
       <div class="row check"><div class="k">Check on website</div><div class="v">DevTools → Network → resend a checkout POST with an empty/garbage <code>intakeAnswers</code> → order + document still created.</div></div>
       <div class="row fix"><div class="k">Fix</div><div class="v">Tighten the schema: require ≥1 beneficiary + executor, relationship enums, numeric <code>share</code> 0–100 with a server-side 100% sum check, max lengths on free text. Re-validate before generating.</div></div>
+      <div class="row fix"><div class="k">Update (partial)</div><div class="v"><b>Mostly addressed.</b> <code>.passthrough()</code>/<code>intakeAnswersSchema</code> is gone — checkout now uses fully-typed <code>willIntakeSchema</code>/<code>trustIntakeSchema</code> with required, bounded fields (beneficiaries <code>.min(1).max(20)</code>, required executor, max-length free text). <b>Still open:</b> the "shares total 100%" rule is browser-only — there is no server-side share-sum validation (<code>share</code> is <code>z.string().max(10)</code>, no <code>superRefine</code>).</div></div>
     </div>
   </details>
 
@@ -456,6 +464,7 @@
       <div class="row"><div class="k">Impact</div><div class="v">Free real-document generation if the flag is left active; origin allowlist bypassable when headers are absent.</div></div>
       <div class="row check"><div class="k">Check on website</div><div class="v">Only reproducible if <code>test_promo_code</code> is on — enter <code>TEST</code> at checkout and confirm documents generate with no payment. Verify the flag is forced <b>off</b> in production.</div></div>
       <div class="row fix"><div class="k">Fix</div><div class="v">Treat empty/unknown origin as untrusted; scope the rate limit per IP/email; ensure prod has the flag off; emit watermarked output for test orders.</div></div>
+      <div class="row fix"><div class="k">Update (partial)</div><div class="v"><b>Partially addressed.</b> The partner-URL and non-estatevault-domain rejections work. <b>Still open:</b> an empty <code>Origin</code>/<code>Referer</code>/<code>Host</code> still passes the allowlist (the <code>origin !== ""</code> guard skips rejection when <code>origin === ""</code>), and the rate limit is still global-only (50/hr across all callers), not scoped per IP/email.</div></div>
     </div>
   </details>
 
@@ -553,6 +562,7 @@
       <div class="row"><div class="k">Impact</div><div class="v">Targeted OTP guessing; chains with BUG-40 into account takeover.</div></div>
       <div class="row check"><div class="k">Check on website</div><div class="v">In DevTools repeatedly POST wrong codes to <code>/api/auth/verify-code</code>, re-requesting a code every 5 failures — guessing continues indefinitely.</div></div>
       <div class="row fix"><div class="k">Fix</div><div class="v">Rate-limit verify-code per email + IP; cap fresh-code resends (mirror the trustee OTP cap).</div></div>
+      <div class="row fix"><div class="k">Update (partial)</div><div class="v"><b>Partially addressed.</b> <code>send-verify-code</code> is now rate-limited (<code>authRateLimit</code>, 5/min/email — <code>lib/rate-limit.ts</code>), capping fresh-code issuance. <b>Still open:</b> <code>verify-code</code> itself has no per-email/IP limiter, and <code>storeCode</code> still resets the attempt counter to 0 on each resend, so guessing across resends remains possible.</div></div>
     </div>
   </details>
 
@@ -701,7 +711,7 @@
   </details>
 
   <details class="bug med" data-sev="med">
-    <summary><span class="badge med">Medium</span><span class="id">BUG-51</span>
+    <summary><span class="badge med">Medium</span><span class="badge" style="background:#1a7f37;color:#fff">✅ FIXED</span><span class="id">BUG-51</span>
       <span class="ttl">Trust can silently drop a named successor trustee</span><span class="chev">▶</span></summary>
     <div class="body">
       <div class="row"><div class="k">In plain terms</div><div class="v">If a client names both a "second successor trustee" and a list of additional trustees, the document-building logic skips one of the named people — leaving a named fiduciary out of the trust entirely.</div></div>
@@ -709,6 +719,7 @@
       <div class="row"><div class="k">Impact</div><div class="v">A missing fiduciary in a legal document.</div></div>
       <div class="row check"><div class="k">Check on website</div><div class="v">Hard via the standard UI; reachable via direct API since intake is unvalidated (BUG-28). Supply both <code>secondSuccessorTrusteeName</code> and a 2-item additional list → the first additional name is dropped.</div></div>
       <div class="row fix"><div class="k">Fix</div><div class="v">Only seed the second successor from the array when no explicit value exists, and slice accordingly; otherwise render the full array.</div></div>
+      <div class="row fix"><div class="k">Resolution</div><div class="v">Fixed for the current intake flow. Intake supplies only <code>additionalSuccessorTrustees</code> (no legacy <code>secondSuccessorTrusteeName</code>), so <code>second_successor_trustee</code> resolves via the array fallback to <code>additional[0]</code> and the remaining <code>.slice(1)</code> renders with coherent <code>idx+3</code> numbering — no trustee dropped. (Latent only if a legacy <code>second_successor_trustee</code> key were supplied alongside the array, which current intake never produces.)</div></div>
     </div>
   </details>
 

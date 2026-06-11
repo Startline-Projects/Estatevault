@@ -566,17 +566,17 @@ export const emailPartnerActivatedSchema = z.object({
 });
 
 export const professionalRequestAccessSchema = z.object({
-  firstName: z.string().min(1),
-  lastName: z.string().min(1),
-  email: z.string().email(),
-  professionalType: z.string().min(1),
-  phone: z.string().optional(),
-  companyName: z.string().optional(),
-  clientCount: z.union([z.string(), z.number()]).optional(),
-  referralSource: z.string().optional(),
-  bar_number: z.string().optional(),
-  practice_areas: z.union([z.string(), z.array(z.string())]).optional(),
-  desired_review_fee: z.number().optional(),
+  firstName: z.string().min(1).max(100),
+  lastName: z.string().min(1).max(100),
+  email: z.string().email().max(200),
+  professionalType: z.string().min(1).max(100),
+  phone: z.string().max(40).optional(),
+  companyName: z.string().max(200).optional(),
+  clientCount: z.union([z.string().max(40), z.number()]).optional(),
+  referralSource: z.string().max(200).optional(),
+  bar_number: z.string().max(60).optional(),
+  practice_areas: z.union([z.string().max(500), z.array(z.string().max(100)).max(50)]).optional(),
+  desired_review_fee: z.number().nonnegative().max(1_000_000).optional(),
 });
 
 export const quizPersonalizeSchema = z.object({

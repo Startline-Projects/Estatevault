@@ -1,7 +1,9 @@
 import { stripe } from "@/lib/stripe";
+import { getAccountStatus } from "@/lib/stripe-payouts";
 import { getPlatformDefaultReviewFee } from "@/lib/attorney-review/fee";
 import * as partnerRepo from "@/lib/repos/server/partnerRepo";
 import * as orderRepo from "@/lib/repos/server/orderRepo";
+import * as payoutRepo from "@/lib/repos/server/payoutRepo";
 import * as profileRepo from "@/lib/repos/server/profileRepo";
 import * as attorneyReviewRepo from "@/lib/repos/server/attorneyReviewRepo";
 import * as auditLogRepo from "@/lib/repos/server/auditLogRepo";
@@ -58,7 +60,11 @@ export async function handleAttorneyReview(
     sla_deadline: slaDeadline.toISOString(),
   });
 
-  if (routing.feeDestination === "partner_admin" && partnerForRouting?.stripe_account_id) {
+  // The attorney-review fee is owed to a partner only when it routes to a
+  // partner-admin reviewer. (Other destinations keep the fee with the platform
+  // and need no transfer/payout row.)
+  if (routing.feeDestination === "partner_admin" && routing.partnerId) {
+    const feePartnerId = routing.partnerId;
     // Hard guard (BUG-4): never transfer more than the client actually paid for
     // the attorney review on this order, even if routing data is stale.
     const { data: orderRow } = await orderRepo.getAttorneyCut(supabase, orderId);
@@ -70,36 +76,95 @@ export async function handleAttorneyReview(
       );
       return;
     }
-    try {
-      const transfer = await stripe.transfers.create(
-        {
-          amount: transferAmount,
-          currency: "usd",
-          destination: partnerForRouting.stripe_account_id,
-          transfer_group: orderId,
-          metadata: {
-            type: "attorney_review_fee",
-            order_id: orderId,
-            reviewer_type: routing.reviewerType,
-          },
-        },
-        // BUG-23: idempotency key so a replay never double-transfers the fee,
-        // even if it slips past the attorney_reviews(order_id) insert guard.
-        { idempotencyKey: `attyfee_${orderId}` },
-      );
+
+    // BUG-25: never let the owed fee silently vanish. Whenever we cannot send
+    // right now (no Connect account, transfers capability inactive, status
+    // check throws, transfer returns null, or it throws), write a `pending`
+    // payout IOU so reconciliation can recover it — mirroring the BUG-15 fix
+    // for the document partner cut. Guarded so we never double-write.
+    let feeRecorded = false;
+    const recordPendingFee = async () => {
+      if (feeRecorded) return;
+      await payoutRepo.insertPartnerPayout(supabase, {
+        partner_id: feePartnerId,
+        amount: transferAmount,
+        status: "pending",
+        orders_included: [orderId],
+      });
+      feeRecorded = true;
       await auditLogRepo.insertEntry(supabase, {
-        action: "attorney_review.fee_transferred",
+        action: "attorney_review.fee_pending",
         resource_type: "attorney_review",
         resource_id: orderId,
-        metadata: {
-          destination: "partner_admin",
-          amount: transferAmount,
-          transfer_id: transfer.id,
-          partner_id: routing.partnerId,
-        },
+        metadata: { destination: "partner_admin", amount: transferAmount, partner_id: feePartnerId },
       });
+    };
+
+    try {
+      const acctId = partnerForRouting?.stripe_account_id;
+      // A Connect account can only RECEIVE a transfer once `transfers` is active;
+      // details_submitted/payouts_enabled can be true while it is still pending.
+      let transfersActive = false;
+      if (acctId) {
+        try {
+          transfersActive = (await getAccountStatus(acctId)).transfers_active;
+        } catch (statusError) {
+          console.error("Connect account status check failed:", statusError);
+        }
+      }
+
+      if (!acctId || !transfersActive) {
+        await recordPendingFee();
+      } else {
+        const transfer = await stripe.transfers.create(
+          {
+            amount: transferAmount,
+            currency: "usd",
+            destination: acctId,
+            transfer_group: orderId,
+            metadata: {
+              type: "attorney_review_fee",
+              order_id: orderId,
+              reviewer_type: routing.reviewerType,
+            },
+          },
+          // BUG-23: idempotency key so a replay never double-transfers the fee,
+          // even if it slips past the attorney_reviews(order_id) insert guard.
+          { idempotencyKey: `attyfee_${orderId}` },
+        );
+
+        if (transfer) {
+          await payoutRepo.insertPartnerPayout(supabase, {
+            partner_id: feePartnerId,
+            amount: transferAmount,
+            status: "sent",
+            stripe_transfer_id: transfer.id,
+            orders_included: [orderId],
+          });
+          feeRecorded = true;
+          await auditLogRepo.insertEntry(supabase, {
+            action: "attorney_review.fee_transferred",
+            resource_type: "attorney_review",
+            resource_id: orderId,
+            metadata: {
+              destination: "partner_admin",
+              amount: transferAmount,
+              transfer_id: transfer.id,
+              partner_id: feePartnerId,
+            },
+          });
+        } else {
+          await recordPendingFee();
+        }
+      }
     } catch (transferErr) {
       console.error("Attorney review fee transfer failed:", transferErr);
+      // Never drop the owed fee on error — leave a reconcilable IOU (BUG-25).
+      try {
+        await recordPendingFee();
+      } catch (pendingError) {
+        console.error("Failed to record pending attorney-review fee:", pendingError);
+      }
     }
   }
 }

@@ -118,7 +118,7 @@ BENEFICIARY DESIGNATIONS:`;
     if (beneficiaries.length > 1) {
       prompt += beneficiariesEqualShares === "No"
         ? `\n- Estate Distribution: Custom percentages (see above)`
-        : `\n- Estate Distribution: Equal shares (${(100 / beneficiaries.length).toFixed(beneficiaries.length === 3 ? 2 : 0)}% each)`;
+        : `\n- Estate Distribution: Equal shares — divided equally among all ${beneficiaries.length} beneficiaries`;
     } else {
       prompt += `\n- Estate Distribution: 100% to ${primary_beneficiary}`;
     }

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getResend } from "@/lib/email";
+import { getResend, escapeHtml } from "@/lib/email";
 import { contactSchema } from "@/lib/validation/schemas";
 
 const resend = getResend();
@@ -11,8 +11,7 @@ export async function POST(req: NextRequest) {
     if (!parsed.success) return NextResponse.json({ error: "invalid payload" }, { status: 400 });
     const { name, email, message } = parsed.data;
 
-    const escape = (s: string) =>
-      s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    const escape = escapeHtml;
 
     await resend.emails.send({
       from: "EstateVault <info@estatevault.us>",

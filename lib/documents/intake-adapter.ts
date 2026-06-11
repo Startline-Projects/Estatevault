@@ -132,19 +132,27 @@ function str(v: unknown): string {
   return String(v);
 }
 
+// BUG-20: equal shares as whole percentages that ALWAYS sum to exactly 100.
+// `Math.floor(100/count)` per head undershoots (3→99%, 6→96%), producing a
+// legally incoherent residuary. Largest-remainder distributes the leftover
+// 1% units to the first beneficiaries: 3→[34,33,33], 6→[17,17,17,17,16,16].
+function equalShareSplit(count: number): string[] {
+  if (count <= 0) return [];
+  const base = Math.floor(100 / count);
+  const remainder = 100 - base * count;
+  return Array.from({ length: count }, (_, i) => String(base + (i < remainder ? 1 : 0)));
+}
+
 function mapBeneficiariesToPrimary(
   bens: unknown,
   equalShares: unknown,
 ): Array<{ full_name: string; relationship: string; share_percent: string; per_stirpes: boolean }> {
   if (!Array.isArray(bens)) return [];
-  const count = bens.length;
-  const equal = yesNo(equalShares);
-  return bens.map((b) => ({
+  const equalSplit = yesNo(equalShares) ? equalShareSplit(bens.length) : null;
+  return bens.map((b, i) => ({
     full_name: str(b?.name || b?.full_name),
     relationship: str(b?.relationship),
-    share_percent: equal && count > 0
-      ? String(Math.floor(100 / count))
-      : str(b?.share || b?.share_percent),
+    share_percent: equalSplit ? equalSplit[i] : str(b?.share || b?.share_percent),
     per_stirpes: yesNo(b?.per_stirpes),
   }));
 }
@@ -154,14 +162,11 @@ function mapBeneficiariesToContingent(
   equalShares: unknown,
 ): Array<{ full_name: string; relationship: string; share_percent: string }> {
   if (!Array.isArray(bens)) return [];
-  const count = bens.length;
-  const equal = yesNo(equalShares);
-  return bens.map((b) => ({
+  const equalSplit = yesNo(equalShares) ? equalShareSplit(bens.length) : null;
+  return bens.map((b, i) => ({
     full_name: str(b?.name || b?.full_name),
     relationship: str(b?.relationship),
-    share_percent: equal && count > 0
-      ? String(Math.floor(100 / count))
-      : str(b?.share || b?.share_percent),
+    share_percent: equalSplit ? equalSplit[i] : str(b?.share || b?.share_percent),
   }));
 }
 

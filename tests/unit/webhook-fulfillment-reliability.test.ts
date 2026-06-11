@@ -113,6 +113,9 @@ beforeEach(() => {
   vi.clearAllMocks();
   h.getLatestAnswers.mockResolvedValue({ data: { id: "quiz_1", answers: { a: 1 } } });
   h.transferToPartner.mockResolvedValue({ id: "tr_1" });
+  // BUG-24: handler now checks the insert result — resolve a {error} shape so
+  // the document-records insert succeeds by default.
+  h.insertMany.mockResolvedValue({ error: null });
 });
 
 describe("BUG-13 — queue is best-effort, not fatal", () => {
