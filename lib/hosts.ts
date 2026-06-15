@@ -4,11 +4,13 @@ const clientHost = process.env.NEXT_PUBLIC_CLIENT_HOST || "localhost:3000";
 const partnerHost = process.env.NEXT_PUBLIC_PARTNER_HOST || "localhost:3000";
 const adminHost = process.env.NEXT_PUBLIC_ADMIN_HOST || "localhost:3000";
 const salesHost = process.env.NEXT_PUBLIC_SALES_HOST || "localhost:3000";
+const attorneyHost = process.env.NEXT_PUBLIC_ATTORNEY_HOST || "localhost:3000";
 
 export const clientUrl = (path = "/") => `${proto}://${clientHost}${path}`;
 export const partnerUrl = (path = "/") => `${proto}://${partnerHost}${path}`;
 export const adminUrl = (path = "/") => `${proto}://${adminHost}${path}`;
 export const salesUrl = (path = "/") => `${proto}://${salesHost}${path}`;
+export const attorneyUrl = (path = "/") => `${proto}://${attorneyHost}${path}`;
 
 export function isPartnerHost(host: string | null | undefined): boolean {
   if (!host) return false;
@@ -28,11 +30,17 @@ export function isSalesHost(host: string | null | undefined): boolean {
   return host.startsWith("sales.");
 }
 
+export function isAttorneyHost(host: string | null | undefined): boolean {
+  if (!host) return false;
+  if (host === attorneyHost) return true;
+  return host.startsWith("attorney.");
+}
+
 export function isClientHost(host: string | null | undefined): boolean {
   if (!host) return false;
   if (host === clientHost) return true;
   if (host.startsWith("app.")) return true;
-  if (host.startsWith("admin.") || host.startsWith("pro.") || host.startsWith("sales.")) return false;
+  if (host.startsWith("admin.") || host.startsWith("pro.") || host.startsWith("sales.") || host.startsWith("attorney.")) return false;
   if (host === "localhost:3000" || host.startsWith("localhost")) return true;
   return false;
 }

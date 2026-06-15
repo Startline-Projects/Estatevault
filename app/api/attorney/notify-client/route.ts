@@ -8,7 +8,7 @@ import * as attorneyReviewRepo from "@/lib/repos/server/attorneyReviewRepo";
 import { attorneyNotifyClientSchema } from "@/lib/validation/schemas";
 
 export const POST = withRoute(async (req: NextRequest) => {
-  const auth = await requireAuth(["review_attorney", "admin"]);
+  const auth = await requireAuth(["review_attorney"]);
   if ("error" in auth) return auth.error;
 
   const rawBody = await req.json();

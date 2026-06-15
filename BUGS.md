@@ -606,7 +606,8 @@ Tracking doc for checkout + fulfillment failure modes. Severity: Critical > High
 
 ---
 
-## BUG-53 — Attorney `approve` is not idempotent and doesn't require a reviewed document
+## BUG-53 — Attorney `approve` is not idempotent and doesn't require a reviewed document ✅ FIXED
+- **Status:** ✅ FIXED (2026-06-15)
 - **Severity:** Medium
 - **Area:** `app/api/attorney/approve/route.ts:30-51`; `attorneyReviewRepo.updateDecision`
 - **What:** `approve` never checks current status before acting — `updateDecision` overwrites unconditionally. A review can be approved repeatedly (re-stamps `reviewed_at`, re-runs the order/documents `delivered` update, re-sends the delivery email, writes another audit row). Separately, approval performs no check that a reviewed document exists (`documents.reviewed_path` may be null).
@@ -614,6 +615,7 @@ Tracking doc for checkout + fulfillment failure modes. Severity: Critical > High
 - **Repro:** `POST /api/attorney/approve {reviewId, decision:"approved"}` twice → second still 200, order re-delivered, second email sent. Or approve a review whose documents have no `reviewed_path` → order delivered anyway.
 - **Check on website:** Open an assigned review, click Approve without uploading a reviewed document → client is unlocked/emailed. Click Approve again → another delivery email.
 - **Fix:** Reject (409) if already in a terminal decision; for approvals require at least one document with a non-null `reviewed_path` before unlocking.
+- **Resolution:** `app/api/attorney/approve/route.ts` now guards before any write. (1) Idempotency: if `review.status` is already terminal (`approved`/`approved_with_notes`/`flagged`) the route returns 409 before `updateDecision` — no repeat `delivered` update, no duplicate delivery email, no re-stamped audit row. (2) Deliverable gate: for `approved`/`approved_with_notes` it counts `documents` rows on the order with a non-null `reviewed_path` (`head:true` count query) and returns 400 when none exist, so the paid $300 review can't be marked delivered with no reviewed artifact. Both checks run **before** `updateDecision`, so a failed gate leaves the review in its prior state (no stuck terminal-but-undelivered). Note: simultaneous double-approve still theoretically possible (both pass the status read before either writes); single-attorney flow = low risk, conditional-update hardening deferred.
 
 ---
 

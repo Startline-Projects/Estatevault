@@ -754,26 +754,28 @@
   </details>
 
   <details class="bug med" data-sev="med">
-    <summary><span class="badge med">Medium</span><span class="id">BUG-53</span>
-      <span class="ttl">Attorney approve is repeatable &amp; needs no reviewed document</span><span class="chev">▶</span></summary>
+    <summary><span class="badge med">Medium</span><span class="badge" style="background:#1a7f37;color:#fff">✅ FIXED</span><span class="id">BUG-53</span>
+      <span class="ttl">Attorney approve is repeatable &amp; needs no reviewed document ✅ FIXED</span><span class="chev">▶</span></summary>
     <div class="body">
       <div class="row"><div class="k">In plain terms</div><div class="v">Approving a review can be done over and over (re-sending the "documents delivered" email each time), and can be done even when no reviewed document was ever uploaded — so the paid $300 review can be "delivered" with nothing to show for it.</div></div>
       <div class="row"><div class="k">Where</div><div class="v"><code>app/api/attorney/approve/route.ts:30-51</code></div></div>
       <div class="row"><div class="k">Impact</div><div class="v">Duplicate client emails; paid review marked complete with no deliverable.</div></div>
       <div class="row check"><div class="k">Check on website</div><div class="v">Open an assigned review, click Approve without uploading a reviewed document → client unlocked/emailed. Click Approve again → another delivery email.</div></div>
       <div class="row fix"><div class="k">Fix</div><div class="v">Reject if already in a terminal state; require at least one document with a reviewed file before unlocking.</div></div>
+      <div class="row fix"><div class="k">Resolution (2026-06-15)</div><div class="v"><code>app/api/attorney/approve/route.ts</code> guards before any write. (1) <b>Idempotency:</b> if <code>review.status</code> is already terminal (<code>approved</code>/<code>approved_with_notes</code>/<code>flagged</code>) the route returns <code>409</code> before <code>updateDecision</code> — no repeat <code>delivered</code> update, no duplicate delivery email, no extra audit row. (2) <b>Deliverable gate:</b> for approvals it counts <code>documents</code> rows on the order with a non-null <code>reviewed_path</code> and returns <code>400</code> when none exist, so the paid $300 review can't be delivered with no reviewed artifact. Both checks run <b>before</b> <code>updateDecision</code> → a failed gate leaves the review unchanged (no stuck terminal-but-undelivered state). Concurrent double-approve hardening (conditional update) deferred — low risk in the single-attorney flow.</div></div>
     </div>
   </details>
 
-  <details class="bug med" data-sev="med">
-    <summary><span class="badge med">Medium</span><span class="id">BUG-54</span>
-      <span class="ttl">Attorney-review role permissions inconsistent across routes</span><span class="chev">▶</span></summary>
+  <details class="bug med" open data-sev="med">
+    <summary><span class="badge med">Medium</span><span class="badge" style="background:#1a7f37;color:#fff">✅ FIXED</span><span class="id">BUG-54</span>
+      <span class="ttl">Attorney-review role permissions inconsistent across routes — ✅ FIXED</span><span class="chev">▶</span></summary>
     <div class="body">
       <div class="row"><div class="k">In plain terms</div><div class="v">Different review endpoints accept different role sets. A user typed "attorney" can see the queue and change statuses but can't fetch documents or approve; an admin can approve but can't see the queue. No role works end-to-end.</div></div>
       <div class="row"><div class="k">Where</div><div class="v">queue routes use <code>["review_attorney","attorney"]</code>; action routes use <code>["review_attorney","admin"]</code></div></div>
       <div class="row"><div class="k">Impact</div><div class="v">Broken workflow / dead-end UI; a role can mutate status but is denied the matching decision capability.</div></div>
       <div class="row check"><div class="k">Check on website</div><div class="v">Compare an <code>attorney</code> vs <code>review_attorney</code> login — the <code>attorney</code> sees the reviews list but every document/approve action fails.</div></div>
       <div class="row fix"><div class="k">Fix</div><div class="v">Standardize the role list across all attorney-review routes; decide admin queue access uniformly.</div></div>
+      <div class="row fix"><div class="k">Resolution (2026-06-15)</div><div class="v">Standardized all 8 <code>/api/attorney/*</code> routes to <code>["review_attorney"]</code> only (the phantom <code>"attorney"</code> role was never assigned to anyone, and admins are not review attorneys). Removed the now-dead <code>isAdmin</code> bypass from <code>approve</code> / <code>review</code> / <code>review-docx</code> / <code>upload-reviewed</code>. The attorney portal was then split onto its own subdomain (<code>attorney.estatevault.us</code> / <code>attorney.localhost:3000</code>) so it no longer rides on the admin host: added <code>attorneyUrl()</code>/<code>isAttorneyHost()</code> in <code>lib/hosts.ts</code>, an <code>attorneyOnlyPath</code> host-isolation redirect + a <code>review_attorney</code>-only role guard in <code>lib/supabase/middleware.ts</code>, an <code>"attorney"</code> cross-host handoff target (<code>handoff/route.ts</code> + <code>authHandoffSchema</code>), login routing (review_attorney → attorney host, admin host = admin-only), and the review-attorney invite link. Net: portal is isolated by <b>both</b> host and role — only <code>review_attorney</code> can reach it, end-to-end.</div></div>
     </div>
   </details>
 
@@ -987,7 +989,9 @@
       b.style.display = show ? '' : 'none';
       if(show && v!=='all') b.open=true;
     });
-  });
+  }))
+
+  
 </script>
 </body>
 </html>

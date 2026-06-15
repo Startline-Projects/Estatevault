@@ -11,7 +11,7 @@ import * as partnerRepo from "@/lib/repos/server/partnerRepo";
 // B2: the signed-in attorney's review queue, assembled server-side (was a chain
 // of direct client-side supabase reads in app/attorney/reviews).
 export const GET = withRoute(async (req: NextRequest) => {
-  const auth = await requireAuth(["review_attorney", "attorney"], req);
+  const auth = await requireAuth(["review_attorney"], req);
   if ("error" in auth) return auth.error;
 
   const { data: me } = await profileRepo.getMeById(auth.admin, auth.user.id);

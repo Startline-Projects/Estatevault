@@ -23,6 +23,7 @@ export async function updateSession(request: NextRequest) {
   const clientHostEnv = process.env.NEXT_PUBLIC_CLIENT_HOST || "estatevault.us";
   const adminHostEnv = process.env.NEXT_PUBLIC_ADMIN_HOST || "admin.estatevault.us";
   const salesHostEnv = process.env.NEXT_PUBLIC_SALES_HOST || "sales.estatevault.us";
+  const attorneyHostEnv = process.env.NEXT_PUBLIC_ATTORNEY_HOST || "attorney.estatevault.us";
   const isPartnerHost =
     hostname === partnerHostEnv ||
     hostname === "pro.estatevault.us" ||
@@ -35,8 +36,12 @@ export async function updateSession(request: NextRequest) {
     hostname === salesHostEnv ||
     hostname === "sales.estatevault.us" ||
     hostname.startsWith("sales.localhost");
+  const isAttorneyHost =
+    hostname === attorneyHostEnv ||
+    hostname === "attorney.estatevault.us" ||
+    hostname.startsWith("attorney.localhost");
   const isClientHost =
-    !isPartnerHost && !isAdminHost && !isSalesHost && (
+    !isPartnerHost && !isAdminHost && !isSalesHost && !isAttorneyHost && (
       hostname === clientHostEnv ||
       hostname === "estatevault.us" ||
       hostname === "www.estatevault.us" ||
@@ -49,6 +54,7 @@ export async function updateSession(request: NextRequest) {
     isPartnerHost ||
     isAdminHost ||
     isSalesHost ||
+    isAttorneyHost ||
     hostname.startsWith("localhost") ||
     hostname.includes("vercel.app");
 
@@ -159,14 +165,14 @@ export async function updateSession(request: NextRequest) {
   }
 
   // Non-customer domains: root path goes straight to login
-  if ((isPartnerHost || isAdminHost || isSalesHost) && pathname === "/") {
+  if ((isPartnerHost || isAdminHost || isSalesHost || isAttorneyHost) && pathname === "/") {
     const url = request.nextUrl.clone();
     url.pathname = "/auth/login";
     return NextResponse.redirect(url);
   }
 
   // Public routes, no auth required
-  const publicPaths = ["/", "/quiz", "/will", "/trust", "/auth", "/attorney-referral", "/pro-partners", "/partners", "/professionals", "/farewell", "/khan-lawgroup", "/api/webhooks", "/api/documents/process", "/api/documents/cleanup-test-orders", "/api/documents/process-now", "/api/documents/regenerate-missing", "/api/documents/check-status", "/api/documents/download-by-session", "/api/attorney/check-sla", "/api/checkout", "/api/quiz", "/api/professionals", "/api/farewell", "/api/auth/set-password", "/api/auth/handoff", "/api/auth/signup", "/api/auth/recovery", "/api/auth/resend-verification", "/api/auth/check-email", "/api/auth/send-verify-code", "/api/auth/verify-code", "/api/auth/send-verify-link", "/api/auth/verify-link", "/api/auth/check-verification", "/a", "/affiliate-signup", "/api/affiliate", "/vault/trustee-confirm", "/api/vault/trustees", "/api/partners/branding", "/trustee", "/api/trustee"];
+  const publicPaths = ["/", "/quiz", "/will", "/trust", "/auth", "/attorney-referral", "/pro-partners", "/partners", "/professionals", "/farewell", "/khan-lawgroup", "/api/webhooks", "/api/documents/process", "/api/documents/cleanup-test-orders", "/api/documents/process-now", "/api/documents/regenerate-missing", "/api/documents/check-status", "/api/documents/download-by-session", "/api/attorney/check-sla", "/api/checkout", "/api/quiz", "/api/professionals", "/api/farewell", "/api/auth/set-password", "/api/auth/handoff", "/api/auth/signup", "/api/auth/recovery", "/api/auth/resend-verification", "/api/auth/check-email", "/api/auth/send-verify-code", "/api/auth/verify-code", "/api/auth/send-verify-link", "/api/auth/verify-link", "/api/auth/check-verification", "/a", "/affiliate-signup", "/api/affiliate", "/api/contact", "/vault/trustee-confirm", "/api/vault/trustees", "/api/partners/branding", "/trustee", "/api/trustee"];
   const isPublic = publicPaths.some(
     (p) => pathname === p || pathname.startsWith(p + "/")
   );
@@ -247,6 +253,18 @@ export async function updateSession(request: NextRequest) {
         return NextResponse.redirect(url);
       }
     }
+
+    // Attorney portal, only review_attorney. Other roles (incl. admin) are
+    // redirected to their own portal — the attorney portal is not shared.
+    if (pathname === "/attorney" || pathname.startsWith("/attorney/")) {
+      if (userType !== "review_attorney") {
+        const url = request.nextUrl.clone();
+        if (userType === "admin" || userType === "sales_rep") url.pathname = "/sales/dashboard";
+        else if (userType === "partner") url.pathname = "/pro/dashboard";
+        else url.pathname = "/dashboard";
+        return NextResponse.redirect(url);
+      }
+    }
   }
 
   // ── Host-based portal isolation ──────────────────────────────────────────
@@ -258,20 +276,21 @@ export async function updateSession(request: NextRequest) {
     hostname.startsWith("app.") ||
     hostname.startsWith("admin.") ||
     hostname.startsWith("sales.") ||
+    hostname.startsWith("attorney.") ||
     hostname === "estatevault.us" ||
     hostname === "www.estatevault.us" ||
     hostname === "pro.estatevault.us" ||
     hostname === "admin.estatevault.us" ||
-    hostname === "sales.estatevault.us";
+    hostname === "sales.estatevault.us" ||
+    hostname === "attorney.estatevault.us";
 
   if (isSubdomainAware) {
     const partnerOnlyPath =
       pathname.startsWith("/pro") && pathname !== "/pro-partners";
     const salesPath = pathname.startsWith("/sales");
-    const adminOnlyPath =
-      pathname.startsWith("/admin") ||
-      pathname === "/attorney" ||
-      pathname.startsWith("/attorney/");
+    const adminOnlyPath = pathname.startsWith("/admin");
+    const attorneyOnlyPath =
+      pathname === "/attorney" || pathname.startsWith("/attorney/");
     const clientOnlyPath =
       pathname.startsWith("/dashboard") ||
       pathname.startsWith("/quiz") ||
@@ -285,6 +304,9 @@ export async function updateSession(request: NextRequest) {
     }
     if (adminOnlyPath && !isAdminHost) {
       return NextResponse.redirect(`${proto}://${adminHostEnv}${pathname}${search}`);
+    }
+    if (attorneyOnlyPath && !isAttorneyHost) {
+      return NextResponse.redirect(`${proto}://${attorneyHostEnv}${pathname}${search}`);
     }
     // /sales paths allowed on sales host AND admin host (admin can access sales tools).
     // From any other host → redirect to sales host.

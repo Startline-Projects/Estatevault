@@ -3,7 +3,7 @@ import { requireAuth } from "@/lib/api/auth";
 import { withRoute } from "@/lib/api/route";
 import { ok, fail } from "@/lib/api/response";
 import { createReviewAttorneySchema } from "@/lib/validation/schemas";
-import { getAppUrl } from "@/lib/config/appUrl";
+import { attorneyUrl } from "@/lib/hosts";
 import * as profileRepo from "@/lib/repos/server/profileRepo";
 
 export const POST = withRoute(async (req: NextRequest) => {
@@ -88,7 +88,7 @@ export const POST = withRoute(async (req: NextRequest) => {
       type: "magiclink",
       email: normalizedEmail,
       options: {
-        redirectTo: `${getAppUrl()}/attorney`,
+        redirectTo: attorneyUrl("/attorney"),
       },
     });
   }

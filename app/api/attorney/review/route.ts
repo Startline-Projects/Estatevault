@@ -5,18 +5,16 @@ import { ok, fail } from "@/lib/api/response";
 import * as attorneyReviewRepo from "@/lib/repos/server/attorneyReviewRepo";
 
 export const GET = withRoute(async (req: NextRequest) => {
-  const auth = await requireAuth(["review_attorney", "admin"]);
+  const auth = await requireAuth(["review_attorney"]);
   if ("error" in auth) return auth.error;
 
   const reviewId = new URL(req.url).searchParams.get("id");
   if (!reviewId) return fail("Missing id", 400);
 
-  const isAdmin = auth.profile.user_type === "admin";
-
   const { data: review } = await attorneyReviewRepo.getById(auth.admin, reviewId);
   if (!review) return fail("Review not found", 404);
 
-  if (!isAdmin && review.attorney_id !== auth.user.id) return fail("Forbidden", 403);
+  if (review.attorney_id !== auth.user.id) return fail("Forbidden", 403);
   if (!review.order_id) return fail("Review has no associated order", 400);
   const reviewOrderId = review.order_id;
 

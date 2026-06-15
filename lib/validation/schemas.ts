@@ -386,7 +386,7 @@ export const authCheckVerificationSchema = z.object({
 export const authHandoffSchema = z.object({
   access_token: z.string().min(1),
   refresh_token: z.string().min(1),
-  target: z.enum(["client", "partner", "admin", "sales"]),
+  target: z.enum(["client", "partner", "admin", "sales", "attorney"]),
   redirect_path: z.string().startsWith("/"),
 });
 
