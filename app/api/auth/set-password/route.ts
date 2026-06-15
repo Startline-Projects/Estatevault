@@ -8,6 +8,7 @@ import { authSetPasswordSchema } from "@/lib/validation/schemas";
 import { consumeVerifiedToken, peekVerifiedToken } from "@/lib/auth/emailVerification";
 import { authRateLimit } from "@/lib/rate-limit";
 import * as auditLogRepo from "@/lib/repos/server/auditLogRepo";
+import { sendPasswordChangedEmail } from "@/lib/email";
 
 export const POST = withRoute(async (req: NextRequest) => {
   const body = await req.json();
@@ -105,5 +106,12 @@ export const POST = withRoute(async (req: NextRequest) => {
   });
 
   await consumeVerifiedToken(normalizedEmail, verifiedToken);
+
+  try {
+    await sendPasswordChangedEmail({ to: normalizedEmail });
+  } catch (e) {
+    console.error("Password-changed email failed (non-blocking):", e);
+  }
+
   return ok({ success: true });
 });

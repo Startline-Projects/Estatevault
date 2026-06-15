@@ -60,6 +60,17 @@ export const POST = withRoute(async (req: NextRequest) => {
 
   const fullDomain = domainType === "custom_domain" ? cleanDomain : `legacy.${cleanDomain}`;
 
+  const updateField = domainType === "custom_domain" ? "custom_domain" : "subdomain";
+
+  // Pre-check: domain not already claimed by another partner
+  const { data: existing } = await auth.admin
+    .from("partners")
+    .select("id")
+    .eq(updateField, fullDomain)
+    .neq("id", partner.id)
+    .maybeSingle();
+  if (existing) return fail("Domain already claimed by another partner", 409);
+
   const oldDomain = domainType === "custom_domain" ? partner.custom_domain : partner.subdomain;
   if (oldDomain && oldDomain !== fullDomain) {
     await removeVercelDomain(oldDomain);
@@ -68,8 +79,11 @@ export const POST = withRoute(async (req: NextRequest) => {
   const { ok: vercelOk, error: vercelError } = await registerVercelDomain(fullDomain);
   if (!vercelOk) return fail(vercelError || "Domain registration failed", 500);
 
-  const updateField = domainType === "custom_domain" ? "custom_domain" : "subdomain";
-  await partnerRepo.update(auth.admin, partner.id, { [updateField]: fullDomain });
+  const { error: updateError } = await partnerRepo.update(auth.admin, partner.id, { [updateField]: fullDomain });
+  if (updateError) {
+    await removeVercelDomain(fullDomain);
+    return fail("Failed to save domain claim", 500);
+  }
 
   await auditLogRepo.insertEntry(auth.admin, {
     actor_id: auth.user.id,
@@ -94,9 +108,10 @@ export const DELETE = withRoute(async (req: NextRequest) => {
 
   if (domain) {
     await removeVercelDomain(domain);
-    await partnerRepo.update(auth.admin, partner.id, {
+    const { error: updateError } = await partnerRepo.update(auth.admin, partner.id, {
       [domainType === "custom_domain" ? "custom_domain" : "subdomain"]: null,
     });
+    if (updateError) return fail("Failed to clear domain", 500);
   }
 
   return ok({ success: true });

@@ -3,6 +3,7 @@ import { requireAuth } from "@/lib/api/auth";
 import { withRoute } from "@/lib/api/route";
 import { ok } from "@/lib/api/response";
 import { PARTNER_PLATFORM_FEE } from "@/lib/orders/pricing";
+import { DEFAULT_COMMISSION_RATE } from "@/lib/sales/constants";
 import * as profileRepo from "@/lib/repos/server/profileRepo";
 import * as partnerRepo from "@/lib/repos/server/partnerRepo";
 
@@ -34,7 +35,7 @@ export const GET = withRoute(async (req: NextRequest) => {
     .map((rep) => {
       const repPartners = allPartners.filter((p) => p.created_by === rep.id);
       const mtdPartners = repPartners.filter((p) => p.created_at && new Date(p.created_at) >= monthStart);
-      const rate = rep.commission_rate ?? 0.5;
+      const rate = rep.commission_rate ?? DEFAULT_COMMISSION_RATE;
       const mtdFees = mtdPartners.reduce((s, p) => s + effectiveFeeCents(p), 0) / 100;
       return {
         repId: rep.id,

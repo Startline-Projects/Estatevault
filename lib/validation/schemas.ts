@@ -147,16 +147,26 @@ const BENEFICIARY_REL = z.enum(["Spouse/Partner", "Child", "Parent", "Sibling", 
 const CONTINGENT_REL = z.enum(["Child", "Parent", "Sibling", "Friend", "Charity/Organization", "Other"]);
 const GUARDIAN_REL = z.enum(["Spouse/Partner", "Sibling", "Parent", "Friend", "Other"]);
 
+const shareString = z.string().max(10).refine(
+  (s) => s === "" || (/^\d{1,3}(\.\d{1,2})?$/.test(s) && parseFloat(s) >= 0 && parseFloat(s) <= 100),
+  { message: "Share must be a number between 0 and 100" },
+);
+
+function sharesSum100(beneficiaries: { share: string }[]): boolean {
+  const sum = beneficiaries.reduce((acc, b) => acc + (parseFloat(b.share) || 0), 0);
+  return Math.abs(sum - 100) < 0.02;
+}
+
 const beneficiarySchema = z.object({
   name: z.string().min(1).max(200),
   relationship: BENEFICIARY_REL,
-  share: z.string().max(10),
+  share: shareString,
 });
 
 const contingentBeneficiarySchema = z.object({
   name: z.string().min(1).max(200),
   relationship: CONTINGENT_REL,
-  share: z.string().max(10),
+  share: shareString,
 });
 
 const RELATIONSHIP_OR_EMPTY = z.union([RELATIONSHIP, z.literal("")]);
@@ -186,7 +196,13 @@ const willIntakeSchema = z.object({
   organDonation: YES_NO,
   hasSpecificGifts: YES_NO,
   specificGiftsDescription: z.string().max(5000),
-});
+}).refine(
+  (d) => d.beneficiariesEqualShares === "Yes" || sharesSum100(d.beneficiaries),
+  { message: "Beneficiary shares must total 100%", path: ["beneficiaries"] },
+).refine(
+  (d) => d.hasContingentBeneficiary !== "Yes" || d.contingentBeneficiaries.length === 0 || d.contingentEqualShares === "Yes" || sharesSum100(d.contingentBeneficiaries),
+  { message: "Contingent beneficiary shares must total 100%", path: ["contingentBeneficiaries"] },
+);
 
 const TRUST_ASSET_TYPES = [
   "Primary home / real estate in Michigan",
@@ -250,7 +266,16 @@ const trustIntakeSchema = z.object({
   contingentEqualShares: z.string().max(10),
   hasSpecificGifts: YES_NO,
   specificGiftsDescription: z.string().max(5000),
-});
+}).refine(
+  (d) => d.beneficiariesEqualShares === "Yes" || sharesSum100(d.beneficiaries),
+  { message: "Beneficiary shares must total 100%", path: ["beneficiaries"] },
+).refine(
+  (d) => d.hasContingentBeneficiary !== "Yes" || d.contingentBeneficiaries.length === 0 || d.contingentEqualShares === "Yes" || sharesSum100(d.contingentBeneficiaries),
+  { message: "Contingent beneficiary shares must total 100%", path: ["contingentBeneficiaries"] },
+).refine(
+  (d) => !d.distributionAge || parseInt(d.distributionAge, 10) >= 18,
+  { message: "Distribution age must be at least 18", path: ["distributionAge"] },
+);
 
 type _QuizSchemaCheck = z.infer<typeof quizAnswersSchema> extends QuizAnswers ? true : never;
 type _WillSchemaCheck = z.infer<typeof willIntakeSchema> extends WillIntake ? true : never;
@@ -258,7 +283,6 @@ type _TrustSchemaCheck = z.infer<typeof trustIntakeSchema> extends TrustIntake ?
 
 // POST /api/checkout/will
 export const willCheckoutSchema = z.object({
-  userId: z.string().nullable().optional(),
   attorneyReview: z.boolean().optional().default(false),
   intakeAnswers: willIntakeSchema,
   promoCode: z.string().max(64).optional(),
@@ -269,7 +293,6 @@ export const willCheckoutSchema = z.object({
 
 // POST /api/checkout/trust — adds trust-specific fields
 export const trustCheckoutSchema = z.object({
-  userId: z.string().nullable().optional(),
   attorneyReview: z.boolean().optional().default(false),
   intakeAnswers: trustIntakeSchema,
   complexityFlag: z.boolean().optional(),
@@ -287,6 +310,7 @@ export const amendmentCheckoutSchema = z.object({
   userId: z.string().min(1, "userId is required"),
   changeType: z.string().min(1).max(200),
   description: z.string().min(1).max(4000),
+  acknowledgmentSigned: z.literal(true),
 });
 
 // POST /api/checkout/vault-subscription — partner/guest vault signup

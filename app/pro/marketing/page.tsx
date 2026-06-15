@@ -75,7 +75,7 @@ Best,
 
 It's been about a year since you created your estate plan through [Product Name].
 
-A lot can change in a year, new assets, family changes, address changes. We recommend a quick annual review to make sure your plan is still current.
+A lot can change in a year, new assets, family changes, address changes. An annual review helps keep your plan current.
 
 Document amendments are available for ${formatPrice(PRICES.amendment)}.
 

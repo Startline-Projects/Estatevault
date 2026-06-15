@@ -3,6 +3,7 @@ import { requireAuth } from "@/lib/api/auth";
 import { withRoute } from "@/lib/api/route";
 import { ok, fail } from "@/lib/api/response";
 import { salesRepsUpdateSchema } from "@/lib/validation/schemas";
+import { DEFAULT_COMMISSION_RATE } from "@/lib/sales/constants";
 import * as profileRepo from "@/lib/repos/server/profileRepo";
 import * as partnerRepo from "@/lib/repos/server/partnerRepo";
 import * as auditLogRepo from "@/lib/repos/server/auditLogRepo";
@@ -23,7 +24,7 @@ export const GET = withRoute(async (_req: NextRequest) => {
         email: rep.email,
         active_partners: count || 0,
         created_at: rep.created_at,
-        commission_rate: rep.commission_rate ?? 0.05,
+        commission_rate: rep.commission_rate ?? DEFAULT_COMMISSION_RATE,
       };
     })
   );

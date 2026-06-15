@@ -7,6 +7,7 @@ import { encryptBytes, decryptBytes } from "@/lib/crypto/aead";
 import { blindIndex, normalize } from "@/lib/crypto/blindIndex";
 import { withRoute } from "@/lib/api/route";
 import { ok, fail } from "@/lib/api/response";
+import { isValidStoragePath } from "@/lib/api/storage";
 import * as farewellRepo from "@/lib/repos/server/farewellRepo";
 import * as clientRepo from "@/lib/repos/server/clientRepo";
 import { farewellCreateSchema, farewellUpdateSchema } from "@/lib/validation/schemas";
@@ -90,6 +91,9 @@ export const POST = withRoute(async (req: NextRequest) => {
     return fail("invalid input", 400, { details: parsed.error.flatten() });
   }
   const { title, recipientEmail, storagePath } = parsed.data;
+  if (!isValidStoragePath(storagePath, client.id)) {
+    return fail("Invalid storage path", 400);
+  }
   // storagePath is optional: clients may create the metadata-only (locked) record
   // first and attach the encrypted video later via PATCH.
 
@@ -207,7 +211,12 @@ export const PATCH = withRoute(async (req: NextRequest) => {
   }
 
   // Attach video (or update its metadata) — no crypto needed.
-  if (parsed.data.storagePath !== undefined) update.storage_path = parsed.data.storagePath;
+  if (parsed.data.storagePath !== undefined) {
+    if (!isValidStoragePath(parsed.data.storagePath, client.id)) {
+      return fail("Invalid storage path", 400);
+    }
+    update.storage_path = parsed.data.storagePath;
+  }
   if (parsed.data.fileSizeMb !== undefined) update.file_size_mb = parsed.data.fileSizeMb;
   if (parsed.data.durationSeconds !== undefined) update.duration_seconds = parsed.data.durationSeconds;
 

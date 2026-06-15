@@ -15,11 +15,16 @@ type ClientUpdate = Database["public"]["Tables"]["clients"]["Update"];
 // access until its paid term ends (Stripe `cancel_at_period_end`): the gates
 // must honor `vault_subscription_expiry`, not just the `active` status, or a
 // mid-period cancel would revoke months the customer already paid for (BUG-5).
+const EXPIRY_GRACE_MS = 3 * 24 * 60 * 60 * 1000; // 3 days grace for dunning/retry
+
 export function hasVaultAccess(
   status: string | null | undefined,
   expiry: string | null | undefined,
 ): boolean {
-  if (status === "active") return true;
+  if (status === "active") {
+    if (!expiry) return true;
+    return new Date(expiry).getTime() + EXPIRY_GRACE_MS > Date.now();
+  }
   if (status === "cancelled" && expiry) return new Date(expiry).getTime() > Date.now();
   return false;
 }

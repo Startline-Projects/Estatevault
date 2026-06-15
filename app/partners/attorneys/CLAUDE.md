@@ -10,7 +10,7 @@ Sections: Nav · Hero · Logo bar · Problem/Solution · How it works · Demo ·
 
 ## Pricing tiers displayed
 - **Standard:** $1,200 one-time · 3 seats · $300/will + review fee · $400/trust + review fee
-- **Professional:** $6,000 one-time · 10 seats · $350/will · $500/trust · priority placement
+- **Professional:** $6,000 one-time · 10 seats · $350/will · $450/trust · priority placement
 - **Enterprise:** Custom pricing · multi-firm/location · SLA
 
 ## Attorney-specific features

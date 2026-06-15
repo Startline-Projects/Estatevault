@@ -47,7 +47,7 @@ export const POST = withRoute(async (request: Request) => {
         amount_total: 0,
         ev_cut: 0,
         amendment_type: "subscription_included",
-        acknowledgment_signed: true,
+        acknowledgment_signed: parsed.data.acknowledgmentSigned,
         acknowledgment_signed_at: new Date().toISOString(),
       });
 
@@ -86,7 +86,7 @@ export const POST = withRoute(async (request: Request) => {
       partner_cut: partnerCut,
       partner_id: partnerId,
       amendment_type: "paid",
-      acknowledgment_signed: true,
+      acknowledgment_signed: parsed.data.acknowledgmentSigned,
       acknowledgment_signed_at: new Date().toISOString(),
     });
 

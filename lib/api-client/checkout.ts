@@ -25,6 +25,7 @@ export function checkoutAmendment(body: {
   userId: string;
   changeType: string;
   description: string;
+  acknowledgmentSigned: true;
 }): Promise<ApiResult<CheckoutUrlResult | { redirect: string }>> {
   return post("/api/checkout/amendment", body);
 }
@@ -43,4 +44,8 @@ export function checkoutAttorney(body: Record<string, unknown>): Promise<ApiResu
 
 export function verifyAttorneyCheckout(sessionId: string, password: string): Promise<ApiResult<{ success: boolean }>> {
   return publicPost("/api/checkout/attorney/verify", { session_id: sessionId, password });
+}
+
+export function validatePromoCode(code: string): Promise<ApiResult<{ valid: boolean }>> {
+  return publicPost("/api/checkout/validate-promo", { code });
 }

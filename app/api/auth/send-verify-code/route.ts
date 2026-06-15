@@ -4,7 +4,7 @@ import { ok, fail } from "@/lib/api/response";
 import { authSendVerifyCodeSchema } from "@/lib/validation/schemas";
 import { generateCode, storeCode } from "@/lib/auth/emailVerification";
 import { resolveSenderForEmail, sendEmail } from "@/lib/email";
-import { authRateLimit } from "@/lib/rate-limit";
+import { emailResendRateLimit } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
 
@@ -48,8 +48,8 @@ export const POST = withRoute(async (req: NextRequest) => {
 
   if (!normalizedEmail) return fail("Email is required.", 400);
 
-  const { success } = await authRateLimit.limit(`verify-code:${normalizedEmail}`);
-  if (!success) return fail("Too many attempts. Please wait a minute and try again.", 429);
+  const { success } = await emailResendRateLimit.limit(`resend:${normalizedEmail}`);
+  if (!success) return fail("Too many requests. Please wait before requesting another code.", 429);
 
   const code = generateCode();
   await storeCode(normalizedEmail, code);

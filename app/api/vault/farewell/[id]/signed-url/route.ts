@@ -18,6 +18,11 @@ export const GET = withRoute(async (
   const { data: client } = await clientRepo.getIdByProfile(admin, user.id);
   if (!client) return fail("No client record", 400);
 
+  const { data: sub } = await clientRepo.getSubscriptionById(admin, client.id);
+  if (!clientRepo.hasVaultAccess(sub?.vault_subscription_status, sub?.vault_subscription_expiry)) {
+    return fail("Vault subscription required", 403);
+  }
+
   const { data: message } = await farewellRepo.getById(admin, messageId);
 
   if (!message || !message.storage_path) {

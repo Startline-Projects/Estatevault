@@ -6,12 +6,7 @@ import { useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { checkEmail, sendVerifyCode, verifyCode } from "@/lib/api-client/auth";
 
-type ExistingAccountInfo = {
-  fullName: string | null;
-  hasWill: boolean;
-  hasTrust: boolean;
-  hasVault: boolean;
-};
+type ExistingAccountInfo = { exists: true };
 
 function SignUpForm() {
   const searchParams = useSearchParams();
@@ -79,12 +74,7 @@ function SignUpForm() {
       }
 
       if (checkData.exists) {
-        setExistingAccount({
-          fullName: checkData.fullName ?? null,
-          hasWill: !!checkData.hasWill,
-          hasTrust: !!checkData.hasTrust,
-          hasVault: !!checkData.hasVault,
-        });
+        setExistingAccount({ exists: true });
         return;
       }
 
@@ -325,15 +315,6 @@ function SignUpForm() {
                 <div className="mt-3 rounded-lg bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-900">
                   <p className="font-semibold">An account already exists for this email.</p>
                   <p className="mt-1 text-xs text-amber-800/80">
-                    {existingAccount.fullName ? `${existingAccount.fullName} already has ` : "We already have "}
-                    {[
-                      existingAccount.hasWill && "Will documents",
-                      existingAccount.hasTrust && "Trust documents",
-                      existingAccount.hasVault && "an active Vault subscription",
-                    ]
-                      .filter(Boolean)
-                      .join(", ") || "an account"}
-                    {" on file. "}
                     <Link href={loginHref} className="underline font-medium text-amber-900 hover:text-navy">
                       Sign in instead
                     </Link>

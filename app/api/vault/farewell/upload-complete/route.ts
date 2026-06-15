@@ -3,6 +3,7 @@ import { requireAuth } from "@/lib/api/auth";
 import { withRoute } from "@/lib/api/route";
 import { ok, fail } from "@/lib/api/response";
 import { farewellUploadCompleteSchema } from "@/lib/validation/schemas";
+import { isValidStoragePath } from "@/lib/api/storage";
 import * as farewellRepo from "@/lib/repos/server/farewellRepo";
 import * as clientRepo from "@/lib/repos/server/clientRepo";
 
@@ -15,10 +16,19 @@ export const POST = withRoute(async (request: NextRequest) => {
   const { data: client } = await clientRepo.getIdByProfile(admin, user.id);
   if (!client) return fail("No client record", 400);
 
+  const { data: sub } = await clientRepo.getSubscriptionById(admin, client.id);
+  if (!clientRepo.hasVaultAccess(sub?.vault_subscription_status, sub?.vault_subscription_expiry)) {
+    return fail("Vault subscription required", 403);
+  }
+
   const body = await request.json();
   const parsed = farewellUploadCompleteSchema.safeParse(body);
   if (!parsed.success) return fail("invalid payload", 400);
   const { messageId, storagePath, fileSize, duration } = parsed.data;
+
+  if (!isValidStoragePath(storagePath, client.id)) {
+    return fail("Invalid storage path", 400);
+  }
 
   // Verify ownership
   const { data: message } = await farewellRepo.getIdForOwner(admin, messageId, client.id);

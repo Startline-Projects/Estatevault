@@ -13,24 +13,33 @@ export const GET = withRoute(async (req: NextRequest) => {
   const admin = createAdminClient();
   const cols = "id, company_name, product_name, logo_url, accent_color, theme_preset, hero_recipe, highlight_dark, cta_text_override";
 
-  let query = admin.from("partners").select(cols).limit(1);
-  if (id) query = query.eq("id", id);
-  else if (slug) query = query.eq("partner_slug", slug);
-  else if (domain) query = query.or(`subdomain.eq.${domain},custom_domain.eq.${domain}`);
+  let data: Record<string, unknown> | undefined;
 
-  const { data: rows, error } = await query;
-  const data = rows?.[0];
-  if (error || !data) return fail("Partner not found", 404);
+  if (id) {
+    const { data: rows } = await admin.from("partners").select(cols).eq("id", id).limit(1);
+    data = rows?.[0] as Record<string, unknown> | undefined;
+  } else if (slug) {
+    const { data: rows } = await admin.from("partners").select(cols).eq("partner_slug", slug).limit(1);
+    data = rows?.[0] as Record<string, unknown> | undefined;
+  } else if (domain) {
+    const [{ data: bySubdomain }, { data: byCustom }] = await Promise.all([
+      admin.from("partners").select(cols).eq("subdomain", domain).limit(1),
+      admin.from("partners").select(cols).eq("custom_domain", domain).limit(1),
+    ]);
+    data = (bySubdomain?.[0] || byCustom?.[0]) as Record<string, unknown> | undefined;
+  }
+
+  if (!data) return fail("Partner not found", 404);
 
   return ok({
     id: data.id,
     companyName: data.company_name,
-    productName: data.product_name || "Legacy Protection",
-    logoUrl: data.logo_url || null,
-    accentColor: data.accent_color || "#C9A84C",
-    themePresetId: data.theme_preset || "cool",
-    heroRecipeId: data.hero_recipe || "mesh",
-    highlightDark: data.highlight_dark || null,
-    ctaTextOverride: data.cta_text_override || null,
+    productName: (data.product_name as string) || "Legacy Protection",
+    logoUrl: (data.logo_url as string) || null,
+    accentColor: (data.accent_color as string) || "#C9A84C",
+    themePresetId: (data.theme_preset as string) || "cool",
+    heroRecipeId: (data.hero_recipe as string) || "mesh",
+    highlightDark: (data.highlight_dark as string) || null,
+    ctaTextOverride: (data.cta_text_override as string) || null,
   });
 });

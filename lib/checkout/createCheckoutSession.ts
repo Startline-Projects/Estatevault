@@ -119,18 +119,22 @@ export async function createCheckoutSession(
   if (resolvedUserId) {
     const { data: existingProfile } = await profileRepo.getMeById(supabase, resolvedUserId);
     if (!existingProfile) {
-      const { data: authUser } = await supabase.auth.admin.getUserById(resolvedUserId);
-      if (authUser?.user) {
-        const meta = (authUser.user.user_metadata || {}) as Record<string, unknown>;
-        await profileRepo.upsert(supabase, {
-          id: resolvedUserId,
-          email: authUser.user.email || (conflictEmail ?? ""),
-          full_name: (meta.full_name as string) || `${(intakeAnswers.firstName as string) || ""} ${(intakeAnswers.lastName as string) || ""}`.trim(),
-          user_type: "client",
-        });
-      } else {
-        // Account fully wiped — proceed as a guest rather than dead-ending the user.
-        console.warn("Checkout: orphaned session, no profile or auth record; continuing as guest:", resolvedUserId);
+      try {
+        const { data: authUser } = await supabase.auth.admin.getUserById(resolvedUserId);
+        if (authUser?.user) {
+          const meta = (authUser.user.user_metadata || {}) as Record<string, unknown>;
+          await profileRepo.upsert(supabase, {
+            id: resolvedUserId,
+            email: authUser.user.email || (conflictEmail ?? ""),
+            full_name: (meta.full_name as string) || `${(intakeAnswers.firstName as string) || ""} ${(intakeAnswers.lastName as string) || ""}`.trim(),
+            user_type: "client",
+          });
+        } else {
+          console.warn("Checkout: orphaned session, no profile or auth record; continuing as guest:", resolvedUserId);
+          resolvedUserId = null;
+        }
+      } catch (err) {
+        console.warn("Checkout: auth lookup failed, continuing as guest:", resolvedUserId, err);
         resolvedUserId = null;
       }
     }
@@ -360,10 +364,9 @@ async function handleTestPromo(
 ): Promise<NextResponse> {
   const { intakeAnswers, declinedAttorneyReview } = input;
 
-  const origin = request.headers.get("origin") || request.headers.get("referer") || request.headers.get("host") || "";
-  const isPartnerUrl = origin.includes("legacy.");
-  const isEstateVault = origin.includes("estatevault.us");
-  if (isPartnerUrl || (!isEstateVault && origin !== "" && !origin.includes("localhost"))) {
+  const origin = request.headers.get("origin") || request.headers.get("referer") || "";
+  const isTrustedOrigin = origin.includes("estatevault.us") || origin.includes("localhost") || origin.includes("127.0.0.1");
+  if (!isTrustedOrigin) {
     return NextResponse.json({ error: "Invalid promo code." }, { status: 400 });
   }
 
@@ -373,13 +376,25 @@ async function handleTestPromo(
     return NextResponse.json({ error: "This code is not valid" }, { status: 400 });
   }
 
+  const clientIp = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+
   const oneHourAgo = new Date(Date.now() - 3600000).toISOString();
   const { count } = await supabase
     .from("audit_log")
     .select("id", { count: "exact", head: true })
     .eq("action", "test_promo.used")
     .gte("created_at", oneHourAgo);
-  if ((count || 0) >= 50) {
+  if ((count || 0) >= 15) {
+    return NextResponse.json({ error: "Rate limit exceeded. Try again later." }, { status: 429 });
+  }
+
+  const { count: ipCount } = await supabase
+    .from("audit_log")
+    .select("id", { count: "exact", head: true })
+    .eq("action", "test_promo.used")
+    .contains("metadata", { ip: clientIp })
+    .gte("created_at", oneHourAgo);
+  if ((ipCount || 0) >= 5) {
     return NextResponse.json({ error: "Rate limit exceeded. Try again later." }, { status: 429 });
   }
 
@@ -450,7 +465,7 @@ async function handleTestPromo(
     action: "test_promo.used",
     resource_type: "order",
     resource_id: order.id,
-    metadata: { product_type: config.productType, promo_code: "TEST" },
+    metadata: { product_type: config.productType, promo_code: "TEST", ip: clientIp },
   });
 
   return NextResponse.json({ test: true, orderId: order.id });

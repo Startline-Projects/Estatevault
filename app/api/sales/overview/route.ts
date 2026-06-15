@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { requireAuth } from "@/lib/api/auth";
 import { withRoute } from "@/lib/api/route";
 import { ok } from "@/lib/api/response";
+import { DEFAULT_COMMISSION_RATE } from "@/lib/sales/constants";
 import * as partnerRepo from "@/lib/repos/server/partnerRepo";
 import * as orderRepo from "@/lib/repos/server/orderRepo";
 import * as profileRepo from "@/lib/repos/server/profileRepo";
@@ -12,6 +13,9 @@ import * as professionalLeadRepo from "@/lib/repos/server/professionalLeadRepo";
 export const GET = withRoute(async (req: NextRequest) => {
   const auth = await requireAuth(["sales_rep", "admin", "review_attorney"], req);
   if ("error" in auth) return auth.error;
+
+  const { data: prof } = await profileRepo.getCommissionRateById(auth.admin, auth.user.id);
+  const rate = prof?.commission_rate ?? DEFAULT_COMMISSION_RATE;
 
   const { data: me } = await profileRepo.getMeById(auth.admin, auth.user.id);
   const repName = me?.full_name || me?.email?.split("@")[0] || "Rep";
@@ -30,7 +34,7 @@ export const GET = withRoute(async (req: NextRequest) => {
   const orders = ordersRaw ?? [];
 
   const mtdRevenue = orders.reduce((s, o) => s + (o.amount_total || 0), 0) / 100;
-  const mtdCommission = mtdRevenue * 0.05;
+  const mtdCommission = mtdRevenue * rate;
 
   const threeDaysAgo = new Date();
   threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);

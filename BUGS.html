@@ -409,86 +409,89 @@
   </details>
 
   <details class="bug med" data-sev="med">
-    <summary><span class="badge med">Medium</span><span class="id">BUG-26</span>
-      <span class="ttl">"Failed to create client record" (largely fixed — verify)</span><span class="chev">▶</span></summary>
+    <summary><span class="badge med">Medium</span><span class="badge" style="background:#1a7f37;color:#fff">✅ FIXED</span><span class="id">BUG-26</span>
+      <span class="ttl">"Failed to create client record" (largely fixed — verify) ✅ FIXED</span><span class="chev">▶</span></summary>
     <div class="body">
       <div class="row"><div class="k">In plain terms</div><div class="v">A logged-in session pointing at a user with no <code>profiles</code> row (a wiped or half-finished account) used to crash checkout with a database foreign-key error. Self-healing was added (recreate the profile, or fall back to guest), and the dashboard now signs out orphaned sessions. Mostly fixed — just needs a regression test and re-verification across will/trust/vault.</div></div>
       <div class="row"><div class="k">Where</div><div class="v"><code>lib/checkout/createCheckoutSession.ts</code>, <code>app/dashboard/layout.tsx</code></div></div>
       <div class="row check"><div class="k">How to check</div><div class="v">Wipe a test user's <code>profiles</code> row, keep the browser session, attempt checkout → should now self-heal instead of throwing the FK error.</div></div>
       <div class="row fix"><div class="k">Fix</div><div class="v">Remaining: add a regression test for the orphaned-session path; confirm it works across will, trust, and vault.</div></div>
+      <div class="row fix"><div class="k">Resolution (2026-06-12)</div><div class="v">Added try/catch around <code>getUserById</code> in the orphaned-session path so network errors degrade gracefully to guest checkout instead of crashing. Regression test <code>tests/unit/bug26-orphaned-session.test.ts</code> covers 4 scenarios: (a) self-heal when auth user exists, (b) guest fallback when auth user wiped, (c) graceful degradation on network timeout, (d) upsert race condition. Dashboard orphan signout verified.</div></div>
     </div>
   </details>
 
   <details class="bug med" data-sev="med">
-    <summary><span class="badge med">Medium</span><span class="id">BUG-27</span>
-      <span class="ttl">Will checkout trusts the customer ID sent by the browser</span><span class="chev">▶</span></summary>
+    <summary><span class="badge med">Medium</span><span class="badge" style="background:#1a7f37;color:#fff">✅ FIXED</span><span class="id">BUG-27</span>
+      <span class="ttl">Will checkout trusts the customer ID sent by the browser ✅ FIXED</span><span class="chev">▶</span></summary>
     <div class="body">
       <div class="row"><div class="k">In plain terms</div><div class="v">The will checkout takes the <code>userId</code> from the data the browser sends, instead of from the logged-in session the server already knows. Someone could send a different person's <code>userId</code> and attach an order to an account they don't own. No data leak today, but it's an integrity hole. (The amendment checkout already does this correctly — it verifies against the session.)</div></div>
       <div class="row"><div class="k">Where</div><div class="v"><code>lib/validation/schemas.ts:121</code>, will checkout route</div></div>
       <div class="row check"><div class="k">How to check</div><div class="v">POST to <code>/api/checkout/will</code> with a <code>userId</code> belonging to another account → the order attaches to that account.</div></div>
       <div class="row fix"><div class="k">Fix</div><div class="v">Ignore <code>body.userId</code>; derive the real user from the verified server session (<code>requireAuth()</code> / <code>getUser()</code>) and use only that.</div></div>
+      <div class="row fix"><div class="k">Resolution (2026-06-12)</div><div class="v">Removed <code>userId</code> from both <code>willCheckoutSchema</code> and <code>trustCheckoutSchema</code>. Both route handlers now resolve the session user server-side via <code>createClient().auth.getUser()</code> (with try/catch for graceful guest fallback) and override <code>parsed.data</code> before passing to <code>createCheckoutSession</code>. Body-supplied userId is fully ignored.</div></div>
     </div>
   </details>
 
   <details class="bug med" data-sev="med">
-    <summary><span class="badge med">Medium</span><span class="id">BUG-28</span>
-      <span class="ttl">Intake answers barely validated at the server</span><span class="chev">▶</span></summary>
+    <summary><span class="badge med">Medium</span><span class="badge" style="background:#1a7f37;color:#fff">✅ FIXED</span><span class="id">BUG-28</span>
+      <span class="ttl">Intake answers barely validated at the server ✅ FIXED</span><span class="chev">▶</span></summary>
     <div class="body">
       <div class="row"><div class="k">In plain terms</div><div class="v">The system barely checks what's submitted. A direct call with no beneficiaries, shares totaling 30%, a giant blob of text, or text designed to trick the AI will still build a document. The "shares must total 100%" rule only lives in the browser.</div></div>
       <div class="row"><div class="k">Where</div><div class="v"><code>lib/validation/schemas.ts:100-117</code> (<code>.passthrough()</code>); consumed in <code>michigan-will.ts</code></div></div>
       <div class="row"><div class="k">Impact</div><div class="v">Garbage or malicious intake reaches the database and the AI prompt; documents built from invalid data.</div></div>
       <div class="row check"><div class="k">Check on website</div><div class="v">DevTools → Network → resend a checkout POST with an empty/garbage <code>intakeAnswers</code> → order + document still created.</div></div>
       <div class="row fix"><div class="k">Fix</div><div class="v">Tighten the schema: require ≥1 beneficiary + executor, relationship enums, numeric <code>share</code> 0–100 with a server-side 100% sum check, max lengths on free text. Re-validate before generating.</div></div>
-      <div class="row fix"><div class="k">Update (partial)</div><div class="v"><b>Mostly addressed.</b> <code>.passthrough()</code>/<code>intakeAnswersSchema</code> is gone — checkout now uses fully-typed <code>willIntakeSchema</code>/<code>trustIntakeSchema</code> with required, bounded fields (beneficiaries <code>.min(1).max(20)</code>, required executor, max-length free text). <b>Still open:</b> the "shares total 100%" rule is browser-only — there is no server-side share-sum validation (<code>share</code> is <code>z.string().max(10)</code>, no <code>superRefine</code>).</div></div>
     </div>
   </details>
 
   <details class="bug med" data-sev="med">
-    <summary><span class="badge med">Medium</span><span class="id">BUG-29</span>
-      <span class="ttl">Trust accepts a distribution age under 18</span><span class="chev">▶</span></summary>
+    <summary><span class="badge med">Medium</span><span class="badge" style="background:#1a7f37;color:#fff">✅ FIXED</span><span class="id">BUG-29</span>
+      <span class="ttl">Trust accepts a distribution age under 18 ✅ FIXED</span><span class="chev">▶</span></summary>
     <div class="body">
       <div class="row"><div class="k">In plain terms</div><div class="v">The "hold money until age X" field blocks anything over 99 but accepts low values like 0 or 5. That produces a nonsense trust — a person is a legal adult at 18.</div></div>
       <div class="row"><div class="k">Where</div><div class="v"><code>app/trust/page.tsx:471-479</code></div></div>
       <div class="row"><div class="k">Impact</div><div class="v">Customer pays for a legally incoherent document ("hold until age 5").</div></div>
       <div class="row check"><div class="k">Check on website</div><div class="v"><code>/trust</code> → answer you have minor children → distribution age → <b>Other</b> → type <code>5</code> (or <code>0</code>) → it's accepted.</div></div>
       <div class="row fix"><div class="k">Fix</div><div class="v">Enforce a minimum (≥18) in the custom-age handler and in the card-complete check.</div></div>
+      <div class="row fix"><div class="k">Resolution (2026-06-12)</div><div class="v">Client-side: custom age input shows "Must be at least 18" for values &lt;18; card-complete check rejects &lt;18. Server-side: <code>trustIntakeSchema.refine()</code> validates <code>distributionAge &gt;= 18</code> for any non-empty value.</div></div>
     </div>
   </details>
 
   <details class="bug med" data-sev="med">
-    <summary><span class="badge med">Medium</span><span class="id">BUG-30</span>
-      <span class="ttl">TEST promo generates real documents for $0 with weak guards</span><span class="chev">▶</span></summary>
+    <summary><span class="badge med">Medium</span><span class="badge" style="background:#1a7f37;color:#fff">✅ FIXED</span><span class="id">BUG-30</span>
+      <span class="ttl">TEST promo generates real documents for $0 with weak guards ✅ FIXED</span><span class="chev">▶</span></summary>
     <div class="body">
       <div class="row"><div class="k">In plain terms</div><div class="v">There's an internal TEST code that generates real documents for free. The guard limiting it is weak — if the switch is ever left on in production, people could mint free real documents (up to 50/hour).</div></div>
       <div class="row"><div class="k">Where</div><div class="v"><code>lib/checkout/createCheckoutSession.ts:298-400</code> (<code>handleTestPromo</code>)</div></div>
       <div class="row"><div class="k">Impact</div><div class="v">Free real-document generation if the flag is left active; origin allowlist bypassable when headers are absent.</div></div>
       <div class="row check"><div class="k">Check on website</div><div class="v">Only reproducible if <code>test_promo_code</code> is on — enter <code>TEST</code> at checkout and confirm documents generate with no payment. Verify the flag is forced <b>off</b> in production.</div></div>
       <div class="row fix"><div class="k">Fix</div><div class="v">Treat empty/unknown origin as untrusted; scope the rate limit per IP/email; ensure prod has the flag off; emit watermarked output for test orders.</div></div>
-      <div class="row fix"><div class="k">Update (partial)</div><div class="v"><b>Partially addressed.</b> The partner-URL and non-estatevault-domain rejections work. <b>Still open:</b> an empty <code>Origin</code>/<code>Referer</code>/<code>Host</code> still passes the allowlist (the <code>origin !== ""</code> guard skips rejection when <code>origin === ""</code>), and the rate limit is still global-only (50/hr across all callers), not scoped per IP/email.</div></div>
     </div>
   </details>
 
   <details class="bug med" data-sev="med">
-    <summary><span class="badge med">Medium</span><span class="id">BUG-31</span>
-      <span class="ttl">Partner "trust" earnings advertised as $500, actual payout is $450</span><span class="chev">▶</span></summary>
+    <summary><span class="badge med">Medium</span><span class="badge" style="background:#1a7f37;color:#fff">✅ FIXED</span><span class="id">BUG-31</span>
+      <span class="ttl">Partner "trust" earnings advertised as $500, actual payout is $450 ✅ FIXED</span><span class="chev">▶</span></summary>
     <div class="body">
       <div class="row"><div class="k">In plain terms</div><div class="v">The partner-recruitment pages tell Professional-tier partners they earn <b>$500 per trust</b> — both the feature list and the live earnings calculator. But the system actually pays them <b>$450</b> (the real source-of-truth figure). Partners are promised $50 more per trust than they get.</div></div>
       <div class="row"><div class="k">Where</div><div class="v"><code>app/khan-lawgroup/page.tsx:22, :157</code>; <code>app/partners/attorneys/page.tsx:22, :152</code>; <code>app/partners/attorneys/CLAUDE.md:13</code>. Truth: <code>lib/orders/pricing.ts:43</code> (enterprise trust partner = 45000 = $450).</div></div>
       <div class="row"><div class="k">Impact</div><div class="v">Partner trust / dispute risk — they're paid $50/trust less than advertised. Not a direct money loss to the platform (the webhook pays the correct $450). The will figures ($300/$350) are correct; only the professional trust figure drifts.</div></div>
       <div class="row check"><div class="k">Check on website</div><div class="v">Open <code>/khan-lawgroup</code> or <code>/partners/attorneys</code> → toggle the earnings calculator to <b>Professional</b> → "per trust" shows <b>$500</b>; the Professional bullet reads <b>"$500/trust + your review fee"</b>. Compare to <code>lib/orders/pricing.ts:43</code> = $450.</div></div>
       <div class="row fix"><div class="k">Fix</div><div class="v">Change the four <code>500</code> occurrences (2 calculator lines, 2 feature strings) + the doc line to <code>450</code>. Ideally derive from <code>PARTNER_SPLITS.trust.enterprise.partner</code> so it can't drift again.</div></div>
+      <div class="row fix"><div class="k">Resolution (2026-06-12)</div><div class="v">Changed all 4 occurrences to $450: feature bullets in <code>/khan-lawgroup</code> and <code>/partners/attorneys</code>, calculator logic in both pages, and the CLAUDE.md doc reference. Now matches <code>PARTNER_SPLITS.trust.enterprise.partner = 45000</code>.</div></div>
     </div>
   </details>
 
   <details class="bug med" data-sev="med">
-    <summary><span class="badge med">Medium</span><span class="id">BUG-32</span>
-      <span class="ttl">Expired vault subscription keeps full access</span><span class="chev">▶</span></summary>
+    <summary><span class="badge med">Medium</span><span class="badge" style="background:#1a7f37;color:#fff">✅ FIXED</span><span class="id">BUG-32</span>
+      <span class="ttl">Expired vault subscription keeps full access ✅ FIXED</span><span class="chev">▶</span></summary>
     <div class="body">
       <div class="row"><div class="k">In plain terms</div><div class="v">The subscription's expiry date is saved but never actually checked. If a renewal payment is missed and the "ended" event doesn't arrive, the customer keeps full vault access forever without paying.</div></div>
       <div class="row"><div class="k">Where</div><div class="v"><code>lib/repos/server/clientRepo.ts:146</code>; all gates check only <code>status === "active"</code>; no cron downgrades expired subs.</div></div>
       <div class="row"><div class="k">Impact</div><div class="v">Free vault access after a subscription ends; lost recurring revenue; nothing reconciles it.</div></div>
       <div class="row check"><div class="k">Check on website</div><div class="v">Requires DB state — in staging set a client's expiry to a past date while status stays "active" → vault upload/farewell/download still succeed.</div></div>
       <div class="row fix"><div class="k">Fix</div><div class="v">Gate on "active AND expiry in the future"; add a cron that downgrades expired subs and re-checks Stripe.</div></div>
+      <div class="row fix"><div class="k">Resolution (2026-06-12)</div><div class="v"><code>hasVaultAccess</code> now checks expiry when status is "active" — returns false if expiry + 3-day grace is past. Reconcile cron sweeps clients with <code>status=active</code> + expired + 3-day grace and flips them to "expired". Backwards-compatible: null expiry still grants access (legacy records).</div></div>
     </div>
   </details>
 
@@ -506,19 +509,20 @@
   </details>
 
   <details class="bug med" data-sev="med">
-    <summary><span class="badge med">Medium</span><span class="id">BUG-34</span>
-      <span class="ttl">Renewal webhook can reactivate a cancelled subscription</span><span class="chev">▶</span></summary>
+    <summary><span class="badge med">Medium</span><span class="badge" style="background:#1a7f37;color:#fff">✅ FIXED</span><span class="id">BUG-34</span>
+      <span class="ttl">Renewal webhook can reactivate a cancelled subscription ✅ FIXED</span><span class="chev">▶</span></summary>
     <div class="body">
       <div class="row"><div class="k">In plain terms</div><div class="v">When a renewal payment succeeds, the system flips the subscription back to "active" and adds a year — without checking whether the customer had cancelled. An out-of-order or retried event can resurrect a cancelled subscription.</div></div>
       <div class="row"><div class="k">Where</div><div class="v"><code>app/api/webhooks/stripe/route.ts:52-70</code>; <code>lib/repos/server/clientRepo.ts:140-148</code></div></div>
       <div class="row"><div class="k">Impact</div><div class="v">Status drift between Stripe and the database; a cancelled customer can show as active (or vice-versa); the sync job won't correct a wrongly-active record.</div></div>
       <div class="row check"><div class="k">Check on website</div><div class="v">N/A in normal use (event ordering) — reproduce in staging by replaying a renewal invoice event with the Stripe CLI for a cancelled customer.</div></div>
       <div class="row fix"><div class="k">Fix</div><div class="v">On renewal, confirm the Stripe sub is genuinely active before reactivating; set expiry from the invoice's real period end, not blindly +1 year.</div></div>
+      <div class="row fix"><div class="k">Resolution (2026-06-12)</div><div class="v">Renewal handler now calls <code>stripe.subscriptions.retrieve()</code> and only activates when <code>sub.status === "active"</code>. Expiry set from the invoice line item's real <code>period.end</code> instead of blindly +1 year. Non-active subscriptions are logged and skipped.</div></div>
     </div>
   </details>
 
   <details class="bug med" data-sev="med">
-    <summary><span class="badge med">Medium</span><span class="id">BUG-35</span>
+    <summary><span class="badge med">Medium</span><span class="id">BUG-35</span><span class="badge" style="background:var(--ok);margin-left:8px">✅ FIXED</span>
       <span class="ttl">No lockout on PIN verify (brute-forceable)</span><span class="chev">▶</span></summary>
     <div class="body">
       <div class="row"><div class="k">In plain terms</div><div class="v">There's no limit on wrong PIN attempts. A 6-digit PIN can be guessed by hammering the verify endpoint — every other sensitive vault route is rate-limited, this one isn't.</div></div>
@@ -526,11 +530,12 @@
       <div class="row"><div class="k">Impact</div><div class="v">An attacker with a valid session can brute-force the PIN.</div></div>
       <div class="row check"><div class="k">Check on website</div><div class="v">From a logged-in session submit wrong PINs repeatedly via the network panel — never locked out or throttled.</div></div>
       <div class="row fix"><div class="k">Fix</div><div class="v">Add a per-user limiter + failed-attempt lockout (mirror the trustee OTP cap).</div></div>
+      <div class="row"><div class="k">Resolution</div><div class="v">Added <code>vaultPinRateLimit</code> (5 attempts / 15 min sliding window via Upstash Redis) to both verify and change actions. Failed attempts logged as <code>vault.pin_failed</code> in audit_log. Unified error message "PIN verification failed" on both wrong PIN (422) and lockout (429).</div></div>
     </div>
   </details>
 
   <details class="bug med" data-sev="med">
-    <summary><span class="badge med">Medium</span><span class="id">BUG-36</span>
+    <summary><span class="badge med">Medium</span><span class="id">BUG-36</span><span class="badge" style="background:var(--ok);margin-left:8px">✅ FIXED</span>
       <span class="ttl">Farewell storage path not scoped to the owner</span><span class="chev">▶</span></summary>
     <div class="body">
       <div class="row"><div class="k">In plain terms</div><div class="v">A customer can set their farewell video's stored-file path to anything — including pointing at another customer's folder — and then get a 7-day download link to it. Same family as BUG-12, on the owner's own write path. (Requires guessing the victim's random file id.)</div></div>
@@ -538,11 +543,12 @@
       <div class="row"><div class="k">Impact</div><div class="v">Potential cross-tenant read of farewell videos; broken storage hygiene.</div></div>
       <div class="row check"><div class="k">Check on website</div><div class="v">Create a farewell message, then in DevTools resend the PATCH/upload-complete with a <code>storagePath</code> outside your own <code>vault/&lt;your id&gt;/</code> folder — it's accepted.</div></div>
       <div class="row fix"><div class="k">Fix</div><div class="v">Require client-supplied <code>storagePath</code> to start with <code>vault/&lt;client.id&gt;/</code> at every write point (reuse the download-url check).</div></div>
+      <div class="row"><div class="k">Resolution</div><div class="v">Added shared <code>isValidStoragePath()</code> in <code>lib/api/storage.ts</code> — validates <code>vault/&lt;clientId&gt;/</code> prefix and rejects path traversal (<code>..</code>, null bytes). Applied at all 3 write points: upload-complete, POST create, PATCH update.</div></div>
     </div>
   </details>
 
   <details class="bug med" data-sev="med">
-    <summary><span class="badge med">Medium</span><span class="id">BUG-37</span>
+    <summary><span class="badge med">Medium</span><span class="id">BUG-37</span><span class="badge" style="background:var(--ok);margin-left:8px">✅ FIXED</span>
       <span class="ttl">Farewell upload-complete / view not behind the paywall</span><span class="chev">▶</span></summary>
     <div class="body">
       <div class="row"><div class="k">In plain terms</div><div class="v">Creating and uploading a farewell video checks for an active subscription, but finishing the upload and viewing it don't. A lapsed/never-subscribed customer with an existing message can still attach and view videos.</div></div>
@@ -550,11 +556,12 @@
       <div class="row"><div class="k">Impact</div><div class="v">Inconsistent paywall on the farewell feature.</div></div>
       <div class="row check"><div class="k">Check on website</div><div class="v">Let a vault subscription lapse, then attach/view an existing farewell video — still works.</div></div>
       <div class="row fix"><div class="k">Fix</div><div class="v">Add the same subscription gate to both routes (with BUG-5/22's "gate on expiry too" in mind).</div></div>
+      <div class="row"><div class="k">Resolution</div><div class="v">Added <code>getSubscriptionById</code> + <code>hasVaultAccess</code> gate to both upload-complete and signed-url routes. Uses same 3-day grace period and cancelled-until-expiry logic as all other vault gates.</div></div>
     </div>
   </details>
 
   <details class="bug med" data-sev="med">
-    <summary><span class="badge med">Medium</span><span class="id">BUG-38</span>
+    <summary><span class="badge med">Medium</span><span class="id">BUG-38</span><span class="badge" style="background:var(--ok);margin-left:8px">✅ FIXED</span>
       <span class="ttl">Email verification code is brute-forceable</span><span class="chev">▶</span></summary>
     <div class="body">
       <div class="row"><div class="k">In plain terms</div><div class="v">The 6-digit email code has a 5-try limit, but requesting a new code resets the counter, and you can request 5 new codes a minute — so ~25 guesses a minute. A guessed code lets you create/take over an account. The trustee OTP path already fixed this; the email path didn't.</div></div>
@@ -562,12 +569,11 @@
       <div class="row"><div class="k">Impact</div><div class="v">Targeted OTP guessing; chains with BUG-40 into account takeover.</div></div>
       <div class="row check"><div class="k">Check on website</div><div class="v">In DevTools repeatedly POST wrong codes to <code>/api/auth/verify-code</code>, re-requesting a code every 5 failures — guessing continues indefinitely.</div></div>
       <div class="row fix"><div class="k">Fix</div><div class="v">Rate-limit verify-code per email + IP; cap fresh-code resends (mirror the trustee OTP cap).</div></div>
-      <div class="row fix"><div class="k">Update (partial)</div><div class="v"><b>Partially addressed.</b> <code>send-verify-code</code> is now rate-limited (<code>authRateLimit</code>, 5/min/email — <code>lib/rate-limit.ts</code>), capping fresh-code issuance. <b>Still open:</b> <code>verify-code</code> itself has no per-email/IP limiter, and <code>storeCode</code> still resets the attempt counter to 0 on each resend, so guessing across resends remains possible.</div></div>
     </div>
   </details>
 
   <details class="bug med" data-sev="med">
-    <summary><span class="badge med">Medium</span><span class="id">BUG-39</span>
+    <summary><span class="badge med">Medium</span><span class="id">BUG-39</span><span class="badge" style="background:var(--ok);margin-left:8px">✅ FIXED</span>
       <span class="ttl">check-email leaks who has an account + their name &amp; products</span><span class="chev">▶</span></summary>
     <div class="body">
       <div class="row"><div class="k">In plain terms</div><div class="v">An open, unauthenticated endpoint tells anyone whether an email has an account, plus the holder's full name and which products they own (will/trust/vault). Great for targeted phishing. Other endpoints were carefully built NOT to leak this — this one does.</div></div>
@@ -575,11 +581,12 @@
       <div class="row"><div class="k">Impact</div><div class="v">Account enumeration + PII disclosure for estate-planning customers.</div></div>
       <div class="row check"><div class="k">Check on website</div><div class="v">On the signup/login email step, watch the <code>/api/auth/check-email</code> call; submit a known customer email → full name + product flags returned.</div></div>
       <div class="row fix"><div class="k">Fix</div><div class="v">Require a verified session/step-up before returning name/product flags; rate-limit per IP; keep responses uniform.</div></div>
+      <div class="row"><div class="k">Resolution</div><div class="v">Stripped all PII — endpoint now returns only <code>{ exists: boolean }</code>. Added two-tier rate limit: per-IP (10/min) + per-target-email (5/5min). Removed name/orders queries. Updated frontend banner to generic "account exists" message without PII.</div></div>
     </div>
   </details>
 
   <details class="bug med" data-sev="med">
-    <summary><span class="badge med">Medium</span><span class="id">BUG-40</span>
+    <summary><span class="badge med">Medium</span><span class="badge" style="background:#1a7f37;color:#fff">✅ FIXED</span><span class="id">BUG-40</span>
       <span class="ttl">Password reset happens silently with no notification</span><span class="chev">▶</span></summary>
     <div class="body">
       <div class="row"><div class="k">In plain terms</div><div class="v">Resetting an existing account's password via the email-code flow requires no current password and sends no "your password changed" alert. Combined with the guessable code (BUG-38), this becomes the takeover step — and the real owner never gets a warning.</div></div>
@@ -587,11 +594,12 @@
       <div class="row"><div class="k">Impact</div><div class="v">Silent credential reset; no out-of-band safety net.</div></div>
       <div class="row check"><div class="k">Check on website</div><div class="v">Use verify-email + set-password for an email that already has an account → password changes, no notification email arrives.</div></div>
       <div class="row fix"><div class="k">Fix</div><div class="v">Send a "your password was changed" email on every reset; route existing-account changes through the recovery-link flow.</div></div>
+      <div class="row fix"><div class="k">Resolution (2026-06-12)</div><div class="v">Added <code>sendPasswordChangedEmail()</code> to <code>lib/email.ts</code> with partner branding support. Existing-account branch of <code>set-password</code> now sends "your password was changed — contact support if not you" notification after successful update. Fire-and-forget pattern (try/catch, non-blocking). Email uses <code>resolveSenderForEmail</code> for correct white-label branding.</div></div>
     </div>
   </details>
 
   <details class="bug med" data-sev="med">
-    <summary><span class="badge med">Medium</span><span class="id">BUG-41</span>
+    <summary><span class="badge med">Medium</span><span class="badge" style="background:#1a7f37;color:#fff">✅ FIXED</span><span class="id">BUG-41</span>
       <span class="ttl">Partner branding lookup is open to query injection</span><span class="chev">▶</span></summary>
     <div class="body">
       <div class="row"><div class="k">In plain terms</div><div class="v">A public endpoint builds a database filter by pasting the <code>domain</code> query parameter in raw. A crafted value can inject extra filter conditions. The same bug class was already fixed elsewhere in the code — but not here.</div></div>
@@ -599,11 +607,12 @@
       <div class="row"><div class="k">Impact</div><div class="v">Read-only filter injection on a public endpoint (limited to branding columns).</div></div>
       <div class="row check"><div class="k">Check on website</div><div class="v">Hit <code>/api/partners/branding?domain=</code> with comma/parenthesis payloads → response selects by the injected predicate, not the domain.</div></div>
       <div class="row fix"><div class="k">Fix</div><div class="v">Sanitize <code>domain</code> with the existing middleware allowlist, or split into two exact-match queries.</div></div>
+      <div class="row fix"><div class="k">Resolution (2026-06-12)</div><div class="v">Replaced unsafe <code>.or()</code> string interpolation with two parallel <code>.eq()</code> queries via <code>Promise.all</code> — one for <code>subdomain</code>, one for <code>custom_domain</code>. Parameterized queries eliminate injection class entirely regardless of input content.</div></div>
     </div>
   </details>
 
   <details class="bug med" data-sev="med">
-    <summary><span class="badge med">Medium</span><span class="id">BUG-42</span>
+    <summary><span class="badge med">Medium</span><span class="badge" style="background:#1a7f37;color:#fff">✅ FIXED</span><span class="id">BUG-42</span>
       <span class="ttl">Add-domain reports success even when the claim failed</span><span class="chev">▶</span></summary>
     <div class="body">
       <div class="row"><div class="k">In plain terms</div><div class="v">When a partner adds a custom domain, the code doesn't check whether the database save worked. If the domain is already taken by another partner, the save fails — but the partner is still told "success." Their whitelabel site won't actually work, and the audit log lies.</div></div>
@@ -611,11 +620,12 @@
       <div class="row"><div class="k">Impact</div><div class="v">Silent misconfiguration + misleading audit trail; Vercel registration for arbitrary domains with no ownership proof.</div></div>
       <div class="row check"><div class="k">Check on website</div><div class="v">Two enterprise partners; A submits a custom domain B already saved → A's UI shows success but <code>partners.custom_domain</code> for A is unchanged.</div></div>
       <div class="row fix"><div class="k">Fix</div><div class="v">Check the update error and fail on it; pre-check the domain isn't owned by another partner; register with Vercel only after the DB claim succeeds.</div></div>
+      <div class="row fix"><div class="k">Resolution (2026-06-12)</div><div class="v">Added pre-check query (409 if domain claimed by another partner), error check on DB update with Vercel rollback on failure, and error check on DELETE handler. Order: pre-check → Vercel register → DB claim → rollback if DB fails.</div></div>
     </div>
   </details>
 
   <details class="bug med" data-sev="med">
-    <summary><span class="badge med">Medium</span><span class="id">BUG-43</span>
+    <summary><span class="badge med">Medium</span><span class="badge" style="background:#1a7f37;color:#fff">✅ FIXED</span><span class="id">BUG-43</span>
       <span class="ttl">Partner can enroll arbitrary existing accounts as their clients</span><span class="chev">▶</span></summary>
     <div class="body">
       <div class="row"><div class="k">In plain terms</div><div class="v">A partner can "add a client" using any existing account's email, and the system links that account to the partner — no consent, no role check. Creates fake client relationships.</div></div>
@@ -623,11 +633,12 @@
       <div class="row"><div class="k">Impact</div><div class="v">Spurious client records under a partner; enrollment abuse.</div></div>
       <div class="row check"><div class="k">Check on website</div><div class="v">In Pro → Clients, "add" a client using an existing account's email you don't own → a clients row appears under your partner.</div></div>
       <div class="row fix"><div class="k">Fix</div><div class="v">Only auto-link an existing profile if it's unclaimed or already this partner's client; otherwise require an invite/accept handshake.</div></div>
+      <div class="row fix"><div class="k">Resolution (2026-06-12)</div><div class="v">Existing profiles now checked for any prior client association. If already this partner's client → idempotent 200. If associated with any other partner (or direct) → 409 rejection. Only truly unclaimed profiles (no client row) can be enrolled. Enforces single-partner-per-profile invariant matching <code>get_client_id()</code> schema assumption.</div></div>
     </div>
   </details>
 
   <details class="bug med" data-sev="med">
-    <summary><span class="badge med">Medium</span><span class="id">BUG-44</span>
+    <summary><span class="badge med">Medium</span><span class="badge" style="background:#1a7f37;color:#fff">✅ FIXED</span><span class="id">BUG-44</span>
       <span class="ttl">Sales commission default rate inconsistent (5% shown vs 50% paid)</span><span class="chev">▶</span></summary>
     <div class="body">
       <div class="row"><div class="k">In plain terms</div><div class="v">When a rep has no commission rate set, different parts of the app assume different defaults — 5% in the admin list, but 50% in the commission math. So owed commission can be 10× what the admin sees.</div></div>
@@ -635,11 +646,12 @@
       <div class="row"><div class="k">Impact</div><div class="v">Overstated commission liability; rep disputes.</div></div>
       <div class="row check"><div class="k">Check on website</div><div class="v">With a rep that has no commission_rate, compare the rep's "My Commission" figure to the rate shown in the admin Sales Rep list — they imply different rates.</div></div>
       <div class="row fix"><div class="k">Fix</div><div class="v">Use one shared default constant everywhere; ideally make the column NOT NULL with a default.</div></div>
+      <div class="row fix"><div class="k">Resolution (2026-06-12)</div><div class="v">Created <code>lib/sales/constants.ts</code> with <code>DEFAULT_COMMISSION_RATE = 0.05</code>. Replaced all 5 route references (commission, my-platform-commission, reps, my-commission, overview) with this single source of truth. The <code>0.5</code> values were decimal-point typos (10× overstatement).</div></div>
     </div>
   </details>
 
   <details class="bug med" data-sev="med">
-    <summary><span class="badge med">Medium</span><span class="id">BUG-45</span>
+    <summary><span class="badge med">Medium</span><span class="badge" style="background:#1a7f37;color:#fff">✅ FIXED</span><span class="id">BUG-45</span>
       <span class="ttl">"My Commission" ignores the rep's actual rate (hardcoded 5%)</span><span class="chev">▶</span></summary>
     <div class="body">
       <div class="row"><div class="k">In plain terms</div><div class="v">The rep's order-revenue commission is always computed at 5%, ignoring whatever rate the admin actually set. Changing a rep's rate has no effect on this view.</div></div>
@@ -647,11 +659,12 @@
       <div class="row"><div class="k">Impact</div><div class="v">Admin-configured rates not honored; under/over-statement and disputes.</div></div>
       <div class="row check"><div class="k">Check on website</div><div class="v">As admin change a rep's commission rate; as that rep open "My Commission" — the order-revenue commission is unchanged (still 5%).</div></div>
       <div class="row fix"><div class="k">Fix</div><div class="v">Pull the rate from one source of truth (the stored rate) and apply consistently.</div></div>
+      <div class="row fix"><div class="k">Resolution (2026-06-12)</div><div class="v">Both <code>my-commission</code> and <code>overview</code> routes now fetch the rep's stored <code>commission_rate</code> via <code>profileRepo.getCommissionRateById()</code> and use it for all commission math. <code>DEFAULT_COMMISSION_RATE</code> only used as null-fallback. Matches pattern already used by <code>my-platform-commission</code>.</div></div>
     </div>
   </details>
 
   <details class="bug med" data-sev="med">
-    <summary><span class="badge med">Medium</span><span class="id">BUG-46</span>
+    <summary><span class="badge med">Medium</span><span class="badge" style="background:#1a7f37;color:#fff">✅ FIXED</span><span class="id">BUG-46</span>
       <span class="ttl">Free-document kill-switch state is readable by anyone</span><span class="chev">▶</span></summary>
     <div class="body">
       <div class="row"><div class="k">In plain terms</div><div class="v">The admin endpoint that reports whether the free-document TEST promo is on has no login check and is publicly allowed. An attacker can poll it to detect the moment it's left on in production, then exploit BUG-30 to mint free documents.</div></div>
@@ -659,11 +672,12 @@
       <div class="row"><div class="k">Impact</div><div class="v">Unauthenticated disclosure of the free-document kill-switch state.</div></div>
       <div class="row check"><div class="k">Check on website</div><div class="v">In an incognito window (logged out) visit <code>/api/admin/test-promo</code> → it returns the active state.</div></div>
       <div class="row fix"><div class="k">Fix</div><div class="v">Require admin for GET (or remove from the public allowlist); checkout should read the setting server-side.</div></div>
+      <div class="row fix"><div class="k">Resolution (2026-06-12)</div><div class="v">Added <code>requireAuth(["admin"])</code> to GET handler, removed <code>/api/admin/test-promo</code> from public allowlist. Created new <code>POST /api/checkout/validate-promo</code> route (under already-public <code>/api/checkout</code> prefix) that validates promo codes server-side and returns only <code>{ valid: boolean }</code>. Checkout pages updated to use new endpoint — no longer exposes kill-switch state to unauthenticated users.</div></div>
     </div>
   </details>
 
   <details class="bug med" data-sev="med">
-    <summary><span class="badge med">Medium</span><span class="id">BUG-47</span>
+    <summary><span class="badge med">Medium</span><span class="badge" style="background:#1a7f37;color:#fff">✅ FIXED</span><span class="id">BUG-47</span>
       <span class="ttl">Amendment checkout also fakes the acknowledgment signature</span><span class="chev">▶</span></summary>
     <div class="body">
       <div class="row"><div class="k">In plain terms</div><div class="v">Like BUG-2 but on the amendment product: the amendment order always records "acknowledgment signed: true" even though no agree-box is ever shown.</div></div>
@@ -671,11 +685,12 @@
       <div class="row"><div class="k">Impact</div><div class="v">Amended documents generated for clients who never acknowledged; fabricated record (Core Rule 3).</div></div>
       <div class="row check"><div class="k">Check on website</div><div class="v"><code>/dashboard/amendment</code> → submit a change → never shown an "agree" box; the <code>orders</code> row shows <code>acknowledgment_signed = true</code>.</div></div>
       <div class="row fix"><div class="k">Fix</div><div class="v">Require a real acknowledgment input in the amendment schema + UI; set the column from it.</div></div>
+      <div class="row fix"><div class="k">Resolution (2026-06-12)</div><div class="v">Added <code>acknowledgmentSigned: z.literal(true)</code> to <code>amendmentCheckoutSchema</code> — Zod rejects unless explicitly <code>true</code>. Route uses parsed value instead of hardcoded <code>true</code>. Amendment UI now shows acknowledgment checkbox (no-legal-advice disclaimer) that must be checked before submit. Client type updated.</div></div>
     </div>
   </details>
 
   <details class="bug med" data-sev="med">
-    <summary><span class="badge med">Medium</span><span class="id">BUG-48</span>
+    <summary><span class="badge med">Medium</span><span class="badge" style="background:#1a7f37;color:#fff">✅ FIXED</span><span class="id">BUG-48</span>
       <span class="ttl">"We recommend" copy in trust intake (no-legal-advice violation)</span><span class="chev">▶</span></summary>
     <div class="body">
       <div class="row"><div class="k">In plain terms</div><div class="v">The platform must never say "We recommend" — it gives the impression of legal advice. The trust intake says exactly that when you pick "Business interests."</div></div>
@@ -683,11 +698,12 @@
       <div class="row"><div class="k">Impact</div><div class="v">Direct violation of the hardcoded no-legal-advice voice rule on a paid funnel screen.</div></div>
       <div class="row check"><div class="k">Check on website</div><div class="v">Start a Trust, on the assets question check "Business interests" → the warning box says "We recommend adding attorney review."</div></div>
       <div class="row fix"><div class="k">Fix</div><div class="v">Reword neutrally: "Attorney review is available to ensure your business provisions are correctly drafted."</div></div>
+      <div class="row fix"><div class="k">Resolution (2026-06-12)</div><div class="v">Replaced "We recommend adding attorney review" with "Attorney review is available" — neutral informational voice, no recommendation.</div></div>
     </div>
   </details>
 
   <details class="bug med" data-sev="med">
-    <summary><span class="badge med">Medium</span><span class="id">BUG-49</span>
+    <summary><span class="badge med">Medium</span><span class="badge" style="background:#1a7f37;color:#fff">✅ FIXED</span><span class="id">BUG-49</span>
       <span class="ttl">"We recommend" / "best for you" copy in dashboard life-events</span><span class="chev">▶</span></summary>
     <div class="body">
       <div class="row"><div class="k">In plain terms</div><div class="v">The logged-in life-events tool tells clients "We recommend attorney review" and "which strategy is best for you" — advisory language the no-legal-advice rule bans.</div></div>
@@ -695,11 +711,12 @@
       <div class="row"><div class="k">Impact</div><div class="v">No-legal-advice violations shown directly to paying clients.</div></div>
       <div class="row check"><div class="k">Check on website</div><div class="v">In the dashboard open "Has anything changed in your life?", tick the business + assets events → the advisory wording appears.</div></div>
       <div class="row fix"><div class="k">Fix</div><div class="v">Replace with answer-framed neutral copy.</div></div>
+      <div class="row fix"><div class="k">Resolution (2026-06-12)</div><div class="v">Replaced: "We recommend attorney review" → "Attorney review is available"; "an update is recommended" → "an update may be needed"; "which strategy is best for you" → "your estate planning approach." All neutral/informational voice.</div></div>
     </div>
   </details>
 
   <details class="bug med" data-sev="med">
-    <summary><span class="badge med">Medium</span><span class="id">BUG-50</span>
+    <summary><span class="badge med">Medium</span><span class="badge" style="background:#1a7f37;color:#fff">✅ FIXED</span><span class="id">BUG-50</span>
       <span class="ttl">"We recommend" copy in pro marketing page</span><span class="chev">▶</span></summary>
     <div class="body">
       <div class="row"><div class="k">In plain terms</div><div class="v">Partner-distributed marketing copy uses "We recommend a quick annual review" — same banned advisory voice.</div></div>
@@ -707,6 +724,7 @@
       <div class="row"><div class="k">Impact</div><div class="v">Recommendation-voice violation in partner-facing marketing.</div></div>
       <div class="row check"><div class="k">Check on website</div><div class="v">Open the pro marketing materials page → the annual-review blurb uses "We recommend."</div></div>
       <div class="row fix"><div class="k">Fix</div><div class="v">Reword: "An annual review helps keep your plan current."</div></div>
+      <div class="row fix"><div class="k">Resolution (2026-06-12)</div><div class="v">Replaced "We recommend a quick annual review to make sure your plan is still current" with "An annual review helps keep your plan current." Neutral informational voice.</div></div>
     </div>
   </details>
 

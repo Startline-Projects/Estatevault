@@ -20,6 +20,7 @@ export default function AmendmentPage() {
   const router = useRouter();
   const [changeType, setChangeType] = useState("");
   const [description, setDescription] = useState("");
+  const [acknowledgmentSigned, setAcknowledgmentSigned] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [touched, setTouched] = useState<Record<string, boolean>>({});
@@ -41,7 +42,7 @@ export default function AmendmentPage() {
     setError("");
 
     try {
-      const { data, error: err } = await checkoutAmendment({ userId, changeType, description });
+      const { data, error: err } = await checkoutAmendment({ userId, changeType, description, acknowledgmentSigned: true });
       if (err || !data) { setError(err || "Something went wrong"); setLoading(false); return; }
 
       const result = data as Record<string, unknown>;
@@ -106,9 +107,23 @@ export default function AmendmentPage() {
           {touched.description && !description.trim() && <p id="desc-error" role="alert" className="mt-1 text-xs text-red-600">Please describe the changes you need.</p>}
         </div>
 
+        <div className="mt-5">
+          <label className="flex items-start gap-3 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={acknowledgmentSigned}
+              onChange={(e) => setAcknowledgmentSigned(e.target.checked)}
+              className="mt-0.5 h-5 w-5 rounded border-gray-300 text-gold focus:ring-gold/30"
+            />
+            <span className="text-sm text-charcoal/80">
+              I acknowledge that this platform provides document preparation services only and does not provide legal advice. No attorney-client relationship is created by my use of this service.
+            </span>
+          </label>
+        </div>
+
         {error && <p role="alert" className="mt-4 text-sm text-red-600">{error}</p>}
 
-        <button onClick={handleSubmit} disabled={loading || !changeType || !description.trim()} className="mt-6 w-full min-h-[44px] rounded-full bg-gold py-3 text-sm font-semibold text-white hover:bg-gold/90 disabled:opacity-50 disabled:cursor-not-allowed">
+        <button onClick={handleSubmit} disabled={loading || !changeType || !description.trim() || !acknowledgmentSigned} className="mt-6 w-full min-h-[44px] rounded-full bg-gold py-3 text-sm font-semibold text-white hover:bg-gold/90 disabled:opacity-50 disabled:cursor-not-allowed">
           {loading
             ? (isSubscriber ? "Submitting..." : "Redirecting to payment...")
             : (isSubscriber ? "Submit Amendment (Included with Subscription)" : `Proceed to Payment, ${formatPrice(PRICES.amendment)}`)

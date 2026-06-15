@@ -174,6 +174,36 @@ export const GET = withRoute(async (req: NextRequest) => {
     }
   }
 
+  // ── BUG-32: downgrade expired "active" subscriptions ────────
+  // If the renewal webhook never arrived, status stays "active" with a past
+  // expiry. After a 3-day grace period (matching hasVaultAccess), flip to
+  // "expired" so records stay honest.
+  let subsExpired = 0;
+  const graceCutoff = new Date(now - 3 * 24 * 60 * 60 * 1000).toISOString();
+  const { data: expiredClients, error: expErr } = await admin
+    .from("clients")
+    .select("id")
+    .eq("vault_subscription_status", "active")
+    .not("vault_subscription_expiry", "is", null)
+    .lt("vault_subscription_expiry", graceCutoff)
+    .limit(200);
+
+  if (expErr) {
+    console.error("[reconcile-orders] expired sub query failed:", expErr);
+  } else if (expiredClients && expiredClients.length) {
+    const ids = expiredClients.map((c) => c.id);
+    console.log(`[reconcile-orders] expiring ${ids.length} stale-active subscriptions (BUG-32):`, ids);
+    const { error: upErr } = await admin
+      .from("clients")
+      .update({ vault_subscription_status: "expired" })
+      .in("id", ids);
+    if (upErr) {
+      console.error("[reconcile-orders] sub expiry update failed:", upErr);
+    } else {
+      subsExpired = ids.length;
+    }
+  }
+
   return ok({
     ok: true,
     checked: stuck?.length || 0,
@@ -182,5 +212,6 @@ export const GET = withRoute(async (req: NextRequest) => {
     generationTriggered,
     alerted,
     orphansDeleted,
+    subsExpired,
   });
 });

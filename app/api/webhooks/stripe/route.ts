@@ -75,15 +75,22 @@ async function dispatchEvent(
       const rawSub = (event.data.object as unknown as Record<string, unknown>).subscription;
       const subscriptionId = typeof rawSub === "string" ? rawSub : null;
       if (subscriptionId) {
-        const expiry = new Date();
-        expiry.setFullYear(expiry.getFullYear() + 1);
-        await clientRepo.activateVaultByStripeId(supabase, subscriptionId, expiry.toISOString());
-        await auditLogRepo.insertEntry(supabase, {
-          action: "subscription.renewed",
-          resource_type: "client",
-          resource_id: subscriptionId,
-          metadata: { subscription_id: subscriptionId },
-        });
+        const sub = await stripe.subscriptions.retrieve(subscriptionId);
+        if (sub.status === "active") {
+          const periodEnd = invoice.lines?.data?.[0]?.period?.end;
+          const expiry = periodEnd
+            ? new Date(periodEnd * 1000).toISOString()
+            : new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString();
+          await clientRepo.activateVaultByStripeId(supabase, subscriptionId, expiry);
+          await auditLogRepo.insertEntry(supabase, {
+            action: "subscription.renewed",
+            resource_type: "client",
+            resource_id: subscriptionId,
+            metadata: { subscription_id: subscriptionId, stripe_status: sub.status },
+          });
+        } else {
+          console.warn(`[webhook] renewal skipped: sub ${subscriptionId} status=${sub.status}, not active`);
+        }
       }
     }
     return ok({ received: true });

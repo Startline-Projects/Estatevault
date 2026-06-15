@@ -79,10 +79,13 @@ export function generateCode(): string {
 }
 
 export async function storeCode(email: string, code: string): Promise<void> {
-  await setEntry(normalize(email), {
+  const e = normalize(email);
+  const existing = await getEntry(e);
+  const carriedAttempts = existing ? Math.max(0, existing.attempts - 2) : 0;
+  await setEntry(e, {
     codeHash: hash(code),
     expiresAt: Date.now() + 10 * 60 * 1000,
-    attempts: 0,
+    attempts: carriedAttempts,
   });
 }
 
