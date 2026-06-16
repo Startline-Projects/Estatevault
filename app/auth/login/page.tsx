@@ -4,7 +4,7 @@ import { Suspense, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { clientUrl, partnerUrl, adminUrl, salesUrl, isClientHost, isPartnerHost, isAdminHost, isSalesHost } from "@/lib/hosts";
+import { clientUrl, partnerUrl, adminUrl, salesUrl, attorneyUrl, isClientHost, isPartnerHost, isAdminHost, isSalesHost, isAttorneyHost } from "@/lib/hosts";
 import { createClient as createBrowserSupabase } from "@/lib/supabase/client";
 import PartnerThemedShell, { usePartnerBranding } from "@/components/partner/PartnerThemedShell";
 import { createHandoff, getLoginRouting } from "@/lib/api-client/auth";
@@ -18,7 +18,7 @@ function BrandedWordmark({ className = "" }: { className?: string }) {
 async function navigate(
   router: ReturnType<typeof useRouter>,
   fullUrl: string,
-  target: "client" | "partner" | "admin" | "sales",
+  target: "client" | "partner" | "admin" | "sales" | "attorney",
   redirectPath: string
 ) {
   if (typeof window === "undefined") return;
@@ -112,18 +112,21 @@ function LoginForm() {
     const onPartnerHost = isPartnerHost(currentHost);
     const onAdminHost = isAdminHost(currentHost);
     const onSalesHost = isSalesHost(currentHost);
+    const onAttorneyHost = isAttorneyHost(currentHost);
 
     const wrongHost =
       (onClientHost && (userType === "partner" || userType === "admin" || userType === "sales_rep" || userType === "review_attorney")) ||
       (onPartnerHost && userType !== "partner") ||
-      (onAdminHost && userType !== "admin" && userType !== "review_attorney") ||
-      (onSalesHost && userType !== "sales_rep");
+      (onAdminHost && userType !== "admin") ||
+      (onSalesHost && userType !== "sales_rep") ||
+      (onAttorneyHost && userType !== "review_attorney");
 
     if (wrongHost) {
       await supabase.auth.signOut();
       let portalUrl = "";
       if (userType === "partner") portalUrl = partnerUrl("/auth/login");
-      else if (userType === "admin" || userType === "review_attorney") portalUrl = adminUrl("/auth/login");
+      else if (userType === "admin") portalUrl = adminUrl("/auth/login");
+      else if (userType === "review_attorney") portalUrl = attorneyUrl("/auth/login");
       else if (userType === "sales_rep") portalUrl = salesUrl("/auth/login");
       else portalUrl = clientUrl("/auth/login");
       setError(
@@ -185,7 +188,7 @@ function LoginForm() {
     } else if (userType === "admin") {
       await navigate(router, adminUrl("/sales/dashboard"), "admin", "/sales/dashboard");
     } else if (userType === "review_attorney") {
-      await navigate(router, adminUrl("/attorney"), "admin", "/attorney");
+      await navigate(router, attorneyUrl("/attorney"), "attorney", "/attorney");
     } else if (userType === "affiliate") {
       await navigate(router, clientUrl("/affiliate"), "client", "/affiliate");
     } else {

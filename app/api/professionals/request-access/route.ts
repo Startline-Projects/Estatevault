@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getResend } from "@/lib/email";
+import { getResend, escapeHtml } from "@/lib/email";
 import { professionalRequestAccessSchema } from "@/lib/validation/schemas";
 import { createAdminClient } from "@/lib/api/auth";
 
@@ -71,13 +71,13 @@ export async function POST(request: Request) {
           html: `
             <h2>New Professional Partner Lead</h2>
             <table style="border-collapse:collapse;">
-              <tr><td style="padding:4px 12px;font-weight:600;">Name</td><td style="padding:4px 12px;">${firstName} ${lastName}</td></tr>
-              <tr><td style="padding:4px 12px;font-weight:600;">Email</td><td style="padding:4px 12px;">${email}</td></tr>
-              <tr><td style="padding:4px 12px;font-weight:600;">Phone</td><td style="padding:4px 12px;">${phone || "N/A"}</td></tr>
-              <tr><td style="padding:4px 12px;font-weight:600;">Company</td><td style="padding:4px 12px;">${companyName || "N/A"}</td></tr>
-              <tr><td style="padding:4px 12px;font-weight:600;">Type</td><td style="padding:4px 12px;">${professionalType}</td></tr>
-              <tr><td style="padding:4px 12px;font-weight:600;">Clients</td><td style="padding:4px 12px;">${clientCount || "N/A"}</td></tr>
-              <tr><td style="padding:4px 12px;font-weight:600;">Referral</td><td style="padding:4px 12px;">${referralSource || "N/A"}</td></tr>
+              <tr><td style="padding:4px 12px;font-weight:600;">Name</td><td style="padding:4px 12px;">${escapeHtml(firstName)} ${escapeHtml(lastName)}</td></tr>
+              <tr><td style="padding:4px 12px;font-weight:600;">Email</td><td style="padding:4px 12px;">${escapeHtml(email)}</td></tr>
+              <tr><td style="padding:4px 12px;font-weight:600;">Phone</td><td style="padding:4px 12px;">${escapeHtml(phone || "N/A")}</td></tr>
+              <tr><td style="padding:4px 12px;font-weight:600;">Company</td><td style="padding:4px 12px;">${escapeHtml(companyName || "N/A")}</td></tr>
+              <tr><td style="padding:4px 12px;font-weight:600;">Type</td><td style="padding:4px 12px;">${escapeHtml(professionalType)}</td></tr>
+              <tr><td style="padding:4px 12px;font-weight:600;">Clients</td><td style="padding:4px 12px;">${escapeHtml(String(clientCount ?? "N/A"))}</td></tr>
+              <tr><td style="padding:4px 12px;font-weight:600;">Referral</td><td style="padding:4px 12px;">${escapeHtml(referralSource || "N/A")}</td></tr>
             </table>
           `,
         });
@@ -107,7 +107,7 @@ export async function POST(request: Request) {
                   <h1 style="margin:0;color:#ffffff;font-size:20px;font-weight:700;">EstateVault</h1>
                 </div>
                 <div style="padding:32px;">
-                  <h2 style="margin:0 0 16px;font-size:22px;color:#1C3557;">Thanks, ${firstName}!</h2>
+                  <h2 style="margin:0 0 16px;font-size:22px;color:#1C3557;">Thanks, ${escapeHtml(firstName)}!</h2>
                   <p style="font-size:14px;color:#2D2D2D;line-height:1.6;">
                     We received your request to join the EstateVault Pro partner program.
                     A member of our partnerships team will reach out within one business day

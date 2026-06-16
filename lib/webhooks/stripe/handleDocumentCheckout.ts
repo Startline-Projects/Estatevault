@@ -393,7 +393,16 @@ export async function handleDocumentCheckout(
       status: "pending" as const,
     }));
   if (documentRecords.length) {
-    await documentRepo.insertMany(supabase, documentRecords);
+    // BUG-24: the document rows are what the generation worker fills in. If this
+    // insert fails we must NOT pretend success — partner is already paid and the
+    // order is 'generating', so a swallowed error leaves a paid order with zero
+    // document rows and nothing to fulfill. Throw so the webhook returns non-200
+    // and Stripe redelivers into a clean re-run (replay-safe: existing-doc filter
+    // above + BUG-23 per-side-effect idempotency mean the retry won't duplicate).
+    const { error: insertErr } = await documentRepo.insertMany(supabase, documentRecords);
+    if (insertErr) {
+      throw new Error(`Failed to insert document records for order ${orderId}: ${insertErr.message}`);
+    }
   }
 
   // ── 4. Attorney review record if requested ─────────────────

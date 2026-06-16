@@ -10,7 +10,7 @@ import * as auditLogRepo from "@/lib/repos/server/auditLogRepo";
 import { attorneyApproveSchema } from "@/lib/validation/schemas";
 
 export const POST = withRoute(async (req: NextRequest) => {
-  const auth = await requireAuth(["review_attorney", "admin"]);
+  const auth = await requireAuth(["review_attorney"]);
   if ("error" in auth) return auth.error;
 
   const rawBody = await req.json();
@@ -25,11 +25,25 @@ export const POST = withRoute(async (req: NextRequest) => {
   const validDecisions = ["approved", "approved_with_notes", "flagged"];
   if (!validDecisions.includes(decision)) return fail("Invalid decision", 400);
 
-  const isAdmin = auth.profile.user_type === "admin";
-
   const { data: review } = await attorneyReviewRepo.getById(auth.admin, reviewId);
   if (!review) return fail("Review not found", 404);
-  if (!isAdmin && review.attorney_id !== auth.user.id) return fail("Forbidden", 403);
+  if (review.attorney_id !== auth.user.id) return fail("Forbidden", 403);
+
+  // BUG-53: a decided review is terminal — block repeat approvals (and the duplicate delivery emails they send).
+  const terminalStates = ["approved", "approved_with_notes", "flagged"];
+  if (review.status && terminalStates.includes(review.status)) return fail("Review already decided", 409);
+
+  // BUG-53: a paid review can't be "delivered" with nothing to show — require an uploaded reviewed document first.
+  if (decision === "approved" || decision === "approved_with_notes") {
+    if (!review.order_id) return fail("Review has no associated order", 400);
+    const { count, error: cntErr } = await auth.admin
+      .from("documents")
+      .select("id", { count: "exact", head: true })
+      .eq("order_id", review.order_id)
+      .not("reviewed_path", "is", null);
+    if (cntErr) return fail("Failed to verify reviewed documents", 500);
+    if (!count) return fail("No reviewed document uploaded", 400);
+  }
 
   const { error: reviewErr } = await attorneyReviewRepo.updateDecision(auth.admin, reviewId, decision, notes || null);
   if (reviewErr) return fail("Failed to update review", 500);

@@ -14,7 +14,7 @@ const MAX_BYTES = 20 * 1024 * 1024;
 const DOCX_MIME = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
 
 export const POST = withRoute(async (req: NextRequest) => {
-  const auth = await requireAuth(["review_attorney", "admin"]);
+  const auth = await requireAuth(["review_attorney"]);
   if ("error" in auth) return auth.error;
 
   const form = await req.formData().catch(() => null);
@@ -38,9 +38,8 @@ export const POST = withRoute(async (req: NextRequest) => {
   if (!doc.order_id) return fail("Document has no associated order", 400);
   if (!doc.client_id) return fail("Document has no associated client", 400);
 
-  const isAdmin = auth.profile.user_type === "admin";
   const { data: ar } = await attorneyReviewRepo.isAssignedAttorney(auth.admin, doc.order_id, auth.user.id);
-  if (!isAdmin && !ar) return fail("Forbidden", 403);
+  if (!ar) return fail("Forbidden", 403);
 
   const docxBytes = Buffer.from(await file.arrayBuffer());
 

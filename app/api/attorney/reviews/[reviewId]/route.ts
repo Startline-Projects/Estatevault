@@ -11,7 +11,7 @@ export const PATCH = withRoute(async (
   req: NextRequest,
   { params }: { params: { reviewId: string } },
 ) => {
-  const auth = await requireAuth(["review_attorney", "attorney"], req);
+  const auth = await requireAuth(["review_attorney"], req);
   if ("error" in auth) return auth.error;
 
   const parsed = attorneyReviewStatusSchema.safeParse(await req.json().catch(() => null));

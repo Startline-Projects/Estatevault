@@ -77,6 +77,7 @@ function makeAdmin() {
   builder.update = chain;
   // Terminal awaits: a bare `.eq()` chain (update) and explicit resolvers.
   builder.maybeSingle = () => Promise.resolve({ data: null });
+  builder.single = () => Promise.resolve({ data: null });
   builder.then = (resolve: (v: unknown) => unknown) => resolve({ data: [] });
   return { from: () => builder } as never;
 }
@@ -109,6 +110,9 @@ beforeEach(() => {
   h.transferToPartner.mockResolvedValue({ id: "tr_1" });
   // Default: connected accounts are fully payable (transfers capability active).
   h.getAccountStatus.mockResolvedValue({ transfers_active: true });
+  // BUG-24: the handler now checks the insert result, so the mock must resolve
+  // a {error} shape (success by default).
+  h.insertMany.mockResolvedValue({ error: null });
 });
 
 describe("handleDocumentCheckout — document set per product", () => {
@@ -178,18 +182,22 @@ describe("handleDocumentCheckout — revenue split (Rules 5+6, real calculateSpl
 });
 
 describe("handleDocumentCheckout — client-profile linking (Bug 8)", () => {
+  // Table-aware chainable stub: the `clients` lookup resolves the given client
+  // row; every other replay-safety read resolves empty. (The handler now reads
+  // several tables — orders/documents/payouts/attorney_reviews — so a stub that
+  // only knew `clients` broke on their `.maybeSingle()`/array awaits.)
   function adminWithClient(clientData: { id: string; profile_id: string | null } | null) {
-    const clientChain = {
-      eq: () => ({
-        single: () => Promise.resolve({ data: clientData }),
-        is: () => ({ single: () => Promise.resolve({ data: clientData }) }),
-      }),
+    const chainable = (singleData: unknown) => {
+      const b: Record<string, unknown> = {};
+      const chain = () => b;
+      b.select = chain; b.eq = chain; b.is = chain; b.contains = chain; b.update = chain;
+      b.single = () => Promise.resolve({ data: singleData });
+      b.maybeSingle = () => Promise.resolve({ data: null });
+      b.then = (resolve: (v: unknown) => unknown) => resolve({ data: [] });
+      return b;
     };
     return {
-      from: () => ({
-        update: () => ({ eq: () => Promise.resolve({}) }),
-        select: () => clientChain,
-      }),
+      from: (table: string) => chainable(table === "clients" ? clientData : null),
     } as never;
   }
 
@@ -221,5 +229,19 @@ describe("handleDocumentCheckout — client-profile linking (Bug 8)", () => {
       testAdmin,
       expect.objectContaining({ id: "client_1", profile_id: "prof_1" }),
     );
+  });
+});
+
+describe("handleDocumentCheckout — BUG-24 document-records insert failure", () => {
+  it("throws (does not swallow) when insertMany errors, and never queues generation", async () => {
+    h.insertMany.mockResolvedValue({ error: { message: "insert boom" } });
+
+    await expect(
+      handleDocumentCheckout(admin, session(40000), meta("will")),
+    ).rejects.toThrow(/Failed to insert document records/);
+
+    // Insert is step 3; the generation queue is step 4b. A thrown insert must
+    // abort before queueing so the webhook returns non-200 and Stripe retries.
+    expect(h.addJob).not.toHaveBeenCalled();
   });
 });

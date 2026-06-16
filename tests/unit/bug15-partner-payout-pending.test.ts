@@ -66,6 +66,7 @@ function makeAdmin() {
   builder.contains = chain;
   builder.update = chain;
   builder.maybeSingle = () => Promise.resolve({ data: null });
+  builder.single = () => Promise.resolve({ data: null });
   builder.then = (resolve: (v: unknown) => unknown) => resolve({ data: [] });
   return { from: () => builder } as never;
 }
@@ -101,6 +102,8 @@ beforeEach(() => {
   h.findIdAndNameByEmail.mockResolvedValue({ data: { id: "prof_1", full_name: "Buyer One" } });
   h.getLatestAnswers.mockResolvedValue({ data: { id: "quiz_1", answers: { a: 1 } } });
   h.transferToPartner.mockResolvedValue({ id: "tr_1" });
+  // BUG-24: handler now checks the insert result — resolve a {error} shape.
+  h.insertMany.mockResolvedValue({ error: null });
 });
 
 describe("BUG-15 — connected-but-unpayable partner", () => {

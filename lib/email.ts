@@ -430,7 +430,10 @@ export async function sendDocumentEmail(params: SendDocumentEmailParams & { part
   }
 }
 
-function escapeHtml(s: string): string {
+// Escape user-supplied text before interpolating into an HTML email body.
+// Exported so every email route shares one guard (BUG-22: request-access was
+// interpolating lead fields raw while contact escaped — that drift was the bug).
+export function escapeHtml(s: string): string {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
 

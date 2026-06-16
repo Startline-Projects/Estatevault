@@ -7,7 +7,7 @@ import * as attorneyReviewRepo from "@/lib/repos/server/attorneyReviewRepo";
 import * as auditLogRepo from "@/lib/repos/server/auditLogRepo";
 
 export const GET = withRoute(async (req: NextRequest) => {
-  const auth = await requireAuth(["review_attorney", "admin"]);
+  const auth = await requireAuth(["review_attorney"]);
   if ("error" in auth) return auth.error;
 
   const documentId = new URL(req.url).searchParams.get("documentId");
@@ -20,11 +20,10 @@ export const GET = withRoute(async (req: NextRequest) => {
     .single();
   if (!doc || !doc.review_docx_path) return fail("No editable document available.", 404);
 
-  const isAdmin = auth.profile.user_type === "admin";
   if (!doc.order_id) return fail("Document has no associated order", 400);
   const { data: ar } = await attorneyReviewRepo.isAssignedAttorney(auth.admin, doc.order_id, auth.user.id);
 
-  if (!isAdmin && !ar) return fail("Forbidden", 403);
+  if (!ar) return fail("Forbidden", 403);
 
   const sealed = !!doc.review_docx_for;
   if (sealed && doc.review_docx_for !== auth.user.id) {
