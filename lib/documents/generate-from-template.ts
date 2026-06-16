@@ -1,4 +1,4 @@
-import { useReactPdfRenderer } from "./pdf/feature-flag";
+import { isReactPdfRendererEnabled } from "./pdf/feature-flag";
 import { toTemplateDocType } from "./pdf/doc-type-map";
 import { mapIntakeToTemplateData } from "./intake-adapter";
 import { readTemplateFile } from "./pdf/template-reader";
@@ -22,7 +22,7 @@ export async function tryTemplateRender(
   partnerLogoUrl?: string | null,
   clientFullName?: string,
 ): Promise<TemplateRenderResult | null> {
-  if (!useReactPdfRenderer()) return null;
+  if (!isReactPdfRendererEnabled()) return null;
 
   const templateDocType = toTemplateDocType(docType);
   if (!templateDocType) {

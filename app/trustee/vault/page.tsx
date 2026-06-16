@@ -318,7 +318,6 @@ export default function TrusteeVaultPage() {
       try {
         const { data: itemsData, error: apiError } = await getItems();
         if (apiError || !itemsData) throw new Error(apiError || "Failed to load");
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const j = itemsData as Record<string, any>;
         const serverItems = (j.vaultItems || []) as ServerVaultItem[];
         const serverDocs = (j.documents || []) as ServerDoc[];

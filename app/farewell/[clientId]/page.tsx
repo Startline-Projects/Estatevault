@@ -139,7 +139,6 @@ export default function FarewellTrusteePage() {
         return;
       }
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const d = data as Record<string, any>;
 
       const block = (title: string, message: string, action: null | "upload_cert" = null) => {

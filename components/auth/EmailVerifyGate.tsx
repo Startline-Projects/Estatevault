@@ -4,13 +4,6 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { checkEmail, sendVerifyLink, checkVerification } from "@/lib/api-client/auth";
 
-type ExistingAccountInfo = {
-  fullName: string | null;
-  hasWill: boolean;
-  hasTrust: boolean;
-  hasVault: boolean;
-};
-
 type Props = {
   value: string;
   onChange: (email: string) => void;
@@ -43,7 +36,7 @@ export default function EmailVerifyGate({
 }: Props) {
   const [stage, setStage] = useState<"idle" | "sending" | "awaiting_click" | "verified">("idle");
   const [verifyError, setVerifyError] = useState("");
-  const [existingAccount, setExistingAccount] = useState<ExistingAccountInfo | null>(null);
+  const [existingAccount, setExistingAccount] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [verifiedToken, setVerifiedToken] = useState("");
   const [verifiedEmail, setVerifiedEmail] = useState("");
@@ -59,7 +52,7 @@ export default function EmailVerifyGate({
   useEffect(() => {
     if (stage === "verified" && normalizedEmail !== verifiedEmail) {
       setStage("idle");
-      setExistingAccount(null);
+      setExistingAccount(false);
       setVerifiedToken("");
       setVerifyError("");
       setShowModal(false);
@@ -112,7 +105,7 @@ export default function EmailVerifyGate({
 
   async function handleVerifyClick() {
     setVerifyError("");
-    setExistingAccount(null);
+    setExistingAccount(false);
     if (!emailLooksValid) {
       setVerifyError("Enter a valid email address.");
       return;
@@ -128,12 +121,7 @@ export default function EmailVerifyGate({
       }
 
       if (checkData.exists) {
-        setExistingAccount({
-          fullName: checkData.fullName ?? null,
-          hasWill: !!checkData.hasWill,
-          hasTrust: !!checkData.hasTrust,
-          hasVault: !!checkData.hasVault,
-        });
+        setExistingAccount(true);
         setStage("idle");
         return;
       }
@@ -227,15 +215,6 @@ export default function EmailVerifyGate({
         <div className="mt-3 rounded-lg bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-900">
           <p className="font-semibold">An account already exists for this email.</p>
           <p className="mt-1 text-xs text-amber-800/80">
-            {existingAccount.fullName ? `${existingAccount.fullName} already has ` : "We already have "}
-            {[
-              existingAccount.hasWill && "Will documents",
-              existingAccount.hasTrust && "Trust documents",
-              existingAccount.hasVault && "an active Vault subscription",
-            ]
-              .filter(Boolean)
-              .join(", ") || "an account"}
-            {" on file. "}
             <Link href={loginHref} className="underline font-medium text-amber-900 hover:text-navy">
               Sign in instead
             </Link>
