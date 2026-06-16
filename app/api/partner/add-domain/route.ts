@@ -2,7 +2,7 @@ import { NextRequest } from "next/server";
 import { requireAuth } from "@/lib/api/auth";
 import { withRoute } from "@/lib/api/route";
 import { ok, fail } from "@/lib/api/response";
-import { partnerAddDomainSchema } from "@/lib/validation/schemas";
+import { partnerAddDomainSchema, partnerDeleteDomainSchema } from "@/lib/validation/schemas";
 import { normalizeBusinessDomain } from "@/lib/hosts";
 import * as partnerRepo from "@/lib/repos/server/partnerRepo";
 import * as auditLogRepo from "@/lib/repos/server/auditLogRepo";
@@ -103,7 +103,9 @@ export const DELETE = withRoute(async (req: NextRequest) => {
   const { data: partner } = await partnerRepo.getDomainInfoByProfileId(auth.admin, auth.profile.id);
   if (!partner) return fail("No partner record", 400);
 
-  const { domainType } = await req.json();
+  const parsed = partnerDeleteDomainSchema.safeParse(await req.json().catch(() => null));
+  if (!parsed.success) return fail("invalid payload", 400);
+  const { domainType } = parsed.data;
   const domain = domainType === "custom_domain" ? partner.custom_domain : partner.subdomain;
 
   if (domain) {

@@ -952,9 +952,10 @@
   </details>
 
   <details class="bug low" data-sev="med">
-    <summary><span class="badge low">Low</span><span class="id">BUG-69</span>
-      <span class="ttl">Add-domain DELETE has no validation → removes the wrong domain</span><span class="chev">▶</span></summary>
+    <summary><span class="badge low">Low</span><span class="badge" style="background:#1a7f37;color:#fff">✅ FIXED</span><span class="id">BUG-69</span>
+      <span class="ttl">Add-domain DELETE has no validation → removes the wrong domain — ✅ FIXED</span><span class="chev">▶</span></summary>
     <div class="body">
+      <div class="row"><div class="k">Status</div><div class="v">✅ FIXED (2026-06-16) — DELETE now validates the body with <code>partnerDeleteDomainSchema</code> (<code>domainType</code> enum <code>subdomain | custom_domain</code>, required). Empty/garbage body returns 400 instead of falling through to the subdomain branch.</div></div>
       <div class="row"><div class="k">In plain terms</div><div class="v">The "remove domain" action doesn't validate its input. An empty/garbage request silently removes the partner's subdomain instead of rejecting.</div></div>
       <div class="row"><div class="k">Where</div><div class="v"><code>app/api/partner/add-domain/route.ts:92</code></div></div>
       <div class="row"><div class="k">Impact</div><div class="v">Owner-scoped (no cross-tenant impact), but a malformed request removes the wrong domain. Footgun.</div></div>

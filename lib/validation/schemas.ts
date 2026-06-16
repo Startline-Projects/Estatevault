@@ -507,6 +507,13 @@ export const partnerAddDomainSchema = z.object({
   domainType: z.string().optional(),
 });
 
+// DELETE /api/partner/add-domain — domainType MUST be present and one of the two
+// known values (BUG-69): an absent/garbage value previously fell through to the
+// subdomain branch and silently removed the wrong domain.
+export const partnerDeleteDomainSchema = z.object({
+  domainType: z.enum(["subdomain", "custom_domain"]),
+});
+
 export const partnerClientsCreateSchema = z.object({
   firstName: z.string().min(1),
   lastName: z.string().optional(),
