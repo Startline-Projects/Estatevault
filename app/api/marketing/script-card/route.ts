@@ -119,10 +119,17 @@ export const GET = withRoute(async (req: NextRequest) => {
   // Log download
   await admin.from("audit_log").insert({ actor_id: auth.user.id, action: "marketing.download", metadata: { asset_type: "script_card" } });
 
+  // Build a header-safe filename: strip quotes/backslash/CR/LF/control chars for the
+  // ASCII fallback, and provide the full UTF-8 name via RFC 5987 filename*.
+  const fileName = `${companyName} - Compliance Script Card.pdf`;
+  const asciiFallback =
+    fileName.replace(/[\x00-\x1f\x7f"\\]/g, "").trim() || "Compliance Script Card.pdf";
+  const encodedName = encodeURIComponent(fileName);
+
   return new NextResponse(Buffer.from(pdfBytes), {
     headers: {
       "Content-Type": "application/pdf",
-      "Content-Disposition": `attachment; filename="${companyName} - Compliance Script Card.pdf"`,
+      "Content-Disposition": `attachment; filename="${asciiFallback}"; filename*=UTF-8''${encodedName}`,
     },
   });
 });

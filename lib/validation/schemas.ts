@@ -446,6 +446,25 @@ export const farewellAccessSchema = z.object({
   trusteeEmail: z.string().email(),
 });
 
+// Allowed death-certificate uploads. The extension is whitelisted (not just the
+// MIME type) because it is concatenated into the storage object path. See BUG-67.
+export const FAREWELL_CERT_TYPES = [
+  "application/pdf", "image/jpeg", "image/png", "image/jpg",
+] as const;
+export const FAREWELL_CERT_EXTS = ["pdf", "jpg", "jpeg", "png"] as const;
+const CERT_TYPE_MSG = "Certificate must be PDF, JPG, or PNG";
+
+// POST /api/farewell/verify — trustee submits a death certificate. clientId MUST
+// be a UUID (BUG-59): it flows raw into six DB queries and the cert storage path.
+// File metadata is validated here from the multipart fields.
+export const farewellVerifySchema = z.object({
+  clientId: z.string().uuid("Invalid client reference"),
+  trusteeEmail: z.string().email("A valid email is required").max(320),
+  certType: z.enum(FAREWELL_CERT_TYPES, { message: CERT_TYPE_MSG }),
+  certExt: z.enum(FAREWELL_CERT_EXTS, { message: CERT_TYPE_MSG }),
+  certSize: z.number().int().positive().max(10 * 1024 * 1024, "Certificate must be under 10MB"),
+});
+
 export const farewellOwnerVetoSchema = z.object({
   token: z.string().min(1),
 });

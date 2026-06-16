@@ -780,9 +780,10 @@
   </details>
 
   <details class="bug med" data-sev="med">
-    <summary><span class="badge med">Medium</span><span class="id">BUG-55</span>
-      <span class="ttl">Public contact form fails (401) for logged-out visitors</span><span class="chev">▶</span></summary>
+    <summary><span class="badge med">Medium</span><span class="badge" style="background:#1a7f37;color:#fff">✅ FIXED</span><span class="id">BUG-55</span>
+      <span class="ttl">Public contact form fails (401) for logged-out visitors — ✅ FIXED</span><span class="chev">▶</span></summary>
     <div class="body">
+      <div class="row"><div class="k">Status</div><div class="v">✅ FIXED (2026-06-15) — added <code>"/api/contact"</code> to <code>publicPaths</code> in <code>lib/supabase/middleware.ts</code>. Anonymous <code>publicPost("/api/contact")</code> passes middleware now.</div></div>
       <div class="row"><div class="k">In plain terms</div><div class="v">The <code>/api/contact</code> endpoint isn't on the public allowlist, so the contact form on the public page is rejected with 401 for exactly the anonymous visitors it's meant for. Leads are silently lost.</div></div>
       <div class="row"><div class="k">Where</div><div class="v"><code>lib/supabase/middleware.ts:162</code></div></div>
       <div class="row"><div class="k">Impact</div><div class="v">Broken public funnel / lost leads.</div></div>
@@ -792,9 +793,10 @@
   </details>
 
   <details class="bug med" data-sev="med">
-    <summary><span class="badge med">Medium</span><span class="id">BUG-56</span>
-      <span class="ttl">All CSP violation reports are dropped (401)</span><span class="chev">▶</span></summary>
+    <summary><span class="badge med">Medium</span><span class="badge" style="background:#1a7f37;color:#fff">✅ FIXED</span><span class="id">BUG-56</span>
+      <span class="ttl">All CSP violation reports are dropped (401) — ✅ FIXED</span><span class="chev">▶</span></summary>
     <div class="body">
+      <div class="row"><div class="k">Status</div><div class="v">✅ FIXED (2026-06-15) — added <code>"/api/csp-report"</code> to <code>publicPaths</code> in <code>lib/supabase/middleware.ts</code>. Logged-out <code>POST /api/csp-report</code> now returns 204 (verified) instead of 401, so browser CSP reports reach the handler.</div></div>
       <div class="row"><div class="k">In plain terms</div><div class="v">Browsers send security (CSP) violation reports to <code>/api/csp-report</code>, but that path isn't allowlisted so every report is rejected. The team gets zero security telemetry and can never safely tighten CSP.</div></div>
       <div class="row"><div class="k">Where</div><div class="v"><code>lib/supabase/middleware.ts:162</code>; wired in <code>next.config.mjs:22,38</code></div></div>
       <div class="row"><div class="k">Impact</div><div class="v">Security-visibility gap.</div></div>
@@ -816,9 +818,10 @@
   </details>
 
   <details class="bug med" data-sev="med">
-    <summary><span class="badge med">Medium</span><span class="id">BUG-58</span>
-      <span class="ttl">Script-card download: partner name injected into response header</span><span class="chev">▶</span></summary>
+    <summary><span class="badge med">Medium</span><span class="badge" style="background:#1a7f37;color:#fff">✅ FIXED</span><span class="id">BUG-58</span>
+      <span class="ttl">Script-card download: partner name injected into response header — ✅ FIXED</span><span class="chev">▶</span></summary>
     <div class="body">
+      <div class="row"><div class="k">Status</div><div class="v">✅ FIXED (2026-06-15) — <code>company_name</code> no longer interpolated raw into <code>Content-Disposition</code>. ASCII fallback strips <code>"</code>, <code>\</code>, CR, LF and all control chars (<code>0x00–0x1f</code>, <code>0x7f</code>), empty result falls back to <code>"Compliance Script Card.pdf"</code>; full UTF-8 name preserved via RFC 5987 <code>filename*=UTF-8''…</code>. Verified <code>x"; evil</code> → <code>x; evil</code> and CR/LF stripped.</div></div>
       <div class="row"><div class="k">In plain terms</div><div class="v">The script-card PDF puts the partner's company name straight into the download header with no sanitizing. A quote or newline in the name corrupts the header / breaks the filename.</div></div>
       <div class="row"><div class="k">Where</div><div class="v"><code>app/api/marketing/script-card/route.ts:124</code></div></div>
       <div class="row"><div class="k">Impact</div><div class="v">Header corruption; latent header-injection class on a generated document.</div></div>
@@ -828,9 +831,10 @@
   </details>
 
   <details class="bug med" data-sev="med">
-    <summary><span class="badge med">Medium</span><span class="id">BUG-59</span>
-      <span class="ttl">farewell/verify has no input validation</span><span class="chev">▶</span></summary>
+    <summary><span class="badge med">Medium</span><span class="badge" style="background:#1a7f37;color:#fff">✅ FIXED</span><span class="id">BUG-59</span>
+      <span class="ttl">farewell/verify has no input validation — ✅ FIXED</span><span class="chev">▶</span></summary>
     <div class="body">
+      <div class="row"><div class="k">Status</div><div class="v">✅ FIXED (2026-06-16) — added <code>farewellVerifySchema</code> in <code>lib/validation/schemas.ts</code> and validate before any DB call. <code>clientId</code> must be a UUID, email validated, cert type/ext/size checked. Junk <code>clientId</code> now returns a clean 400 instead of 500.</div></div>
       <div class="row"><div class="k">In plain terms</div><div class="v">This public endpoint doesn't validate its input at all. A bad <code>clientId</code> is passed straight into database queries and the file path, causing server errors and compounding the cert-upload issue (BUG-67).</div></div>
       <div class="row"><div class="k">Where</div><div class="v"><code>app/api/farewell/verify/route.ts:21-26</code></div></div>
       <div class="row"><div class="k">Impact</div><div class="v">500s instead of clean errors; unvalidated value flows into a storage path. (No cross-tenant read — the blind-index gate still applies.)</div></div>
@@ -923,9 +927,10 @@
   </details>
 
   <details class="bug low" data-sev="med">
-    <summary><span class="badge low">Low</span><span class="id">BUG-67</span>
-      <span class="ttl">Death-certificate uploads can overwrite each other (unauthenticated)</span><span class="chev">▶</span></summary>
+    <summary><span class="badge low">Low</span><span class="badge" style="background:#1a7f37;color:#fff">✅ FIXED</span><span class="id">BUG-67</span>
+      <span class="ttl">Death-certificate uploads can overwrite each other (unauthenticated) — ✅ FIXED</span><span class="chev">▶</span></summary>
     <div class="body">
+      <div class="row"><div class="k">Status</div><div class="v">✅ FIXED (2026-06-16) — path now uses <code>crypto.randomUUID()</code> instead of <code>Date.now()</code> and upload sets <code>upsert:false</code>, so a second submission can never overwrite an existing certificate. File extension whitelisted via <code>FAREWELL_CERT_EXTS</code> in <code>farewellVerifySchema</code>.</div></div>
       <div class="row"><div class="k">In plain terms</div><div class="v">The death-certificate upload uses a filename that can collide and overwrites by default, on an unauthenticated route. Someone passing the trustee-email check could overwrite a legitimate certificate.</div></div>
       <div class="row"><div class="k">Where</div><div class="v"><code>app/api/farewell/verify/route.ts:119-123</code> (<code>Date.now()</code> path, <code>upsert:true</code>, unsanitized extension)</div></div>
       <div class="row"><div class="k">Impact</div><div class="v">Overwrite-enabled, unauthenticated storage write into the death-certificates bucket. Low (requires passing the blind-index lookup; cert is admin-reviewed).</div></div>

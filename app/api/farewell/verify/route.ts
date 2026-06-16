@@ -10,6 +10,7 @@ import { blindIndex, normalize } from "@/lib/crypto/blindIndex";
 import { apiRateLimit } from "@/lib/rate-limit";
 import { sendEmail } from "@/lib/email";
 import * as auditLogRepo from "@/lib/repos/server/auditLogRepo";
+import { farewellVerifySchema } from "@/lib/validation/schemas";
 
 export const runtime = "nodejs";
 
@@ -19,15 +20,18 @@ export const POST = withRoute(async (req: NextRequest) => {
   if (!success) return fail("Too many requests", 429);
 
   const formData = await req.formData();
-  const clientId = formData.get("clientId") as string;
-  const trusteeEmail = ((formData.get("trusteeEmail") as string) || "").trim().toLowerCase();
-  const certificate = formData.get("certificate") as File;
+  const certificate = formData.get("certificate");
+  if (!(certificate instanceof File)) return fail("Missing required fields", 400);
 
-  if (!clientId || !trusteeEmail || !certificate) return fail("Missing required fields", 400);
-
-  const validTypes = ["application/pdf", "image/jpeg", "image/png", "image/jpg"];
-  if (!validTypes.includes(certificate.type)) return fail("Certificate must be PDF, JPG, or PNG", 400);
-  if (certificate.size > 10 * 1024 * 1024) return fail("Certificate must be under 10MB", 400);
+  const parsed = farewellVerifySchema.safeParse({
+    clientId: formData.get("clientId"),
+    trusteeEmail: ((formData.get("trusteeEmail") as string) || "").trim().toLowerCase(),
+    certType: certificate.type,
+    certExt: (certificate.name.split(".").pop() || "").toLowerCase(),
+    certSize: certificate.size,
+  });
+  if (!parsed.success) return fail(parsed.error.issues[0]?.message || "Invalid request", 400);
+  const { clientId, trusteeEmail, certExt } = parsed.data;
 
   const admin = createAdminClient();
 
@@ -115,12 +119,13 @@ export const POST = withRoute(async (req: NextRequest) => {
   if (existingRequest) return fail("A verification request is already pending", 400);
 
   const buffer = Buffer.from(await certificate.arrayBuffer());
-  const ext = certificate.name.split(".").pop() || "pdf";
-  const certPath = `${clientId}/${Date.now()}.${ext}`;
+  // Random object name + upsert:false so a second submission can never overwrite an
+  // existing certificate; extension is whitelisted upstream (BUG-67).
+  const certPath = `${clientId}/${crypto.randomUUID()}.${certExt}`;
 
   const { error: uploadErr } = await admin.storage
     .from("death-certificates")
-    .upload(certPath, buffer, { contentType: certificate.type, upsert: true });
+    .upload(certPath, buffer, { contentType: certificate.type, upsert: false });
 
   if (uploadErr) {
     console.error("Certificate upload error:", uploadErr);
