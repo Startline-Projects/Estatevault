@@ -65,6 +65,9 @@ export function computeDerivedFields(intake: WillIntake): Record<string, unknown
   const purposes = Array.isArray(intake.organ_donation_purposes) ? intake.organ_donation_purposes : [];
   const contingent = Array.isArray(intake.contingent_beneficiaries) ? intake.contingent_beneficiaries : [];
   const hipaaParties = Array.isArray(intake.hipaa_additional_authorized_parties) ? intake.hipaa_additional_authorized_parties : [];
+  const trustAssets = Array.isArray(intake.assets) ? intake.assets : [];
+  const trustNameRaw = (intake.trust_name || "").trim();
+  const trustNameDisplay = trustNameRaw || `The ${client_full_name} Revocable Living Trust`;
 
   return {
     client_full_name,
@@ -85,5 +88,8 @@ export function computeDerivedFields(intake: WillIntake): Record<string, unknown
     marital_status_label: MARITAL_STATUS_LABELS[intake.marital_status] ?? intake.marital_status ?? "",
     contingent_beneficiaries_not_empty: contingent.length > 0,
     hipaa_additional_authorized_parties_not_empty: hipaaParties.length > 0,
+    trust_name_display: trustNameDisplay,
+    trust_name_display_upper: trustNameDisplay.toUpperCase(),
+    has_assets: trustAssets.length > 0,
   };
 }

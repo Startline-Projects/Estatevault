@@ -4,8 +4,8 @@ const ROUTE_TO_TEMPLATE: Record<string, DocumentType | null> = {
   will: "will",
   poa: "dpoa",
   healthcare_directive: "pad",
-  trust: null,
-  pour_over_will: null,
+  trust: "trust",
+  pour_over_will: "pour_over_will",
 };
 
 export function toTemplateDocType(routeDocType: string): DocumentType | null {

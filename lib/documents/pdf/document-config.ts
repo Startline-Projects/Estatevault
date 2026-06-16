@@ -22,7 +22,9 @@ export type DocumentType =
   | "pad"
   | "hipaa"
   | "funeral_rep"
-  | "guardian_nomination";
+  | "guardian_nomination"
+  | "trust"
+  | "pour_over_will";
 
 /** Per-document metadata consumed by {@link DocumentRenderer}. */
 export interface DocumentConfig {
@@ -84,5 +86,17 @@ export const DOCUMENT_CONFIG: Record<DocumentType, DocumentConfig> = {
     templateFile: "guardian-nomination-michigan-v1.0.0.txt",
     version: "1.0.0-michigan",
     filenameLabel: "Nomination of Guardian",
+  },
+  trust: {
+    title: "REVOCABLE LIVING TRUST",
+    templateFile: "trust-michigan-v1.1.0.txt",
+    version: "1.1.0-michigan",
+    filenameLabel: "Revocable Living Trust",
+  },
+  pour_over_will: {
+    title: "POUR-OVER WILL",
+    templateFile: "pour-over-will-michigan-v1.1.0.txt",
+    version: "1.1.0-michigan",
+    filenameLabel: "Pour-Over Will",
   },
 };

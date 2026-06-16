@@ -95,6 +95,14 @@ const lenientWillIntakeSchema = z.object({
   })).default([]),
   no_contest_clause: z.boolean().default(true),
 
+  trust_name: z.string().default(""),
+  trustee_is_self: z.boolean().default(true),
+  trustee: personSchema4.default({ full_name: "", relationship: "", city: "", state: "" }),
+  successor_trustee: personSchema4.default({ full_name: "", relationship: "", city: "", state: "" }),
+  second_successor_trustee: personSchema4.nullable().default(null),
+  distribution_age: z.number().default(18),
+  assets: z.array(z.string()).default([]),
+
   dpoa_agent: personSchema5.default({ full_name: "", relationship: "", city: "", state: "", phone: "" }),
   first_successor_dpoa_agent: personSchema5.default({ full_name: "", relationship: "", city: "", state: "", phone: "" }),
   second_successor_dpoa_agent: personSchema5.default({ full_name: "", relationship: "", city: "", state: "", phone: "" }),
@@ -250,6 +258,57 @@ export function mapIntakeToTemplateData(
         full_name: str(raw.successorGuardianName),
         relationship: "",
       };
+    }
+
+    // Trust-specific fields
+    if (raw.trustName !== undefined) mapped.trust_name = str(raw.trustName);
+    if (raw.primaryTrustee !== undefined || raw.primary_trustee !== undefined) {
+      mapped.trustee_is_self = str(raw.primaryTrustee || raw.primary_trustee) === "Myself";
+    }
+    if (raw.trusteeName || raw.trustee_name) {
+      mapped.trustee = {
+        full_name: str(raw.trusteeName || raw.trustee_name),
+        relationship: str(raw.trusteeRelationship || ""),
+        city: str(raw.trusteeCity || raw.city || ""),
+        state: str(raw.trusteeState || raw.state || "Michigan"),
+      };
+    }
+    if (raw.successorTrusteeName || raw.successor_trustee) {
+      mapped.successor_trustee = {
+        full_name: str(raw.successorTrusteeName || raw.successor_trustee),
+        relationship: str(raw.successorTrusteeRelationship || ""),
+        city: str(raw.successorTrusteeCity || ""),
+        state: str(raw.successorTrusteeState || "Michigan"),
+      };
+    }
+    if (raw.secondSuccessorTrusteeName || raw.second_successor_trustee) {
+      const name = str(raw.secondSuccessorTrusteeName || raw.second_successor_trustee);
+      if (name) {
+        mapped.second_successor_trustee = {
+          full_name: name,
+          relationship: str(raw.secondSuccessorTrusteeRelationship || ""),
+          city: str(raw.secondSuccessorTrusteeCity || ""),
+          state: str(raw.secondSuccessorTrusteeState || "Michigan"),
+        };
+      }
+    }
+    if (raw.additionalSuccessorTrustees && Array.isArray(raw.additionalSuccessorTrustees)) {
+      const additional = raw.additionalSuccessorTrustees as Array<{ name?: string; relationship?: string }>;
+      if (!mapped.second_successor_trustee && additional[0]?.name) {
+        mapped.second_successor_trustee = {
+          full_name: str(additional[0].name),
+          relationship: str(additional[0].relationship || ""),
+          city: "",
+          state: "Michigan",
+        };
+      }
+    }
+    if (raw.distributionAge !== undefined || raw.distribution_age !== undefined) {
+      mapped.distribution_age = Number(raw.distributionAge || raw.distribution_age) || 18;
+    }
+    if (raw.assetTypes !== undefined || raw.assets !== undefined) {
+      const rawAssets = raw.assetTypes || raw.assets;
+      mapped.assets = Array.isArray(rawAssets) ? rawAssets.map((a: unknown) => str(a)) : [];
     }
 
     // Specific gifts

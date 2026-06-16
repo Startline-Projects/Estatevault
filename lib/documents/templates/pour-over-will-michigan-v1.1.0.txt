@@ -1,0 +1,201 @@
+POUR-OVER WILL
+
+OF
+
+{{client_full_name_upper}}
+
+Companion Trust: {{trust_name_display}}
+
+Testator: {{client_full_name}}  ·  Date of Birth: {{client_dob}}
+
+Residence: {{street_address}}, {{city}}, {{county}} County, Michigan  {{zip}}
+
+## OPERATION OF THIS DOCUMENT
+
+This is your Pour-Over Will under Michigan law (MCL 700.2502 et seq.). This Will operates in conjunction with your {{trust_name_display}}. Its primary purpose is to direct any assets not already held in the Trust into the Trust upon your passing, ensuring that all of your property is administered and distributed according to the Trust's terms.
+
+State of Michigan  ·  Michigan EPIC, MCL 700.2502 et seq.
+
+{{#IF attorney_review_purchased}}
+
+## ATTORNEY REVIEWED & APPROVED
+
+Reviewing Attorney: {{reviewing_attorney_name}}  ·  Bar No. {{reviewing_attorney_bar_number}}
+
+Firm: {{reviewing_attorney_firm}}  ·  Reviewed: {{review_date}}
+
+{{/IF}}
+
+I, {{client_full_name}}, a resident of the City of {{city}}, County of {{county}}, State of Michigan, being of sound mind and not acting under duress, menace, fraud, or the undue influence of any person, do hereby make, publish, and declare this instrument to be my Last Will and Testament, revoking all prior wills and codicils.
+
+## ARTICLE I — IDENTIFICATION
+
+### Section 1.1 — Identification of Testator.
+
+I am a resident of the State of Michigan. I was born on {{client_dob}}. My current residence address is {{street_address}}, {{city}}, Michigan {{zip}}.
+
+### Section 1.2 — Marital Status.
+
+{{#IF marital_status equals "Married"}}
+
+I am married. My spouse is {{spouse_full_name}}. All references in this Will to "my spouse" refer to {{spouse_full_name}}.
+
+{{/IF}}
+
+{{#IF marital_status equals "Single"}}
+
+I am single. I am not currently married and have no spouse at the time of executing this Will.
+
+{{/IF}}
+
+{{#IF marital_status equals "Divorced"}}
+
+I am divorced. I am not currently married and have no spouse at the time of executing this Will. Any provision of this Will in favor of a former spouse is revoked by operation of Michigan law pursuant to MCL 700.2807.
+
+{{/IF}}
+
+{{#IF marital_status equals "Widowed"}}
+
+I am widowed. I am not currently married and have no spouse at the time of executing this Will.
+
+{{/IF}}
+
+## ARTICLE II — REVOCATION OF PRIOR WILLS
+
+I hereby revoke any and all prior wills and codicils heretofore made by me, including any oral, holographic, or other testamentary instruments.
+
+## ARTICLE III — TRUST REFERENCE AND POUR-OVER CLAUSE
+
+### Section 3.1 — Companion Trust.
+
+I have previously established a revocable living trust known as "{{trust_name_display}}." This Will is intended to operate in conjunction with said Trust.
+
+### Section 3.2 — Pour-Over of Residuary Estate.
+
+I give, devise, and bequeath all of my estate, both real and personal, of whatever kind and wherever situated, that I may own or be entitled to at the time of my passing, including all property acquired after the execution of this Will, to the then-acting Trustee of {{trust_name_display}}, to be added to, administered, and distributed as part of said Trust in accordance with its terms as they exist at the time of my passing, or as thereafter amended prior to my passing.
+
+### Section 3.3 — Failure of Trust.
+
+If {{trust_name_display}} has been revoked, is otherwise invalid, or for any reason fails to take effect at the time of my passing, my residuary estate shall be distributed to my heirs at law, as determined under the laws of the State of Michigan governing intestate succession, in effect at the time of my passing.
+
+## ARTICLE IV — PERSONAL REPRESENTATIVE
+
+### Section 4.1 — Appointment.
+
+I nominate and appoint {{personal_representative.full_name}}, currently residing in {{personal_representative.city}}, {{personal_representative.state}}, to serve as the Personal Representative of my estate.
+
+### Section 4.2 — Successor Personal Representative.
+
+If {{personal_representative.full_name}} is unable or unwilling to serve, predeceases me, or for any reason ceases to serve, I nominate {{successor_personal_representative.full_name}}, currently residing in {{successor_personal_representative.city}}, {{successor_personal_representative.state}}, to serve as Successor Personal Representative.
+
+### Section 4.3 — Bond.
+
+I direct that no bond or other security shall be required of any Personal Representative or Successor Personal Representative named in this Will, whether appointed in Michigan or elsewhere.
+
+### Section 4.4 — Powers of the Personal Representative.
+
+In addition to all powers granted by Michigan law, my Personal Representative shall have full power and authority, without prior court approval, to take possession of and manage all property of my estate; pay all just debts, funeral expenses, expenses of administration, and taxes; sell, lease, exchange, or otherwise dispose of any real or personal property of my estate, at public or private sale, with or without notice, for cash or on credit, and upon such terms as the Personal Representative deems advisable; and exercise all powers granted to personal representatives under MCL 700.3715 and other applicable provisions of Michigan law. The Personal Representative's primary duty under this Will is to transfer all estate assets to the Trustee of {{trust_name_display}} as expeditiously as reasonably possible.
+
+### Section 4.5 — Compensation.
+
+My Personal Representative shall be entitled to reasonable compensation for services rendered, in accordance with Michigan law.
+
+## ARTICLE V — PAYMENT OF DEBTS, EXPENSES, AND TAXES
+
+### Section 5.1 — Debts and Expenses.
+
+I direct my Personal Representative to pay from my estate all of my just debts, the expenses of my last illness, funeral expenses, and the expenses of administering my estate, as soon as practicable after my passing.
+
+### Section 5.2 — Taxes.
+
+I direct that all estate, inheritance, succession, and similar taxes imposed by reason of my passing, together with interest and penalties thereon, be paid from my estate, without apportionment or reimbursement from any beneficiary or the Trust.
+
+{{#IF has_minor_children equals true}}
+
+## ARTICLE VI — GUARDIAN FOR MINOR CHILDREN
+
+### Section 6.1 — Nomination of Guardian.
+
+If at the time of my passing any of my children are minors, and if the other natural parent of such minor child is no longer living or is otherwise unable to serve as guardian, I nominate {{guardian.full_name}}, currently residing in {{guardian.city}}, {{guardian.state}}, to serve as Guardian of the person of such minor children. This nomination is made pursuant to MCL 700.5202.
+
+### Section 6.2 — Successor Guardian.
+
+If {{guardian.full_name}} is unable or unwilling to serve, or for any reason ceases to serve, I nominate {{successor_guardian.full_name}} to serve as Successor Guardian.
+
+{{/IF}}
+
+## ARTICLE VII — EXECUTION INSTRUCTIONS
+
+To make this Will legally valid under Michigan law (MCL 700.2502), you must follow each step below carefully. Failure to follow these steps may render this Will invalid.
+
+STEP 1 — CHOOSE YOUR WITNESSES. Select two (2) adult witnesses (age 18 or older). Your witnesses must NOT be named beneficiaries under this Will or the companion Trust. Your witnesses must be present at the same time as each other and as you when signing.
+
+STEP 2 — GATHER ALL PARTIES. Arrange for yourself and both witnesses to be in the same location at the same time. All three parties must be physically present together throughout the signing.
+
+STEP 3 — YOU SIGN FIRST. Sign and date this Will in the presence of both witnesses simultaneously. Do not sign before both witnesses are present. Sign on the signature line designated for the Testator.
+
+STEP 4 — WITNESSES SIGN. Immediately after you sign, each witness must sign the Will in your presence and in the presence of each other. Each witness should print their name and provide their address on the lines provided.
+
+STEP 5 — NOTARY (OPTIONAL BUT STRONGLY RECOMMENDED). Although a notary is not required for the Will itself, signing before a licensed notary public completes the self-proving affidavit at the end of this document. A self-proving Will can be admitted to probate without requiring your witnesses to testify in court. All three parties (you and both witnesses) should sign before the notary at the same time.
+
+STEP 6 — STORE YOUR WILL SAFELY. Keep the original signed Will together with your {{trust_name_display}} in a secure location such as a fireproof safe, safe deposit box, or with your estate planning attorney. Inform your Personal Representative of its location. Do not store your Will in a location your Personal Representative cannot access without a court order.
+
+STEP 7 — INFORM YOUR PERSONAL REPRESENTATIVE. Provide your Personal Representative with a copy of this Will and confirm they are willing to serve in that role. Keep their contact information current.
+
+## ARTICLE VIII — GENERAL PROVISIONS
+
+### Section 8.1 — Severability.
+
+If any provision of this Will is held to be invalid, unenforceable, or contrary to law, the remaining provisions shall continue in full force and effect, and the invalid provision shall be reformed only to the extent necessary to render it valid and enforceable.
+
+### Section 8.2 — Governing Law.
+
+This Will shall be governed by and construed in accordance with the laws of the State of Michigan in effect at the time of my passing.
+
+### Section 8.3 — References to Michigan Law.
+
+All references in this Will to "Michigan law" or to specific provisions of the Michigan Compiled Laws shall be construed to include any successor statutes, amendments, or recodifications, unless the context clearly requires otherwise.
+
+### Section 8.4 — Definitions and Construction.
+
+References to "my Personal Representative" include any Successor Personal Representative duly serving in that role. Words denoting one gender include all genders. The headings of Articles and Sections are for convenience of reference only and shall not affect the construction of this Will.
+
+## ATTESTATION
+
+IN WITNESS WHEREOF, I, {{client_full_name}}, the Testator, sign my name to this Pour-Over Will on this _ day of _, 20_, and being duly identified by the witnesses below, declare to them that this is my Last Will and Testament, that I sign it willingly, that I execute it as my free and voluntary act, and that I am of legal age (eighteen years or older) and of sound mind, and under no constraint or undue influence.
+
+[SIGNATURE] Testator
+
+The foregoing instrument was signed, sealed, published, and declared by the above-named Testator to be the Testator's Last Will and Testament in our presence; and we, at the Testator's request and in the Testator's presence and in the presence of each other, have hereunto subscribed our names as witnesses thereto.
+
+[SIGNATURE] Witness One — Printed Name and Address
+
+[SIGNATURE] Witness Two — Printed Name and Address
+
+## SELF-PROVING AFFIDAVIT
+
+Pursuant to MCL 700.2504
+
+## STATE OF MICHIGAN
+
+COUNTY OF {{county_upper}}
+
+Before me, the undersigned authority, on this _ day of _, 20_, personally appeared {{client_full_name}}, the Testator, and _ and _, the witnesses, whose names are signed to the attached or foregoing instrument, and, all of these persons being by me first duly sworn, the Testator declared to me and to the witnesses in my presence that the instrument is the Testator's Pour-Over Will and that the Testator had willingly signed and executed it as the Testator's free and voluntary act for the purposes therein expressed; and each of the witnesses stated to me, in the presence and hearing of the Testator, that the witness signed the Will as a witness and that to the best of the witness's knowledge the Testator was at that time eighteen years of age or older, of sound mind, and under no constraint or undue influence.
+
+[SIGNATURE] Testator
+
+[SIGNATURE] Witness One
+
+[SIGNATURE] Witness Two
+
+Sworn to and signed in my presence by {{client_full_name}}, the Testator, and sworn to and signed in my presence by the two witnesses named above, on this _ day of _, 20_.
+
+[NOTARY_BLOCK]
+## NOTARY ACKNOWLEDGMENT
+
+Notary Public, State of Michigan
+
+County of   ·  Acting in {{county}} County, Michigan
+
+My commission expires: _
+[/NOTARY_BLOCK]

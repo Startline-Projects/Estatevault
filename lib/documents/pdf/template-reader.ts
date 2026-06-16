@@ -7,6 +7,8 @@ const TEMPLATE_IMPORTS: Record<DocumentType, () => Promise<{ default: string }>>
   hipaa: () => import("@/lib/documents/templates/hipaa-authorization-v1.1.0"),
   funeral_rep: () => import("@/lib/documents/templates/funeral-rep-michigan-v1.0.0"),
   guardian_nomination: () => import("@/lib/documents/templates/guardian-nomination-michigan-v1.0.0"),
+  trust: () => import("@/lib/documents/templates/trust-michigan-v1.1.0"),
+  pour_over_will: () => import("@/lib/documents/templates/pour-over-will-michigan-v1.1.0"),
 };
 
 export async function readTemplateFile(docType: DocumentType): Promise<string> {
