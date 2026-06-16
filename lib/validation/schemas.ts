@@ -197,10 +197,10 @@ const willIntakeSchema = z.object({
   hasSpecificGifts: YES_NO,
   specificGiftsDescription: z.string().max(5000),
 }).refine(
-  (d) => d.beneficiariesEqualShares === "Yes" || sharesSum100(d.beneficiaries),
+  (d) => d.beneficiariesEqualShares === "Yes" || d.beneficiaries.length <= 1 || sharesSum100(d.beneficiaries),
   { message: "Beneficiary shares must total 100%", path: ["beneficiaries"] },
 ).refine(
-  (d) => d.hasContingentBeneficiary !== "Yes" || d.contingentBeneficiaries.length === 0 || d.contingentEqualShares === "Yes" || sharesSum100(d.contingentBeneficiaries),
+  (d) => d.hasContingentBeneficiary !== "Yes" || d.contingentBeneficiaries.length <= 1 || d.contingentEqualShares === "Yes" || sharesSum100(d.contingentBeneficiaries),
   { message: "Contingent beneficiary shares must total 100%", path: ["contingentBeneficiaries"] },
 );
 
@@ -267,10 +267,10 @@ const trustIntakeSchema = z.object({
   hasSpecificGifts: YES_NO,
   specificGiftsDescription: z.string().max(5000),
 }).refine(
-  (d) => d.beneficiariesEqualShares === "Yes" || sharesSum100(d.beneficiaries),
+  (d) => d.beneficiariesEqualShares === "Yes" || d.beneficiaries.length <= 1 || sharesSum100(d.beneficiaries),
   { message: "Beneficiary shares must total 100%", path: ["beneficiaries"] },
 ).refine(
-  (d) => d.hasContingentBeneficiary !== "Yes" || d.contingentBeneficiaries.length === 0 || d.contingentEqualShares === "Yes" || sharesSum100(d.contingentBeneficiaries),
+  (d) => d.hasContingentBeneficiary !== "Yes" || d.contingentBeneficiaries.length <= 1 || d.contingentEqualShares === "Yes" || sharesSum100(d.contingentBeneficiaries),
   { message: "Contingent beneficiary shares must total 100%", path: ["contingentBeneficiaries"] },
 ).refine(
   (d) => !d.distributionAge || parseInt(d.distributionAge, 10) >= 18,

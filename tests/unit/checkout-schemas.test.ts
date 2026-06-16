@@ -98,6 +98,26 @@ describe("willCheckoutSchema", () => {
   it("rejects missing beneficiaries", () => {
     expect(willCheckoutSchema.safeParse({ intakeAnswers: { ...VALID_WILL_INTAKE, beneficiaries: [] } }).success).toBe(false);
   });
+  it("accepts a single beneficiary with blank share and blank equal-shares flag (implicit 100%)", () => {
+    // The intake UI only renders the equal-shares question + share inputs when
+    // beneficiaries.length > 1, so a sole beneficiary arrives with share "" and
+    // beneficiariesEqualShares "". That must validate — the one beneficiary gets 100%.
+    expect(willCheckoutSchema.safeParse({ intakeAnswers: {
+      ...VALID_WILL_INTAKE,
+      beneficiaries: [{ name: "Jane Doe", relationship: "Spouse/Partner" as const, share: "" }],
+      beneficiariesEqualShares: "",
+    } }).success).toBe(true);
+  });
+  it("still rejects >1 beneficiaries whose shares don't total 100%", () => {
+    expect(willCheckoutSchema.safeParse({ intakeAnswers: {
+      ...VALID_WILL_INTAKE,
+      beneficiaries: [
+        { name: "A", relationship: "Child" as const, share: "60" },
+        { name: "B", relationship: "Child" as const, share: "30" },
+      ],
+      beneficiariesEqualShares: "No",
+    } }).success).toBe(false);
+  });
 });
 
 describe("trustCheckoutSchema", () => {
@@ -120,6 +140,13 @@ describe("trustCheckoutSchema", () => {
     expect(trustCheckoutSchema.safeParse({
       intakeAnswers: { ...VALID_TRUST_INTAKE, poaPowers: ["Hacking"] },
     }).success).toBe(false);
+  });
+  it("accepts a single beneficiary with blank share and blank equal-shares flag (implicit 100%)", () => {
+    expect(trustCheckoutSchema.safeParse({ intakeAnswers: {
+      ...VALID_TRUST_INTAKE,
+      beneficiaries: [{ name: "Jane Doe", relationship: "Spouse/Partner" as const, share: "" }],
+      beneficiariesEqualShares: "",
+    } }).success).toBe(true);
   });
 });
 
