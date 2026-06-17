@@ -15,6 +15,7 @@ import * as partnerRepo from "@/lib/repos/server/partnerRepo";
 import * as auditLogRepo from "@/lib/repos/server/auditLogRepo";
 import { handleVaultSubscriptionCheckout } from "@/lib/webhooks/stripe/handleVaultSubscriptionCheckout";
 import { handleDocumentCheckout } from "@/lib/webhooks/stripe/handleDocumentCheckout";
+import { retryPendingPartnerPayouts } from "@/lib/payouts/retryPendingPartnerPayouts";
 
 // Stripe webhook router. Verifies the signature, enforces idempotency, then
 // dispatches by event type. The heavy per-product checkout handlers live in
@@ -134,6 +135,25 @@ async function dispatchEvent(
       resource_id: subscription.id,
       metadata: { subscription_id: subscription.id },
     });
+    return ok({ received: true });
+  }
+
+  // ── CONNECTED ACCOUNT UPDATED ───────────────────────────────
+  // A partner finished (or progressed) Stripe Connect onboarding. The moment
+  // their `transfers` capability flips active, drain any payout IOUs we left
+  // `pending` at checkout because we could not send them yet (BUG-15). Requires
+  // "Listen to events on Connected accounts" on this webhook endpoint.
+  if (event.type === "account.updated") {
+    const account = event.data.object as Stripe.Account;
+    if (account.capabilities?.transfers === "active") {
+      const { data: partner } = await partnerRepo.findByStripeAccountId(supabase, account.id);
+      if (partner) {
+        const { cleared, total } = await retryPendingPartnerPayouts(supabase, partner.id);
+        if (cleared > 0) {
+          console.log(`[webhook] account.updated cleared ${cleared}/${total} pending payouts for partner ${partner.id}`);
+        }
+      }
+    }
     return ok({ received: true });
   }
 

@@ -20,6 +20,36 @@ export function insertAffiliatePayout(admin: Admin, row: AffiliatePayoutInsert) 
   return admin.from("affiliate_payouts").insert(row).select("id").maybeSingle();
 }
 
+// A partner's still-owed (`pending`) payouts — the IOUs left when a transfer
+// could not be sent at checkout (no Connect account / transfers capability not
+// yet active). Retried once the account becomes payable.
+export function listPendingByPartner(admin: Admin, partnerId: string) {
+  return admin
+    .from("payouts")
+    .select("id, amount, order_id, orders_included")
+    .eq("partner_id", partnerId)
+    .eq("status", "pending");
+}
+
+// Flip a pending payout to `sent` after a successful retry transfer. The
+// `.eq("status", "pending")` guard makes this a conditional claim: only the
+// row that is still pending is updated and returned, so a racing retry that
+// already flipped it gets null and skips its audit write (the Stripe
+// idempotency key already prevented a second transfer).
+export function markPayoutSent(admin: Admin, payoutId: string, transferId: string) {
+  return admin
+    .from("payouts")
+    .update({
+      status: "sent",
+      stripe_transfer_id: transferId,
+      payout_date: new Date().toISOString().slice(0, 10),
+    })
+    .eq("id", payoutId)
+    .eq("status", "pending")
+    .select("id")
+    .maybeSingle();
+}
+
 // A partner's payouts (with orders_included) for the revenue page (B2).
 export function listByPartner(admin: Admin, partnerId: string) {
   return admin

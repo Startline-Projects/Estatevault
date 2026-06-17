@@ -1349,6 +1349,7 @@ export type Database = {
           amount: number
           created_at: string | null
           id: string
+          order_id: string | null
           orders_included: Json | null
           partner_id: string | null
           payout_date: string | null
@@ -1359,6 +1360,7 @@ export type Database = {
           amount: number
           created_at?: string | null
           id?: string
+          order_id?: string | null
           orders_included?: Json | null
           partner_id?: string | null
           payout_date?: string | null
@@ -1369,6 +1371,7 @@ export type Database = {
           amount?: number
           created_at?: string | null
           id?: string
+          order_id?: string | null
           orders_included?: Json | null
           partner_id?: string | null
           payout_date?: string | null
@@ -1381,6 +1384,13 @@ export type Database = {
             columns: ["partner_id"]
             isOneToOne: false
             referencedRelation: "partners"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payouts_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
             referencedColumns: ["id"]
           },
         ]

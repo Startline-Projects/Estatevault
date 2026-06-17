@@ -229,6 +229,7 @@ export async function handleDocumentCheckout(
         partner_id: partnerId,
         amount: partnerCut,
         status: "pending",
+        order_id: orderId,
         orders_included: [orderId],
       });
       payoutRecorded = true;
@@ -272,6 +273,7 @@ export async function handleDocumentCheckout(
               amount: partnerCut,
               status: "sent",
               stripe_transfer_id: transfer.id,
+              order_id: orderId,
               orders_included: [orderId],
             });
             payoutRecorded = true;

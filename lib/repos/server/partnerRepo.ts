@@ -79,6 +79,16 @@ export function upsert(admin: Admin, row: PartnerInsert) {
   return admin.from("partners").upsert(row);
 }
 
+// Partner owning a given Stripe Connect account id — used by the
+// account.updated webhook to map a capability change back to a partner.
+export function findByStripeAccountId(admin: Admin, stripeAccountId: string) {
+  return admin
+    .from("partners")
+    .select("id")
+    .eq("stripe_account_id", stripeAccountId)
+    .maybeSingle();
+}
+
 // Stripe Connect account + tier for payout routing.
 export function getStripeAndTier(admin: Admin, partnerId: string) {
   return admin
