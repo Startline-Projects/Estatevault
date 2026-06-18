@@ -17,6 +17,7 @@ export default function ProClientsPage() {
   const [form, setForm] = useState({ firstName: "", lastName: "", email: "", phone: "", message: "" });
   const [sending, setSending] = useState(false);
   const [partnerId, setPartnerId] = useState("");
+  const [formError, setFormError] = useState("");
 
   useEffect(() => {
     async function load() {
@@ -31,10 +32,17 @@ export default function ProClientsPage() {
     load();
   }, []);
 
+  // The partner tracks the estate package (will/trust) per client. Vault
+  // subscriptions and amendments also create order rows but are secondary —
+  // they belong on the client detail page, not this summary. Pick the estate
+  // package first; fall back to the newest order only if none exists. Orders
+  // arrive newest-first from the API (BUG-70).
+  function primaryOrder(orders: ClientRow["orders"]) {
+    return orders.find((o) => o.product_type === "will" || o.product_type === "trust") ?? orders[0];
+  }
+
   function getStatus(orders: ClientRow["orders"]): string {
-    if (!orders.length) return "in_progress";
-    const latest = orders[0];
-    return latest.status;
+    return primaryOrder(orders)?.status ?? "in_progress";
   }
 
   function statusBadge(status: string) {
@@ -65,9 +73,16 @@ export default function ProClientsPage() {
   async function handleStartSession() {
     if (!form.firstName || !form.email) return;
     setSending(true);
+    setFormError("");
     // Create auth user for client (the API route authorizes the partner).
     const { data, error } = await apiCreateClient({ ...form, partnerId, action: "start" });
-    if (!error && data) {
+    if (error) {
+      // e.g. the email already purchased a plan (409 from the API).
+      setFormError(error);
+      setSending(false);
+      return;
+    }
+    if (data) {
       window.open(`/quiz?partner=${partnerId}&client=${data.clientId}`, "_blank");
       setShowModal(false);
       setForm({ firstName: "", lastName: "", email: "", phone: "", message: "" });
@@ -78,7 +93,13 @@ export default function ProClientsPage() {
   async function handleSendInvite() {
     if (!form.firstName || !form.email) return;
     setSending(true);
-    await apiCreateClient({ ...form, partnerId, action: "invite" });
+    setFormError("");
+    const { error } = await apiCreateClient({ ...form, partnerId, action: "invite" });
+    if (error) {
+      setFormError(error);
+      setSending(false);
+      return;
+    }
     setShowModal(false);
     setForm({ firstName: "", lastName: "", email: "", phone: "", message: "" });
     setSending(false);
@@ -96,8 +117,8 @@ export default function ProClientsPage() {
         <div className="flex gap-2">
           {certified ? (
             <>
-              <button onClick={() => { setShowModal(true); setModalTab("start"); }} className="rounded-full bg-gold px-5 py-2 text-sm font-semibold text-white hover:bg-gold/90">+ New Client Session</button>
-              <button onClick={() => { setShowModal(true); setModalTab("invite"); }} className="rounded-full border border-navy px-5 py-2 text-sm font-medium text-navy hover:bg-navy hover:text-white transition-colors">Send Invite Link</button>
+              <button onClick={() => { setShowModal(true); setModalTab("start"); setFormError(""); }} className="rounded-full bg-gold px-5 py-2 text-sm font-semibold text-white hover:bg-gold/90">+ New Client Session</button>
+              <button onClick={() => { setShowModal(true); setModalTab("invite"); setFormError(""); }} className="rounded-full border border-navy px-5 py-2 text-sm font-medium text-navy hover:bg-navy hover:text-white transition-colors">Send Invite Link</button>
             </>
           ) : (
             <button disabled className="rounded-full bg-gray-200 px-5 py-2 text-sm font-semibold text-gray-400 cursor-not-allowed">🔒 Complete Certification</button>
@@ -138,15 +159,16 @@ export default function ProClientsPage() {
               {filtered.map((c) => {
                 const name = c.profiles?.full_name || c.profiles?.email || "Unknown";
                 const initials = name.split(" ").map((w: string) => w[0]).join("").slice(0, 2);
-                const order = c.orders[0];
+                const order = primaryOrder(c.orders);
+                const isPackage = order?.product_type === "will" || order?.product_type === "trust";
                 const status = getStatus(c.orders);
                 return (
                   <tr key={c.id} className="border-b border-gray-100 hover:bg-gray-50">
                     <td className="px-4 py-3"><span className="font-medium text-navy">{initials}.</span></td>
-                    <td className="px-4 py-3">{order ? <span className="rounded-full bg-navy/10 px-2 py-0.5 text-xs text-navy">{order.product_type === "trust" ? "Trust" : "Will"}</span> : "-"}</td>
+                    <td className="px-4 py-3">{isPackage ? <span className="rounded-full bg-navy/10 px-2 py-0.5 text-xs text-navy">{order.product_type === "trust" ? "Trust" : "Will"}</span> : "-"}</td>
                     <td className="px-4 py-3">{statusBadge(status)}</td>
                     <td className="px-4 py-3 text-charcoal/50 text-xs">{new Date(c.created_at).toLocaleDateString()}</td>
-                    <td className="px-4 py-3 text-charcoal/70">{order?.partner_cut ? `$${order.partner_cut / 100}` : "-"}</td>
+                    <td className="px-4 py-3 text-charcoal/70">{isPackage && order.partner_cut ? `$${order.partner_cut / 100}` : "-"}</td>
                     <td className="px-4 py-3"><Link href={`/pro/clients/${c.id}`} className="text-xs text-gold hover:text-gold/80">View</Link></td>
                   </tr>
                 );
@@ -172,8 +194,13 @@ export default function ProClientsPage() {
             <div className="space-y-4">
               <input type="text" value={form.firstName} onChange={(e) => setForm((p) => ({ ...p, firstName: e.target.value }))} placeholder="Client first name" className="w-full min-h-[44px] rounded-xl border-2 border-gray-200 px-4 py-3 text-sm focus:border-gold focus:outline-none" />
               {modalTab === "start" && <input type="text" value={form.lastName} onChange={(e) => setForm((p) => ({ ...p, lastName: e.target.value }))} placeholder="Client last name" className="w-full min-h-[44px] rounded-xl border-2 border-gray-200 px-4 py-3 text-sm focus:border-gold focus:outline-none" />}
-              <input type="email" value={form.email} onChange={(e) => setForm((p) => ({ ...p, email: e.target.value }))} placeholder="Client email" className="w-full min-h-[44px] rounded-xl border-2 border-gray-200 px-4 py-3 text-sm focus:border-gold focus:outline-none" />
+              <input type="email" value={form.email} onChange={(e) => { setForm((p) => ({ ...p, email: e.target.value })); if (formError) setFormError(""); }} placeholder="Client email" className="w-full min-h-[44px] rounded-xl border-2 border-gray-200 px-4 py-3 text-sm focus:border-gold focus:outline-none" />
               {modalTab === "invite" && <textarea value={form.message} onChange={(e) => setForm((p) => ({ ...p, message: e.target.value }))} placeholder="Add a personal note to your client..." rows={3} className="w-full rounded-xl border-2 border-gray-200 px-4 py-3 text-sm focus:border-gold focus:outline-none resize-none" />}
+              {formError && (
+                <div className="rounded-xl bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-900">
+                  {formError}
+                </div>
+              )}
               <button onClick={modalTab === "start" ? handleStartSession : handleSendInvite} disabled={sending || !form.firstName || !form.email} className="w-full min-h-[44px] rounded-full bg-gold py-3 text-sm font-semibold text-white hover:bg-gold/90 disabled:opacity-50 disabled:cursor-not-allowed">
                 {sending ? "Processing..." : modalTab === "start" ? "Start Session →" : "Send Invitation →"}
               </button>

@@ -333,6 +333,65 @@ export async function sendWelcomeEmail({
   }
 }
 
+export async function sendClientInviteEmail({
+  to,
+  firstName,
+  inviteLink,
+  note,
+  partnerId,
+}: {
+  to: string;
+  firstName?: string | null;
+  inviteLink: string;
+  note?: string | null;
+  partnerId?: string | null;
+}) {
+  const sender = await getPartnerFrom(partnerId);
+  const greeting = firstName ? `Hello ${escapeHtml(firstName)},` : "Hello,";
+  const company = escapeHtml(sender.brand.companyName);
+  const noteHtml = note
+    ? `<div style="margin:0 0 16px;padding:16px;background:#f8f9fa;border-left:3px solid #C9A84C;border-radius:4px;">
+         <p style="margin:0;font-size:14px;color:#2D2D2D;line-height:1.6;font-style:italic;">${escapeHtml(note)}</p>
+       </div>`
+    : "";
+
+  try {
+    await sendEmail({
+      from: sender.from,
+      replyTo: sender.replyTo,
+      to,
+      subject: `${sender.brand.companyName} invited you to protect what matters`,
+      html: `<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#f4f4f5;font-family:'Inter',Arial,sans-serif;">
+  <div style="max-width:600px;margin:0 auto;background:#ffffff;">
+    ${renderEmailHeader(sender.brand)}
+    <div style="padding:32px;">
+      <h2 style="margin:0 0 16px;font-size:22px;color:#1C3557;">${greeting}</h2>
+      <p style="margin:0 0 16px;font-size:14px;color:#2D2D2D;line-height:1.6;">
+        ${company} has invited you to create your estate plan and protect everything that matters &mdash; your documents, your accounts, and the people you love.
+      </p>
+      ${noteHtml}
+      <p style="margin:0 0 16px;font-size:14px;color:#2D2D2D;line-height:1.6;">
+        It only takes a few minutes to begin. Click below to get started.
+      </p>
+      <div style="text-align:center;margin:32px 0;">
+        <a href="${inviteLink}" style="display:inline-block;background:#C9A84C;color:#ffffff;text-decoration:none;padding:14px 32px;border-radius:50px;font-size:14px;font-weight:600;">
+          Get Started
+        </a>
+      </div>
+    </div>
+    ${renderEmailFooter(sender.brand)}
+  </div>
+</body>
+</html>`,
+    });
+  } catch (e) {
+    console.error("Client invite email failed:", e);
+  }
+}
+
 export async function sendAttorneyReviewPendingEmail({
   to,
   productType,

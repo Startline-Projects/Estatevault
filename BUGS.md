@@ -793,3 +793,14 @@ Tracking doc for checkout + fulfillment failure modes. Severity: Critical > High
 - **Fix:** Validate the DELETE body with `{ domainType: z.enum(["custom_domain","subdomain"]) }`; reject when absent/invalid.
 
 ---
+
+## BUG-70 — Pro clients list trusts `orders[0]` as "latest" but embed is unordered
+- **Status:** ✅ FIXED (2026-06-18)
+- **Severity:** Medium
+- **Area:** `lib/repos/server/clientRepo.ts:268` (`listByPartnerWithOrders` — embedded `orders(...)` with no `.order()`); consumed at `app/pro/clients/page.tsx:38,141,146,149`
+- **What:** The clients-list query embeds `orders(product_type, status, partner_cut)` without ordering the related rows. The page then treats `orders[0]` as the latest order for Package, Status, and Earnings (`getStatus` comment literally says "latest = orders[0]"). Postgres returns embedded rows in no guaranteed order, so for a client with more than one order the row reflects an arbitrary order. The detail route does it correctly — `orderRepo.listByClient` orders `created_at desc` (`lib/repos/server/orderRepo.ts:72-78`) — so the list and detail page can disagree for the same client.
+- **Impact:** A client with >1 order (e.g. Will delivered, then a $50 Amendment, or Will → Trust) can show the wrong package/status and the wrong partner earnings figure in the list. Inconsistent with the detail page.
+- **Repro:** Give one client two orders with different `product_type`/`status`/`partner_cut`; the list row's package/status/earnings may not match the newest order (and may differ from the detail page).
+- **Check on website:** A partner client with multiple orders shows a stale package/status/earnings in `/pro/clients` that differs from the client detail page.
+- **Fix:** Order the embedded relation in `listByPartnerWithOrders`: `.order("created_at", { referencedTable: "orders", ascending: false })` (or fetch only the latest order per client). Then `orders[0]` is genuinely the newest.
+- **Resolution:** Two parts. (1) `listByPartnerWithOrders` now sorts the embedded `orders` newest-first via `.order("created_at", { referencedTable: "orders", ascending: false })`, so the page's "latest" picks are deterministic. (2) The page picks the *estate package* rather than the newest of any type: `primaryOrder()` returns the first `will`/`trust` order (falling back to the newest order only if none exists), and Package/Earnings render only when that primary is a real `will`/`trust` — so a `vault_subscription` or `amendment` row can no longer be mislabeled "Will" or surface the wrong earnings. List now agrees with the detail page. Typecheck + lint green. (`lib/repos/server/clientRepo.ts:265`, `app/pro/clients/page.tsx:34-45,138-149`.)

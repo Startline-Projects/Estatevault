@@ -11,7 +11,7 @@ export function getLoginRouting(): Promise<ApiResult<LoginRouting>> {
   return get("/api/auth/login-routing");
 }
 
-export type CheckEmailResult = { exists: boolean };
+export type CheckEmailResult = { exists: boolean; claimable: boolean };
 export type VerifyCodeResult = { token: string };
 export type CheckVerificationResult = { verified: boolean; token?: string };
 export type HandoffResult = { url: string };

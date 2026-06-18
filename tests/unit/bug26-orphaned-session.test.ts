@@ -15,12 +15,14 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 const mockGetMeById = vi.fn();
 const mockProfileUpsert = vi.fn();
+const mockFindIdByEmailMaybe = vi.fn();
 const mockGetIdByProfile = vi.fn();
 const mockClientCreate = vi.fn();
 
 vi.mock("@/lib/repos/server/profileRepo", () => ({
   getMeById: (...args: unknown[]) => mockGetMeById(...args),
   upsert: (...args: unknown[]) => mockProfileUpsert(...args),
+  findIdByEmailMaybe: (...args: unknown[]) => mockFindIdByEmailMaybe(...args),
 }));
 
 vi.mock("@/lib/repos/server/clientRepo", () => ({
@@ -143,6 +145,9 @@ const BASIC_INTAKE = {
 describe("BUG-26 — orphaned session self-healing in checkout", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // Default: the checkout email has no existing account (guest path). Tests
+    // that exercise the existing-account reuse override this per case.
+    mockFindIdByEmailMaybe.mockReturnValue({ data: null });
   });
 
   it("(a) self-heals when auth user exists but profile is missing", async () => {

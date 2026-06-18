@@ -140,6 +140,17 @@ export async function createCheckoutSession(
     }
   }
 
+  // The checkout email may belong to an existing account the buyer isn't logged
+  // into — most commonly a partner-created client shell that hasn't paid yet
+  // (check-email now lets these through). Reuse that profile + its client so the
+  // order attaches to the existing account instead of spawning a duplicate client
+  // row. The webhook links by this same email regardless, so this only moves the
+  // linking earlier and prevents the dup.
+  if (!resolvedUserId && conflictEmail) {
+    const { data: existingByEmail } = await profileRepo.findIdByEmailMaybe(supabase, conflictEmail);
+    if (existingByEmail) resolvedUserId = existingByEmail.id;
+  }
+
   if (resolvedUserId) {
     const { data: existingClient } = await clientRepo.getIdByProfile(supabase, resolvedUserId);
     if (existingClient) {

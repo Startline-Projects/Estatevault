@@ -120,7 +120,11 @@ export default function EmailVerifyGate({
         return;
       }
 
-      if (checkData.exists) {
+      // Only block a genuine, already-paid account (or a non-client account).
+      // A "claimable" shell — e.g. a partner-created client that hasn't paid —
+      // is allowed to continue: email verification below proves ownership and
+      // the order links back to that account on success.
+      if (checkData.exists && !checkData.claimable) {
         setExistingAccount(true);
         setStage("idle");
         return;

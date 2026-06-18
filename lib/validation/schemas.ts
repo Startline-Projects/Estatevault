@@ -520,6 +520,7 @@ export const partnerClientsCreateSchema = z.object({
   email: z.string().email(),
   partnerId: z.string().min(1),
   action: z.string().optional(),
+  message: z.string().optional(),
 });
 
 export const partnerClientsUpdateSchema = z.object({

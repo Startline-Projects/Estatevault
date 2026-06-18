@@ -10,7 +10,10 @@ export interface ConflictResult {
   message: string;
 }
 
-const OWNED_STATUSES = ["paid", "generating", "review", "delivered"];
+// Order statuses that mean the customer has actually paid and owns a plan (vs a
+// still-`pending` or rolled-back order). Exported so the checkout email check can
+// reuse the exact same "has paid" definition (see api/auth/check-email).
+export const OWNED_STATUSES = ["paid", "generating", "review", "delivered"];
 
 export async function checkPlanConflict(
   supabase: SupabaseClient,

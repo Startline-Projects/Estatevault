@@ -267,7 +267,10 @@ export function listByPartnerWithOrders(admin: Admin, partnerId: string) {
     .from("clients")
     .select("id, profile_id, created_at, profiles(full_name, email), orders(product_type, status, partner_cut)")
     .eq("partner_id", partnerId)
-    .order("created_at", { ascending: false });
+    .order("created_at", { ascending: false })
+    // Embedded orders are unordered by default; sort newest-first so the page's
+    // "latest order" picks are deterministic (BUG-70).
+    .order("created_at", { referencedTable: "orders", ascending: false });
 }
 
 // Count of a partner's clients (B2 dashboard). head:true = count only, no rows.
