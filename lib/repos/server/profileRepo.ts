@@ -92,6 +92,25 @@ export function updateCommissionRate(admin: Admin, repId: string, rate: number) 
     .eq("user_type", "sales_rep");
 }
 
+// All review attorneys + their commission rate (admin attorney settings).
+export function findAllReviewAttorneys(admin: Admin) {
+  return admin
+    .from("profiles")
+    .select("id, full_name, email, created_at, commission_rate")
+    .eq("user_type", "review_attorney")
+    .order("created_at", { ascending: false });
+}
+
+// Update commission rate for a review attorney. The user_type guard prevents
+// this admin path from ever writing a rate onto a non-attorney profile.
+export function updateAttorneyCommissionRate(admin: Admin, attorneyId: string, rate: number) {
+  return admin
+    .from("profiles")
+    .update({ commission_rate: rate })
+    .eq("id", attorneyId)
+    .eq("user_type", "review_attorney");
+}
+
 // Find profile by email (maybe null).
 export function findByEmail(admin: Admin, email: string) {
   return admin

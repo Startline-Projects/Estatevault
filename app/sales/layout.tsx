@@ -38,6 +38,7 @@ export default function SalesLayout({ children }: { children: React.ReactNode })
   const adminItems: PortalNavItem[] = isAdmin
     ? [
         { label: "Affiliates", href: "/sales/affiliates" },
+        { label: "Attorney Settings", href: "/sales/admin/attorney" },
         { label: "Marketing Materials", href: "/sales/marketing-materials" },
         { label: "Regenerate Docs", href: "/sales/admin/regenerate-docs" },
       ]

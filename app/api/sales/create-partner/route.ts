@@ -12,7 +12,7 @@ import * as auditLogRepo from "@/lib/repos/server/auditLogRepo";
 import { PROMO_CODES } from "@/lib/orders/pricing";
 
 export const POST = withRoute(async (req: NextRequest) => {
-  const auth = await requireAuth(["sales_rep", "admin"]);
+  const auth = await requireAuth(["sales_rep", "admin", "review_attorney"], req);
   if ("error" in auth) return auth.error;
 
   const body = await req.json();

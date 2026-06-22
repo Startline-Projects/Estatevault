@@ -209,12 +209,3 @@ export function getBranding(params: {
 }): Promise<ApiResult<BrandingResult>> {
   return publicGet("/api/partners/branding", params);
 }
-
-export function createReviewAttorney(body: {
-  partnerId: string;
-  attorneyName: string;
-  attorneyEmail: string;
-  barNumber: string;
-}): Promise<ApiResult<{ success: boolean }>> {
-  return post("/api/partners/create-review-attorney", body);
-}

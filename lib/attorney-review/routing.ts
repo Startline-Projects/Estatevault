@@ -3,27 +3,25 @@
  *
  * Determines who reviews a document and where the $300 fee goes.
  *
+ * EstateVault runs a SINGLE in-house reviewing attorney. Partners do not
+ * register their own reviewers, so every review routes to in-house counsel and
+ * the fee always stays with EstateVault.
+ *
  * ROUTING TABLE:
  * ┌─────────────────────────────────────────────────┬──────────────────────┬───────────────┐
  * │ Scenario                                        │ Reviewer             │ $300 Goes To  │
  * ├─────────────────────────────────────────────────┼──────────────────────┼───────────────┤
- * │ Direct EstateVault client (no partner)          │ Mo (in-house, W-2)   │ EstateVault   │
- * │ Non-attorney partner                            │ Mo (in-house, W-2)   │ EstateVault   │
- * │ Attorney partner, NO in-house estate attorney  │ Mo (in-house, W-2)   │ EstateVault   │
- * │ Attorney partner, HAS in-house estate attorney │ Partner's attorney   │ Partner admin │
+ * │ Direct EstateVault client (no partner)          │ In-house (W-2)       │ EstateVault   │
+ * │ Any partner (attorney or not)                   │ In-house (W-2)       │ EstateVault   │
  * └─────────────────────────────────────────────────┴──────────────────────┴───────────────┘
  *
  * COMPLIANCE, Fee-splitting protection:
- * Mo Murshed (mmurshed@thepeoplesfirmpllc.com, Bar #P-79739) is a W-2 employee
- * of EstateVault. When reviews are routed to him, the $300 fee is employment
+ * The in-house reviewer is a W-2 employee of EstateVault. The $300 is employment
  * revenue for EstateVault, NOT fee-splitting. This is a critical legal distinction.
- *
- * Review Network attorneys (independent, Stripe Connect) receive 100% of the $300.
- * EstateVault earns $0 on Review Network reviews. Never route these fees to EstateVault.
  */
 
 import type { ReviewRouting, PartnerForRouting } from "./types";
-import { DEFAULT_ATTORNEY_REVIEW_FEE, clampAttorneyReviewFee } from "@/lib/orders/pricing";
+import { DEFAULT_ATTORNEY_REVIEW_FEE } from "@/lib/orders/pricing";
 
 export const INHOUSE_ATTORNEY_EMAIL = "test-attorney@estatevault.test";
 export const ESTATEVAULT_ADMIN_EMAIL = "ockmedk@gmail.com";
@@ -46,53 +44,18 @@ export function resolveReviewRouting(
   adminProfileId: string | null,
   platformDefaultFee: number = DEFAULT_REVIEW_FEE_CENTS
 ): ReviewRouting {
-  // ── Case 1: Direct EstateVault client (no partner) ────────────
-  if (!partner) {
-    return {
-      reviewerId: inhouseAttorneyProfileId,
-      reviewerType: "inhouse_estatevault",
-      feeDestination: "estatevault",
-      feeAmount: platformDefaultFee,
-      feeControlledBy: adminProfileId,
-      partnerId: null,
-    };
-  }
-
-  // ── Case 2: Non-attorney partner ──────────────────────────────
-  if (partner.professional_type !== "attorney") {
-    return {
-      reviewerId: inhouseAttorneyProfileId,
-      reviewerType: "inhouse_estatevault",
-      feeDestination: "estatevault",
-      feeAmount: platformDefaultFee,
-      feeControlledBy: adminProfileId,
-      partnerId: partner.id,
-    };
-  }
-
-  // ── Case 3: Attorney partner WITHOUT in-house estate attorney ──
-  if (!partner.has_inhouse_estate_attorney || !partner.inhouse_review_attorney_id) {
-    return {
-      reviewerId: inhouseAttorneyProfileId,
-      reviewerType: "inhouse_estatevault",
-      feeDestination: "estatevault",
-      feeAmount: platformDefaultFee,
-      feeControlledBy: adminProfileId,
-      partnerId: partner.id,
-    };
-  }
-
-  // ── Case 4: Attorney partner WITH in-house estate attorney ─────
-  // Fee goes to partner admin's Stripe Connect account.
-  // Partner pays their attorney via their own payroll.
+  // EstateVault operates a single in-house reviewing attorney. Partners cannot
+  // register their own reviewer, so EVERY review — direct client or any partner
+  // type — routes to in-house counsel and the fee stays with EstateVault
+  // (employment revenue for a W-2 attorney, NOT fee-splitting). This is
+  // deliberately partner-agnostic: even a legacy partner row with a stale
+  // inhouse_review_attorney_id can no longer divert a review or its fee.
   return {
-    reviewerId: partner.inhouse_review_attorney_id,
-    reviewerType: "inhouse_partner",
-    feeDestination: "partner_admin",
-    feeAmount: partner.custom_review_fee
-      ? clampAttorneyReviewFee(partner.custom_review_fee)
-      : platformDefaultFee,
-    feeControlledBy: partner.profile_id,
-    partnerId: partner.id,
+    reviewerId: inhouseAttorneyProfileId,
+    reviewerType: "inhouse_estatevault",
+    feeDestination: "estatevault",
+    feeAmount: platformDefaultFee,
+    feeControlledBy: adminProfileId,
+    partnerId: partner?.id ?? null,
   };
 }

@@ -50,7 +50,6 @@ export default function ProSettingsPage() {
   const [senderEmail, setSenderEmail] = useState("");
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
-  const [reviewFee, setReviewFee] = useState(300);
   const [domainSaving, setDomainSaving] = useState(false);
   const [domainError, setDomainError] = useState("");
   const [connectingStripe, setConnectingStripe] = useState(false);
@@ -92,7 +91,6 @@ export default function ProSettingsPage() {
         setSenderEmail(p.sender_email || "");
         setFullName(p.profiles?.full_name || "");
         setEmail(p.profiles?.email || "");
-        setReviewFee(p.custom_review_fee ? p.custom_review_fee / 100 : 300);
         if (p.subdomain) {
           setSavedSubdomain(p.subdomain);
           if (p.domain_verified) setDomainVerifyStatus("verified");
@@ -741,68 +739,27 @@ export default function ProSettingsPage() {
     {
       key: "attorney_review",
       title: "Attorney Reviews",
-      subtitle:
-        partner.professional_type === "attorney" && partner.has_inhouse_estate_attorney
-          ? `Fee: $${reviewFee} (set by EstateVault)`
-          : "Handled by EstateVault",
-      content:
-        partner.professional_type === "attorney" && partner.has_inhouse_estate_attorney ? (
-          <div className="space-y-4">
-            <p className="text-sm text-charcoal/60">
-              Your firm has an in-house estate planning attorney on staff. The attorney review fee
-              is paid to your firm&apos;s Stripe Connect account. The fee is set by EstateVault —
-              contact your account manager to change it.
-            </p>
-            <div>
-              <label className="block text-sm font-medium text-navy mb-1">
-                Attorney Review Fee
-              </label>
-              <div className="flex items-center gap-3">
-                <span className="rounded-xl border-2 border-gray-200 bg-gray-50 px-4 py-3 text-sm font-medium text-charcoal">
-                  ${reviewFee}
-                </span>
-                <span className="text-xs text-charcoal/50">Set by EstateVault</span>
-              </div>
-              <p className="mt-1 text-xs text-charcoal/50">
-                Default is {formatPrice(PRICES.attorneyReview)}. This fee goes directly to your firm via Stripe Connect.
-              </p>
-            </div>
-            <div className="rounded-lg bg-navy/5 p-4">
-              <p className="text-xs font-medium text-navy">How it works</p>
-              <ul className="mt-2 space-y-1 text-xs text-charcoal/50">
-                <li>• Client adds attorney review at checkout for ${reviewFee}</li>
-                <li>• Review is assigned to your in-house attorney</li>
-                <li>• Full fee is transferred to your Stripe Connect account</li>
-                <li>• You pay your attorney via your own payroll</li>
-              </ul>
-            </div>
+      subtitle: "Handled by EstateVault",
+      content: (
+        <div className="space-y-3">
+          <div className="flex items-center gap-3">
+            <span className="rounded-full bg-green-100 px-3 py-1 text-xs font-medium text-green-700">
+              Included
+            </span>
+            <span className="text-sm text-charcoal/60">
+              Attorney reviews are handled by EstateVault&apos;s in-house counsel.
+            </span>
           </div>
-        ) : (
-          <div className="space-y-3">
-            <div className="flex items-center gap-3">
-              <span className="rounded-full bg-green-100 px-3 py-1 text-xs font-medium text-green-700">
-                Included
-              </span>
-              <span className="text-sm text-charcoal/60">
-                Attorney reviews are handled by EstateVault&apos;s in-house counsel.
-              </span>
-            </div>
-            <div className="rounded-lg bg-gray-50 p-4">
-              <p className="text-xs font-medium text-navy">What clients see</p>
-              <ul className="mt-2 space-y-1 text-xs text-charcoal/50">
-                <li>• Optional {formatPrice(PRICES.attorneyReview)} attorney review add-on at checkout</li>
-                <li>• Reviews completed within 48 hours</li>
-                <li>• Handled by a licensed estate planning attorney</li>
-              </ul>
-            </div>
-            {partner.professional_type === "attorney" && !partner.has_inhouse_estate_attorney && (
-              <p className="text-xs text-charcoal/60">
-                If your firm has a licensed estate planning attorney who can handle reviews,
-                contact info@estatevault.us to enable in-house attorney reviews.
-              </p>
-            )}
+          <div className="rounded-lg bg-gray-50 p-4">
+            <p className="text-xs font-medium text-navy">What clients see</p>
+            <ul className="mt-2 space-y-1 text-xs text-charcoal/50">
+              <li>• Optional {formatPrice(PRICES.attorneyReview)} attorney review add-on at checkout</li>
+              <li>• Reviews completed within 48 hours</li>
+              <li>• Handled by a licensed estate planning attorney</li>
+            </ul>
           </div>
-        ),
+        </div>
+      ),
     },
     ...(isBasic ? [{
       key: "vault_branding" as SectionKey,

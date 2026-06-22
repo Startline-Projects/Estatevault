@@ -9,7 +9,7 @@ import { partnerUrl } from "@/lib/hosts";
 export const dynamic = "force-dynamic";
 
 export const POST = withRoute(async (req: NextRequest) => {
-  const auth = await requireAuth(["sales_rep", "admin"]);
+  const auth = await requireAuth(["sales_rep", "admin", "review_attorney"], req);
   if ("error" in auth) return auth.error;
 
   const body = await req.json();

@@ -546,13 +546,6 @@ export const partnerVaultSubdomainSchema = z.object({
   subdomain: z.string().regex(/^[a-z0-9][a-z0-9-]{1,50}[a-z0-9]$/),
 });
 
-export const createReviewAttorneySchema = z.object({
-  partnerId: z.string().min(1),
-  attorneyEmail: z.string().email(),
-  attorneyName: z.string().optional(),
-  barNumber: z.string().optional(),
-});
-
 // ---- Sales ----
 
 export const salesAffiliateStatusSchema = z.object({
@@ -769,6 +762,19 @@ export const adminPartnerFeeSchema = z.object({
 // Admin-only: set the platform-default attorney review fee (cents).
 export const adminReviewFeeDefaultSchema = z.object({
   fee: z.number().int().min(ATTORNEY_REVIEW_FEE_RANGE.min).max(ATTORNEY_REVIEW_FEE_RANGE.max),
+});
+
+export const adminAttorneyCommissionUpdateSchema = z.object({
+  attorneyId: z.string().min(1),
+  commissionRate: z.number().min(0).max(100),
+});
+
+export const adminCommissionMarkPaidSchema = z.object({
+  recipientId: z.string().min(1),
+  period: z.string().regex(/^\d{4}-\d{2}$/), // YYYY-MM
+  amountCents: z.number().int().min(0),
+  method: z.enum(["ach", "check", "payroll", "other"]).optional(),
+  note: z.string().max(500).optional(),
 });
 
 // A user updating their own profile display name (B2 settings).

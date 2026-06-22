@@ -2,33 +2,35 @@
 
 import { useState, useEffect } from "react";
 import { getMyProfile } from "@/lib/api-client/profile";
-import { getCommission, getMyPlatformCommission } from "@/lib/api-client/sales";
+import { getCommission, getMyPlatformCommission, markCommissionPaid } from "@/lib/api-client/sales";
 
 interface BreakdownRow {
   partnerName: string;
   platformFee: number;
   commission: number;
   paidAt: string;
-  status: "Paid" | "Pending";
+  status: "Paid" | "Pending" | "Owed";
 }
 
 interface HistoryRow {
   month: string;
   platformFees: number;
   commission: number;
-  status: "Paid" | "Pending";
+  status: "Paid" | "Pending" | "Owed" | "—";
 }
 
-// Admin view: per-rep commission summary
+// Admin view: per-recipient commission summary
 interface RepSummaryRow {
   repId: string;
   repName: string;
   repEmail: string;
+  role: "sales_rep" | "review_attorney";
   commissionRate: number;
   mtdPlatformFees: number;
   mtdCommissionOwed: number;
   totalPartners: number;
   mtdPartners: number;
+  currentPeriodPaid: boolean;
 }
 
 function formatCurrency(amount: number): string {
@@ -38,14 +40,17 @@ function formatCurrency(amount: number): string {
 // ─── ADMIN VIEW ────────────────────────────────────────────────────────────────
 function AdminCommissionView() {
   const [loading, setLoading] = useState(true);
+  const [period, setPeriod] = useState("");
   const [repSummaries, setRepSummaries] = useState<RepSummaryRow[]>([]);
   const [totalMtdOwed, setTotalMtdOwed] = useState(0);
   const [totalMtdFees, setTotalMtdFees] = useState(0);
+  const [savingId, setSavingId] = useState<string | null>(null);
 
   useEffect(() => {
     async function load() {
       // Data now comes from the API boundary (B2).
       const { data } = await getCommission();
+      setPeriod(data?.period ?? "");
       setRepSummaries((data?.repSummaries ?? []) as unknown as RepSummaryRow[]);
       setTotalMtdOwed(data?.totalMtdOwed ?? 0);
       setTotalMtdFees(data?.totalMtdFees ?? 0);
@@ -53,6 +58,16 @@ function AdminCommissionView() {
     }
     load();
   }, []);
+
+  async function handleMarkPaid(rep: RepSummaryRow) {
+    if (!period || rep.currentPeriodPaid || rep.mtdCommissionOwed <= 0) return;
+    setSavingId(rep.repId);
+    const { error } = await markCommissionPaid(rep.repId, period, Math.round(rep.mtdCommissionOwed * 100));
+    setSavingId(null);
+    if (!error) {
+      setRepSummaries((rows) => rows.map((r) => (r.repId === rep.repId ? { ...r, currentPeriodPaid: true } : r)));
+    }
+  }
 
   if (loading) {
     return (
@@ -66,50 +81,57 @@ function AdminCommissionView() {
     <div className="max-w-4xl mx-auto space-y-8">
       {/* Header */}
       <div className="bg-navy rounded-xl p-6 text-white">
-        <p className="text-sm font-medium text-white/60 uppercase tracking-wide">Sales Rep Commissions — Total Owed This Month</p>
+        <p className="text-sm font-medium text-white/60 uppercase tracking-wide">Commissions — Total Owed This Month</p>
         <p className="text-4xl font-bold mt-2">{formatCurrency(totalMtdOwed)}</p>
         <p className="text-sm text-white/50 mt-1">
-          {new Date().toLocaleDateString("en-US", { month: "long", year: "numeric" })} across {repSummaries.filter(r => r.mtdCommissionOwed > 0).length} sales rep{repSummaries.filter(r => r.mtdCommissionOwed > 0).length !== 1 ? "s" : ""}
+          {new Date().toLocaleDateString("en-US", { month: "long", year: "numeric" })} across {repSummaries.filter(r => r.mtdCommissionOwed > 0).length} recipient{repSummaries.filter(r => r.mtdCommissionOwed > 0).length !== 1 ? "s" : ""}
         </p>
       </div>
 
       {/* Info Box */}
       <div className="bg-gold/10 border border-gold/30 rounded-xl p-5">
-        <h3 className="text-sm font-semibold text-navy mb-1">About Sales Rep Commissions</h3>
+        <h3 className="text-sm font-semibold text-navy mb-1">About Commissions</h3>
         <p className="text-sm text-charcoal leading-relaxed">
-          This page tracks commissions owed to <span className="font-semibold">sales reps</span> (internal team members
-          who recruit partners) — not partners themselves. Each sales rep earns their configured rate on the white-label
-          platform fee paid by partners they sign up. Commission is earned at partner signup payment, not on document
-          sales, and is paid out on the 1st of each month.
+          This page tracks commissions owed to <span className="font-semibold">sales reps and review attorneys</span>{" "}
+          (internal team members who recruit partners) — not partners themselves. Each earns their configured rate on the
+          white-label platform fee paid by partners they sign up. Commission is earned at partner signup payment, not on
+          document sales. Use <span className="font-semibold">Mark Paid</span> to record a payout once you have paid it by
+          hand (ACH / check / payroll).
         </p>
       </div>
 
       {/* Rep Breakdown Table */}
       <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
         <div className="px-5 py-4 border-b border-gray-100">
-          <h2 className="text-sm font-semibold text-charcoal">MTD Commission Owed by Rep</h2>
+          <h2 className="text-sm font-semibold text-charcoal">MTD Commission Owed</h2>
         </div>
         {repSummaries.length === 0 ? (
           <div className="px-5 py-10 text-center text-sm text-gray-400">
-            No sales reps found.
+            No recipients found.
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-gray-100 bg-gray-50/50">
-                  <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Sales Rep</th>
+                  <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Recipient</th>
                   <th className="text-center px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Rate</th>
                   <th className="text-right px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">MTD Partners</th>
                   <th className="text-right px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">MTD Platform Fees</th>
                   <th className="text-right px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Commission Owed</th>
+                  <th className="text-center px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Status</th>
                 </tr>
               </thead>
               <tbody>
                 {repSummaries.map((rep) => (
                   <tr key={rep.repId} className="border-b border-gray-50 hover:bg-gray-50/50 transition-colors">
                     <td className="px-5 py-3">
-                      <p className="font-medium text-charcoal">{rep.repName}</p>
+                      <div className="flex items-center gap-2">
+                        <p className="font-medium text-charcoal">{rep.repName}</p>
+                        <span className="inline-block px-2 py-0.5 rounded-full text-[10px] font-medium bg-gray-100 text-gray-500 uppercase tracking-wide">
+                          {rep.role === "review_attorney" ? "Attorney" : "Sales Rep"}
+                        </span>
+                      </div>
                       <p className="text-xs text-gray-400">{rep.repEmail}</p>
                     </td>
                     <td className="px-5 py-3 text-center">
@@ -120,12 +142,28 @@ function AdminCommissionView() {
                     <td className="px-5 py-3 text-right text-gray-600">{rep.mtdPartners}</td>
                     <td className="px-5 py-3 text-right text-gray-600">{formatCurrency(rep.mtdPlatformFees)}</td>
                     <td className="px-5 py-3 text-right font-semibold text-navy">{formatCurrency(rep.mtdCommissionOwed)}</td>
+                    <td className="px-5 py-3 text-center">
+                      {rep.currentPeriodPaid ? (
+                        <span className="inline-block px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700">Paid</span>
+                      ) : rep.mtdCommissionOwed <= 0 ? (
+                        <span className="inline-block px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-500">—</span>
+                      ) : (
+                        <button
+                          onClick={() => handleMarkPaid(rep)}
+                          disabled={savingId === rep.repId}
+                          className="rounded-full bg-navy px-4 py-1.5 text-xs font-semibold text-white hover:bg-navy/90 disabled:opacity-50"
+                        >
+                          {savingId === rep.repId ? "Saving…" : "Mark Paid"}
+                        </button>
+                      )}
+                    </td>
                   </tr>
                 ))}
                 <tr className="bg-gray-50 font-semibold">
                   <td className="px-5 py-3 text-charcoal" colSpan={3}>Total</td>
                   <td className="px-5 py-3 text-right text-charcoal">{formatCurrency(totalMtdFees)}</td>
                   <td className="px-5 py-3 text-right text-navy">{formatCurrency(totalMtdOwed)}</td>
+                  <td className="px-5 py-3" />
                 </tr>
               </tbody>
             </table>
@@ -256,7 +294,7 @@ function RepCommissionView() {
                   <td className="px-5 py-3 text-right text-gray-600">{formatCurrency(row.platformFees)}</td>
                   <td className="px-5 py-3 text-right font-medium text-navy">{formatCurrency(row.commission)}</td>
                   <td className="px-5 py-3 text-center">
-                    <span className={`inline-block px-2.5 py-0.5 rounded-full text-xs font-medium ${row.status === "Paid" ? "bg-green-100 text-green-700" : "bg-amber-100 text-amber-700"}`}>
+                    <span className={`inline-block px-2.5 py-0.5 rounded-full text-xs font-medium ${row.status === "Paid" ? "bg-green-100 text-green-700" : row.status === "—" ? "bg-gray-100 text-gray-500" : "bg-amber-100 text-amber-700"}`}>
                       {row.status}
                     </span>
                   </td>

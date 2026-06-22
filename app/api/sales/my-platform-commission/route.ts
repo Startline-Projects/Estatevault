@@ -6,6 +6,7 @@ import { PARTNER_PLATFORM_FEE } from "@/lib/orders/pricing";
 import { DEFAULT_COMMISSION_RATE } from "@/lib/sales/constants";
 import * as partnerRepo from "@/lib/repos/server/partnerRepo";
 import * as profileRepo from "@/lib/repos/server/profileRepo";
+import * as commissionPayoutRepo from "@/lib/repos/server/commissionPayoutRepo";
 
 type PartnerRow = {
   id: string;
@@ -32,6 +33,11 @@ function monthLabel(date: Date): string {
   return date.toLocaleDateString("en-US", { month: "long", year: "numeric" });
 }
 
+// Period key used by commission_payouts: 'YYYY-MM'.
+function periodKey(date: Date): string {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+}
+
 // B2: the signed-in rep's platform-fee commission (was a direct client-side read
 // of profiles.commission_rate + their created partners in app/sales/commission).
 export const GET = withRoute(async (req: NextRequest) => {
@@ -44,20 +50,36 @@ export const GET = withRoute(async (req: NextRequest) => {
   const { data: partnersRaw } = await partnerRepo.listForRepCommission(auth.admin, auth.user.id);
   const partners = (partnersRaw ?? []) as PartnerRow[];
 
+  // Periods this recipient has actually been paid out for — the source of truth
+  // for a real "Paid" status (vs merely "Owed" once earned).
+  const { data: payouts } = await commissionPayoutRepo.listForRecipient(auth.admin, auth.user.id);
+  const paidPeriods = new Set((payouts ?? []).map((p) => p.period));
+
   const now = new Date();
+  const currentPeriod = periodKey(now);
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
   const mtdPartners = partners.filter((p) => p.created_at && new Date(p.created_at) >= monthStart);
-  const mtdFees = mtdPartners.reduce((s, p) => s + effectiveFeeCents(p), 0) / 100;
+  // Commission is earned only once a partner has actually paid their one-time
+  // platform fee — unpaid signups stay visible as pipeline but contribute $0.
+  // (Previously every signup counted, inflating the headline with unpaid rows.)
+  const mtdFees = mtdPartners
+    .filter((p) => p.one_time_fee_paid)
+    .reduce((s, p) => s + effectiveFeeCents(p), 0) / 100;
 
   const breakdown = mtdPartners
     .map((p) => {
+      const earned = !!p.one_time_fee_paid; // partner paid their fee => commission earned
       const fee = effectiveFeeCents(p) / 100;
+      // "Paid" only when this month's commission has actually been paid out to
+      // the recipient (a commission_payouts row exists). Earned-but-not-paid is
+      // "Owed"; partner hasn't paid their fee yet is "Pending".
+      const status = !earned ? "Pending" : paidPeriods.has(currentPeriod) ? "Paid" : "Owed";
       return {
         partnerName: p.company_name || "Unknown",
         platformFee: fee,
-        commission: fee * rate,
+        commission: earned ? fee * rate : 0,
         paidAt: p.created_at ? new Date(p.created_at).toLocaleDateString() : "",
-        status: p.one_time_fee_paid ? "Paid" : "Pending",
+        status,
       };
     })
     .sort((a, b) => b.platformFee - a.platformFee);
@@ -71,12 +93,26 @@ export const GET = withRoute(async (req: NextRequest) => {
       const d = new Date(p.created_at);
       return d >= mDate && d < mEnd;
     });
-    const fees = monthPartners.reduce((s, p) => s + effectiveFeeCents(p), 0) / 100;
+    const fees = monthPartners
+      .filter((p) => p.one_time_fee_paid)
+      .reduce((s, p) => s + effectiveFeeCents(p), 0) / 100;
+    const commission = fees * rate;
+    // "Paid" is now real: a commission_payouts row for this period means the
+    // recipient was actually paid out. Otherwise earned commission is "Owed"
+    // (current month still accruing => "Pending"); an empty month is "—".
+    const status =
+      commission <= 0
+        ? "—"
+        : paidPeriods.has(periodKey(mDate))
+          ? "Paid"
+          : i === 0
+            ? "Pending"
+            : "Owed";
     history.push({
       month: monthLabel(mDate),
       platformFees: fees,
-      commission: fees * rate,
-      status: i === 0 ? "Pending" : "Paid",
+      commission,
+      status,
     });
   }
 

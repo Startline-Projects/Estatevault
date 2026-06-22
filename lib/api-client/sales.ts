@@ -61,16 +61,28 @@ export type RepSummary = {
   repId: string;
   repName: string;
   repEmail: string;
+  role: "sales_rep" | "review_attorney";
   commissionRate: number;
   mtdPlatformFees: number;
   mtdCommissionOwed: number;
   totalPartners: number;
   mtdPartners: number;
+  currentPeriodPaid: boolean;
 };
 
-// Per-rep commission summary (B2, admin view).
-export function getCommission(): Promise<ApiResult<{ repSummaries: RepSummary[]; totalMtdOwed: number; totalMtdFees: number }>> {
+// Per-recipient commission summary (B2, admin view). `period` is the current
+// payout period in YYYY-MM.
+export function getCommission(): Promise<ApiResult<{ period: string; repSummaries: RepSummary[]; totalMtdOwed: number; totalMtdFees: number }>> {
   return get("/api/sales/commission");
+}
+
+// Admin: record that a recipient's commission for a period has been paid out.
+export function markCommissionPaid(
+  recipientId: string,
+  period: string,
+  amountCents: number,
+): Promise<ApiResult<{ success: boolean; alreadyPaid: boolean }>> {
+  return post("/api/admin/commission-payouts", { recipientId, period, amountCents });
 }
 
 export type SalesOverview = {
@@ -186,6 +198,30 @@ export function createRep(body: {
   commissionRate: number;
 }): Promise<ApiResult<{ success: boolean }>> {
   return post("/api/sales/create-rep", body);
+}
+
+// --- Admin: attorney settings (review fee + attorney commission) ---
+export interface AttorneyCommissionRow {
+  id: string;
+  full_name: string;
+  email: string;
+  commission_rate: number; // decimal fraction, e.g. 0.05
+}
+
+export function getAttorneyReviewFee(): Promise<ApiResult<{ fee: number }>> {
+  return get("/api/admin/attorney-review-fee");
+}
+
+export function setAttorneyReviewFee(feeCents: number): Promise<ApiResult<{ success: boolean; fee: number }>> {
+  return post("/api/admin/attorney-review-fee", { fee: feeCents });
+}
+
+export function getAttorneyCommissions(): Promise<ApiResult<{ attorneys: AttorneyCommissionRow[] }>> {
+  return get("/api/admin/attorney-commission");
+}
+
+export function updateAttorneyCommission(attorneyId: string, commissionRate: number): Promise<ApiResult<{ success: boolean }>> {
+  return patch("/api/admin/attorney-commission", { attorneyId, commissionRate });
 }
 
 export function affiliatePayout(affiliateId: string): Promise<ApiResult<{ success: boolean }>> {
