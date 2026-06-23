@@ -33,16 +33,18 @@ export const POST = withRoute(async (req: NextRequest) => {
   const terminalStates = ["approved", "approved_with_notes", "flagged"];
   if (review.status && terminalStates.includes(review.status)) return fail("Review already decided", 409);
 
-  // BUG-53: a paid review can't be "delivered" with nothing to show — require an uploaded reviewed document first.
+  // BUG-53: a paid review can't be "delivered" with nothing to show — require a generated document exists.
+  // Upload is OPTIONAL: if the attorney approves without uploading an edited file, the client receives the
+  // originally generated PDF (the download route falls back to storage_path when reviewed_path is null).
   if (decision === "approved" || decision === "approved_with_notes") {
     if (!review.order_id) return fail("Review has no associated order", 400);
     const { count, error: cntErr } = await auth.admin
       .from("documents")
       .select("id", { count: "exact", head: true })
       .eq("order_id", review.order_id)
-      .not("reviewed_path", "is", null);
-    if (cntErr) return fail("Failed to verify reviewed documents", 500);
-    if (!count) return fail("No reviewed document uploaded", 400);
+      .not("storage_path", "is", null);
+    if (cntErr) return fail("Failed to verify documents", 500);
+    if (!count) return fail("No generated document found for this order", 400);
   }
 
   const { error: reviewErr } = await attorneyReviewRepo.updateDecision(auth.admin, reviewId, decision, notes || null);
