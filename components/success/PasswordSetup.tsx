@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { setPassword as apiSetPassword } from "@/lib/api-client/auth";
 
@@ -13,7 +12,6 @@ interface PasswordSetupProps {
 }
 
 export default function PasswordSetup({ email, userId, defaultName = "", verifiedToken }: PasswordSetupProps) {
-  const router = useRouter();
   const [fullName, setFullName] = useState(defaultName);
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -43,7 +41,19 @@ export default function PasswordSetup({ email, userId, defaultName = "", verifie
       // back to the set-password API path which creates the user fresh.
       const { data: { user: liveUser }, error: liveUserErr } = await supabase.auth.getUser();
 
-      if (liveUser && !liveUserErr) {
+      // Only treat the live session as the buyer when its email matches the
+      // checkout email. On a partner/white-label host the partner (or any prior
+      // user) may still be signed in — using THAT session would overwrite the
+      // wrong account's password and then bounce the buyer to /pro/dashboard via
+      // the middleware cross-portal guard. In that case purge it and create the
+      // client fresh through the set-password API.
+      const sessionIsBuyer =
+        !!liveUser &&
+        !liveUserErr &&
+        !!liveUser.email &&
+        liveUser.email.toLowerCase() === email.trim().toLowerCase();
+
+      if (sessionIsBuyer) {
         const { error: updateErr } = await supabase.auth.updateUser({ password });
         if (updateErr) {
           setError(updateErr.message);
@@ -73,8 +83,10 @@ export default function PasswordSetup({ email, userId, defaultName = "", verifie
         }
       }
 
-      router.push("/dashboard");
-      router.refresh();
+      // Full navigation (not router.push) so the freshly-set client session
+      // cookie is sent on the /dashboard request and middleware routes by the
+      // client role — avoids racing a stale cookie into the cross-portal guard.
+      window.location.assign("/dashboard");
     } catch {
       setError("Something went wrong. Please try again.");
       setLoading(false);
