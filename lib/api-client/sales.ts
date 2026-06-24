@@ -228,6 +228,29 @@ export function affiliatePayout(affiliateId: string): Promise<ApiResult<{ succes
   return post(`/api/sales/affiliates/${affiliateId}/payout`);
 }
 
+// --- Admin: attorney referrals (hard-stop routing → $75 partner fee) ---
+export interface AdminReferralRow {
+  id: string;
+  reason: string;
+  status: string | null;
+  created_at: string | null;
+  referral_fee: number | null;
+  referral_fee_paid: boolean | null;
+  partner_id: string | null;
+  client_name: string | null;
+  client_email: string | null;
+  client_phone: string | null;
+  partners: { company_name: string } | null;
+}
+
+export function getAdminReferrals(): Promise<ApiResult<{ referrals: AdminReferralRow[] }>> {
+  return get("/api/admin/referrals");
+}
+
+export function convertReferral(referralId: string): Promise<ApiResult<{ success: boolean }>> {
+  return patch("/api/admin/referrals", { referralId });
+}
+
 export function affiliateStatus(affiliateId: string, status: string): Promise<ApiResult<{ success: boolean }>> {
   return post(`/api/sales/affiliates/${affiliateId}/status`, { status });
 }

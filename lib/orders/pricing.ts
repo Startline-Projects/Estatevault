@@ -24,6 +24,10 @@ export const PARTNER_PLATFORM_FEE = {
 
 export const DEFAULT_ATTORNEY_REVIEW_FEE = 30000;
 
+// Flat fee a partner earns when a hard-stop attorney referral converts ($75).
+// FIXED — matches the `referrals.referral_fee` column default.
+export const REFERRAL_FEE_CENTS = 7500;
+
 export const ATTORNEY_REVIEW_FEE_RANGE = { min: 15000, max: 150000 } as const;
 
 // `app_settings` key holding the admin-controlled platform-default attorney

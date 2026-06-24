@@ -10,6 +10,8 @@ interface ReferralRow {
   created_at: string | null;
   referral_fee: number | null;
   referral_fee_paid: boolean | null;
+  client_name: string | null;
+  client_email: string | null;
 }
 
 function statusBadge(status: string) {
@@ -44,6 +46,8 @@ export default function ProReferralsPage() {
           created_at: r.created_at,
           referral_fee: r.referral_fee || 7500,
           referral_fee_paid: r.referral_fee_paid || false,
+          client_name: r.client_name ?? null,
+          client_email: r.client_email ?? null,
         }))
       );
       setLoading(false);
@@ -115,6 +119,9 @@ export default function ProReferralsPage() {
             <thead>
               <tr className="bg-gray-50 border-b border-gray-200">
                 <th className="text-left px-4 py-3 text-xs font-semibold text-navy">
+                  Client
+                </th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-navy">
                   Reason
                 </th>
                 <th className="text-left px-4 py-3 text-xs font-semibold text-navy">
@@ -134,6 +141,20 @@ export default function ProReferralsPage() {
                   key={r.id}
                   className="border-b border-gray-100 hover:bg-gray-50"
                 >
+                  <td className="px-4 py-3">
+                    {r.client_name || r.client_email ? (
+                      <>
+                        <p className="font-medium text-charcoal">{r.client_name || "—"}</p>
+                        {r.client_email && (
+                          <a href={`mailto:${r.client_email}`} className="text-xs text-navy/60 hover:underline">
+                            {r.client_email}
+                          </a>
+                        )}
+                      </>
+                    ) : (
+                      <span className="text-xs text-charcoal/40">—</span>
+                    )}
+                  </td>
                   <td className="px-4 py-3 text-charcoal/70">{r.reason}</td>
                   <td className="px-4 py-3">{statusBadge(r.status ?? "")}</td>
                   <td className="px-4 py-3 text-charcoal/50 text-xs">

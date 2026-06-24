@@ -1630,7 +1630,10 @@ export type Database = {
       }
       referrals: {
         Row: {
+          client_email: string | null
           client_id: string | null
+          client_name: string | null
+          client_phone: string | null
           created_at: string | null
           id: string
           partner_id: string | null
@@ -1640,7 +1643,10 @@ export type Database = {
           status: string | null
         }
         Insert: {
+          client_email?: string | null
           client_id?: string | null
+          client_name?: string | null
+          client_phone?: string | null
           created_at?: string | null
           id?: string
           partner_id?: string | null
@@ -1650,7 +1656,10 @@ export type Database = {
           status?: string | null
         }
         Update: {
+          client_email?: string | null
           client_id?: string | null
+          client_name?: string | null
+          client_phone?: string | null
           created_at?: string | null
           id?: string
           partner_id?: string | null

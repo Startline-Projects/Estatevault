@@ -39,6 +39,7 @@ export default function SalesLayout({ children }: { children: React.ReactNode })
     ? [
         { label: "Affiliates", href: "/sales/affiliates" },
         { label: "Attorney Settings", href: "/sales/admin/attorney" },
+        { label: "Referrals", href: "/sales/admin/referrals" },
         { label: "Marketing Materials", href: "/sales/marketing-materials" },
         { label: "Regenerate Docs", href: "/sales/admin/regenerate-docs" },
       ]

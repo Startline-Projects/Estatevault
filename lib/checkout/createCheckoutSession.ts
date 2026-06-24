@@ -7,12 +7,13 @@ import { AFFILIATE_COOKIE } from "@/lib/affiliate";
 import { checkPlanConflict } from "@/lib/orders/plan-conflict";
 import { evaluateHardStop } from "@/lib/compliance/hardStop";
 import { createAdminClient } from "@/lib/api/auth";
-import { PRICES, PROMO_CODES } from "@/lib/orders/pricing";
+import { PRICES, PROMO_CODES, REFERRAL_FEE_CENTS } from "@/lib/orders/pricing";
 import { resolveReviewRouting } from "@/lib/attorney-review/routing";
 import { getPlatformDefaultReviewFee } from "@/lib/attorney-review/fee";
 import * as clientRepo from "@/lib/repos/server/clientRepo";
 import * as partnerRepo from "@/lib/repos/server/partnerRepo";
 import * as orderRepo from "@/lib/repos/server/orderRepo";
+import * as referralRepo from "@/lib/repos/server/referralRepo";
 import * as quizSessionRepo from "@/lib/repos/server/quizSessionRepo";
 import * as affiliateRepo from "@/lib/repos/server/affiliateRepo";
 import * as affiliateClickRepo from "@/lib/repos/server/affiliateClickRepo";
@@ -78,6 +79,44 @@ export async function createCheckoutSession(
   // session — route the family to an attorney.
   const hardStop = evaluateHardStop(intakeAnswers);
   if (hardStop.halted) {
+    // Core Rule 4 routing: when a partner sent this client, log an attorney
+    // referral so the partner earns the $75 fee once it converts. Best-effort
+    // and deduped — never block or fail the hard-stop response on this write.
+    if (partnerId) {
+      try {
+        let clientId: string | null = null;
+        if (conflictEmail) {
+          const { data: prof } = await profileRepo.findIdByEmailMaybe(supabase, conflictEmail);
+          if (prof?.id) {
+            const { data: cli } = await clientRepo
+              .getIdByProfile(supabase, prof.id)
+              .then((r) => r, () => ({ data: null }));
+            clientId = cli?.id ?? null;
+          }
+        }
+
+        // Dedupe only when the client is known. A guest with no client row yet
+        // can't be matched, so we accept the rare duplicate over dropping the
+        // partner's referral entirely.
+        const existing = clientId
+          ? (await referralRepo.findOpenByPartnerAndClient(supabase, partnerId, clientId)).data
+          : null;
+
+        if (!existing) {
+          await referralRepo.insert(supabase, {
+            partner_id: partnerId,
+            client_id: clientId,
+            reason: hardStop.reasons.join(", ") || "Attorney referral",
+            status: "pending",
+            referral_fee: REFERRAL_FEE_CENTS,
+            referral_fee_paid: false,
+          });
+        }
+      } catch (referralErr) {
+        console.error("Failed to record hard-stop referral:", referralErr);
+      }
+    }
+
     return NextResponse.json(
       {
         error:

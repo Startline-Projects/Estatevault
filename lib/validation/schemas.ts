@@ -769,6 +769,24 @@ export const adminAttorneyCommissionUpdateSchema = z.object({
   commissionRate: z.number().min(0).max(100),
 });
 
+// Admin marks a hard-stop attorney referral as converted (credits partner fee).
+export const adminReferralConvertSchema = z.object({
+  referralId: z.string().uuid(),
+});
+
+// Public: client hit a hard stop during intake and was routed to an attorney.
+// partnerId attributes the $75 referral; reason is the hard-stop label; the
+// contact fields are what the partner/attorney use to follow up.
+export const hardStopReferralSchema = z.object({
+  // Optional: a partner-attributed lead earns the $75 fee; a direct lead from
+  // EstateVault's own site (no partner) is still captured, with no fee.
+  partnerId: z.string().uuid().optional(),
+  reason: z.string().min(1).max(120),
+  name: z.string().min(1).max(120),
+  email: z.string().email(),
+  phone: z.string().max(40).optional(),
+});
+
 export const adminCommissionMarkPaidSchema = z.object({
   recipientId: z.string().min(1),
   period: z.string().regex(/^\d{4}-\d{2}$/), // YYYY-MM

@@ -42,6 +42,8 @@ export type Referral = {
   created_at: string | null;
   referral_fee: number | null;
   referral_fee_paid: boolean | null;
+  client_name: string | null;
+  client_email: string | null;
 };
 
 // The signed-in partner's attorney referrals (B2).

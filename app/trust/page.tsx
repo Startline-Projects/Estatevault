@@ -185,7 +185,9 @@ export default function TrustPage() {
 
   function handleContinue() {
     if (!isCardComplete() || hasPartialName) return;
-    // Hard stop (Core Rule 4) — special-needs dependent halts generation.
+    // Hard stop (Core Rule 4) — special-needs dependent halts generation. The
+    // referral (with the lead's contact details) is logged by HardStopCard's
+    // contact form, so the partner can see WHO applied.
     if (intake.hasSpecialNeedsDependent === "Yes") {
       setHardStopped(true);
       return;
@@ -219,7 +221,7 @@ export default function TrustPage() {
   if (hardStopped) {
     return (
       <PartnerThemedShell showHeader={false}>
-        <HardStopCard />
+        <HardStopCard partnerId={partnerParam || undefined} reason="Special-needs dependent" />
       </PartnerThemedShell>
     );
   }
