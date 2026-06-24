@@ -41,6 +41,28 @@ export async function transferToPartner(
   return transfer
 }
 
+export async function transferReferralFee(
+  partnerStripeAccountId: string,
+  amount: number,
+  referralId: string,
+  partnerId: string
+) {
+  if (!partnerStripeAccountId || amount <= 0) return null
+  // Idempotency keyed on the referral so a double admin click (or a retry)
+  // can never pay the partner the referral fee twice.
+  const transfer = await stripe.transfers.create(
+    {
+      amount,
+      currency: 'usd',
+      destination: partnerStripeAccountId,
+      transfer_group: `referral_${referralId}`,
+      metadata: { referral_id: referralId, partner_id: partnerId, kind: 'referral_fee' },
+    },
+    { idempotencyKey: `transfer_referral_${referralId}` }
+  )
+  return transfer
+}
+
 export async function transferToAffiliate(
   affiliateStripeAccountId: string,
   amount: number,

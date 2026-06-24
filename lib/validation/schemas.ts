@@ -774,6 +774,15 @@ export const adminReferralConvertSchema = z.object({
   referralId: z.string().uuid(),
 });
 
+// Review attorney records the lead OUTCOME — a signal for the admin, NOT a
+// payout. "converted" tells the admin the client engaged the attorney (the admin
+// then presses pay to move the real $75 partner fee); "not_converted" closes the
+// lead. The attorney never moves money.
+export const attorneyReferralUpdateSchema = z.object({
+  referralId: z.string().uuid(),
+  outcome: z.enum(["converted", "not_converted"]),
+});
+
 // Public: client hit a hard stop during intake and was routed to an attorney.
 // partnerId attributes the $75 referral; reason is the hard-stop label; the
 // contact fields are what the partner/attorney use to follow up.

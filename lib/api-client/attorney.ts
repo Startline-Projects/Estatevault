@@ -42,3 +42,31 @@ export function getPipeline(): Promise<ApiResult<{ cases: PipelineCase[] }>> {
 export function updateReviewStatus(reviewId: string, status: string): Promise<ApiResult<{ success: boolean }>> {
   return patch(`/api/attorney/reviews/${reviewId}`, { status });
 }
+
+// --- Hard-stop attorney referrals (lead queue) ---
+export type AttorneyReferralRow = {
+  id: string;
+  reason: string;
+  status: string | null;
+  created_at: string | null;
+  // True once the admin has paid the partner — the lead is then settled/locked.
+  referral_fee_paid: boolean | null;
+  client_name: string | null;
+  client_email: string | null;
+  client_phone: string | null;
+  partners: { company_name: string } | null;
+};
+
+// Every hard-stop lead routed to the attorney, newest first (B2).
+export function getAttorneyReferrals(): Promise<ApiResult<{ referrals: AttorneyReferralRow[] }>> {
+  return get("/api/attorney/referrals");
+}
+
+// Record the lead outcome — a signal for the admin only. Does NOT move money;
+// the admin presses pay on a "converted" lead to release the partner's fee.
+export function setReferralOutcome(
+  referralId: string,
+  outcome: "converted" | "not_converted",
+): Promise<ApiResult<{ success: boolean }>> {
+  return patch("/api/attorney/referrals", { referralId, outcome });
+}

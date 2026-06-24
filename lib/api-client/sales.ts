@@ -240,7 +240,9 @@ export interface AdminReferralRow {
   client_name: string | null;
   client_email: string | null;
   client_phone: string | null;
-  partners: { company_name: string } | null;
+  partners: { company_name: string; stripe_account_id: string | null } | null;
+  // Live Stripe check: can this referral's partner actually receive the fee?
+  partner_payable: boolean;
 }
 
 export function getAdminReferrals(): Promise<ApiResult<{ referrals: AdminReferralRow[] }>> {

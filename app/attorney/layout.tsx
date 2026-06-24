@@ -9,6 +9,7 @@ import PortalSidebar, { PortalNavItem } from "@/components/shared/PortalSidebar"
 const navItems: PortalNavItem[] = [
   { label: "Dashboard", href: "/attorney/dashboard" },
   { label: "Document Reviews", href: "/attorney/reviews" },
+  { label: "Referrals", href: "/attorney/referrals" },
   { label: "Partners", href: "/attorney/partners" },
   { label: "New Partner", href: "/attorney/new-partner" },
   { label: "Pipeline", href: "/attorney/pipeline" },

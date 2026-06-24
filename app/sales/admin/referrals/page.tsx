@@ -10,9 +10,18 @@ import {
 
 const STATUS_STYLES: Record<string, string> = {
   pending: "bg-amber-50 text-amber-700",
-  contacted: "bg-blue-50 text-blue-700",
+  contacted: "bg-amber-50 text-amber-700",
   converted: "bg-green-50 text-green-700",
   closed: "bg-gray-100 text-gray-500",
+};
+
+// status reflects the attorney's outcome signal: converted/closed are their
+// call, pending means they haven't judged the lead yet.
+const STATUS_LABELS: Record<string, string> = {
+  pending: "Awaiting attorney",
+  contacted: "Awaiting attorney",
+  converted: "Converted",
+  closed: "Not converted",
 };
 
 function dollars(cents: number | null): string {
@@ -45,7 +54,7 @@ export default function AdminReferralsPage() {
     const { error } = await convertReferral(id);
     setRowSaving((s) => ({ ...s, [id]: false }));
     if (error) {
-      setRowError((s) => ({ ...s, [id]: "Failed. Try again." }));
+      setRowError((s) => ({ ...s, [id]: error || "Failed. Try again." }));
       return;
     }
     setReferrals((rows) =>
@@ -82,8 +91,8 @@ export default function AdminReferralsPage() {
       <div>
         <h1 className="text-2xl font-bold text-navy">Attorney Referrals</h1>
         <p className="mt-1 text-sm text-charcoal/60">
-          Hard-stop clients routed to attorneys. Mark a case converted to credit the partner&apos;s
-          referral fee.
+          Hard-stop clients routed to the attorney. Once the attorney marks a lead converted, pay
+          the partner&apos;s referral fee.
         </p>
       </div>
 
@@ -122,7 +131,18 @@ export default function AdminReferralsPage() {
               </thead>
               <tbody>
                 {referrals.map((r) => {
-                  const isConverted = r.status === "converted";
+                  const status = r.status ?? "pending";
+                  const isPaid = !!r.referral_fee_paid;
+                  // The attorney's outcome signal drives the payout: pay only
+                  // once they've marked the lead "converted". "closed" = not
+                  // converted; pending = they haven't judged it yet.
+                  const attorneyConverted = status === "converted";
+                  const attorneyNotConverted = status === "closed";
+                  // A partner-attributed fee can only be paid if the partner's
+                  // Stripe account can actually receive transfers (live-checked
+                  // server-side). Direct ($0) leads have no partner.
+                  const hasPartner = !!r.partner_id;
+                  const blockedNoStripe = hasPartner && !r.partner_payable;
                   return (
                     <tr key={r.id} className="border-b border-gray-50">
                       <td className="px-6 py-3 font-medium text-charcoal">
@@ -148,7 +168,7 @@ export default function AdminReferralsPage() {
                       <td className="px-6 py-3 text-charcoal/70">{r.reason}</td>
                       <td className="px-6 py-3">
                         <span className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-medium ${STATUS_STYLES[r.status ?? "pending"] ?? "bg-gray-100 text-gray-500"}`}>
-                          {r.status ?? "pending"}
+                          {STATUS_LABELS[r.status ?? "pending"] ?? r.status ?? "pending"}
                         </span>
                       </td>
                       <td className="px-6 py-3 text-charcoal/70">
@@ -156,8 +176,19 @@ export default function AdminReferralsPage() {
                         {r.referral_fee_paid && <span className="ml-1 text-xs text-green-600">paid</span>}
                       </td>
                       <td className="px-6 py-3 text-right">
-                        {isConverted ? (
-                          <span className="text-xs text-gray-400">Converted</span>
+                        {isPaid ? (
+                          <span className="text-xs text-gray-400">Paid</span>
+                        ) : attorneyNotConverted ? (
+                          <span className="text-xs text-gray-400">Not converted</span>
+                        ) : !attorneyConverted ? (
+                          <span className="text-xs text-gray-400">Awaiting attorney</span>
+                        ) : blockedNoStripe ? (
+                          <span
+                            className="inline-block rounded-full bg-gray-100 px-3 py-1.5 text-xs font-medium text-gray-400"
+                            title="The partner must connect a Stripe account before the fee can be paid."
+                          >
+                            Account not connected
+                          </span>
                         ) : (
                           <>
                             <button
@@ -165,7 +196,7 @@ export default function AdminReferralsPage() {
                               disabled={rowSaving[r.id]}
                               className="rounded-full bg-gold px-4 py-1.5 text-xs font-semibold text-white hover:bg-gold/90 disabled:opacity-50"
                             >
-                              {rowSaving[r.id] ? "Saving…" : `Mark converted & pay ${dollars(r.referral_fee)}`}
+                              {rowSaving[r.id] ? "Saving…" : `Pay partner ${dollars(r.referral_fee)}`}
                             </button>
                             {rowError[r.id] && <p className="mt-1 text-xs text-red-600">{rowError[r.id]}</p>}
                           </>
