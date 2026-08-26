@@ -332,19 +332,19 @@ I leave the decision regarding organ, tissue, and body part donation to my Patie
 
 {{#IF funeral_preference equals "burial"}}
 
-It is my preference that my remains be interred by burial. My Personal Representative, in coordination with my Funeral Representative (if any), shall make the final arrangements consistent with this preference and with the resources of my estate.
+It is my preference that my remains be interred by burial. My Personal Representative shall make the final arrangements consistent with this preference and with the resources of my estate.
 
 {{/IF}}
 
 {{#IF funeral_preference equals "cremation"}}
 
-It is my preference that my remains be disposed of by cremation. My Personal Representative, in coordination with my Funeral Representative (if any), shall make the final arrangements consistent with this preference and with the resources of my estate.
+It is my preference that my remains be disposed of by cremation. My Personal Representative shall make the final arrangements consistent with this preference and with the resources of my estate.
 
 {{/IF}}
 
 {{#IF funeral_preference equals "family_decides"}}
 
-I leave the decision regarding the manner of disposition of my remains (whether burial, cremation, or other lawful method) to my Funeral Representative (if any) or, if no Funeral Representative has been designated, to my surviving family members.
+I leave the decision regarding the manner of disposition of my remains (whether burial, cremation, or other lawful method) to my Personal Representative, in consultation with my surviving family members.
 
 {{/IF}}
 
@@ -428,8 +428,6 @@ The foregoing instrument was signed, sealed, published, and declared by the abov
 
 [SIGNATURE] Witness Two — Printed Name and Address
 
-## SELF-PROVING AFFIDAVIT
-
 Pursuant to MCL 700.2504
 
 ## STATE OF MICHIGAN
@@ -460,7 +458,57 @@ My commission expires: _
 
 ## OPERATION OF THIS DOCUMENT
 
-This is your Last Will and Testament under Michigan law (MCL 700.2502 et seq.). This document takes effect upon your death. While you are living, you continue to own and control your property exactly as before. You may revoke or amend this Will at any time while you are competent.
+This is your Last Will and Testament under Michigan law (MCL 700.2502 et seq.). It takes effect only after you are gone. While you are living, you continue to own and control your property exactly as before, and you may revoke or amend this Will at any time while you are competent.
+
+### Section A — Two Witnesses Are Required
+
+In Michigan, a will requires two witnesses to be valid. This is not optional and it is not a formality: a will signed without two witnesses can be refused by the probate court, and your estate would then be distributed under the state's default rules rather than by your instructions.
+
+Your witnesses must be adults, and they must not be people who inherit under this Will. A beneficiary who also witnesses can jeopardise their own gift. Choose two people who receive nothing under this Will.
+
+### Section B — Why There Is Also a Notary Section
+
+Michigan does not require a notary for a will to be valid. The notary section in this document creates a self-proving affidavit under MCL 700.2504, which is included for stronger protection.
+
+Here is what it does for your family. Without it, the probate court may require your witnesses to be located years later and to testify that they watched you sign. People move, lose touch, and are not always still available. A self-proving affidavit lets the court accept your Will without tracking down your witnesses, because they already swore to what they saw, in front of a notary, on the day you signed.
+
+Signing before a notary does not replace the witness requirement. You need both: two witnesses to make the Will valid, and the notary to make it self-proving.
+
+### Section C — This Will Revokes Every Earlier Will
+
+Signing this Will revokes and voids all prior wills and codicils you have made. From the moment you sign, this document is your Will and no earlier one has any effect.
+
+If you have an older signed will in a drawer, a safe, or with another firm, destroy those copies once this one is signed, so nobody later finds an out-of-date document and mistakes it for your current wishes.
+
+### Section D — How to Sign This Will
+
+STEP 1 - CHOOSE YOUR WITNESSES
+
+Select two adult witnesses, age 18 or older. Your witnesses must NOT be named beneficiaries in this Will. Both must be present at the same time as each other and as you when signing.
+
+STEP 2 - GATHER ALL PARTIES
+
+Arrange for yourself, both witnesses, and a notary public to be in the same location at the same time. All parties must be physically present together throughout the signing.
+
+STEP 3 - YOU SIGN FIRST
+
+Sign and date this Will in the presence of both witnesses simultaneously. Do not sign before both witnesses are present. Sign on the signature line designated for the Testator.
+
+STEP 4 - WITNESSES SIGN
+
+Immediately after you sign, each witness signs the Will in your presence and in the presence of each other. Each witness should print their name and provide their address on the lines provided.
+
+STEP 5 - COMPLETE THE NOTARY SECTION
+
+You and both witnesses sign the notary section, and the notary completes and seals it. This is what makes your Will self-proving, as explained in Section B.
+
+STEP 6 - STORE YOUR WILL SAFELY
+
+Keep the original signed Will in a secure location such as a fireproof safe or safe deposit box, and upload a copy to your EstateVault account. Do not store the original where your Personal Representative cannot reach it without a court order.
+
+STEP 7 - INFORM YOUR PERSONAL REPRESENTATIVE
+
+Tell your Personal Representative that they have been named, confirm they are willing to serve, and tell them where the signed original is kept. Keep their contact details current.
 
 State of Michigan  ·  Michigan EPIC, MCL 700.2502 et seq.
 
