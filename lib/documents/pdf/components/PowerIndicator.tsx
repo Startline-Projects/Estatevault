@@ -19,34 +19,34 @@ const styles = StyleSheet.create({
     fontFamily: TOKENS.fonts.sans,
     fontWeight: "bold",
     fontSize: 11,
-    color: TOKENS.colors.greenRule,
+    color: TOKENS.colors.black,
     marginRight: 8,
   },
   indicatorNotGranted: {
     fontFamily: TOKENS.fonts.sans,
     fontWeight: "bold",
     fontSize: 11,
-    color: TOKENS.colors.redRule,
+    color: TOKENS.colors.black,
     marginRight: 8,
   },
   powerName: {
     fontFamily: TOKENS.fonts.serifBold,
     fontSize: TOKENS.fontSize.body,
-    color: TOKENS.colors.navyDark,
+    color: TOKENS.colors.black,
     marginRight: 8,
   },
   badgeGranted: {
     fontFamily: TOKENS.fonts.sans,
     fontWeight: "bold",
     fontSize: TOKENS.fontSize.bodySmall,
-    color: TOKENS.colors.greenDark,
+    color: TOKENS.colors.black,
     letterSpacing: TOKENS.letterSpacing.sectionLabel,
   },
   badgeNotGranted: {
     fontFamily: TOKENS.fonts.sans,
     fontWeight: "bold",
     fontSize: TOKENS.fontSize.bodySmall,
-    color: TOKENS.colors.redDark,
+    color: TOKENS.colors.black,
     letterSpacing: TOKENS.letterSpacing.sectionLabel,
   },
   body: {
@@ -63,15 +63,16 @@ const styles = StyleSheet.create({
  * Renders one DPOA "power" with its granted / not-granted status badge and the
  * descriptive body paragraph below.
  *
- * Visual: filled "■" (green) or outlined "□" (red) indicator, then the power
- * name in Times-Bold, then a letter-spaced uppercase status badge. The body
- * paragraph follows in Times-Roman.
+ * Visual: filled "■" or outlined "□" indicator in black, then the power name in
+ * Times-Bold, then a letter-spaced uppercase status. The body paragraph follows
+ * in Times-Roman. The filled/outlined glyph carries the granted/not-granted
+ * distinction, so no colour is needed.
  */
 export function PowerIndicator({ powerName, status, text }: PowerIndicatorProps): React.ReactElement {
   const isGranted = status === "granted";
   return (
     <>
-      <View style={styles.row}>
+      <View style={styles.row} wrap={false}>
         <Text style={isGranted ? styles.indicatorGranted : styles.indicatorNotGranted}>
           {isGranted ? "■" : "□"}
         </Text>

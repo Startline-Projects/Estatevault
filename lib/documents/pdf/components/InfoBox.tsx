@@ -8,15 +8,15 @@ export interface InfoBoxProps {
 
 const styles = StyleSheet.create({
   box: {
-    backgroundColor: TOKENS.colors.bgLight,
+    
     borderTopWidth: TOKENS.borderWidth.ruleThin,
-    borderTopColor: TOKENS.colors.navy,
+    borderTopColor: TOKENS.colors.black,
     borderBottomWidth: TOKENS.borderWidth.ruleThin,
-    borderBottomColor: TOKENS.colors.navy,
+    borderBottomColor: TOKENS.colors.black,
     borderRightWidth: TOKENS.borderWidth.ruleThin,
-    borderRightColor: TOKENS.colors.navy,
-    borderLeftWidth: TOKENS.borderWidth.leftBar,
-    borderLeftColor: TOKENS.colors.gold,
+    borderRightColor: TOKENS.colors.black,
+    borderLeftWidth: TOKENS.borderWidth.ruleThin,
+    borderLeftColor: TOKENS.colors.black,
     padding: 14,
     marginTop: 12,
     marginBottom: 12,
@@ -24,13 +24,13 @@ const styles = StyleSheet.create({
   row: {
     fontFamily: TOKENS.fonts.sans,
     fontSize: TOKENS.fontSize.bodySmall,
-    color: TOKENS.colors.navyDark,
+    color: TOKENS.colors.black,
     marginBottom: 6,
   },
   rowLast: {
     fontFamily: TOKENS.fonts.sans,
     fontSize: TOKENS.fontSize.bodySmall,
-    color: TOKENS.colors.navyDark,
+    color: TOKENS.colors.black,
   },
   bold: {
     fontFamily: TOKENS.fonts.sans,
