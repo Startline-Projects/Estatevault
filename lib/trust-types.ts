@@ -36,6 +36,8 @@ export interface TrustIntake {
   poaSuccessorAgentName: string;
   poaSuccessorAgentRelationship: string;
   poaPowers: string[];
+  /** "immediate" | "springing" — drives Article III of the DPOA. */
+  poaEffective: string;
   // Healthcare directive
   patientAdvocateName: string;
   patientAdvocateRelationship: string;
@@ -83,6 +85,7 @@ export const initialTrustIntake: TrustIntake = {
   poaSuccessorAgentName: "",
   poaSuccessorAgentRelationship: "",
   poaPowers: ["Banking and finances"],
+  poaEffective: "immediate",
   patientAdvocateName: "",
   patientAdvocateRelationship: "",
   successorPatientAdvocateName: "",

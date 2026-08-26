@@ -255,6 +255,9 @@ const trustIntakeSchema = z.object({
   poaSuccessorAgentName: z.string().max(200),
   poaSuccessorAgentRelationship: RELATIONSHIP_OR_EMPTY,
   poaPowers: z.array(z.enum(POA_POWERS)).min(1),
+  // Drives Article III of the DPOA. Must stay in step with the {{#IF
+  // dpoa_effective ...}} branches in dpoa-michigan-v1.1.0.
+  poaEffective: z.enum(["immediate", "springing"]),
   patientAdvocateName: z.string().min(1).max(200),
   patientAdvocateRelationship: RELATIONSHIP,
   successorPatientAdvocateName: z.string().max(200),

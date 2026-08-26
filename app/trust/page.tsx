@@ -35,6 +35,22 @@ const ALL_POA_POWERS = [
   "Tax filings",
 ];
 
+// PENDING ATTORNEY APPROVAL — final wording comes from the reviewing attorney.
+// `value` must stay in 1:1 correspondence with the {{#IF dpoa_effective ...}}
+// branches in lib/documents/templates/dpoa-michigan-v1.1.0.txt.
+const POA_EFFECTIVE_OPTIONS = [
+  {
+    value: "immediate",
+    label: "Immediately, as soon as I sign",
+    description: "Your agent can act on your behalf right away, even while you are managing your own affairs.",
+  },
+  {
+    value: "springing",
+    label: "Only if I become unable to manage my own affairs",
+    description: "Your agent has no authority unless and until a physician certifies in writing that you cannot manage your finances.",
+  },
+];
+
 const relOptions = ["Spouse/Partner", "Adult Child", "Sibling", "Parent", "Friend", "Other"];
 const maritalOptions = ["Single", "Married", "Divorced", "Widowed"];
 const benRelOptions = ["Spouse/Partner", "Child", "Parent", "Sibling", "Other"];
@@ -165,7 +181,7 @@ export default function TrustPage() {
       case "pourover":
         return intake.executorName.trim() !== "" && intake.executorRelationship !== "";
       case "poa":
-        return intake.poaAgentName.trim() !== "" && intake.poaAgentRelationship !== "" && intake.poaPowers.length > 0;
+        return intake.poaAgentName.trim() !== "" && intake.poaAgentRelationship !== "" && intake.poaPowers.length > 0 && intake.poaEffective !== "";
       case "healthcare":
         return intake.patientAdvocateName.trim() !== "" && intake.patientAdvocateRelationship !== "" && intake.organDonation !== "" && intake.hasHealthcareWishes !== "" && (intake.hasHealthcareWishes === "No" || intake.healthcareWishesDescription.trim() !== "");
       case "gifts":
@@ -687,6 +703,24 @@ export default function TrustPage() {
                 </button>
               </div>
             </div>
+            {/* PENDING ATTORNEY APPROVAL — option wording to be confirmed by the
+                reviewing attorney. The two values map 1:1 to the branches in
+                Article III of dpoa-michigan-v1.1.0. */}
+            <div className="mt-5"><QuestionLabel>When should your agent be able to act?</QuestionLabel>
+              <div className="space-y-3">
+                {POA_EFFECTIVE_OPTIONS.map((opt) => (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() => update({ poaEffective: opt.value })}
+                    className={`min-h-[44px] w-full rounded-xl border-2 px-5 py-3.5 text-left transition-all ${intake.poaEffective === opt.value ? "border-gold bg-gold/10 text-navy" : "border-gray-200 bg-white text-charcoal hover:border-gold/40"}`}
+                  >
+                    <span className="block text-sm font-medium">{opt.label}</span>
+                    <span className="mt-1 block text-xs text-charcoal/60">{opt.description}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
           </>
         );
 
@@ -866,6 +900,7 @@ export default function TrustPage() {
               <Row label="Successor agent" value={intake.poaSuccessorAgentName} />
               <Row label="Successor relationship" value={intake.poaSuccessorAgentRelationship} />
               <Row label="Powers" value={intake.poaPowers.join(", ")} />
+              <Row label="Takes effect" value={POA_EFFECTIVE_OPTIONS.find((o) => o.value === intake.poaEffective)?.label ?? ""} />
             </Section>
 
             <Section k="healthcare" title="Healthcare Directive" target="healthcare">

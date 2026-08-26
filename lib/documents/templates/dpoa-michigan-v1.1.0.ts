@@ -302,22 +302,14 @@ This Durable Power of Attorney shall be governed by and construed in accordance 
 
 The headings of Articles and Sections are for convenience of reference only and shall not affect the construction of this document.
 
-## ATTESTATION
+## EXECUTION BY THE PRINCIPAL
 
-IN WITNESS WHEREOF, I, {{client_full_name}}, the Principal, sign my name to this Durable Power of Attorney on this _ day of _, 20_, in {{city}}, {{county}} County, Michigan, in the presence of the two witnesses named below.
+IN WITNESS WHEREOF, I, {{client_full_name}}, the Principal, sign my name to this Durable Power of Attorney on this _ day of _, 20_, in {{city}}, {{county}} County, Michigan.
 
 [SIGNATURE] Principal
 
-The foregoing Durable Power of Attorney was signed, sealed, published, and declared by the above-named Principal in our presence as the Principal's free and voluntary act for the purposes set forth therein. We, in the Principal's presence and in the presence of each other, have subscribed our names as witnesses. Neither of us is the Agent named in this document.
-
-[SIGNATURE] Witness One — Printed Name and Address
-
-[SIGNATURE] Witness Two — Printed Name and Address
-
 [NOTARY_BLOCK]
 ## NOTARY ACKNOWLEDGMENT
-
-Recommended under MCL 556.205 to enhance third-party acceptance
 
 ## STATE OF MICHIGAN
 
@@ -334,13 +326,11 @@ County of __  ·  Acting in {{county}} County, Michigan
 My commission expires: _
 [/NOTARY_BLOCK]
 
+[PAGE_BREAK]
+
 ## AGENT'S ACKNOWLEDGMENT OF DUTIES
 
 Pursuant to MCL 556.213, Michigan Uniform Power of Attorney Act
-
-## IMPORTANT NOTICE TO AGENT
-
-Each Agent (primary and any Successor Agent) is requested to sign this Acknowledgment before exercising authority under this Durable Power of Attorney. Although signing this Acknowledgment is not a strict prerequisite to the Agent's authority, it is strongly recommended Michigan practice and confirms the Agent's understanding of the Agent's duties. Failure to sign does NOT mitigate the Agent's potential liability for breach of fiduciary duty.
 
 I, the undersigned Agent, accept appointment as Agent under the foregoing Durable Power of Attorney. I acknowledge that:
 
@@ -374,7 +364,43 @@ Second Successor Agent (sign when assuming role): {{second_successor_dpoa_agent.
 
 ## OPERATION OF THIS DOCUMENT
 
-This is your Durable Power of Attorney under the Michigan Uniform Power of Attorney Act (MCL 556.201 et seq., effective July 1, 2024). It authorizes the person you name (your Agent) to handle your financial matters. "Durable" means it remains effective if you later become incapacitated. It does NOT authorize medical decisions, which are governed by a separate Patient Advocate Designation under MCL 700.5506. This document terminates automatically upon your death.
+This is your Durable Power of Attorney under the Michigan Uniform Power of Attorney Act (MCL 556.201 et seq., effective July 1, 2024). It authorizes the person you name (your Agent) to handle your financial matters. "Durable" means it remains effective if you later become unable to manage your own affairs. It does NOT authorize medical decisions, which are governed by a separate Patient Advocate Designation under MCL 700.5506. This document terminates automatically upon your passing.
+
+### Section A — When Your Agent Can Act
+
+{{#IF dpoa_effective equals "immediate"}}
+
+You chose to make this power of attorney effective immediately. Your Agent may act on your behalf as soon as you have signed this document and given your Agent a copy. That is true even while you are perfectly well and managing your own affairs.
+
+You keep full control of your own money and property for as long as you are able to manage it. Your Agent works alongside you, not instead of you, and must follow your instructions while you are able to give them.
+
+{{/IF}}
+
+{{#IF dpoa_effective equals "springing"}}
+
+You chose a "springing" power of attorney. Your Agent has no power to act, and cannot act, unless and until you become unable to manage your own financial affairs.
+
+Before your Agent may do anything under this document, a licensed physician must examine you and sign a written statement saying that you are unable to manage your own financial affairs. That signed statement must be attached to this document. Until that happens, your Agent may not touch your accounts, sign for you, or act for you in any way. A bank or other institution that asks to see this document will also expect to see the physician's statement.
+
+If you later recover, your Agent's authority stops again. It can only restart if a physician signs a new statement after your recovery.
+
+{{/IF}}
+
+### Section B — Making This Document Effective
+
+Sign and date this document in front of a notary public, and have the notary complete the notary section. Michigan does not require witnesses for a power of attorney, so no witness signatures are included.
+
+Give a signed copy to your Agent, and to any bank or institution that will be asked to accept it. Keep the signed original somewhere safe and upload a copy to your EstateVault account.
+
+### Section C — The Agent's Acknowledgment of Duties
+
+The Agent's Acknowledgment is not required to make this power of attorney effective. Your Agent's authority exists whether or not that page is ever signed.
+
+It is included because some institutions require a signed acceptance from the Agent before they will act on the document. Having it signed in advance avoids a delay later. If you have named successor Agents, each of them can sign the acknowledgment at the time they step into the role.
+
+### Section D — Revoking This Document
+
+You may revoke this power of attorney at any time while you are able to make your own decisions. Do it in writing, give the written revocation to your Agent, and notify any institution that has been relying on the document.
 
 State of Michigan  ·  Michigan Uniform Power of Attorney Act, MCL 556.201 et seq.
 
