@@ -19,6 +19,19 @@ ALTER TABLE documents ADD COLUMN IF NOT EXISTS generation_error text;
 COMMENT ON COLUMN documents.generation_error IS
   'Why generation was blocked (e.g. missing required intake fields). Null when the document generated successfully.';
 
+-- Fingerprint of the intake fields a document's content depends on, recorded at
+-- generation. Compared against the current intake before delivery to catch a
+-- document that has gone stale — today, a Pour-Over Will whose Section 3.3
+-- lists trust beneficiaries that have since been edited.
+--
+-- It is an HMAC, not a plain digest: plaintext quiz answers are purged after
+-- generation, and a guessable digest of a short name list would put back the
+-- data that purge exists to remove.
+ALTER TABLE documents ADD COLUMN IF NOT EXISTS source_fingerprint text;
+
+COMMENT ON COLUMN documents.source_fingerprint IS
+  'HMAC of the intake fields this document''s content depends on. Compared against the current intake to detect a stale document. Null for documents with no intake coupling, and for documents generated before fingerprinting.';
+
 -- Fulfillment is gated on there being zero blocked documents for an order, so
 -- this lookup runs on every order completion.
 CREATE INDEX IF NOT EXISTS documents_order_status_idx

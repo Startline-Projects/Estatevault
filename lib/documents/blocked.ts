@@ -11,6 +11,7 @@
 import * as documentRepo from "@/lib/repos/server/documentRepo";
 import { createAdminClient } from "@/lib/api/auth";
 import { sendEmail } from "@/lib/email";
+import { checkPourOverStaleness, type BeneficiaryLike } from "./staleness";
 
 type Admin = ReturnType<typeof createAdminClient>;
 
@@ -102,4 +103,168 @@ export async function alertAdminOrderBlocked(params: {
   } catch (e) {
     console.error(`[BLOCKED] alert email failed for order ${params.orderId}:`, e);
   }
+}
+
+
+// ── Staleness ────────────────────────────────────────────────────────────────
+
+/** Document types whose content embeds another document's data. */
+const INTAKE_COUPLED_TYPES = new Set(["pour_over_will"]);
+
+export interface StaleDocument extends BlockedDocument {
+  /** True when the current intake is still available, so it can be rebuilt. */
+  regenerable: boolean;
+}
+
+/**
+ * Finds documents on this order that no longer match the current intake.
+ *
+ * Only documents that recorded a fingerprint are checked. A null fingerprint
+ * means a legacy or Claude-generated document with no intake coupling — those
+ * are left alone rather than blocked, which would otherwise hold every order
+ * generated before fingerprinting existed.
+ */
+export async function findStaleDocuments(
+  admin: Admin,
+  orderId: string,
+  currentBeneficiaries: readonly BeneficiaryLike[],
+): Promise<StaleDocument[]> {
+  const { data, error } = await admin
+    .from("documents")
+    .select("document_type, source_fingerprint, status")
+    .eq("order_id", orderId);
+
+  if (error) {
+    console.error(`[STALE] could not read documents for order ${orderId}:`, error);
+    return [];
+  }
+
+  const stale: StaleDocument[] = [];
+  for (const row of data ?? []) {
+    if (!INTAKE_COUPLED_TYPES.has(row.document_type)) continue;
+    if (!row.source_fingerprint) continue; // not fingerprinted: not our business
+    const verdict = checkPourOverStaleness(row.source_fingerprint, currentBeneficiaries);
+    if (verdict.stale) {
+      stale.push({
+        docType: row.document_type,
+        reasons: [verdict.reason],
+        regenerable: currentBeneficiaries.length > 0,
+      });
+    }
+  }
+  return stale;
+}
+
+/**
+ * The fulfillment gate, in one place.
+ *
+ * It was duplicated across four routes with three subtly different behaviours,
+ * which is how a document could end up marked delivered on an order that was
+ * itself blocked. Returns true when the order is held.
+ */
+export async function isOrderHeld(
+  admin: Admin,
+  orderId: string,
+  blocked: BlockedDocument[],
+  clientName?: string,
+): Promise<boolean> {
+  const count = blocked.length || (await countBlockedForOrder(admin, orderId));
+  if (count === 0) return false;
+
+  await admin.from("orders").update({ status: "blocked" }).eq("id", orderId);
+  // countBlockedForOrder can find a document blocked by an earlier run that is
+  // not in this run's array; alerting on an empty array would send nothing, so
+  // describe it rather than stay silent.
+  const toAlert: BlockedDocument[] = blocked.length
+    ? blocked
+    : [{ docType: "(recorded earlier)", reasons: ["a document on this order is blocked from a previous run"] }];
+  await alertAdminOrderBlocked({ orderId, clientName, blocked: toAlert });
+  return true;
+}
+
+/**
+ * Rebuilds a stale document in place and records the supersede chain.
+ *
+ * Regenerating is preferable to blocking whenever the current intake is still
+ * available: the template pipeline is deterministic and needs no model call, so
+ * the client gets a correct document instead of a held order. Blocking is the
+ * fallback for when the intake is gone and the document cannot be rebuilt.
+ *
+ * Returns the documents that could NOT be regenerated and must block instead.
+ */
+export async function regenerateStaleDocuments(
+  admin: Admin,
+  params: {
+    orderId: string;
+    clientId: string;
+    intake: Record<string, unknown>;
+    stale: StaleDocument[];
+    partnerName?: string;
+    partnerLogoUrl?: string | null;
+    clientFullName: string;
+  },
+): Promise<BlockedDocument[]> {
+  const unrecoverable: BlockedDocument[] = [];
+
+  for (const doc of params.stale) {
+    if (!doc.regenerable) {
+      unrecoverable.push({ docType: doc.docType, reasons: doc.reasons });
+      continue;
+    }
+    try {
+      const { tryTemplateRender } = await import("./generate-from-template");
+      const rebuilt = await tryTemplateRender(
+        doc.docType,
+        params.intake,
+        params.partnerName,
+        params.partnerLogoUrl,
+        params.clientFullName,
+      );
+      if (!rebuilt) {
+        unrecoverable.push({
+          docType: doc.docType,
+          reasons: [...doc.reasons, "and it could not be rebuilt from the current intake"],
+        });
+        continue;
+      }
+
+      // Record that the previous version was replaced before overwriting it, so
+      // the chain is not lost. These columns existed unused until now.
+      const { data: previous } = await admin
+        .from("documents")
+        .select("id, version")
+        .eq("order_id", params.orderId)
+        .eq("document_type", doc.docType)
+        .maybeSingle();
+
+      const { uploadDocument } = await import("./storage");
+      await uploadDocument(
+        params.clientId,
+        params.orderId,
+        doc.docType,
+        rebuilt.pdfBuffer,
+        undefined,
+        { templateVersion: rebuilt.templateVersion, sourceFingerprint: rebuilt.sourceFingerprint },
+      );
+
+      if (previous?.id) {
+        await admin
+          .from("documents")
+          .update({
+            superseded_at: new Date().toISOString(),
+            version: (previous.version ?? 1) + 1,
+            generation_error: null,
+          })
+          .eq("id", previous.id);
+      }
+      console.warn(`[STALE] order ${params.orderId} ${doc.docType}: regenerated from current intake`);
+    } catch (e) {
+      unrecoverable.push({
+        docType: doc.docType,
+        reasons: [...doc.reasons, `and regeneration failed: ${e instanceof Error ? e.message : String(e)}`],
+      });
+    }
+  }
+
+  return unrecoverable;
 }

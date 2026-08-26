@@ -6,13 +6,14 @@ import { ok, fail } from "@/lib/api/response";
 import { createAdminClient } from "@/lib/api/auth";
 import { claude, CLAUDE_MODEL } from "@/lib/claude";
 import { popNextJob, getJob, updateJob, ratelimit } from "@/lib/queue/document-queue";
-import { uploadDocument } from "@/lib/documents/storage";
+import { uploadDocument, type DocumentProvenance } from "@/lib/documents/storage";
 import { sendDocumentEmail, sendAttorneyReviewPendingEmail, buildAssetChecklist } from "@/lib/email";
 import { wantsNotification } from "@/lib/notifications/prefs";
 import { getTemplate } from "@/lib/documents/templates/resolve";
 import { tryTemplateRender } from "@/lib/documents/generate-from-template";
 import { TemplateBlockedError } from "@/lib/documents/generate-from-template";
-import { markDocumentBlocked, countBlockedForOrder, alertAdminOrderBlocked, type BlockedDocument } from "@/lib/documents/blocked";
+import { markDocumentBlocked, countBlockedForOrder, alertAdminOrderBlocked, findStaleDocuments, regenerateStaleDocuments, type BlockedDocument } from "@/lib/documents/blocked";
+import { mapIntakeToTemplateData } from "@/lib/documents/intake-adapter";
 
 import * as auditLogRepo from "@/lib/repos/server/auditLogRepo";
 import * as documentRepo from "@/lib/repos/server/documentRepo";
@@ -173,10 +174,15 @@ export const GET = withRoute(async (request: NextRequest) => {
         let documentText: string;
         let pdfBuffer: Buffer;
 
+        let provenance: DocumentProvenance | undefined;
         const templateResult = await tryTemplateRender(docType, intake, partnerName, partnerLogoUrl, clientFullName);
         if (templateResult) {
           pdfBuffer = templateResult.pdfBuffer;
           documentText = templateResult.documentText;
+          provenance = {
+            templateVersion: templateResult.templateVersion,
+            sourceFingerprint: templateResult.sourceFingerprint,
+          };
         } else {
           const template = await getTemplate(docType);
           const userPrompt = template.buildPrompt(intake);
@@ -211,7 +217,7 @@ export const GET = withRoute(async (request: NextRequest) => {
         }
 
         const storageClientId = isTestOrder ? "test" : (order.client_id ?? "unknown");
-        await uploadDocument(storageClientId, order.id, docType, pdfBuffer, docxBuffer);
+        await uploadDocument(storageClientId, order.id, docType, pdfBuffer, docxBuffer, provenance);
         await documentRepo.updateStatusByType(supabase, order.id, docType, "generated");
       } catch (docError) {
         // Strict mode: the intake cannot produce a correct document. Hold the
@@ -224,6 +230,30 @@ export const GET = withRoute(async (request: NextRequest) => {
         console.error(`Error generating ${docType}:`, docError);
         await documentRepo.updateStatusByType(supabase, order.id, docType, "failed");
         failedCount++;
+      }
+    }
+
+    // Before delivering, catch any document whose content no longer matches the
+    // intake — a Pour-Over Will whose Section 3.3 lists trust beneficiaries that
+    // were edited afterwards. Regenerate where the intake is still there;
+    // block only what cannot be rebuilt.
+    const adaptedNow = mapIntakeToTemplateData(intake);
+    if (adaptedNow.data) {
+      const stale = await findStaleDocuments(supabase, order.id, adaptedNow.data.primary_beneficiaries);
+      if (stale.length > 0) {
+        const unrecoverable = await regenerateStaleDocuments(supabase, {
+          orderId: order.id,
+          clientId: order.client_id ?? "unknown",
+          intake,
+          stale,
+          partnerName,
+          partnerLogoUrl,
+          clientFullName: String(intake.firstName || "") + " " + String(intake.lastName || ""),
+        });
+        for (const doc of unrecoverable) {
+          await markDocumentBlocked(supabase, order.id, doc.docType, doc.reasons);
+          blocked.push(doc);
+        }
       }
     }
 
@@ -328,10 +358,15 @@ export const GET = withRoute(async (request: NextRequest) => {
       let documentText: string;
       let pdfBuffer: Buffer;
 
+      let provenance: DocumentProvenance | undefined;
       const templateResult = await tryTemplateRender(docType, intake as Record<string, unknown>, jobPartnerName, jobPartnerLogoUrl, jobClientFullName);
       if (templateResult) {
         pdfBuffer = templateResult.pdfBuffer;
         documentText = templateResult.documentText;
+        provenance = {
+          templateVersion: templateResult.templateVersion,
+          sourceFingerprint: templateResult.sourceFingerprint,
+        };
       } else {
         const template = await getTemplate(docType);
         const userPrompt = template.buildPrompt(intake);
@@ -364,7 +399,7 @@ export const GET = withRoute(async (request: NextRequest) => {
         }
       }
 
-      await uploadDocument(job.client_id, job.order_id, docType, pdfBuffer, jobDocxBuffer);
+      await uploadDocument(job.client_id, job.order_id, docType, pdfBuffer, jobDocxBuffer, provenance);
       await documentRepo.updateStatusByType(supabase, job.order_id, docType, "generated");
 
       await auditLogRepo.insertEntry(supabase, {

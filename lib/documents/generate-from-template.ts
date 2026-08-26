@@ -1,9 +1,11 @@
 import { isReactPdfRendererEnabled, isStrictTemplateMode } from "./pdf/feature-flag";
 import { toTemplateDocType } from "./pdf/doc-type-map";
 import { mapIntakeToTemplateData, validateForDocument } from "./intake-adapter";
+import { beneficiaryFingerprint } from "./staleness";
 import { readTemplateFile } from "./pdf/template-reader";
 import { renderTemplate } from "./render-template";
 import { renderReactPdf } from "./pdf/render";
+import { DOCUMENT_CONFIG } from "./pdf/document-config";
 
 /**
  * Raised in strict mode when a document cannot be rendered correctly. The caller
@@ -25,6 +27,19 @@ export class TemplateBlockedError extends Error {
 export interface TemplateRenderResult {
   pdfBuffer: Buffer;
   documentText: string;
+  /**
+   * The template version this document was actually rendered from, e.g.
+   * "1.1.0-michigan". Recorded against the document so anything reasoning about
+   * which template produced it gets the truth.
+   */
+  templateVersion: string;
+  /**
+   * Fingerprint of the intake fields this document's content depends on, or
+   * null when the document has no intake-dependent coupling worth tracking.
+   * Only the Pour-Over Will has one today: its Section 3.3 lists the trust's
+   * primary beneficiaries, so it goes stale if those are edited.
+   */
+  sourceFingerprint: string | null;
 }
 
 /**
@@ -79,5 +94,17 @@ export async function tryTemplateRender(
 
   const { pdfBuffer } = await renderReactPdf(renderedText, templateDocType, branding, name, templateData.county);
 
-  return { pdfBuffer, documentText: renderedText };
+  // Only the Pour-Over Will embeds another document's data (the trust's primary
+  // beneficiaries, in Section 3.3), so only it can go stale against the intake.
+  const sourceFingerprint =
+    templateDocType === "pour_over_will"
+      ? beneficiaryFingerprint(templateData.primary_beneficiaries)
+      : null;
+
+  return {
+    pdfBuffer,
+    documentText: renderedText,
+    templateVersion: DOCUMENT_CONFIG[templateDocType].version,
+    sourceFingerprint,
+  };
 }

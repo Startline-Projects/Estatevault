@@ -6,7 +6,7 @@ import { withRoute } from "@/lib/api/route";
 import { ok, fail } from "@/lib/api/response";
 import { createAdminClient, requireAuth } from "@/lib/api/auth";
 import { claude, CLAUDE_MODEL } from "@/lib/claude";
-import { uploadDocument } from "@/lib/documents/storage";
+import { uploadDocument, type DocumentProvenance } from "@/lib/documents/storage";
 import { getTemplate } from "@/lib/documents/templates/resolve";
 import { tryTemplateRender } from "@/lib/documents/generate-from-template";
 import { TemplateBlockedError } from "@/lib/documents/generate-from-template";
@@ -97,11 +97,16 @@ export const GET = withRoute(async (request: NextRequest) => {
         let documentText: string;
         let pdfBuffer: Buffer;
 
+        let provenance: DocumentProvenance | undefined;
         const templateResult = await tryTemplateRender(docType, intake, partnerName, partnerLogoUrl, clientFullName);
         if (templateResult) {
           pdfBuffer = templateResult.pdfBuffer;
           documentText = templateResult.documentText;
-          log.push(`${docType}: template-rendered ${documentText.length} chars`);
+          provenance = {
+            templateVersion: templateResult.templateVersion,
+            sourceFingerprint: templateResult.sourceFingerprint,
+          };
+          log.push(`${docType}: template-rendered ${documentText.length} chars (v${templateResult.templateVersion})`);
         } else {
           const template = await getTemplate(docType);
           const userPrompt = template.buildPrompt(intake);
@@ -141,7 +146,7 @@ export const GET = withRoute(async (request: NextRequest) => {
         }
 
         const storageClientId = isTestOrder ? "test" : (order.client_id || "unknown");
-        const path = await uploadDocument(storageClientId, order.id, docType, pdfBuffer, docxBuffer);
+        const path = await uploadDocument(storageClientId, order.id, docType, pdfBuffer, docxBuffer, provenance);
 
         // Restore status to match siblings
         const targetStatus = isAttorneyReview && order.status === "review" ? "review" : "delivered";
