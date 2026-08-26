@@ -88,7 +88,10 @@ describe("DPOA powers — granted only when selected", () => {
     expect(out).not.toContain("Real Estate Transactions.  GRANTED.");
     expect(out).not.toContain("Business Interests.  GRANTED.");
     expect(out).not.toContain("Digital Assets.  GRANTED.");
-    expect(out).not.toMatch(/buy, sell, lease, mortgage, encumber/);
+    // Since Prompt 2 a declined power is stated as NOT GRANTED rather than
+    // omitted, so the real-estate wording appears — in the negative.
+    expect(out).toContain("NOT authorized to buy, sell, lease, mortgage, encumber");
+    expect(out).not.toMatch(/The Agent is authorized to buy, sell, lease, mortgage, encumber/);
 
     // The two "hot" powers stay explicitly withheld.
     expect(out).toContain("Gift-Making Authority.  NOT GRANTED.");

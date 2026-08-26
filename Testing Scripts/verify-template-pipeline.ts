@@ -96,6 +96,7 @@ async function run() {
       text, t,
       { isWhiteLabel: false, productName: "EstateVault" },
       "Ahmed R. Hassan",
+      data.county,
     );
     const path = join(OUT, `${DOCUMENT_CONFIG[t].filenameLabel}.pdf`);
     writeFileSync(path, pdfBuffer);
@@ -133,7 +134,13 @@ async function run() {
     const notaryPages = new Set(
       drawn.filter((d) => NOTARY_MARKERS.some((m) => d.text.includes(m))).map((d) => d.page),
     );
-    if (notaryPages.size === 0) {
+    if (t === "pad") {
+      // Binding attorney clarification: a Patient Advocate Designation executes
+      // on two witnesses under MCL 700.5506 and carries no notary block and no
+      // self-proving affidavit. A notary here is a defect, not an absence.
+      check(notaryPages.size === 0, "PAD carries no notary block (witnesses only)",
+        notaryPages.size ? `found on page(s) ${Array.from(notaryPages).join(", ")}` : "");
+    } else if (notaryPages.size === 0) {
       console.log("   – no notary block in this document (skipped)");
     } else {
       check(notaryPages.size === 1, "notary block sits entirely on one page",

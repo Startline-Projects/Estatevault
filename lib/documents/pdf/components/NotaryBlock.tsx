@@ -73,7 +73,16 @@ const styles = StyleSheet.create({
  * title in Helvetica-bold letter-spaced 3pt, signature rule, "Notary Public,
  * State of Michigan" line, county/acting-in row, and commission-expires line.
  */
-export function NotaryBlock(): React.ReactElement {
+export interface NotaryBlockProps {
+  /**
+   * County of the principal's residence. Pre-filled where known so the notary
+   * only has to complete their own county. Blank when the intake did not supply
+   * one — never guessed.
+   */
+  county?: string;
+}
+
+export function NotaryBlock({ county }: NotaryBlockProps = {}): React.ReactElement {
   return (
     <View style={styles.box} wrap={false}>
       <Text style={styles.title}>NOTARY ACKNOWLEDGMENT</Text>
@@ -83,7 +92,7 @@ export function NotaryBlock(): React.ReactElement {
         <Text style={styles.cellText}>County of {UNDERLINE}</Text>
         <Text style={styles.cellText}>
           <Text style={styles.separator}> · </Text>
-          Acting in {UNDERLINE} County, Michigan
+          Acting in {county ? county : UNDERLINE} County, Michigan
         </Text>
       </View>
       <Text style={styles.commission}>My commission expires: {UNDERLINE}</Text>

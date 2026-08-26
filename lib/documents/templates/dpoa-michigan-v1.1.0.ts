@@ -116,11 +116,27 @@ The Agent is authorized to access and manage my bank accounts, savings accounts,
 
 {{/IF}}
 
+{{#IF dpoa_powers does_not_contain "banking"}}
+
+□  Banking and Financial Institution Transactions.  NOT GRANTED.
+
+The Agent is NOT authorized to conduct banking or financial institution transactions on my behalf.
+
+{{/IF}}
+
 {{#IF dpoa_powers contains "real_estate"}}
 
 ■  Real Estate Transactions.  GRANTED.
 
 The Agent is authorized to buy, sell, lease, mortgage, encumber, manage, maintain, repair, improve, or otherwise deal with any real property in which I have an interest; to execute deeds, mortgages, leases, contracts for sale or purchase, and other instruments affecting real property; to engage in real estate transactions on my behalf; and to take any action necessary or convenient to manage my real property interests.
+
+{{/IF}}
+
+{{#IF dpoa_powers does_not_contain "real_estate"}}
+
+□  Real Estate Transactions.  NOT GRANTED.
+
+The Agent is NOT authorized to buy, sell, lease, mortgage, encumber, manage, or otherwise deal with any real property in which I have an interest.
 
 {{/IF}}
 
@@ -132,11 +148,27 @@ The Agent is authorized to operate, manage, buy, sell, or dissolve any business 
 
 {{/IF}}
 
+{{#IF dpoa_powers does_not_contain "business"}}
+
+□  Business Interests.  NOT GRANTED.
+
+The Agent is NOT authorized to operate, manage, sell, or otherwise deal with any business interest of mine.
+
+{{/IF}}
+
 {{#IF dpoa_powers contains "tax"}}
 
 ■  Tax Matters.  GRANTED.
 
 The Agent is authorized to prepare, sign, and file federal, state, and local tax returns of any kind on my behalf; to represent me before the Internal Revenue Service, the Michigan Department of Treasury, and any other tax authority; to make tax elections and other tax-related decisions; to receive confidential tax information; to pay or contest any tax assessment; and to execute IRS Form 2848 and similar documents required by tax authorities.
+
+{{/IF}}
+
+{{#IF dpoa_powers does_not_contain "tax"}}
+
+□  Tax Matters.  NOT GRANTED.
+
+The Agent is NOT authorized to prepare, sign, or file tax returns on my behalf or to represent me before any taxing authority.
 
 {{/IF}}
 
@@ -148,11 +180,27 @@ The Agent is authorized to apply for, manage, modify, cancel, surrender, or chan
 
 {{/IF}}
 
+{{#IF dpoa_powers does_not_contain "insurance"}}
+
+□  Insurance Transactions.  NOT GRANTED.
+
+The Agent is NOT authorized to purchase, modify, surrender, or otherwise deal with any policy of insurance or annuity on my behalf.
+
+{{/IF}}
+
 {{#IF dpoa_powers contains "government_benefits"}}
 
 ■  Government Benefits.  GRANTED.
 
 The Agent is authorized to apply for and manage Social Security benefits, Medicare benefits, Medicaid benefits, Veterans Affairs benefits, unemployment benefits, and any other federal, state, or local government benefit programs on my behalf; to receive payments under any such program; to appeal adverse decisions; and to be designated as my Representative Payee by the Social Security Administration.
+
+{{/IF}}
+
+{{#IF dpoa_powers does_not_contain "government_benefits"}}
+
+□  Government Benefits.  NOT GRANTED.
+
+The Agent is NOT authorized to apply for, receive, or manage government benefits on my behalf.
 
 {{/IF}}
 
@@ -164,11 +212,27 @@ The Agent is authorized to manage any retirement account in which I have an inte
 
 {{/IF}}
 
+{{#IF dpoa_powers does_not_contain "retirement"}}
+
+□  Retirement Accounts.  NOT GRANTED.
+
+The Agent is NOT authorized to deal with any retirement plan or individual retirement account of mine.
+
+{{/IF}}
+
 {{#IF dpoa_powers contains "digital"}}
 
 ■  Digital Assets.  GRANTED.
 
 Pursuant to the Michigan Fiduciary Access to Digital Assets Act (MCL 700.1003 et seq.), the Agent is authorized to access, manage, copy, control, and terminate my digital assets and electronic communications, including email accounts, social media profiles, cloud storage accounts, online financial accounts, cryptocurrency holdings, digital wallets, domain names, and any other electronic records or communications in which I have an interest. The Agent may consent on my behalf to disclosure of the content of my electronic communications under federal and state law.
+
+{{/IF}}
+
+{{#IF dpoa_powers does_not_contain "digital"}}
+
+□  Digital Assets.  NOT GRANTED.
+
+The Agent is NOT authorized to access, manage, or dispose of my digital assets or digital accounts.
 
 {{/IF}}
 

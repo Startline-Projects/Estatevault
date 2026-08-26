@@ -13,12 +13,14 @@ export async function renderReactPdf(
   documentType: DocumentType,
   branding: BrandingContext,
   clientFullName: string,
+  county?: string,
 ): Promise<RenderResult> {
   const element = React.createElement(DocumentRenderer, {
     renderedText,
     documentType,
     branding,
     clientFullName,
+    county,
   }) as unknown as React.ReactElement<DocumentProps>;
 
   const buf = await renderToBuffer(element);

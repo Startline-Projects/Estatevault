@@ -162,3 +162,37 @@ describe("powers still honour the client's selection", () => {
     expect(out).not.toContain("Real Estate Transactions.  GRANTED.");
   });
 });
+
+describe("powers the client declined are stated, not silently absent", () => {
+  it("prints NOT GRANTED for every core power that was not selected", () => {
+    const out = render({ poaPowers: ["Banking and finances"] });
+    expect(out).toContain("Banking and Financial Institution Transactions.  GRANTED.");
+    for (const name of [
+      "Real Estate Transactions",
+      "Business Interests",
+      "Tax Matters",
+      "Insurance Transactions",
+      "Government Benefits",
+      "Retirement Accounts",
+      "Digital Assets",
+    ]) {
+      expect(out).toContain(`${name}.  NOT GRANTED.`);
+    }
+  });
+
+  it("never states a power both ways", () => {
+    const out = render({ poaPowers: ["Banking and finances", "Real estate transactions"] });
+    expect(out).toContain("Real Estate Transactions.  GRANTED.");
+    expect(out).not.toContain("Real Estate Transactions.  NOT GRANTED.");
+    expect(out).toContain("Business Interests.  NOT GRANTED.");
+    expect(out).not.toContain("Business Interests.  GRANTED.");
+  });
+
+  it("makes good on Section 4.1's promise that every power is stated", () => {
+    const out = render({ poaPowers: ["Banking and finances"] });
+    const granted = (out.match(/\.\s\sGRANTED\./g) ?? []).length;
+    const notGranted = (out.match(/\.\s\sNOT GRANTED\./g) ?? []).length;
+    // 8 core powers + 2 hot powers, each stated exactly once.
+    expect(granted + notGranted).toBe(10);
+  });
+});

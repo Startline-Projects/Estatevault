@@ -42,6 +42,10 @@ export interface TrustIntake {
   patientAdvocateName: string;
   patientAdvocateRelationship: string;
   successorPatientAdvocateName: string;
+  /** Maps 1:1 to the {{#IF life_sustaining_treatment_preference ...}} branches. */
+  lifeSustainingTreatment: string;
+  /** Maps 1:1 to the {{#IF artificial_nutrition_preference ...}} branches. */
+  artificialNutrition: string;
   organDonation: string;
   hasHealthcareWishes: string;
   healthcareWishesDescription: string;
@@ -89,6 +93,8 @@ export const initialTrustIntake: TrustIntake = {
   patientAdvocateName: "",
   patientAdvocateRelationship: "",
   successorPatientAdvocateName: "",
+  lifeSustainingTreatment: "",
+  artificialNutrition: "",
   organDonation: "",
   hasHealthcareWishes: "",
   healthcareWishesDescription: "",

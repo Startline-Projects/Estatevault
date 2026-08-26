@@ -338,6 +338,8 @@ The undersigned witnesses, having read the above notice, hereby attest that we a
 
 [SIGNATURE] Witness Two — Signature, Printed Name, and Address
 
+[PAGE_BREAK]
+
 ## ACCEPTANCE BY PATIENT ADVOCATE
 
 Pursuant to MCL 700.5507(5) — Required before exercising authority
@@ -376,6 +378,28 @@ Successor Patient Advocate (sign when assuming role): {{successor_patient_advoca
 
 This is your Patient Advocate Designation under Michigan law (MCL 700.5506 et seq.). It authorizes the person you name (your Patient Advocate) to make medical and mental health decisions on your behalf when you are unable to participate in those decisions yourself. This document becomes effective ONLY when your attending physician determines you are unable to participate in those decisions. While you can participate, you continue to make your own medical decisions. You may revoke this document at any time, regardless of your mental capacity.
 
-State of Michigan  ·  MCL 700.5506 et seq.  ·  Michigan Mental Health Code, MCL 330.1404
+### Section A — Making This Document Effective
 
-Federal HIPAA, 45 C.F.R. Part 164  ·  Michigan Uniform Anatomical Gift Act, MCL 333.10101 et seq.
+Michigan requires two witnesses. No notary is needed: a Patient Advocate Designation is witnessed, not notarized.
+
+Your witnesses must both watch you sign, and then sign themselves. A witness cannot be your Patient Advocate or Successor Patient Advocate, your spouse, parent, child, grandchild or sibling, a presumptive heir or known devisee, your physician, or an employee of your insurer, of a health facility treating you, of a home for the aged where you live, or of a mental health program serving you. The full list is printed on the witness page.
+
+### Section B — Your Patient Advocate Must Sign the Acceptance
+
+Unlike most documents in your plan, this one does not work until the person you named signs. Under MCL 700.5507(5) your Patient Advocate cannot exercise any authority until they have signed the Acceptance page included here.
+
+Give the document to your Patient Advocate and ask them to sign that page. Do the same for your Successor Patient Advocate, who signs at the time they step into the role.
+
+### Section C — When Your Patient Advocate Can Act
+
+Your Patient Advocate can act only after your attending physician determines that you are unable to participate in medical treatment decisions. For mental health decisions, that determination is made separately. While you are able to take part in a decision, the decision remains yours, whatever this document says.
+
+Authority to withhold or withdraw life-sustaining treatment applies only where you specifically granted it in this document.
+
+### Section D — Who Should Have a Copy
+
+Give a signed copy to your Patient Advocate, your Successor Patient Advocate, and your primary care physician, and ask that a copy be added to your medical record. Keep the signed original somewhere safe and upload a copy to your EstateVault account. A copy is as useful as the original in an emergency, so a document nobody can find protects nobody.
+
+### Section E — Revoking This Document
+
+You may revoke this designation at any time and in any way that communicates your intent to revoke it, regardless of your mental capacity. Tell your Patient Advocate and your physician, and remove the copies you handed out.

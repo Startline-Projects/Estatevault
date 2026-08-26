@@ -51,6 +51,70 @@ const POA_EFFECTIVE_OPTIONS = [
   },
 ];
 
+// PENDING ATTORNEY APPROVAL — final wording comes from the reviewing attorney.
+// Each `value` must stay in 1:1 correspondence with a
+// {{#IF life_sustaining_treatment_preference ...}} branch in
+// lib/documents/templates/pad-michigan-v1.1.0.txt.
+const LIFE_SUSTAINING_OPTIONS = [
+  {
+    value: "continue_all",
+    label: "Continue all treatment",
+    description: "Keep all life-sustaining treatment going in every circumstance.",
+  },
+  {
+    value: "withhold_if_terminal",
+    label: "Stop if I have a terminal condition",
+    description: "An incurable condition with no reasonable likelihood of recovery.",
+  },
+  {
+    value: "withhold_if_pvs",
+    label: "Stop if I am permanently unconscious",
+    description: "A persistent vegetative state, with no awareness of myself or my surroundings.",
+  },
+  {
+    value: "withhold_if_terminal_or_pvs",
+    label: "Stop if either applies",
+    description: "A terminal condition or permanent unconsciousness.",
+  },
+  {
+    value: "advocate_decides",
+    label: "Leave the decision to my patient advocate",
+    description: "No set preference; your advocate decides in your best interest.",
+  },
+];
+
+// PENDING ATTORNEY APPROVAL — final wording comes from the reviewing attorney.
+// Michigan treats artificial nutrition and hydration separately from other
+// life-sustaining treatment, so it is asked separately. Each `value` maps 1:1 to
+// an {{#IF artificial_nutrition_preference ...}} branch in the PAD template.
+const ARTIFICIAL_NUTRITION_OPTIONS = [
+  {
+    value: "provide_all",
+    label: "Provide in all circumstances",
+    description: "Continue food and water by feeding tube or IV regardless of my condition.",
+  },
+  {
+    value: "withhold_if_terminal",
+    label: "Stop if I have a terminal condition",
+    description: "An incurable condition with no reasonable likelihood of recovery.",
+  },
+  {
+    value: "withhold_if_pvs",
+    label: "Stop if I am permanently unconscious",
+    description: "A persistent vegetative state, with no awareness of myself or my surroundings.",
+  },
+  {
+    value: "withhold_if_terminal_or_pvs",
+    label: "Stop if either applies",
+    description: "A terminal condition or permanent unconsciousness.",
+  },
+  {
+    value: "advocate_decides",
+    label: "Leave the decision to my patient advocate",
+    description: "No set preference; your advocate decides in your best interest.",
+  },
+];
+
 const relOptions = ["Spouse/Partner", "Adult Child", "Sibling", "Parent", "Friend", "Other"];
 const maritalOptions = ["Single", "Married", "Divorced", "Widowed"];
 const benRelOptions = ["Spouse/Partner", "Child", "Parent", "Sibling", "Other"];
@@ -183,7 +247,7 @@ export default function TrustPage() {
       case "poa":
         return intake.poaAgentName.trim() !== "" && intake.poaAgentRelationship !== "" && intake.poaPowers.length > 0 && intake.poaEffective !== "";
       case "healthcare":
-        return intake.patientAdvocateName.trim() !== "" && intake.patientAdvocateRelationship !== "" && intake.organDonation !== "" && intake.hasHealthcareWishes !== "" && (intake.hasHealthcareWishes === "No" || intake.healthcareWishesDescription.trim() !== "");
+        return intake.patientAdvocateName.trim() !== "" && intake.patientAdvocateRelationship !== "" && intake.lifeSustainingTreatment !== "" && intake.artificialNutrition !== "" && intake.organDonation !== "" && intake.hasHealthcareWishes !== "" && (intake.hasHealthcareWishes === "No" || intake.healthcareWishesDescription.trim() !== "");
       case "gifts":
         return intake.hasSpecificGifts !== "" && (intake.hasSpecificGifts === "No" || intake.specificGiftsDescription.trim() !== "");
       case "review":
@@ -731,6 +795,34 @@ export default function TrustPage() {
             <QuestionLabel required>Patient advocate name</QuestionLabel><NameInput value={intake.patientAdvocateName} onChange={(v) => update({ patientAdvocateName: v })} />
             <div className="mt-5"><QuestionLabel>Relationship</QuestionLabel><div className="grid grid-cols-2 gap-3">{relOptions.map((opt) => (<ChoiceTile key={opt} label={opt} selected={intake.patientAdvocateRelationship === opt} onClick={() => update({ patientAdvocateRelationship: opt })} />))}</div></div>
             <div className="mt-5"><QuestionLabel>Successor patient advocate</QuestionLabel><NameInput value={intake.successorPatientAdvocateName} onChange={(v) => update({ successorPatientAdvocateName: v })} optional onPartialChange={partialHandler("successor-advocate")} /></div>
+            {/* PENDING ATTORNEY APPROVAL — option wording to be confirmed by the
+                reviewing attorney. Values map 1:1 to Article V of the PAD template. */}
+            <div className="mt-5"><QuestionLabel>If you could not recover, what should happen to life-sustaining treatment?</QuestionLabel>
+              <p className="mb-3 text-xs text-charcoal/60 leading-relaxed">Life-sustaining treatment means things like a breathing machine or CPR. Your advocate can only act on this if a physician has determined you cannot take part in the decision yourself.</p>
+              <div className="space-y-3">
+                {LIFE_SUSTAINING_OPTIONS.map((opt) => (
+                  <button key={opt.value} type="button" onClick={() => update({ lifeSustainingTreatment: opt.value })}
+                    className={`min-h-[44px] w-full rounded-xl border-2 px-5 py-3.5 text-left transition-all ${intake.lifeSustainingTreatment === opt.value ? "border-gold bg-gold/10 text-navy" : "border-gray-200 bg-white text-charcoal hover:border-gold/40"}`}>
+                    <span className="block text-sm font-medium">{opt.label}</span>
+                    <span className="mt-1 block text-xs text-charcoal/60">{opt.description}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+            {/* PENDING ATTORNEY APPROVAL — asked separately because Michigan law
+                treats artificial nutrition and hydration separately. */}
+            <div className="mt-5"><QuestionLabel>And what about food and water given through a tube or IV?</QuestionLabel>
+              <p className="mb-3 text-xs text-charcoal/60 leading-relaxed">Michigan law treats this separately from other life-sustaining treatment, so it is a separate choice.</p>
+              <div className="space-y-3">
+                {ARTIFICIAL_NUTRITION_OPTIONS.map((opt) => (
+                  <button key={opt.value} type="button" onClick={() => update({ artificialNutrition: opt.value })}
+                    className={`min-h-[44px] w-full rounded-xl border-2 px-5 py-3.5 text-left transition-all ${intake.artificialNutrition === opt.value ? "border-gold bg-gold/10 text-navy" : "border-gray-200 bg-white text-charcoal hover:border-gold/40"}`}>
+                    <span className="block text-sm font-medium">{opt.label}</span>
+                    <span className="mt-1 block text-xs text-charcoal/60">{opt.description}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
             <div className="mt-5"><QuestionLabel>Do you wish to be an organ and tissue donor?</QuestionLabel><YesNoTiles value={intake.organDonation} onChange={(v) => update({ organDonation: v })} /></div>
             <div className="mt-5"><QuestionLabel>Do you have specific healthcare wishes to document?</QuestionLabel><YesNoTiles value={intake.hasHealthcareWishes} onChange={(v) => update({ hasHealthcareWishes: v, ...(v === "No" ? { healthcareWishesDescription: "" } : {}) })} /></div>
             {intake.hasHealthcareWishes === "Yes" && (
@@ -907,6 +999,8 @@ export default function TrustPage() {
               <Row label="Advocate" value={intake.patientAdvocateName} />
               <Row label="Relationship" value={intake.patientAdvocateRelationship} />
               <Row label="Successor advocate" value={intake.successorPatientAdvocateName} />
+              <Row label="Life-sustaining treatment" value={LIFE_SUSTAINING_OPTIONS.find((o) => o.value === intake.lifeSustainingTreatment)?.label ?? ""} />
+              <Row label="Food and water by tube" value={ARTIFICIAL_NUTRITION_OPTIONS.find((o) => o.value === intake.artificialNutrition)?.label ?? ""} />
               <Row label="Organ donation" value={intake.organDonation} />
               <Row label="Healthcare wishes" value={intake.hasHealthcareWishes} />
               {intake.hasHealthcareWishes === "Yes" && (

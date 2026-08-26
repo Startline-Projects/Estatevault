@@ -261,6 +261,23 @@ const trustIntakeSchema = z.object({
   patientAdvocateName: z.string().min(1).max(200),
   patientAdvocateRelationship: RELATIONSHIP,
   successorPatientAdvocateName: z.string().max(200),
+  // These drive Article V of the Patient Advocate Designation. Each value must
+  // stay in 1:1 correspondence with a {{#IF ...}} branch in pad-michigan-v1.1.0;
+  // an unmatched value renders a blank statutory section.
+  lifeSustainingTreatment: z.enum([
+    "continue_all",
+    "withhold_if_terminal",
+    "withhold_if_pvs",
+    "withhold_if_terminal_or_pvs",
+    "advocate_decides",
+  ]),
+  artificialNutrition: z.enum([
+    "provide_all",
+    "withhold_if_terminal",
+    "withhold_if_pvs",
+    "withhold_if_terminal_or_pvs",
+    "advocate_decides",
+  ]),
   organDonation: YES_NO,
   hasHealthcareWishes: YES_NO,
   healthcareWishesDescription: z.string().max(5000),

@@ -32,6 +32,8 @@ export interface DocumentRendererProps {
   branding: BrandingContext;
   /** Used by the BrandedFooter to label the page. */
   clientFullName: string;
+  /** County of residence, pre-filled into the notary block where known. */
+  county?: string;
 }
 
 /**
@@ -41,7 +43,7 @@ export interface DocumentRendererProps {
  * and the trailing `never` assignment is a compile-time guard — adding a new
  * variant to the union without updating this function is a type error.
  */
-function dispatchBlock(block: DocumentBlock, index: number): React.ReactElement {
+function dispatchBlock(block: DocumentBlock, index: number, county?: string): React.ReactElement {
   switch (block.type) {
     case "cover_title":
       return <CoverTitle key={index} text={block.text} />;
@@ -80,7 +82,7 @@ function dispatchBlock(block: DocumentBlock, index: number): React.ReactElement 
     case "signature":
       return <SignatureBlock key={index} label={block.label} />;
     case "notary_block":
-      return <NotaryBlock key={index} />;
+      return <NotaryBlock key={index} county={county} />;
     case "page_break":
       return <View key={index} break />;
     case "bold_statutory":
@@ -143,6 +145,7 @@ export function DocumentRenderer({
   documentType,
   branding,
   clientFullName,
+  county,
 }: DocumentRendererProps): React.ReactElement {
   const config = DOCUMENT_CONFIG[documentType];
   const blocks = parseRenderedText(renderedText);
@@ -162,7 +165,7 @@ export function DocumentRenderer({
             ))}
           </View>
         ) : (
-          dispatchBlock(item.block, item.index)
+          dispatchBlock(item.block, item.index, county)
         ),
       )}
     </DocumentLayout>

@@ -77,7 +77,7 @@ export async function tryTemplateRender(
 
   const name = clientFullName || `${templateData.first_name} ${templateData.last_name}`.trim();
 
-  const { pdfBuffer } = await renderReactPdf(renderedText, templateDocType, branding, name);
+  const { pdfBuffer } = await renderReactPdf(renderedText, templateDocType, branding, name, templateData.county);
 
   return { pdfBuffer, documentText: renderedText };
 }
