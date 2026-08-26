@@ -1,22 +1,14 @@
-LAST WILL AND TESTAMENT
+# LAST WILL AND TESTAMENT
 
-OF
+#sub OF
 
-{{client_full_name_upper}}
+#sub {{client_full_name_upper}}
 
 Testator: {{client_full_name}}  ·  Date of Birth: {{client_dob}}
 
 Residence: {{street_address}}, {{city}}, {{county}} County, Michigan  {{zip}}
 
 Marital Status: {{marital_status_label}}
-
-## OPERATION OF THIS DOCUMENT
-
-This is your Last Will and Testament under Michigan law (MCL 700.2502 et seq.). This document takes effect upon your death. While you are living, you continue to own and control your property exactly as before. You may revoke or amend this Will at any time while you are competent.
-
-State of Michigan  ·  Michigan EPIC, MCL 700.2502 et seq.
-
-Michigan Uniform Fiduciary Access to Digital Assets Act, MCL 700.1003 et seq.
 
 {{#IF attorney_review_purchased}}
 
@@ -459,3 +451,13 @@ County of   ·  Acting in {{county}} County, Michigan
 
 My commission expires: _
 [/NOTARY_BLOCK]
+
+[PAGE_BREAK]
+
+## OPERATION OF THIS DOCUMENT
+
+This is your Last Will and Testament under Michigan law (MCL 700.2502 et seq.). This document takes effect upon your death. While you are living, you continue to own and control your property exactly as before. You may revoke or amend this Will at any time while you are competent.
+
+State of Michigan  ·  Michigan EPIC, MCL 700.2502 et seq.
+
+Michigan Uniform Fiduciary Access to Digital Assets Act, MCL 700.1003 et seq.

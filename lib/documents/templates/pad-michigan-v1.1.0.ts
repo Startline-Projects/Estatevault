@@ -2,15 +2,13 @@
 // Regenerate with: npm run templates:build
 
 const template = `
-PATIENT ADVOCATE
+# PATIENT ADVOCATE DESIGNATION
 
-DESIGNATION
+#sub MEDICAL & MENTAL HEALTH AUTHORITY
 
-MEDICAL & MENTAL HEALTH AUTHORITY
+#sub OF
 
-OF
-
-{{client_full_name_upper}}
+#sub {{client_full_name_upper}}
 
 Patient: {{client_full_name}}  ·  Date of Birth: {{client_dob}}
 
@@ -19,14 +17,6 @@ Residence: {{street_address}}, {{city}}, {{county}} County, Michigan  {{zip}}
 Patient Advocate: {{patient_advocate.full_name}}  ·  {{patient_advocate.relationship}}
 
 Successor Patient Advocate: {{successor_patient_advocate.full_name}}  ·  {{successor_patient_advocate.relationship}}
-
-## OPERATION OF THIS DOCUMENT
-
-This is your Patient Advocate Designation under Michigan law (MCL 700.5506 et seq.). It authorizes the person you name (your Patient Advocate) to make medical and mental health decisions on your behalf when you are unable to participate in those decisions yourself. This document becomes effective ONLY when your attending physician determines you are unable to participate in those decisions. While you can participate, you continue to make your own medical decisions. You may revoke this document at any time, regardless of your mental capacity.
-
-State of Michigan  ·  MCL 700.5506 et seq.  ·  Michigan Mental Health Code, MCL 330.1404
-
-Federal HIPAA, 45 C.F.R. Part 164  ·  Michigan Uniform Anatomical Gift Act, MCL 333.10101 et seq.
 
 {{#IF attorney_review_purchased}}
 
@@ -383,6 +373,16 @@ Primary Patient Advocate: {{patient_advocate.full_name}}
 Successor Patient Advocate (sign when assuming role): {{successor_patient_advocate.full_name}}
 
 [SIGNATURE] Successor Patient Advocate — Signature and Date
+
+[PAGE_BREAK]
+
+## OPERATION OF THIS DOCUMENT
+
+This is your Patient Advocate Designation under Michigan law (MCL 700.5506 et seq.). It authorizes the person you name (your Patient Advocate) to make medical and mental health decisions on your behalf when you are unable to participate in those decisions yourself. This document becomes effective ONLY when your attending physician determines you are unable to participate in those decisions. While you can participate, you continue to make your own medical decisions. You may revoke this document at any time, regardless of your mental capacity.
+
+State of Michigan  ·  MCL 700.5506 et seq.  ·  Michigan Mental Health Code, MCL 330.1404
+
+Federal HIPAA, 45 C.F.R. Part 164  ·  Michigan Uniform Anatomical Gift Act, MCL 333.10101 et seq.
 `;
 
 export default template;

@@ -30,7 +30,7 @@ const styles = StyleSheet.create({
     fontFamily: TOKENS.fonts.sans,
     fontWeight: "bold",
     fontSize: TOKENS.fontSize.footer,
-    color: TOKENS.colors.navy,
+    color: TOKENS.colors.black,
   },
   dot: {
     fontFamily: TOKENS.fonts.sans,
@@ -55,7 +55,7 @@ const styles = StyleSheet.create({
     fontFamily: TOKENS.fonts.sans,
     fontWeight: "bold",
     fontSize: TOKENS.fontSize.footer,
-    color: TOKENS.colors.navy,
+    color: TOKENS.colors.black,
   },
   disclaimer: {
     textAlign: "center",

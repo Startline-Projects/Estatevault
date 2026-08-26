@@ -10,9 +10,9 @@ const styles = StyleSheet.create({
   subtitle: {
     marginBottom: 4,
     textAlign: "center",
-    fontFamily: TOKENS.fonts.sans,
+    fontFamily: TOKENS.fonts.serifBold,
     fontSize: TOKENS.fontSize.coverSubtitle,
-    color: TOKENS.colors.grayText,
+    color: TOKENS.colors.black,
     letterSpacing: 3,
   },
 });

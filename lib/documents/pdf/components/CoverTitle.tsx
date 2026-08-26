@@ -11,10 +11,9 @@ const styles = StyleSheet.create({
     marginTop: 40,
     marginBottom: 8,
     textAlign: "center",
-    fontFamily: TOKENS.fonts.sans,
-    fontWeight: "bold",
+    fontFamily: TOKENS.fonts.serifBold,
     fontSize: TOKENS.fontSize.coverTitle,
-    color: TOKENS.colors.navy,
+    color: TOKENS.colors.black,
     letterSpacing: TOKENS.letterSpacing.coverTitle,
   },
 });
@@ -22,8 +21,9 @@ const styles = StyleSheet.create({
 /**
  * Centered cover-page title (e.g. "LAST WILL AND TESTAMENT").
  *
- * Visual: 40pt top margin, centered Helvetica-bold 28pt navy with 4pt letter
- * spacing. Wraps cleanly if the text overflows the centered column.
+ * Centered bold serif in black — the caption of a conventional legal
+ * instrument. Brand colours belong on cover/wrapper pages, not on the face of
+ * the instrument itself.
  */
 export function CoverTitle({ text }: CoverTitleProps): React.ReactElement {
   return <Text style={styles.title}>{text}</Text>;

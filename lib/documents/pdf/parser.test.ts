@@ -370,6 +370,7 @@ describe("parser: end-to-end on real template", () => {
       cover_subtitle: 0,
       article_header: 0,
       section_header: 0,
+      document_header: 0,
       body: 0,
       bullet: 0,
       info_box: 0,

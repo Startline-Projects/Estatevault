@@ -1,12 +1,10 @@
-DURABLE POWER
+# DURABLE POWER OF ATTORNEY
 
-OF ATTORNEY
+#sub FINANCIAL AUTHORITY
 
-FINANCIAL AUTHORITY
+#sub OF
 
-OF
-
-{{client_full_name_upper}}
+#sub {{client_full_name_upper}}
 
 Principal: {{client_full_name}}  ·  Date of Birth: {{client_dob}}
 
@@ -17,14 +15,6 @@ Primary Agent: {{dpoa_agent.full_name}}  ·  {{dpoa_agent.relationship}}
 First Successor Agent: {{first_successor_dpoa_agent.full_name}}  ·  {{first_successor_dpoa_agent.relationship}}
 
 Second Successor Agent: {{second_successor_dpoa_agent.full_name}}  ·  {{second_successor_dpoa_agent.relationship}}
-
-## OPERATION OF THIS DOCUMENT
-
-This is your Durable Power of Attorney under the Michigan Uniform Power of Attorney Act (MCL 556.201 et seq., effective July 1, 2024). It authorizes the person you name (your Agent) to handle your financial matters. "Durable" means it remains effective if you later become incapacitated. It does NOT authorize medical decisions, which are governed by a separate Patient Advocate Designation under MCL 700.5506. This document terminates automatically upon your death.
-
-State of Michigan  ·  Michigan Uniform Power of Attorney Act, MCL 556.201 et seq.
-
-Michigan Uniform Fiduciary Access to Digital Assets Act, MCL 700.1003 et seq.
 
 {{#IF attorney_review_purchased}}
 
@@ -375,3 +365,13 @@ First Successor Agent (sign when assuming role): {{first_successor_dpoa_agent.fu
 Second Successor Agent (sign when assuming role): {{second_successor_dpoa_agent.full_name}}
 
 [SIGNATURE] Second Successor Agent — Signature and Date
+
+[PAGE_BREAK]
+
+## OPERATION OF THIS DOCUMENT
+
+This is your Durable Power of Attorney under the Michigan Uniform Power of Attorney Act (MCL 556.201 et seq., effective July 1, 2024). It authorizes the person you name (your Agent) to handle your financial matters. "Durable" means it remains effective if you later become incapacitated. It does NOT authorize medical decisions, which are governed by a separate Patient Advocate Designation under MCL 700.5506. This document terminates automatically upon your death.
+
+State of Michigan  ·  Michigan Uniform Power of Attorney Act, MCL 556.201 et seq.
+
+Michigan Uniform Fiduciary Access to Digital Assets Act, MCL 700.1003 et seq.

@@ -52,7 +52,7 @@ export const TOKENS = {
     bodySmall: 10,
     sectionHeader: 11,
     articleHeader: 11,
-    coverTitle: 28,
+    coverTitle: 22,
     coverSubtitle: 12,
     footer: 8,
     notaryLabel: 11,
@@ -60,7 +60,7 @@ export const TOKENS = {
   letterSpacing: {
     articleHeader: 3,
     sectionLabel: 2,
-    coverTitle: 4,
+    coverTitle: 2,
   },
   borderWidth: {
     leftBar: 4,

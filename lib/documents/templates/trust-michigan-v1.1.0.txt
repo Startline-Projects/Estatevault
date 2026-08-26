@@ -1,12 +1,10 @@
-REVOCABLE LIVING TRUST
+# REVOCABLE LIVING TRUST AGREEMENT
 
-AGREEMENT
+#sub OF
 
-OF
+#sub {{client_full_name_upper}}
 
-{{client_full_name_upper}}
-
-{{trust_name_display_upper}}
+#sub {{trust_name_display_upper}}
 
 Grantor: {{client_full_name}}  ·  Date of Birth: {{client_dob}}
 
@@ -33,14 +31,6 @@ First Successor Trustee: {{successor_trustee.full_name}}
 Second Successor Trustee: {{second_successor_trustee.full_name}}
 
 {{/IF}}
-
-## OPERATION OF THIS DOCUMENT
-
-This is your Revocable Living Trust under Michigan law (MCL 700.7101 et seq., the Estates and Protected Individuals Code). During your lifetime, you retain full control over the Trust and may amend, modify, or revoke it at any time while you have legal capacity to do so. Upon your passing, this Trust becomes irrevocable and the distribution provisions take effect.
-
-State of Michigan  ·  Michigan EPIC, MCL 700.7101 et seq.
-
-Michigan Uniform Fiduciary Access to Digital Assets Act, MCL 700.1003 et seq.
 
 {{#IF attorney_review_purchased}}
 
@@ -419,3 +409,13 @@ County of   ·  Acting in {{county}} County, Michigan
 
 My commission expires: _
 [/NOTARY_BLOCK]
+
+[PAGE_BREAK]
+
+## OPERATION OF THIS DOCUMENT
+
+This is your Revocable Living Trust under Michigan law (MCL 700.7101 et seq., the Estates and Protected Individuals Code). During your lifetime, you retain full control over the Trust and may amend, modify, or revoke it at any time while you have legal capacity to do so. Upon your passing, this Trust becomes irrevocable and the distribution provisions take effect.
+
+State of Michigan  ·  Michigan EPIC, MCL 700.7101 et seq.
+
+Michigan Uniform Fiduciary Access to Digital Assets Act, MCL 700.1003 et seq.

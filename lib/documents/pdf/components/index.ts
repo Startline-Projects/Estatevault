@@ -3,6 +3,7 @@
 // so the file layout can evolve without forcing churn in the Document renderer.
 
 export { ArticleHeader, type ArticleHeaderProps } from "./ArticleHeader";
+export { DocumentHeader } from "./DocumentHeader";
 export { SectionHeader, type SectionHeaderProps } from "./SectionHeader";
 export { BodyText, type BodyTextProps } from "./BodyText";
 export { BulletItem, type BulletItemProps } from "./BulletItem";
