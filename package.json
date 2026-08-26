@@ -21,7 +21,10 @@
     "crypto:vectors:generate": "tsx scripts/generate-crypto-vectors.ts",
     "db:types": "supabase gen types typescript --linked > types/db.generated.ts",
     "docs:generate": "tsx \"Testing Scripts/test-all-pdfs.ts\"",
-    "docs:verify": "tsx \"Testing Scripts/verify-formatting.ts\""
+    "docs:verify": "tsx \"Testing Scripts/verify-formatting.ts\"",
+    "templates:build": "tsx scripts/build-templates.ts",
+    "templates:check": "tsx scripts/build-templates.ts --check",
+    "prebuild": "tsx scripts/build-templates.ts --check"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.80.0",

@@ -1,3 +1,6 @@
+// GENERATED FILE — do not edit. Source: dpoa-michigan-v1.1.0.txt
+// Regenerate with: npm run templates:build
+
 const template = `
 DURABLE POWER
 

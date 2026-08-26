@@ -1,3 +1,6 @@
+// GENERATED FILE — do not edit. Source: pad-michigan-v1.1.0.txt
+// Regenerate with: npm run templates:build
+
 const template = `
 PATIENT ADVOCATE
 

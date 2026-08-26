@@ -1,3 +1,6 @@
+// GENERATED FILE — do not edit. Source: will-michigan-v1.1.0.txt
+// Regenerate with: npm run templates:build
+
 const template = `
 LAST WILL AND TESTAMENT
 
@@ -151,7 +154,7 @@ I make the following specific gifts:
 
 ### Section 4.{{loop_index}}
 
-I give, devise, and bequeath {{item_description}} to {{recipient_full_name}}, my {{recipient_relationship}}.
+I give, devise, and bequeath {{item_description}} to {{recipient_full_name}}, my {{recipient_relationship}}. 
 
 {{#IF fallback equals "residuary"}}
 

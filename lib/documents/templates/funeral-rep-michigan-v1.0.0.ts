@@ -1,3 +1,6 @@
+// GENERATED FILE — do not edit. Source: funeral-rep-michigan-v1.0.0.txt
+// Regenerate with: npm run templates:build
+
 const template = `
 FUNERAL REPRESENTATIVE
 

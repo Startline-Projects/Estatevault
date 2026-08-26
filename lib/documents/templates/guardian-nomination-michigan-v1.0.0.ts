@@ -1,3 +1,6 @@
+// GENERATED FILE — do not edit. Source: guardian-nomination-michigan-v1.0.0.txt
+// Regenerate with: npm run templates:build
+
 const template = `
 NOMINATION OF GUARDIAN
 
