@@ -37,6 +37,15 @@ function intake(overrides: Record<string, unknown> = {}): TemplateWillIntake {
 
 const render = (o: Record<string, unknown> = {}) => renderTemplate(TEMPLATE, intake(o));
 const sheetOf = (out: string) => out.slice(out.indexOf("## OPERATION OF THIS DOCUMENT"));
+/**
+ * Slice the funeral clause by heading text, not by section number: numbers are
+ * assigned at render time now, so "Section 8.2" is a different clause depending
+ * on whether the guardian article rendered.
+ */
+const funeralClause = (body: string) => {
+  const start = body.indexOf("— Funeral and Burial Preference.");
+  return body.slice(start, body.indexOf("— Reference to Funeral Representative Designation.", start));
+};
 const bodyOf = (out: string) => out.slice(0, out.indexOf("## OPERATION OF THIS DOCUMENT"));
 
 describe("1. funeral preferences go to the Personal Representative", () => {
@@ -45,7 +54,7 @@ describe("1. funeral preferences go to the Personal Representative", () => {
     ["cremation", "disposed of by cremation"],
   ])("%s names the Personal Representative and no Funeral Representative", (pref, marker) => {
     const body = bodyOf(renderTemplate(TEMPLATE, { ...intake(), funeral_preference: pref }));
-    const clause = body.slice(body.indexOf("Section 8.2"), body.indexOf("Section 8.3"));
+    const clause = funeralClause(body);
     expect(clause).toContain(marker);
     expect(clause).toContain("My Personal Representative shall make the final arrangements");
     expect(clause).not.toContain("Funeral Representative");
@@ -53,7 +62,7 @@ describe("1. funeral preferences go to the Personal Representative", () => {
 
   it("family_decides also routes to the Personal Representative", () => {
     const body = bodyOf(render()); // funeral_preference defaults to family_decides
-    const clause = body.slice(body.indexOf("Section 8.2"), body.indexOf("Section 8.3"));
+    const clause = funeralClause(body);
     expect(clause).toContain("to my Personal Representative");
     expect(clause).not.toContain("Funeral Representative");
   });

@@ -1,5 +1,6 @@
 import type { TemplateWillIntake as WillIntake } from "./intake-adapter";
 import { computeDerivedFields } from "./computed-fields";
+import { assignNumbering } from "./article-numbering";
 
 /**
  * A lookup namespace: a flat record keyed by field name. Values may be any JSON-ish
@@ -287,7 +288,11 @@ function evaluateNodes(nodes: TemplateNode[], ns: Namespace, template: string): 
 export function renderTemplate(template: string, intake: WillIntake): string {
   const ns: Namespace = { ...(intake as unknown as Namespace), ...computeDerivedFields(intake) };
   const ast = parseTemplate(template);
-  const out = evaluateNodes(ast, ns, template);
+  const evaluated = evaluateNodes(ast, ns, template);
+
+  // Numerals are assigned from what actually rendered, so a conditional article
+  // or section dropping out never leaves a gap or a dangling reference.
+  const out = assignNumbering(evaluated).text;
 
   // Defensive post-condition: no unprocessed tags should remain. A leftover `{{`
   // indicates an unclosed/garbled token the parser treated as literal text.

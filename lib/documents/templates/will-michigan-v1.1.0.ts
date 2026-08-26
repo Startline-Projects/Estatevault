@@ -26,13 +26,13 @@ Firm: {{reviewing_attorney_firm}}  ·  Reviewed: {{review_date}}
 
 I, {{client_full_name}}, a resident of the City of {{city}}, County of {{county}}, State of Michigan, being of sound mind and not acting under duress, menace, fraud, or the undue influence of any person, do hereby make, publish, and declare this instrument to be my Last Will and Testament, and hereby revoke any and all wills and codicils heretofore made by me.
 
-## ARTICLE I — IDENTIFICATION AND FAMILY
+## ARTICLE [[ARTICLE:family]] — IDENTIFICATION AND FAMILY
 
-### Section 1.1 — Identification of Testator.
+### Section [[SECTION:family.s1]] — Identification of Testator.
 
 I am a resident of the State of Michigan. I was born on {{client_dob}}. My current residence address is {{street_address}}, {{city}}, Michigan {{zip}}.
 
-### Section 1.2 — Marital Status.
+### Section [[SECTION:family.s2]] — Marital Status.
 
 {{#IF marital_status equals "Married"}}
 
@@ -58,7 +58,7 @@ I am widowed. I am not currently married and have no spouse at the time of execu
 
 {{/IF}}
 
-### Section 1.3 — Children.
+### Section [[SECTION:family.s3]] — Children.
 
 {{#IF has_children equals true}}
 
@@ -80,13 +80,13 @@ I have no living children at the time of executing this Will. Any reference in t
 
 {{/IF}}
 
-## ARTICLE II — PERSONAL REPRESENTATIVE
+## ARTICLE [[ARTICLE:pr]] — PERSONAL REPRESENTATIVE
 
-### Section 2.1 — Appointment.
+### Section [[SECTION:pr.s1]] — Appointment.
 
 I nominate and appoint {{personal_representative.full_name}}, currently residing in {{personal_representative.city}}, {{personal_representative.state}}, to serve as the Personal Representative of my estate.
 
-### Section 2.2 — Successor Personal Representatives.
+### Section [[SECTION:pr.s2]] — Successor Personal Representatives.
 
 If {{personal_representative.full_name}} is unable or unwilling to serve, predeceases me, or for any reason ceases to serve, I nominate {{successor_personal_representative.full_name}}, currently residing in {{successor_personal_representative.city}}, {{successor_personal_representative.state}}, to serve as Successor Personal Representative.
 
@@ -96,7 +96,7 @@ If both {{personal_representative.full_name}} and {{successor_personal_represent
 
 {{/IF}}
 
-### Section 2.3 — Bond.
+### Section [[SECTION:pr.s3]] — Bond.
 
 {{#IF bond_waiver equals true}}
 
@@ -110,7 +110,7 @@ The Personal Representative shall provide such bond as may be required by the co
 
 {{/IF}}
 
-### Section 2.4 — Independent Administration.
+### Section [[SECTION:pr.s4]] — Independent Administration.
 
 {{#IF independent_administration equals true}}
 
@@ -118,25 +118,25 @@ I authorize my Personal Representative to administer my estate in an unsupervise
 
 {{/IF}}
 
-### Section 2.5 — Powers of the Personal Representative.
+### Section [[SECTION:pr.s5]] — Powers of the Personal Representative.
 
 In addition to all powers granted by Michigan law, my Personal Representative shall have full power and authority, without prior court approval, to take possession of and manage all property of my estate; pay all just debts, funeral expenses, expenses of administration, and taxes; sell, lease, exchange, or otherwise dispose of any real or personal property of my estate, at public or private sale, with or without notice, for cash or on credit, and upon such terms as the Personal Representative deems advisable; distribute property in cash or in kind, or partly in cash and partly in kind, and to make such distributions on a non-pro-rata basis; compromise, settle, or abandon any claim in favor of or against my estate; employ and compensate attorneys, accountants, investment advisors, and other professionals; and exercise all powers granted to personal representatives under MCL 700.3715 and other applicable provisions of Michigan law.
 
-### Section 2.6 — Compensation.
+### Section [[SECTION:pr.s6]] — Compensation.
 
 My Personal Representative shall be entitled to reasonable compensation for services rendered, in accordance with Michigan law.
 
-## ARTICLE III — PAYMENT OF DEBTS, EXPENSES, AND TAXES
+## ARTICLE [[ARTICLE:debts]] — PAYMENT OF DEBTS, EXPENSES, AND TAXES
 
-### Section 3.1 — Debts and Expenses.
+### Section [[SECTION:debts.s1]] — Debts and Expenses.
 
 I direct my Personal Representative to pay from my residuary estate all of my just debts, the expenses of my last illness, funeral expenses, and the expenses of administering my estate, as soon as practicable after my death. No debt shall be paid that is barred by the statute of limitations or the non-claim statute, except in the discretion of my Personal Representative.
 
-### Section 3.2 — Taxes.
+### Section [[SECTION:debts.s2]] — Taxes.
 
 I direct that all estate, inheritance, succession, and similar taxes (collectively, "Death Taxes") imposed by reason of my death, together with interest and penalties thereon, be paid from my residuary estate, without apportionment or reimbursement from any beneficiary. This provision shall not apply to any taxes on property over which I have a power of appointment or to taxes that, by their terms, must be borne by the recipient of the property generating the tax.
 
-## ARTICLE IV — SPECIFIC GIFTS
+## ARTICLE [[ARTICLE:gifts]] — SPECIFIC GIFTS
 
 {{#IF has_specific_gifts equals true}}
 
@@ -144,7 +144,7 @@ I make the following specific gifts:
 
 {{#FOREACH specific_gifts}}
 
-### Section 4.{{loop_index}}
+### Section [[REF_NUM:gifts]].{{loop_index}}
 
 I give, devise, and bequeath {{item_description}} to {{recipient_full_name}}, my {{recipient_relationship}}. 
 
@@ -164,13 +164,13 @@ If the recipient does not survive me by thirty (30) days, this gift shall pass t
 
 {{/IF}}
 
-### Section 4.M — Personal Property Memorandum.
+### Section [[SECTION:gifts.sM]] — Personal Property Memorandum.
 
 I may from time to time prepare a written, signed, and dated memorandum disposing of specific items of tangible personal property. Pursuant to MCL 700.2513, such a memorandum, if it exists and can be located at the time of my death, shall be given effect to the extent permitted by Michigan law.
 
-## ARTICLE V — RESIDUARY ESTATE
+## ARTICLE [[ARTICLE:residuary]] — RESIDUARY ESTATE
 
-### Section 5.1 — Primary Beneficiaries.
+### Section [[SECTION:residuary.s1]] — Primary Beneficiaries.
 
 I give, devise, and bequeath all the rest, residue, and remainder of my estate, of every kind and nature and wherever situated (my "residuary estate"), to the following persons in the shares indicated:
 
@@ -192,11 +192,11 @@ I give, devise, and bequeath all the rest, residue, and remainder of my estate, 
 
 {{/FOREACH}}
 
-### Section 5.2 — Contingent Beneficiaries.
+### Section [[SECTION:residuary.s2]] — Contingent Beneficiaries.
 
 {{#IF contingent_beneficiaries_not_empty}}
 
-If all of the primary beneficiaries named in Section 5.1 fail to survive me by thirty (30) days, I give, devise, and bequeath my residuary estate to the following contingent beneficiaries in the shares indicated:
+If all of the primary beneficiaries named in Section [[REF:residuary.s1]] fail to survive me by thirty (30) days, I give, devise, and bequeath my residuary estate to the following contingent beneficiaries in the shares indicated:
 
 {{#FOREACH contingent_beneficiaries}}
 
@@ -206,35 +206,35 @@ If all of the primary beneficiaries named in Section 5.1 fail to survive me by t
 
 {{/IF}}
 
-### Section 5.3 — Final Disposition.
+### Section [[SECTION:residuary.s3]] — Final Disposition.
 
-If all of the primary beneficiaries named in Section 5.1, and all of the contingent beneficiaries named in Section 5.2 (if any), fail to survive me by thirty (30) days, my residuary estate shall pass to my heirs at law, as determined under the laws of the State of Michigan governing intestate succession, in effect at the time of my death.
+If all of the primary beneficiaries named in Section [[REF:residuary.s1]], and all of the contingent beneficiaries named in Section [[REF:residuary.s2]] (if any), fail to survive me by thirty (30) days, my residuary estate shall pass to my heirs at law, as determined under the laws of the State of Michigan governing intestate succession, in effect at the time of my death.
 
-### Section 5.4 — Survivorship Requirement.
+### Section [[SECTION:residuary.s4]] — Survivorship Requirement.
 
 For the purposes of this Will, a beneficiary shall be considered to have survived me only if such beneficiary is living on the thirtieth (30th) day following the date of my death.
 
 {{#IF has_minor_children equals true}}
 
-## ARTICLE VI — GUARDIAN FOR MINOR CHILDREN
+## ARTICLE [[ARTICLE:guardian]] — GUARDIAN FOR MINOR CHILDREN
 
-### Section 6.1 — Nomination of Guardian.
+### Section [[SECTION:guardian.s1]] — Nomination of Guardian.
 
 If at the time of my death any of my children are minors, and if the other natural parent of such minor child is deceased or otherwise unable to serve as guardian, I nominate {{guardian.full_name}}, currently residing in {{guardian.city}}, {{guardian.state}}, to serve as Guardian of the person of such minor children. This nomination is made pursuant to MCL 700.5202.
 
-### Section 6.2 — Successor Guardian.
+### Section [[SECTION:guardian.s2]] — Successor Guardian.
 
 If {{guardian.full_name}} is unable or unwilling to serve, predeceases me, or for any reason ceases to serve, I nominate {{successor_guardian.full_name}} to serve as Successor Guardian.
 
 {{#IF standby_guardian}}
 
-### Section 6.3 — Standby Guardian.
+### Section [[SECTION:guardian.s3]] — Standby Guardian.
 
 If both {{guardian.full_name}} and {{successor_guardian.full_name}} are unable or unwilling to serve, I nominate {{standby_guardian.full_name}} to serve as Standby Guardian.
 
 {{/IF}}
 
-### Section 6.4 — Temporary Incapacity Authority.
+### Section [[SECTION:guardian.s4]] — Temporary Incapacity Authority.
 
 {{#IF guardian_temporary_incapacity_authority equals true}}
 
@@ -244,23 +244,23 @@ Pursuant to MCL 700.5204, if I am alive but temporarily unable to care for my mi
 
 {{#IF guardian_temporary_incapacity_authority equals false}}
 
-The Guardian nominated in this Article VI is nominated only for the period following my death and is not authorized to act on my behalf during any period of my temporary incapacity.
+The Guardian nominated in this Article [[REF:guardian]] is nominated only for the period following my death and is not authorized to act on my behalf during any period of my temporary incapacity.
 
 {{/IF}}
 
-### Section 6.5 — Best Interests of the Children.
+### Section [[SECTION:guardian.s5]] — Best Interests of the Children.
 
-I have nominated the persons named in this Article VI because I believe each, in his or her own way, would act in the best interests of my minor children. Any court of competent jurisdiction reviewing this nomination is requested to honor my choice unless there is clear and compelling reason to do otherwise.
+I have nominated the persons named in this Article [[REF:guardian]] because I believe each, in his or her own way, would act in the best interests of my minor children. Any court of competent jurisdiction reviewing this nomination is requested to honor my choice unless there is clear and compelling reason to do otherwise.
 
 {{/IF}}
 
-## ARTICLE VII — DIGITAL ASSETS
+## ARTICLE [[ARTICLE:digital]] — DIGITAL ASSETS
 
-### Section 7.1 — Designation of Digital Asset Agent.
+### Section [[SECTION:digital.s1]] — Designation of Digital Asset Agent.
 
 {{#IF digital_executor_is_same equals true}}
 
-Pursuant to the Michigan Fiduciary Access to Digital Assets Act (MCL 700.1003 et seq.), I hereby designate my Personal Representative named in Article II as the person authorized to access, manage, copy, control, and terminate my digital assets and electronic communications, including but not limited to email accounts, social media profiles, cloud storage accounts, online financial accounts, cryptocurrency holdings, digital wallets, domain names, and any other electronic records or communications in which I have an interest.
+Pursuant to the Michigan Fiduciary Access to Digital Assets Act (MCL 700.1003 et seq.), I hereby designate my Personal Representative named in Article [[REF:pr]] as the person authorized to access, manage, copy, control, and terminate my digital assets and electronic communications, including but not limited to email accounts, social media profiles, cloud storage accounts, online financial accounts, cryptocurrency holdings, digital wallets, domain names, and any other electronic records or communications in which I have an interest.
 
 {{/IF}}
 
@@ -270,11 +270,11 @@ Pursuant to the Michigan Fiduciary Access to Digital Assets Act (MCL 700.1003 et
 
 {{/IF}}
 
-### Section 7.2 — Scope of Authority.
+### Section [[SECTION:digital.s2]] — Scope of Authority.
 
 My designated digital asset agent shall have full authority to access the content of my electronic communications; manage and dispose of my digital assets in accordance with my instructions; provide consent to any custodian, service provider, or other holder of my digital assets for the disclosure and management of those assets; and take any other action necessary or appropriate to give effect to this designation.
 
-### Section 7.3 — Instructions for Digital Assets.
+### Section [[SECTION:digital.s3]] — Instructions for Digital Assets.
 
 {{#IF digital_asset_instructions equals "Preserve all accounts. My digital executor preserves access where possible and passes credentials to my beneficiaries."}}
 
@@ -290,7 +290,7 @@ My digital asset agent shall close my social media accounts, email accounts, and
 
 {{#IF digital_asset_instructions equals "Transfer financial and cryptocurrency assets, close everything else. My digital executor transfers any financial or cryptocurrency assets to my beneficiaries and closes the remaining accounts."}}
 
-My digital asset agent shall transfer any digital financial accounts and cryptocurrency holdings to the beneficiaries of my residuary estate in proportion to the shares set forth in Article V, and shall close all other digital accounts after handling any final matters.
+My digital asset agent shall transfer any digital financial accounts and cryptocurrency holdings to the beneficiaries of my residuary estate in proportion to the shares set forth in Article [[REF:residuary]], and shall close all other digital accounts after handling any final matters.
 
 {{/IF}}
 
@@ -300,9 +300,9 @@ I leave the decisions regarding the management and disposition of my digital ass
 
 {{/IF}}
 
-## ARTICLE VIII — FINAL WISHES
+## ARTICLE [[ARTICLE:final_wishes]] — FINAL WISHES
 
-### Section 8.1 — Organ and Tissue Donation.
+### Section [[SECTION:final_wishes.s1]] — Organ and Tissue Donation.
 
 {{#IF organ_donation equals "yes_all"}}
 
@@ -328,7 +328,7 @@ I leave the decision regarding organ, tissue, and body part donation to my Patie
 
 {{/IF}}
 
-### Section 8.2 — Funeral and Burial Preference.
+### Section [[SECTION:final_wishes.s2]] — Funeral and Burial Preference.
 
 {{#IF funeral_preference equals "burial"}}
 
@@ -348,7 +348,7 @@ I leave the decision regarding the manner of disposition of my remains (whether 
 
 {{/IF}}
 
-### Section 8.3 — Reference to Funeral Representative Designation.
+### Section [[SECTION:final_wishes.s3]] — Reference to Funeral Representative Designation.
 
 {{#IF has_funeral_representative equals true}}
 
@@ -356,9 +356,9 @@ I have executed a separate Funeral Representative Designation pursuant to MCL 70
 
 {{/IF}}
 
-## ARTICLE IX — INTENTIONAL EXCLUSIONS AND NO-CONTEST CLAUSE
+## ARTICLE [[ARTICLE:exclusions]] — INTENTIONAL EXCLUSIONS AND NO-CONTEST CLAUSE
 
-### Section 9.1 — Intentional Exclusions.
+### Section [[SECTION:exclusions.s1]] — Intentional Exclusions.
 
 {{#IF has_intentional_exclusions equals true}}
 
@@ -380,7 +380,7 @@ I have not intentionally excluded any specific individual from this Will by name
 
 {{/IF}}
 
-### Section 9.2 — No-Contest Clause.
+### Section [[SECTION:exclusions.s2]] — No-Contest Clause.
 
 {{#IF no_contest_clause equals true}}
 
@@ -394,25 +394,25 @@ This Will contains no no-contest clause. Any beneficiary who wishes to contest t
 
 {{/IF}}
 
-## ARTICLE X — GENERAL PROVISIONS
+## ARTICLE [[ARTICLE:general]] — GENERAL PROVISIONS
 
-### Section 10.1 — Severability.
+### Section [[SECTION:general.s1]] — Severability.
 
 If any provision of this Will is held to be invalid, unenforceable, or contrary to law, the remaining provisions shall continue in full force and effect, and the invalid provision shall be reformed only to the extent necessary to render it valid and enforceable.
 
-### Section 10.2 — Governing Law.
+### Section [[SECTION:general.s2]] — Governing Law.
 
 This Will shall be governed by and construed in accordance with the laws of the State of Michigan in effect at the time of my death.
 
-### Section 10.3 — References to Michigan Law.
+### Section [[SECTION:general.s3]] — References to Michigan Law.
 
 All references in this Will to "Michigan law" or to specific provisions of the Michigan Compiled Laws shall be construed to include any successor statutes, amendments, or recodifications, unless the context clearly requires otherwise.
 
-### Section 10.4 — Definitions and Construction.
+### Section [[SECTION:general.s4]] — Definitions and Construction.
 
 References to "my Personal Representative" include any Successor Personal Representative or Second Successor Personal Representative duly serving in that role. References to a person's descendants mean lineal descendants of that person. Words denoting one gender include all genders. The headings of Articles and Sections are for convenience of reference only and shall not affect the construction of this Will.
 
-### Section 10.5 — Revocation of Prior Wills.
+### Section [[SECTION:general.s5]] — Revocation of Prior Wills.
 
 I hereby revoke any and all prior wills and codicils heretofore made by me, including any oral, holographic, or other testamentary instruments.
 
