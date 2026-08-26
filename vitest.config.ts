@@ -19,6 +19,9 @@ export default defineConfig({
       "tests/unit/**/*.test.{ts,tsx}",
       "tests/api/**/*.test.{ts,tsx}",
       "lib/crypto/__tests__/**/*.test.ts",
+      // Document-generation tests live beside their sources. Without this glob
+      // the whole suite under lib/documents/ was collected by nobody and never ran.
+      "lib/documents/**/*.test.{ts,tsx}",
     ],
     exclude: ["tests/e2e/**", "node_modules/**"],
   },

@@ -93,6 +93,9 @@ function realisticIntake(): WillIntake {
     dpoa_agent: { full_name: "Mark Smith", relationship: "Brother", city: "Ann Arbor", state: "Michigan", phone: "(734) 555-1212" },
     first_successor_dpoa_agent: { full_name: "Sue Doe", relationship: "Sister", city: "Lansing", state: "Michigan", phone: "(517) 555-3333" },
     second_successor_dpoa_agent: { full_name: "Karen Lee", relationship: "Friend", city: "Detroit", state: "Michigan", phone: "(313) 555-4444" },
+    // Powers are now explicit: the adapter no longer defaults to granting
+    // everything, so a fixture must state what the client selected.
+    dpoa_powers: ["banking", "real_estate", "business", "tax", "insurance", "government_benefits", "retirement", "digital"],
     dpoa_effective: "immediate",
     dpoa_agent_compensation: "reasonable",
 
@@ -191,12 +194,12 @@ describe("template integration — dpoa-michigan-v1.1.0", () => {
     expect(out).toContain("effective immediately upon execution");
     expect(out).not.toContain('"springing" power of attorney');
 
-    // Default powers (8 of them) — all GRANTED
+    // Selected powers — all GRANTED
     expect(out).toContain("Banking and Financial Institution Transactions.  GRANTED.");
     expect(out).toContain("Real Estate Transactions.  GRANTED.");
     expect(out).toContain("Digital Assets.  GRANTED.");
 
-    // Hot powers default = NOT GRANTED (gift_making + amend_estate_plan absent from defaults)
+    // Hot powers not selected = NOT GRANTED (gift_making + amend_estate_plan)
     expect(out).toContain("Gift-Making Authority.  NOT GRANTED.");
     expect(out).toContain("Authority to Make Changes to Estate Plan.  NOT GRANTED.");
 

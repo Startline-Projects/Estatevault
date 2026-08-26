@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { getMichiganCounty } from "./michigan-counties";
 
 const personSchema5 = z.object({
   full_name: z.string().default(""),
@@ -70,6 +71,13 @@ const lenientWillIntakeSchema = z.object({
   guardian_temporary_incapacity_authority: z.boolean().default(true),
 
   has_specific_gifts: z.boolean().default(false),
+  /**
+   * The current questionnaire collects specific gifts as one free-text field.
+   * The template's structured `specific_gifts` loop needs item/recipient pairs,
+   * which cannot be derived from prose without inventing recipients — so the
+   * client's own words are carried verbatim here instead.
+   */
+  specific_gifts_freeform: z.string().default(""),
   specific_gifts: z.array(z.object({
     item_description: z.string().default(""),
     recipient_full_name: z.string().default(""),
@@ -106,7 +114,10 @@ const lenientWillIntakeSchema = z.object({
   dpoa_agent: personSchema5.default({ full_name: "", relationship: "", city: "", state: "", phone: "" }),
   first_successor_dpoa_agent: personSchema5.default({ full_name: "", relationship: "", city: "", state: "", phone: "" }),
   second_successor_dpoa_agent: personSchema5.default({ full_name: "", relationship: "", city: "", state: "", phone: "" }),
-  dpoa_powers: z.array(z.string()).default(["banking", "real_estate", "business", "tax", "insurance", "government_benefits", "retirement", "digital"]),
+  // A power is granted ONLY if the client selected it. Defaulting this to the
+  // full set silently granted real-estate/business/tax/retirement authority to
+  // clients who asked for banking alone.
+  dpoa_powers: z.array(z.string()).default([]),
   dpoa_effective: z.string().default("immediate"),
   dpoa_agent_compensation: z.string().default("reasonable"),
   dpoa_agent_compensation_amount: z.string().nullable().default(null),
@@ -118,6 +129,8 @@ const lenientWillIntakeSchema = z.object({
   pain_management_preference: z.string().default("provide_even_if_shortens"),
   pregnancy_exclusion: z.string().default("no_pregnancy_restriction"),
   mental_health_treatment_authority: z.boolean().default(true),
+  /** Free-text healthcare wishes from the questionnaire, carried verbatim. */
+  healthcare_wishes_freeform: z.string().default(""),
   has_hipaa_additional_parties: z.boolean().default(false),
   hipaa_additional_authorized_parties: z.array(z.object({
     full_name: z.string().default(""),
@@ -149,6 +162,122 @@ function equalShareSplit(count: number): string[] {
   const base = Math.floor(100 / count);
   const remainder = 100 - base * count;
   return Array.from({ length: count }, (_, i) => String(base + (i < remainder ? 1 : 0)));
+}
+
+// ── DPOA powers ───────────────────────────────────────────────────────────────
+// The questionnaire presents four human-readable checkboxes; the template
+// branches on snake_case tokens. Anything the client did not select must not
+// appear in the output at all.
+const POWER_LABEL_TO_TOKEN: Record<string, string> = {
+  "banking and finances": "banking",
+  "banking": "banking",
+  "real estate transactions": "real_estate",
+  "real estate": "real_estate",
+  "business operations": "business",
+  "business": "business",
+  "tax filings": "tax",
+  "tax": "tax",
+  "insurance": "insurance",
+  "government benefits": "government_benefits",
+  "retirement": "retirement",
+  "retirement accounts": "retirement",
+  "digital assets": "digital",
+  "digital": "digital",
+  "gift making": "gift_making",
+  "amend estate plan": "amend_estate_plan",
+};
+
+/** Every token the DPOA template understands. Used to pass through pre-tokenized input. */
+const KNOWN_POWER_TOKENS = new Set(Object.values(POWER_LABEL_TO_TOKEN));
+
+/**
+ * Map selected powers to template tokens.
+ *
+ * Accepts the questionnaire's label array, an already-tokenized array, or the
+ * legacy `{ real_estate: true }` object. Unrecognized entries are dropped rather
+ * than guessed at. Banking is always included because the questionnaire makes it
+ * mandatory and non-deselectable.
+ */
+function mapPoaPowers(raw: Record<string, unknown>): string[] | undefined {
+  const tokens = new Set<string>();
+  let sawAnySource = false;
+
+  const list = raw.poaPowers ?? raw.dpoa_powers ?? raw.dpoaPowers;
+  if (Array.isArray(list)) {
+    sawAnySource = true;
+    for (const entry of list) {
+      const v = str(entry).trim();
+      if (!v) continue;
+      if (KNOWN_POWER_TOKENS.has(v)) { tokens.add(v); continue; }
+      const token = POWER_LABEL_TO_TOKEN[v.toLowerCase()];
+      if (token) tokens.add(token);
+    }
+  }
+
+  const legacy = raw.powers;
+  if (legacy && typeof legacy === "object" && !Array.isArray(legacy)) {
+    sawAnySource = true;
+    for (const [k, v] of Object.entries(legacy as Record<string, unknown>)) {
+      if (v === true && KNOWN_POWER_TOKENS.has(k)) tokens.add(k);
+    }
+  }
+
+  if (!sawAnySource) return undefined;
+  // An empty selection is returned as-is so strict validation can block it.
+  // Auto-granting banking here would mean inventing authority nobody chose.
+  if (tokens.size === 0) return [];
+  tokens.add("banking"); // mandatory in the questionnaire, never deselectable
+  return Array.from(tokens);
+}
+
+// ── Organ donation ────────────────────────────────────────────────────────────
+// The questionnaire stores Yes/No; the PAD template branches on
+// yes_all / yes_specific / no / advocate_decides. An unmapped value matches no
+// branch and renders a blank statutory section.
+function mapOrganDonation(v: unknown): string | undefined {
+  const raw = str(v).trim();
+  if (!raw) return undefined;
+  const lower = raw.toLowerCase();
+  if (["yes_all", "yes_specific", "no", "advocate_decides"].includes(lower)) return lower;
+  if (lower === "yes" || lower === "true") return "yes_all";
+  if (lower === "no" || lower === "false") return "no";
+  if (lower.startsWith("advocate")) return "advocate_decides";
+  return undefined;
+}
+
+/**
+ * Build primary beneficiaries from the pre-array questionnaire shape
+ * (primaryBeneficiaryName / secondBeneficiaryName / estateSplit / customSplit).
+ * In-progress intakes saved before the array migration still carry this shape;
+ * without it they render an empty residuary clause.
+ */
+function mapLegacyBeneficiaries(
+  raw: Record<string, unknown>,
+): Array<{ full_name: string; relationship: string; share_percent: string; per_stirpes: boolean }> | undefined {
+  const primary = str(raw.primaryBeneficiaryName || raw.primary_beneficiary).trim();
+  if (!primary) return undefined;
+
+  const secondary = str(raw.secondBeneficiaryName || raw.secondary_beneficiary).trim();
+  const primaryRel = str(raw.primaryBeneficiaryRelationship || raw.primary_beneficiary_relationship);
+  const secondaryRel = str(raw.secondBeneficiaryRelationship || raw.secondary_beneficiary_relationship);
+
+  if (!secondary) {
+    return [{ full_name: primary, relationship: primaryRel, share_percent: "100", per_stirpes: false }];
+  }
+
+  const split = str(raw.estateSplit || raw.estate_split).trim();
+  let shares = ["50", "50"];
+  if (split && split !== "50/50") {
+    const custom = str(raw.customSplit || raw.custom_split).split("/");
+    const a = custom[0]?.trim();
+    const b = custom[1]?.trim();
+    if (a && b) shares = [a, b];
+  }
+
+  return [
+    { full_name: primary, relationship: primaryRel, share_percent: shares[0], per_stirpes: false },
+    { full_name: secondary, relationship: secondaryRel, share_percent: shares[1], per_stirpes: false },
+  ];
 }
 
 function mapBeneficiariesToPrimary(
@@ -203,13 +332,33 @@ export function mapIntakeToTemplateData(
     if (raw.streetAddress !== undefined) mapped.street_address = str(raw.streetAddress);
     if (raw.city !== undefined) mapped.city = str(raw.city);
     if (raw.county !== undefined) mapped.county = str(raw.county);
+    // The questionnaire collects city but not county. Every template prints
+    // "<county> County, Michigan" and the notary block needs it, so derive it
+    // from the city when it was not asked for directly.
+    if (!str(mapped.county).trim()) {
+      const derived = getMichiganCounty(str(raw.city || mapped.city));
+      if (derived && !derived.startsWith("___")) {
+        mapped.county = derived.charAt(0) + derived.slice(1).toLowerCase();
+      }
+    }
     if (raw.zip !== undefined) mapped.zip = str(raw.zip);
     if (raw.state !== undefined && !mapped.state) mapped.state = str(raw.state);
     if (raw.maritalStatus !== undefined) mapped.marital_status = str(raw.maritalStatus);
     if (raw.spouseFullName !== undefined) mapped.spouse_full_name = str(raw.spouseFullName);
     if (raw.spouseName !== undefined && !mapped.spouse_full_name) mapped.spouse_full_name = str(raw.spouseName);
 
-    // Children
+    // Children. The questionnaire currently asks only whether minor children
+    // exist, so the roster is populated only when a caller supplies one.
+    const rawChildren = raw.children ?? raw.childrenList;
+    if (Array.isArray(rawChildren)) {
+      mapped.children = rawChildren.map((c: Record<string, unknown>) => ({
+        full_name: str(c?.full_name ?? c?.name),
+        date_of_birth: str(c?.date_of_birth ?? c?.dateOfBirth),
+        is_minor: yesNo(c?.is_minor ?? c?.isMinor),
+      }));
+      if (mapped.children && (mapped.children as unknown[]).length > 0) mapped.has_children = true;
+    }
+
     if (raw.hasMinorChildren !== undefined) {
       mapped.has_minor_children = yesNo(raw.hasMinorChildren);
       if (!mapped.has_children) mapped.has_children = yesNo(raw.hasMinorChildren);
@@ -241,11 +390,22 @@ export function mapIntakeToTemplateData(
         raw.beneficiariesEqualShares,
       );
     }
+    // Pre-array questionnaire shape. Only consulted when the array shape is
+    // absent or empty, so a migrated intake always wins.
+    if (!Array.isArray(mapped.primary_beneficiaries) || (mapped.primary_beneficiaries as unknown[]).length === 0) {
+      const legacyBens = mapLegacyBeneficiaries(raw);
+      if (legacyBens) mapped.primary_beneficiaries = legacyBens;
+    }
+
     if (raw.contingentBeneficiaries !== undefined) {
       mapped.contingent_beneficiaries = mapBeneficiariesToContingent(
         raw.contingentBeneficiaries,
         raw.contingentEqualShares,
       );
+    }
+    // An explicit "No" clears anything left over from an earlier answer.
+    if (raw.hasContingentBeneficiary !== undefined && !yesNo(raw.hasContingentBeneficiary)) {
+      mapped.contingent_beneficiaries = [];
     }
 
     // Guardian
@@ -320,26 +480,74 @@ export function mapIntakeToTemplateData(
     if (raw.hasSpecificGifts !== undefined) {
       mapped.has_specific_gifts = yesNo(raw.hasSpecificGifts);
     }
+    if (raw.specificGiftsDescription !== undefined) {
+      mapped.specific_gifts_freeform = str(raw.specificGiftsDescription).trim();
+    }
+    if (Array.isArray(raw.specificGifts)) {
+      mapped.specific_gifts = (raw.specificGifts as Array<Record<string, unknown>>).map((g) => ({
+        item_description: str(g?.item_description ?? g?.description ?? g?.item),
+        recipient_full_name: str(g?.recipient_full_name ?? g?.recipient ?? g?.name),
+        recipient_relationship: str(g?.recipient_relationship ?? g?.relationship),
+        fallback: str(g?.fallback || "residuary"),
+      }));
+    }
 
-    // Organ donation
-    if (raw.organDonation !== undefined) mapped.organ_donation = str(raw.organDonation);
+    // Organ donation — normalized to the tokens the PAD template branches on.
+    const organ = mapOrganDonation(raw.organDonation ?? raw.organ_donation);
+    if (organ) mapped.organ_donation = organ;
 
-    // DPOA fields (if quiz collected them)
+    // DPOA agent and successors
     if (raw.dpoaAgentName || raw.poaAgentName) {
       mapped.dpoa_agent = {
         full_name: str(raw.dpoaAgentName || raw.poaAgentName),
         relationship: str(raw.dpoaAgentRelationship || raw.poaAgentRelationship || ""),
-        city: str(raw.dpoaAgentCity || ""),
-        state: str(raw.dpoaAgentState || ""),
+        city: str(raw.dpoaAgentCity || raw.city || ""),
+        state: str(raw.dpoaAgentState || raw.state || ""),
         phone: str(raw.dpoaAgentPhone || ""),
       };
     }
+    if (raw.poaSuccessorAgentName || raw.dpoaSuccessorAgentName) {
+      mapped.first_successor_dpoa_agent = {
+        full_name: str(raw.poaSuccessorAgentName || raw.dpoaSuccessorAgentName),
+        relationship: str(raw.poaSuccessorAgentRelationship || raw.dpoaSuccessorAgentRelationship || ""),
+        city: str(raw.poaSuccessorAgentCity || ""),
+        state: str(raw.poaSuccessorAgentState || ""),
+        phone: str(raw.poaSuccessorAgentPhone || ""),
+      };
+    }
+    if (raw.poaSecondSuccessorAgentName) {
+      mapped.second_successor_dpoa_agent = {
+        full_name: str(raw.poaSecondSuccessorAgentName),
+        relationship: str(raw.poaSecondSuccessorAgentRelationship || ""),
+        city: "",
+        state: "",
+        phone: "",
+      };
+    }
 
-    // Patient advocate (if quiz collected)
+    // Powers actually selected by the client.
+    const powers = mapPoaPowers(raw);
+    if (powers) mapped.dpoa_powers = powers;
+
+    if (raw.dpoaEffective !== undefined || raw.poaEffective !== undefined) {
+      const eff = str(raw.dpoaEffective ?? raw.poaEffective).toLowerCase();
+      if (eff === "springing" || eff === "immediate") mapped.dpoa_effective = eff;
+    }
+
+    // Patient advocate and successor
     if (raw.patientAdvocateName || raw.healthcareAgentName) {
       mapped.patient_advocate = {
         full_name: str(raw.patientAdvocateName || raw.healthcareAgentName),
         relationship: str(raw.patientAdvocateRelationship || raw.healthcareAgentRelationship || ""),
+        city: str(raw.city || ""),
+        state: str(raw.state || ""),
+        phone: "",
+      };
+    }
+    if (raw.successorPatientAdvocateName || raw.successorHealthcareAgentName) {
+      mapped.successor_patient_advocate = {
+        full_name: str(raw.successorPatientAdvocateName || raw.successorHealthcareAgentName),
+        relationship: str(raw.successorPatientAdvocateRelationship || ""),
         city: "",
         state: "",
         phone: "",
@@ -347,11 +555,18 @@ export function mapIntakeToTemplateData(
     }
 
     // Healthcare directive preferences
-    if (raw.lifeSustainingTreatment !== undefined) {
-      mapped.life_sustaining_treatment_preference = str(raw.lifeSustainingTreatment);
+    if (raw.lifeSustainingTreatment !== undefined || raw.life_sustaining_treatment_preference !== undefined) {
+      mapped.life_sustaining_treatment_preference = str(
+        raw.lifeSustainingTreatment ?? raw.life_sustaining_treatment_preference,
+      );
     }
-    if (raw.artificialNutrition !== undefined) {
-      mapped.artificial_nutrition_preference = str(raw.artificialNutrition);
+    if (raw.artificialNutrition !== undefined || raw.artificial_nutrition_preference !== undefined) {
+      mapped.artificial_nutrition_preference = str(
+        raw.artificialNutrition ?? raw.artificial_nutrition_preference,
+      );
+    }
+    if (raw.healthcareWishesDescription !== undefined && yesNo(raw.hasHealthcareWishes ?? "Yes")) {
+      mapped.healthcare_wishes_freeform = str(raw.healthcareWishesDescription).trim();
     }
 
     const result = lenientWillIntakeSchema.safeParse(mapped);
@@ -363,4 +578,113 @@ export function mapIntakeToTemplateData(
   } catch (e) {
     return { data: null, error: e instanceof Error ? e.message : String(e) };
   }
+}
+
+// ── Strict per-document requirements ─────────────────────────────────────────
+//
+// The schema above is deliberately lenient: every field has a default, so
+// `safeParse` succeeds on almost any input. That is right for drafts and for
+// in-progress intakes, but it means a missing agent name or an unanswered
+// treatment question produces a document with a blank clause rather than an
+// error. These checks are the gate that has to pass before a document is
+// rendered for delivery.
+
+/** Values the PAD template branches on. Anything else renders an empty section. */
+const LIFE_SUSTAINING_VALUES = [
+  "continue_all",
+  "withhold_if_terminal",
+  "withhold_if_pvs",
+  "withhold_if_terminal_or_pvs",
+  "advocate_decides",
+];
+const ARTIFICIAL_NUTRITION_VALUES = [
+  "provide_all",
+  "withhold_if_terminal",
+  "withhold_if_pvs",
+  "withhold_if_terminal_or_pvs",
+  "advocate_decides",
+];
+const ORGAN_DONATION_VALUES = ["yes_all", "yes_specific", "no", "advocate_decides"];
+
+function person(name: string, label: string, out: string[]) {
+  if (!name.trim()) out.push(label);
+}
+
+/** Gifts were requested but nothing usable was captured to render them from. */
+function checkGifts(d: TemplateWillIntake, out: string[]) {
+  if (d.has_specific_gifts && d.specific_gifts.length === 0 && !d.specific_gifts_freeform.trim()) {
+    out.push("specific gifts were requested but no gift details were captured");
+  }
+}
+
+function checkBeneficiaries(d: TemplateWillIntake, out: string[]) {
+  if (d.primary_beneficiaries.length === 0) {
+    out.push("at least one primary beneficiary");
+    return;
+  }
+  d.primary_beneficiaries.forEach((b, i) => {
+    if (!b.full_name.trim()) out.push(`primary beneficiary ${i + 1} name`);
+    if (!b.share_percent.trim()) out.push(`primary beneficiary ${i + 1} share`);
+  });
+}
+
+function checkIdentity(d: TemplateWillIntake, out: string[]) {
+  if (!d.first_name.trim() || !d.last_name.trim()) out.push("client first and last name");
+}
+
+/**
+ * Returns the list of missing/invalid requirements for a document type.
+ * An empty array means the document can be rendered for delivery.
+ *
+ * @param docType - One of the template document types.
+ * @param d - Adapter output.
+ */
+export function validateForDocument(docType: string, d: TemplateWillIntake): string[] {
+  const out: string[] = [];
+  checkIdentity(d, out);
+
+  switch (docType) {
+    case "will":
+      person(d.personal_representative.full_name, "personal representative", out);
+      checkBeneficiaries(d, out);
+      checkGifts(d, out);
+      break;
+
+    case "trust":
+      person(d.successor_trustee.full_name, "successor trustee", out);
+      checkBeneficiaries(d, out);
+      checkGifts(d, out);
+      break;
+
+    case "pour_over_will":
+      person(d.personal_representative.full_name, "personal representative", out);
+      person(d.successor_trustee.full_name, "successor trustee (named in the companion trust)", out);
+      break;
+
+    case "dpoa":
+      person(d.dpoa_agent.full_name, "power of attorney agent", out);
+      if (d.dpoa_powers.length === 0) out.push("at least one power granted to the agent");
+      if (d.dpoa_effective !== "immediate" && d.dpoa_effective !== "springing") {
+        out.push('effective date must be "immediate" or "springing"');
+      }
+      break;
+
+    case "pad":
+      person(d.patient_advocate.full_name, "patient advocate", out);
+      if (!LIFE_SUSTAINING_VALUES.includes(d.life_sustaining_treatment_preference)) {
+        out.push("life-sustaining treatment preference (not collected by the current questionnaire)");
+      }
+      if (!ARTIFICIAL_NUTRITION_VALUES.includes(d.artificial_nutrition_preference)) {
+        out.push("artificial nutrition preference (not collected by the current questionnaire)");
+      }
+      if (!ORGAN_DONATION_VALUES.includes(d.organ_donation)) {
+        out.push("organ donation preference");
+      }
+      break;
+
+    default:
+      break;
+  }
+
+  return out;
 }
