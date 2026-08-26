@@ -104,6 +104,22 @@ const lenientWillIntakeSchema = z.object({
   no_contest_clause: z.boolean().default(true),
 
   trust_name: z.string().default(""),
+  /**
+   * A joint trust has two Grantors, who serve as co-Trustees. EstateVault does
+   * not collect Social Security numbers, so the certification's taxpayer line
+   * is left blank for the client to complete by hand.
+   */
+  is_joint_trust: z.boolean().default(false),
+  grantor_2_full_name: z.string().default(""),
+  grantor_2_relationship: z.string().default(""),
+  grantor_2_address: z.string().default(""),
+  /** Date the trust was executed, printed on the certification and assignment. */
+  trust_date: z.string().default(""),
+  /** Filled per-document when an Assignment of Personal Property is rendered. */
+  assignor_full_name: z.string().default(""),
+  assignor_city: z.string().default(""),
+  assignor_state: z.string().default("Michigan"),
+  assignment_trustee_line: z.string().default(""),
   trustee_is_self: z.boolean().default(true),
   trustee: personSchema4.default({ full_name: "", relationship: "", city: "", state: "" }),
   successor_trustee: personSchema4.default({ full_name: "", relationship: "", city: "", state: "" }),
@@ -439,6 +455,22 @@ export function mapIntakeToTemplateData(
 
     // Trust-specific fields
     if (raw.trustName !== undefined) mapped.trust_name = str(raw.trustName);
+
+    // Joint trust. Marital status alone does not make a trust joint — the
+    // client has to name a second grantor — so both are required before the
+    // joint-trust branches render.
+    const secondGrantor = str(raw.secondGrantorName ?? raw.grantor2Name ?? raw.grantor_2_full_name).trim();
+    if (secondGrantor) {
+      mapped.grantor_2_full_name = secondGrantor;
+      mapped.grantor_2_relationship = str(raw.secondGrantorRelationship ?? raw.grantor_2_relationship ?? "Spouse");
+      mapped.grantor_2_address = str(raw.secondGrantorAddress ?? raw.grantor_2_address ?? "");
+      mapped.is_joint_trust = true;
+    } else if (raw.isJointTrust !== undefined) {
+      mapped.is_joint_trust = yesNo(raw.isJointTrust);
+    }
+    if (raw.trustDate !== undefined || raw.trust_date !== undefined) {
+      mapped.trust_date = str(raw.trustDate ?? raw.trust_date);
+    }
     if (raw.primaryTrustee !== undefined || raw.primary_trustee !== undefined) {
       mapped.trustee_is_self = str(raw.primaryTrustee || raw.primary_trustee) === "Myself";
     }
@@ -695,6 +727,29 @@ export function validateForDocument(docType: string, d: TemplateWillIntake): str
       if (!ORGAN_DONATION_VALUES.includes(d.organ_donation)) {
         out.push("organ donation preference");
       }
+      break;
+
+    case "certification_of_trust":
+      // The taxpayer line is blank by design — EstateVault collects no SSNs —
+      // so it is not a requirement. A trust name and a trustee are.
+      if (!d.trust_name.trim() && !d.first_name.trim()) out.push("trust name");
+      if (d.is_joint_trust && !d.grantor_2_full_name.trim()) {
+        out.push("second grantor's name (this trust is marked joint)");
+      }
+      break;
+
+    case "assignment_personal_property_g1":
+      if (!d.first_name.trim()) out.push("assignor name");
+      break;
+
+    case "assignment_personal_property_g2":
+      // Only exists for a joint trust, and only the second Grantor can sign it.
+      if (!d.is_joint_trust) out.push("a joint trust (a second assignment exists only for two grantors)");
+      if (!d.grantor_2_full_name.trim()) out.push("second grantor's name");
+      break;
+
+    case "trust_funding_instructions":
+      // Educational; needs only enough to name the trust it belongs to.
       break;
 
     default:

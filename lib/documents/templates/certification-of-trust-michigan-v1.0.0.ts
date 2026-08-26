@@ -1,0 +1,144 @@
+// GENERATED FILE — do not edit. Source: certification-of-trust-michigan-v1.0.0.txt
+// Regenerate with: npm run templates:build
+
+const template = `
+# CERTIFICATION OF TRUST
+
+#sub for the
+
+#sub {{trust_name_display_upper}}
+
+#sub dated {{trust_date}}
+
+This Certification of Trust is made under Mich. Comp. Laws § 700.7913 and is signed by each Trustee presently serving under the {{trust_name_display}} dated {{trust_date}}. The undersigned {{#IF is_joint_trust equals true}}Trustees certify{{/IF}}{{#IF is_joint_trust equals false}}Trustee certifies{{/IF}} the following:
+
+## ARTICLE [[ARTICLE:grantors]] — GRANTORS AND REVOCABILITY
+
+{{#IF is_joint_trust equals true}}
+
+The Grantors of the trust are {{client_full_name}} and {{grantor_2_full_name}}. The Grantors retain the power to revoke the trust, exercisable jointly and not individually.
+
+{{/IF}}
+
+{{#IF is_joint_trust equals false}}
+
+The Grantor of the trust is {{client_full_name}}. The Grantor retains the power to revoke the trust.
+
+{{/IF}}
+
+## ARTICLE [[ARTICLE:trustees]] — ACTING TRUSTEES
+
+{{#IF is_joint_trust equals true}}
+
+The persons currently serving as Trustees are {{client_full_name}}, whose address is {{street_address}}, {{city}}, Michigan {{zip}}, and {{grantor_2_full_name}}, whose address is {{grantor_2_address}}.
+
+Any one Trustee, acting alone, may sign for the trust and exercise the powers of the Trustee.
+
+{{/IF}}
+
+{{#IF is_joint_trust equals false}}
+
+The person currently serving as Trustee is {{client_full_name}}, whose address is {{street_address}}, {{city}}, Michigan {{zip}}.
+
+The Trustee may sign for the trust and exercise the powers of the Trustee.
+
+{{/IF}}
+
+## ARTICLE [[ARTICLE:taxpayer]] — TAXPAYER IDENTIFICATION
+
+The trust uses the Social Security number of {{client_full_name}} as its taxpayer identification number.
+
+Taxpayer Identification Number: ______________________
+
+## ARTICLE [[ARTICLE:title]] — FORM OF TITLE
+
+Assets belonging to the trust are to be titled in either of the following forms:
+
+{{#IF is_joint_trust equals true}}
+
+{{client_full_name}} and {{grantor_2_full_name}}, Trustees of the {{trust_name_display}} dated {{trust_date}}, and any amendments to it
+
+{{/IF}}
+
+{{#IF is_joint_trust equals false}}
+
+{{client_full_name}}, Trustee of the {{trust_name_display}} dated {{trust_date}}, and any amendments to it
+
+{{/IF}}
+
+OR
+
+The {{trust_name_display}} dated {{trust_date}}
+
+## ARTICLE [[ARTICLE:alternates]] — ALTERNATE DESCRIPTIONS
+
+A different description will still be sufficient to title an asset in the name of the trust, or to name the trust as a beneficiary, so long as that description identifies at least one initial or successor Trustee, indicates in some manner that the property is held in a fiduciary capacity, and states the date of the trust.
+
+## ARTICLE [[ARTICLE:authority]] — TRUSTEE AUTHORITY
+
+On request, the {{#IF is_joint_trust equals true}}Trustees will{{/IF}}{{#IF is_joint_trust equals false}}Trustee will{{/IF}} furnish the portions of the trust instrument that create the trust, name the Trustee, and describe the Trustee's authority. That authority includes the power to acquire, sell, assign, convey, pledge, encumber, lease, borrow against, manage, and otherwise deal in interests in real and personal property.
+
+## ARTICLE [[ARTICLE:reliance]] — RELIANCE BY THIRD PARTIES
+
+Under the terms of the trust, a third party may rely on this Certification of Trust as proof that the trust exists. No such party has any obligation to inquire into the terms of the trust, to verify the authority of the Trustee, or to monitor how the Trustee applies any funds or other property it receives.
+
+## ARTICLE [[ARTICLE:no_changes]] — NO CONFLICTING CHANGES
+
+The trust has not been revoked, amended, or modified in any way that would make any statement in this Certification of Trust inaccurate.
+
+## ARTICLE [[ARTICLE:demands]] — DEMANDS FOR THE TRUST INSTRUMENT
+
+Under Section 7913 of the Michigan Trust Code (MCL 700.7913), a person who demands the trust instrument or excerpts from it in addition to this Certification of Trust may be liable for damages, costs, expenses, and attorney fees if a court determines that the demand was not made pursuant to a legal requirement.
+
+## EXECUTION
+
+Dated: ______________________
+
+[SIGNATURE] {{client_full_name}}, Trustee
+
+{{#IF is_joint_trust equals true}}
+
+Dated: ______________________
+
+[SIGNATURE] {{grantor_2_full_name}}, Trustee
+
+{{/IF}}
+
+[NOTARY_BLOCK]
+## NOTARY ACKNOWLEDGMENT
+
+Acknowledged before me on ______________________ by {{certification_signatories}}, as {{#IF is_joint_trust equals true}}Trustees{{/IF}}{{#IF is_joint_trust equals false}}Trustee{{/IF}}.
+
+Notary Public
+
+Printed name: ______________________________________
+
+State of ______________________, County of ______________________
+
+My commission expires: ______________________
+
+Acting in the County of ______________________
+[/NOTARY_BLOCK]
+
+[PAGE_BREAK]
+
+## OPERATION OF THIS DOCUMENT
+
+Your Certification of Trust is a short statement confirming that your trust exists, who is serving as Trustee, and that the Trustee has authority to act. You give it to a bank, broker, or title company instead of handing over the whole trust document, so the confidential terms of your plan stay private.
+
+### Section A — Filling In the Taxpayer Identification Number
+
+The taxpayer identification line has been left blank on purpose. EstateVault does not collect or store Social Security numbers.
+
+Before you present this certification to a financial institution, write your own Social Security number on that line by hand. While you are living, your trust uses your Social Security number and files no separate return.
+
+### Section B — Using This Document
+
+Most institutions have their own certification form they will ask you to complete. If the institution has no form of its own, give them a copy of this Certification of Trust.
+
+Sign it in front of a notary public and have the notary complete the notary section. Keep the signed original with your trust documents and upload a copy to your EstateVault account.
+
+Document preparation service only. Not legal advice. No attorney-client relationship created.
+`;
+
+export default template;

@@ -16,7 +16,17 @@ Residence: {{street_address}}, {{city}}, {{county}} County, Michigan  {{zip}}
 
 Marital Status: {{marital_status_label}}
 
+{{#IF is_joint_trust equals false}}
+
 Initial Trustee: {{client_full_name}} (Grantor serving as Trustee)
+
+{{/IF}}
+
+{{#IF is_joint_trust equals true}}
+
+Initial Co-Trustees: {{client_full_name}} and {{grantor_2_full_name}} (Grantors serving as Co-Trustees)
+
+{{/IF}}
 
 First Successor Trustee: {{successor_trustee.full_name}}
 
@@ -108,25 +118,39 @@ Upon revocation, the Trustee shall transfer and deliver all Trust property to th
 
 ## ARTICLE [[ARTICLE:trustees]] — TRUSTEE APPOINTMENT AND SUCCESSION
 
+{{#IF is_joint_trust equals false}}
+
 ### Section [[SECTION:trustees.s1]] — Initial Trustee.
 
 The Grantor shall serve as the initial Trustee of this Trust during the Grantor's lifetime and while the Grantor has legal capacity to manage the Trust assets.
 
+{{/IF}}
+
+{{#IF is_joint_trust equals true}}
+
+### Section [[SECTION:trustees.s1]] — Initial Co-Trustees.
+
+The Grantors, {{client_full_name}} and {{grantor_2_full_name}}, shall serve together as the initial Co-Trustees of this Trust during their joint lifetimes and while each has legal capacity to manage the Trust assets. Either Co-Trustee, acting alone, may transact business on behalf of the Trust.
+
+If one Grantor ceases to serve as Co-Trustee for any reason, the surviving or remaining Grantor shall continue to serve alone as sole Trustee, with all of the powers granted to the Co-Trustees under this Trust, and no successor Trustee shall take office while that Grantor is willing and able to serve.
+
+{{/IF}}
+
 ### Section [[SECTION:trustees.s2]] — First Successor Trustee.
 
-If the Grantor is unable or unwilling to continue serving as Trustee, ceases to serve for any reason, or in the event of the Grantor's incapacity (as determined under Article [[REF:incapacity]]), I appoint {{successor_trustee.full_name}}, currently residing in {{successor_trustee.city}}, {{successor_trustee.state}}, to serve as First Successor Trustee.
+If {{#IF is_joint_trust equals true}}both Grantors are{{/IF}}{{#IF is_joint_trust equals false}}the Grantor is{{/IF}} unable or unwilling to continue serving as Trustee, {{#IF is_joint_trust equals true}}cease{{/IF}}{{#IF is_joint_trust equals false}}ceases{{/IF}} to serve for any reason, or in the event of {{#IF is_joint_trust equals true}}the incapacity of both Grantors{{/IF}}{{#IF is_joint_trust equals false}}the Grantor's incapacity{{/IF}} (as determined under Article [[REF:incapacity]]), I appoint {{successor_trustee.full_name}}, currently residing in {{successor_trustee.city}}, {{successor_trustee.state}}, to serve as First Successor Trustee.
 
 {{#IF second_successor_trustee}}
 
 ### Section [[SECTION:trustees.s3]] — Second Successor Trustee.
 
-If both the Grantor and {{successor_trustee.full_name}} are unable or unwilling to serve, I appoint {{second_successor_trustee.full_name}}, currently residing in {{second_successor_trustee.city}}, {{second_successor_trustee.state}}, to serve as Second Successor Trustee.
+If {{#IF is_joint_trust equals true}}both Grantors{{/IF}}{{#IF is_joint_trust equals false}}the Grantor{{/IF}} and {{successor_trustee.full_name}} are unable or unwilling to serve, I appoint {{second_successor_trustee.full_name}}, currently residing in {{second_successor_trustee.city}}, {{second_successor_trustee.state}}, to serve as Second Successor Trustee.
 
 {{/IF}}
 
 ### Section [[SECTION:trustees.s4]] — Court Appointment.
 
-If the Grantor and all named Successor Trustees are unable or unwilling to serve, a Michigan court of competent jurisdiction shall appoint a successor Trustee.
+If {{#IF is_joint_trust equals true}}both Grantors{{/IF}}{{#IF is_joint_trust equals false}}the Grantor{{/IF}} and all named Successor Trustees are unable or unwilling to serve, a Michigan court of competent jurisdiction shall appoint a successor Trustee.
 
 ### Section [[SECTION:trustees.s5]] — Bond.
 

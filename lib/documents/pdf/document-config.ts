@@ -24,7 +24,11 @@ export type DocumentType =
   | "funeral_rep"
   | "guardian_nomination"
   | "trust"
-  | "pour_over_will";
+  | "pour_over_will"
+  | "certification_of_trust"
+  | "assignment_personal_property_g1"
+  | "assignment_personal_property_g2"
+  | "trust_funding_instructions";
 
 /** Per-document metadata consumed by {@link DocumentRenderer}. */
 export interface DocumentConfig {
@@ -98,5 +102,32 @@ export const DOCUMENT_CONFIG: Record<DocumentType, DocumentConfig> = {
     templateFile: "pour-over-will-michigan-v1.1.0.txt",
     version: "1.1.0-michigan",
     filenameLabel: "Pour-Over Will",
+  },
+  certification_of_trust: {
+    title: "CERTIFICATION OF TRUST",
+    templateFile: "certification-of-trust-michigan-v1.0.0.txt",
+    version: "1.0.0-michigan",
+    filenameLabel: "Certification of Trust",
+  },
+  // A joint trust generates one assignment per Grantor, each covering that
+  // Grantor's own property. Distinct document types rather than a discriminator
+  // column, so the existing (order_id, document_type) keying keeps working.
+  assignment_personal_property_g1: {
+    title: "ASSIGNMENT OF PERSONAL PROPERTY",
+    templateFile: "assignment-personal-property-michigan-v1.0.0.txt",
+    version: "1.0.0-michigan",
+    filenameLabel: "Assignment of Personal Property",
+  },
+  assignment_personal_property_g2: {
+    title: "ASSIGNMENT OF PERSONAL PROPERTY",
+    templateFile: "assignment-personal-property-michigan-v1.0.0.txt",
+    version: "1.0.0-michigan",
+    filenameLabel: "Assignment of Personal Property (Second Grantor)",
+  },
+  trust_funding_instructions: {
+    title: "TRUST FUNDING INSTRUCTIONS",
+    templateFile: "trust-funding-instructions-v1.0.0.txt",
+    version: "1.0.0",
+    filenameLabel: "Trust Funding Instructions",
   },
 };

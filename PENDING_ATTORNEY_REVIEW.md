@@ -23,8 +23,8 @@ file is rendered.
 
 | | |
 |---|---|
-| Entries awaiting review | 49 |
-| Generated | Prompt 6, backfilled across Prompts 1–6 |
+| Entries awaiting review | 56 |
+| Generated | Prompt 7, backfilled across Prompts 1–7 |
 | Reviewing attorney | Mo Murshed |
 | Also pending | Drake (UPL review), Mike (legal sign-off) — see the compliance checklist |
 | Related | `PROMPT6_REGENERATION.md` — schema proposal, not a review item |
@@ -1112,6 +1112,152 @@ Your Revocable Living Trust holds title to the assets you transfer into it, stat
 ```
 
 **Why it was written:** Written by the assistant; no attorney wording existed for a plain-language summary of the trust.
+
+**Decision:** ☐ approved as written ☐ replace with attorney wording
+
+---
+
+## Prompt 7 — Trust Package documents and joint trusts
+
+### Revocable Living Trust — operative document body
+
+**Where:** Article III, Section 3.1 — Initial Co-Trustees (joint trust branch)  
+
+**Source file:** `lib/documents/templates/trust-michigan-v1.1.0.txt`
+
+**Text:**
+
+```text
+The Grantors, {{client_full_name}} and {{grantor_2_full_name}}, shall serve together as the initial Co-Trustees of this Trust during their joint lifetimes and while each has legal capacity to manage the Trust assets. Either Co-Trustee, acting alone, may transact business on behalf of the Trust.
+
+If one Grantor ceases to serve as Co-Trustee for any reason, the surviving or remaining Grantor shall continue to serve alone as sole Trustee, with all of the powers granted to the Co-Trustees under this Trust, and no successor Trustee shall take office while that Grantor is willing and able to serve.
+```
+
+**Why it was written:** Operative legal text, written by the development team. Joint trusts did not exist in the pipeline before Prompt 7, so there was no co-trustee clause of any kind. Nothing in the attorney's notes supplied one. Two substantive choices were made here and both need confirming: that either Co-Trustee may act alone, and that the survivor continues as sole Trustee ahead of any named successor.
+
+**Decision:** ☐ approved as written ☐ replace with attorney wording
+
+---
+
+### Revocable Living Trust — operative document body
+
+**Where:** Article III, Sections 3.2 / 3.3 / court appointment — survivor-phrased succession triggers (joint trust branch)  
+
+**Source file:** `lib/documents/templates/trust-michigan-v1.1.0.txt`
+
+**Text:**
+
+```text
+If both Grantors are unable or unwilling to continue serving as Trustee, cease to serve for any reason, or in the event of the incapacity of both Grantors (as determined under Article [[REF:incapacity]]), I appoint {{successor_trustee.full_name}} ... to serve as First Successor Trustee.
+
+If both Grantors and {{successor_trustee.full_name}} are unable or unwilling to serve, I appoint {{second_successor_trustee.full_name}} ... to serve as Second Successor Trustee.
+
+If both Grantors and all named Successor Trustees are unable or unwilling to serve, a Michigan court of competent jurisdiction shall appoint a successor Trustee.
+```
+
+**Why it was written:** Operative legal text, written by the development team. The single-grantor triggers had to be rephrased for two grantors so a successor takes office only when BOTH have ceased to serve — otherwise the survivor would be displaced by the named successor. The single-grantor wording is unchanged.
+
+**Decision:** ☐ approved as written ☐ replace with attorney wording
+
+---
+
+### Certification of Trust — operative document body
+
+**Where:** Taxpayer identification line  
+
+**Source file:** `lib/documents/templates/certification-of-trust-michigan-v1.0.0.txt`
+
+**Text:**
+
+```text
+Taxpayer Identification Number: ______________________
+```
+
+**Why it was written:** The source text in Part 2 reads "The trust uses the Social Security number of [NAME OF GRANTOR WHOSE SSN IS USED] as its taxpayer identification number." Per the confirmed decision that EstateVault will not collect or store Social Security numbers, that sentence is kept and a blank fill-in line was added beneath it for the client to complete by hand. The line itself is the development team's addition.
+
+**Decision:** ☐ approved as written ☐ replace with attorney wording
+
+---
+
+### Certification of Trust — instruction sheet
+
+**Where:** Section A — Filling In the Taxpayer Identification Number  
+
+**Source file:** `lib/documents/templates/certification-of-trust-michigan-v1.0.0.txt`
+
+**Text:**
+
+```text
+The taxpayer identification line has been left blank on purpose. EstateVault does not collect or store Social Security numbers.
+
+Before you present this certification to a financial institution, write your own Social Security number on that line by hand. While you are living, your trust uses your Social Security number and files no separate return.
+```
+
+**Why it was written:** The handwrite instruction required by the confirmed decision. No wording was supplied for it. Written by the development team.
+
+**Decision:** ☐ approved as written ☐ replace with attorney wording
+
+---
+
+### Certification of Trust — instruction sheet
+
+**Where:** Opening paragraph and Section B — Using This Document  
+
+**Source file:** `lib/documents/templates/certification-of-trust-michigan-v1.0.0.txt`
+
+**Text:**
+
+```text
+Your Certification of Trust is a short statement confirming that your trust exists, who is serving as Trustee, and that the Trustee has authority to act. You give it to a bank, broker, or title company instead of handing over the whole trust document, so the confidential terms of your plan stay private.
+
+Most institutions have their own certification form they will ask you to complete. If the institution has no form of its own, give them a copy of this Certification of Trust.
+
+Sign it in front of a notary public and have the notary complete the notary section. Keep the signed original with your trust documents and upload a copy to your EstateVault account.
+```
+
+**Why it was written:** Part 2 supplies the certification's legal text but no instruction sheet. The sheet was written by the development team, drawing on the Funding Instructions' own description of the certification.
+
+**Decision:** ☐ approved as written ☐ replace with attorney wording
+
+---
+
+### Assignment of Personal Property — instruction sheet
+
+**Where:** Opening paragraph, Section A — Signing It, Section B — Filing It  
+
+**Source file:** `lib/documents/templates/assignment-personal-property-michigan-v1.0.0.txt`
+
+**Text:**
+
+```text
+This Assignment moves your tangible personal property — the things you own that are not titled, such as furniture, jewellery, artwork, books and household goods — into your trust in one step, without listing each item.
+
+Sign and date the assignment in front of a notary public, and have the notary complete the notary section.
+
+Because your trust has two Grantors, each of you receives a separate assignment covering your own personal property. Both must be signed for the trust to hold all of the household's tangible property.
+
+File a copy of the signed assignment in the Trust Assets section of your Vault, and keep the signed original with your trust documents.
+```
+
+**Why it was written:** Part 2 supplies the assignment's legal text but no instruction sheet. Written by the development team. The joint-trust paragraph explains the two-assignment structure confirmed by the attorney, in the team's own words.
+
+**Decision:** ☐ approved as written ☐ replace with attorney wording
+
+---
+
+### Trust Funding Instructions
+
+**Where:** Section headings and lettered section structure  
+
+**Source file:** `lib/documents/templates/trust-funding-instructions-v1.0.0.txt`
+
+**Text:**
+
+```text
+Section A — Cash Accounts, Section B — Investment Accounts, ... Section P — Reviewing Your Estate Plan
+```
+
+**Why it was written:** The body text is Part 2's UPL-rewritten text verbatim. What the development team added is structure only: the source's bold sub-headings were turned into lettered instruction-sheet sections so the document renders through the platform's heading system. No sentence of the source text was altered. Flagged so the attorney can confirm the re-sectioning does not change meaning.
 
 **Decision:** ☐ approved as written ☐ replace with attorney wording
 

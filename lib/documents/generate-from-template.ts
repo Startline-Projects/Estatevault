@@ -24,6 +24,30 @@ export class TemplateBlockedError extends Error {
   }
 }
 
+/**
+ * Fills in whose property a given Assignment of Personal Property transfers.
+ *
+ * A joint trust produces one assignment per Grantor, each covering only that
+ * Grantor's own property, so the assignor and the trustee line both change.
+ */
+function withAssignor(
+  data: ReturnType<typeof mapIntakeToTemplateData>["data"] & object,
+  isSecondGrantor: boolean,
+) {
+  const first = [data.first_name, data.middle_name, data.last_name].filter(Boolean).join(" ").trim();
+  const assignor = isSecondGrantor ? data.grantor_2_full_name : first;
+  const trusteeLine = data.is_joint_trust && data.grantor_2_full_name
+    ? `${first} and ${data.grantor_2_full_name}, Trustees of the ${data.trust_name || ""} dated`
+    : `${first}, Trustee of the ${data.trust_name || ""} dated`;
+  return {
+    ...data,
+    assignor_full_name: assignor,
+    assignor_city: data.city,
+    assignor_state: "Michigan",
+    assignment_trustee_line: trusteeLine,
+  };
+}
+
 export interface TemplateRenderResult {
   pdfBuffer: Buffer;
   documentText: string;
@@ -70,7 +94,13 @@ export async function tryTemplateRender(
     console.warn(`[PDF_RENDERER] Intake adapter validation failed for ${docType}, falling back to Claude path:`, adapted.error);
     return null;
   }
-  const templateData = adapted.data;
+  let templateData = adapted.data;
+
+  // The two joint-trust assignments render from one template. Which Grantor is
+  // assigning is decided here rather than duplicating the legal text.
+  if (templateDocType === "assignment_personal_property_g1" || templateDocType === "assignment_personal_property_g2") {
+    templateData = withAssignor(templateData, templateDocType === "assignment_personal_property_g2");
+  }
 
   // The lenient schema cannot fail; these are the requirements that actually
   // determine whether the rendered document would be correct.
