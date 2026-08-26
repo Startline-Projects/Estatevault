@@ -23,8 +23,8 @@ file is rendered.
 
 | | |
 |---|---|
-| Entries awaiting review | 56 |
-| Generated | Prompt 7, backfilled across Prompts 1–7 |
+| Entries awaiting review | 60 |
+| Generated | Prompt 8, backfilled across Prompts 1–8 |
 | Reviewing attorney | Mo Murshed |
 | Also pending | Drake (UPL review), Mike (legal sign-off) — see the compliance checklist |
 | Related | `PROMPT6_REGENERATION.md` — schema proposal, not a review item |
@@ -1258,6 +1258,95 @@ Section A — Cash Accounts, Section B — Investment Accounts, ... Section P �
 ```
 
 **Why it was written:** The body text is Part 2's UPL-rewritten text verbatim. What the development team added is structure only: the source's bold sub-headings were turned into lettered instruction-sheet sections so the document renders through the platform's heading system. No sentence of the source text was altered. Flagged so the attorney can confirm the re-sectioning does not change meaning.
+
+**Decision:** ☐ approved as written ☐ replace with attorney wording
+
+---
+
+## Prompt 8 — per-beneficiary contingency
+
+### Last Will and Testament, Revocable Living Trust, Pour-Over Will — operative document body
+
+**Where:** Residuary / Distribution / Section 3.3 — the three per-beneficiary contingency clauses  
+
+**Source file:** `lib/documents/templates/{will,trust,pour-over-will}-michigan-v1.1.0.txt`
+
+**Text:**
+
+```text
+If {{full_name}} does not survive me by thirty (30) days, this share shall pass to the then-living descendants of {{full_name}}, per stirpes. If {{full_name}} leaves no then-living descendants, this share shall be distributed equally among the other beneficiaries named in this Section who survive me by thirty (30) days.
+
+If {{full_name}} does not survive me by thirty (30) days, this share shall be distributed equally among the other beneficiaries named in this Section who survive me by thirty (30) days.
+
+If {{full_name}} does not survive me by thirty (30) days, this share shall pass to {{contingent_full_name}}. If {{contingent_full_name}} also does not survive me by thirty (30) days, this share shall be distributed equally among the other beneficiaries named in this Section who survive me by thirty (30) days.
+```
+
+**Why it was written:** Operative dispositive language, written by the development team. The attorney's note gives the three OPTIONS the client chooses between but no clause wording for any of them. Two drafting decisions need confirming: (a) the descendants option falls back to the other beneficiaries when there are no descendants, which the note specifies, but the fallback is phrased as "equally" where the previous template said "proportionally"; (b) the named-individual option adds a second-level fallback if that person also predeceases, which the note does not mention — without it the share could lapse with no taker.
+
+**Decision:** ☐ approved as written ☐ replace with attorney wording
+
+---
+
+### Last Will and Testament, Revocable Living Trust — operative document body
+
+**Where:** Final Disposition clause, rephrased after the global contingent section was removed  
+
+**Source file:** `lib/documents/templates/{will,trust}-michigan-v1.1.0.txt`
+
+**Text:**
+
+```text
+If none of the beneficiaries named in Section [X], and no person named to take a share under that Section, survives me by thirty (30) days, [my residuary estate / the Trust estate] shall be distributed to my heirs at law, as determined under the laws of the State of Michigan governing intestate succession, in effect at the time of my passing.
+```
+
+**Why it was written:** Removing the global contingent-beneficiary section left the final-disposition clause referring to a section that no longer exists. It was rephrased to cover both the named beneficiaries and anyone named to take a share under the new per-beneficiary contingencies. Written by the development team.
+
+**Decision:** ☐ approved as written ☐ replace with attorney wording
+
+---
+
+### Questionnaire — beneficiaries step (will flow and trust flow)
+
+**Where:** components/intake/BeneficiaryContingency.tsx — the question, the three options and their descriptions  
+
+**Source file:** `components/intake/BeneficiaryContingency.tsx`
+
+**Text:**
+
+```text
+If [beneficiary name] passes away before you, what happens to their share?
+
+To the other named beneficiaries equally
+Their share is divided equally among the other people you named above.
+
+To their descendants equally, if any
+Their children take their share. If they have none, it goes to the other people you named above.
+
+To someone else I name
+Their share goes to one person you choose, who does not have to be named above.
+
+Who should receive [beneficiary name]'s share?
+```
+
+**Why it was written:** The attorney's note gives the three options in shorthand; the labels, the plain-language descriptions and the follow-up name question are the development team's wording, marked PENDING ATTORNEY APPROVAL in the code. Note one behaviour worth confirming: with a single beneficiary the "other named beneficiaries" option is hidden, because there are no others.
+
+**Decision:** ☐ approved as written ☐ replace with attorney wording
+
+---
+
+### Questionnaire — beneficiaries step
+
+**Where:** Migration notice shown to a client whose saved session named several contingent beneficiaries  
+
+**Source file:** `lib/intake/contingency-migration.ts`
+
+**Text:**
+
+```text
+You previously named [names] as contingent beneficiaries. That answer applied to your whole estate; this question is now asked for each beneficiary separately, so please choose again below.
+```
+
+**Why it was written:** Written by the development team. A session saved under the old global question can name several contingents, which cannot be expressed as one per-beneficiary answer. Rather than discard the answer or guess at a mapping, the previous answer is shown back to the client and they choose again.
 
 **Decision:** ☐ approved as written ☐ replace with attorney wording
 

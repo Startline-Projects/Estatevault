@@ -178,37 +178,29 @@ I give, devise, and bequeath all the rest, residue, and remainder of my estate, 
 
   •  {{share_percent}}% to {{full_name}}, my {{relationship}}.
 
-{{#IF per_stirpes equals true}}
+{{#IF contingency equals "descendants"}}
 
-        If {{full_name}} does not survive me by thirty (30) days, this share shall pass to the then-living descendants of {{full_name}}, per stirpes.
+        If {{full_name}} does not survive me by thirty (30) days, this share shall pass to the then-living descendants of {{full_name}}, per stirpes. If {{full_name}} leaves no then-living descendants, this share shall be distributed equally among the other beneficiaries named in this Section who survive me by thirty (30) days.
 
 {{/IF}}
 
-{{#IF per_stirpes equals false}}
+{{#IF contingency equals "other_beneficiaries"}}
 
-        If {{full_name}} does not survive me by thirty (30) days, this share shall be distributed proportionally among the other primary beneficiaries named in this Section.
+        If {{full_name}} does not survive me by thirty (30) days, this share shall be distributed equally among the other beneficiaries named in this Section who survive me by thirty (30) days.
+
+{{/IF}}
+
+{{#IF contingency equals "named_individual"}}
+
+        If {{full_name}} does not survive me by thirty (30) days, this share shall pass to {{contingent_full_name}}. If {{contingent_full_name}} also does not survive me by thirty (30) days, this share shall be distributed equally among the other beneficiaries named in this Section who survive me by thirty (30) days.
 
 {{/IF}}
 
 {{/FOREACH}}
-
-### Section [[SECTION:residuary.s2]] — Contingent Beneficiaries.
-
-{{#IF contingent_beneficiaries_not_empty}}
-
-If all of the primary beneficiaries named in Section [[REF:residuary.s1]] fail to survive me by thirty (30) days, I give, devise, and bequeath my residuary estate to the following contingent beneficiaries in the shares indicated:
-
-{{#FOREACH contingent_beneficiaries}}
-
-  •  {{share_percent}}% to {{full_name}}, my {{relationship}}.
-
-{{/FOREACH}}
-
-{{/IF}}
 
 ### Section [[SECTION:residuary.s3]] — Final Disposition.
 
-If all of the primary beneficiaries named in Section [[REF:residuary.s1]], and all of the contingent beneficiaries named in Section [[REF:residuary.s2]] (if any), fail to survive me by thirty (30) days, my residuary estate shall pass to my heirs at law, as determined under the laws of the State of Michigan governing intestate succession, in effect at the time of my death.
+If none of the beneficiaries named in Section [[REF:residuary.s1]], and no person named to take a share under that Section, survives me by thirty (30) days, my residuary estate shall pass to my heirs at law, as determined under the laws of the State of Michigan governing intestate succession, in effect at the time of my death.
 
 ### Section [[SECTION:residuary.s4]] — Survivorship Requirement.
 

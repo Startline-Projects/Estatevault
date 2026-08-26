@@ -30,8 +30,8 @@ function answers(overrides: Record<string, unknown> = {}) {
     successorTrusteeName: "Raga Hassan",
     successorTrusteeRelationship: "Spouse/Partner",
     beneficiaries: [
-      { name: "Ahmed Junior", relationship: "Child", share: "" },
-      { name: "Raga Hassan", relationship: "Spouse", share: "" },
+      { name: "Ahmed Junior", relationship: "Child", share: "", contingency: "other_beneficiaries" },
+      { name: "Raga Hassan", relationship: "Spouse", share: "", contingency: "other_beneficiaries" },
     ],
     beneficiariesEqualShares: "Yes",
     ...overrides,
@@ -74,8 +74,8 @@ describe("1. Section 3.3 names the actual trust beneficiaries", () => {
   it("carries custom percentages through unchanged", () => {
     const clause = section33(render({
       beneficiaries: [
-        { name: "Ahmed Junior", relationship: "Child", share: "70" },
-        { name: "Raga Hassan", relationship: "Spouse", share: "30" },
+        { name: "Ahmed Junior", relationship: "Child", share: "70", contingency: "other_beneficiaries" },
+        { name: "Raga Hassan", relationship: "Spouse", share: "30", contingency: "other_beneficiaries" },
       ],
       beneficiariesEqualShares: "No",
     }));
@@ -86,9 +86,9 @@ describe("1. Section 3.3 names the actual trust beneficiaries", () => {
   it("uses a largest-remainder split that totals 100 for three beneficiaries", () => {
     const clause = section33(render({
       beneficiaries: [
-        { name: "A One", relationship: "Child", share: "" },
-        { name: "B Two", relationship: "Child", share: "" },
-        { name: "C Three", relationship: "Child", share: "" },
+        { name: "A One", relationship: "Child", share: "", contingency: "other_beneficiaries" },
+        { name: "B Two", relationship: "Child", share: "", contingency: "other_beneficiaries" },
+        { name: "C Three", relationship: "Child", share: "", contingency: "other_beneficiaries" },
       ],
       beneficiariesEqualShares: "Yes",
     }));
@@ -100,7 +100,7 @@ describe("1. Section 3.3 names the actual trust beneficiaries", () => {
   it("includes no contingent beneficiaries", () => {
     const clause = section33(render({
       hasContingentBeneficiary: "Yes",
-      contingentBeneficiaries: [{ name: "Nadia Hassan", relationship: "Sibling", share: "100" }],
+      contingentBeneficiaries: [{ name: "Nadia Hassan", relationship: "Sibling", share: "100", contingency: "other_beneficiaries" }],
       contingentEqualShares: "Yes",
     }));
     expect(clause).not.toContain("Nadia Hassan");

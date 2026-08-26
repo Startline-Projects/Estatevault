@@ -16,6 +16,7 @@ import DateOfBirthInput from "@/components/intake/DateOfBirthInput";
 import NameInput from "@/components/quiz/NameInput";
 import QuestionLabel from "@/components/quiz/QuestionLabel";
 import { findResumePoint } from "@/lib/intake/incomplete-steps";
+import { BeneficiaryContingency, contingenciesComplete, CONTINGENCY_OPTIONS } from "@/components/intake/BeneficiaryContingency";
 import {
   PoaStep,
   PadStep,
@@ -178,7 +179,6 @@ export default function TrustPage() {
       case "beneficiaries": {
         if (intake.beneficiaries.length === 0) return false;
         if (intake.beneficiaries.some((b) => !b.name.trim() || !b.relationship)) return false;
-        if (intake.hasContingentBeneficiary === "") return false;
         if (intake.beneficiaries.length > 1) {
           if (!intake.beneficiariesEqualShares) return false;
           if (intake.beneficiariesEqualShares === "No") {
@@ -187,17 +187,6 @@ export default function TrustPage() {
             if (Math.round(t) !== 100) return false;
           }
         }
-        if (intake.hasContingentBeneficiary === "Yes" && (intake.contingentBeneficiaries.length === 0 || intake.contingentBeneficiaries.some((b) => !b.name.trim() || !b.relationship))) return false;
-        if (intake.hasContingentBeneficiary === "Yes" && intake.contingentBeneficiaries.length > 1) {
-          if (!intake.contingentEqualShares) return false;
-          if (intake.contingentEqualShares === "No") {
-            if (intake.contingentBeneficiaries.some((b) => !b.share?.trim())) return false;
-            const shareTotal = intake.contingentBeneficiaries.reduce((sum, b) => sum + (parseFloat(b.share) || 0), 0);
-            if (Math.round(shareTotal) !== 100) return false;
-          }
-        }
-        if (hasMinorChildren && !intake.distributionAge) return false;
-        if (hasMinorChildren && parseInt(intake.distributionAge, 10) < 18) return false;
         return true;
       }
       case "guardian":
@@ -559,57 +548,6 @@ export default function TrustPage() {
                 </div>
               );
             })()}
-            {/* Contingent beneficiary */}
-            <div className="mt-5">
-              <QuestionLabel>Add a contingent beneficiary?</QuestionLabel>
-              <p className="mb-3 text-xs text-charcoal/50">A contingent beneficiary inherits only if your primary beneficiary cannot. Example: your children inherit if your spouse passes before you.</p>
-              <YesNoTiles value={intake.hasContingentBeneficiary} onChange={(v) => { update({ hasContingentBeneficiary: v }); if (v === "Yes" && intake.contingentBeneficiaries.length === 0) update({ contingentBeneficiaries: [{ name: "", relationship: "", share: "" }] }); if (v === "No") update({ contingentBeneficiaries: [], contingentEqualShares: "" }); }} />
-            </div>
-            {intake.hasContingentBeneficiary === "Yes" && (
-              <>
-                {intake.contingentBeneficiaries.map((cb, idx) => (
-                  <div key={idx} className="mt-5 rounded-lg bg-gray-50 p-4">
-                    <QuestionLabel required>{idx === 0 ? "Contingent beneficiary name" : `Contingent beneficiary ${idx + 1} name`}</QuestionLabel>
-                    <NameInput value={cb.name} onChange={(v) => { const u = [...intake.contingentBeneficiaries]; u[idx] = { ...u[idx], name: v }; update({ contingentBeneficiaries: u }); }} />
-                    <div className="mt-3"><QuestionLabel>Relationship</QuestionLabel>
-                      <div className="grid grid-cols-2 gap-2">{["Child", "Parent", "Sibling", "Friend", "Charity/Organization", "Other"].map((opt) => (<ChoiceTile key={opt} label={opt} selected={cb.relationship === opt} onClick={() => { const u = [...intake.contingentBeneficiaries]; u[idx] = { ...u[idx], relationship: opt }; update({ contingentBeneficiaries: u }); }} />))}</div>
-                    </div>
-                  </div>
-                ))}
-                {intake.contingentBeneficiaries.length < 3 && (
-                  <button type="button" onClick={() => update({ contingentBeneficiaries: [...intake.contingentBeneficiaries, { name: "", relationship: "", share: "" }] })} className="mt-3 text-sm text-gold font-medium hover:text-gold/80">+ Add another contingent beneficiary</button>
-                )}
-                {intake.contingentBeneficiaries.length > 1 && (
-                  <div className="mt-5">
-                    <QuestionLabel>Should these beneficiaries receive equal shares?</QuestionLabel>
-                    <YesNoTiles value={intake.contingentEqualShares} onChange={(v) => { update({ contingentEqualShares: v, contingentBeneficiaries: intake.contingentBeneficiaries.map((b) => ({ ...b, share: "" })) }); }} />
-                    {intake.contingentEqualShares === "No" && (() => {
-                      const total = intake.contingentBeneficiaries.reduce((sum, b) => sum + (parseFloat(b.share) || 0), 0);
-                      const rounded = Math.round(total);
-                      return (
-                        <div className="mt-3 space-y-2">
-                          {intake.contingentBeneficiaries.map((cb, idx) => (
-                            <div key={idx} className="flex items-center gap-3 rounded-xl border-2 border-gray-200 bg-white px-4 py-3">
-                              <span className="flex-1 truncate text-sm font-medium text-navy">{cb.name || `Beneficiary ${idx + 1}`}</span>
-                              <div className="flex items-center gap-1.5">
-                                <input type="number" min={0} max={100} value={cb.share}
-                                  onChange={(e) => { const u = [...intake.contingentBeneficiaries]; u[idx] = { ...u[idx], share: e.target.value }; update({ contingentBeneficiaries: u }); }}
-                                  className="w-16 rounded-lg border-2 border-gray-200 px-2 py-1.5 text-center text-sm font-medium focus:border-gold focus:outline-none transition-colors"
-                                  placeholder="0" />
-                                <span className="text-sm text-charcoal/50">%</span>
-                              </div>
-                            </div>
-                          ))}
-                          <p className={`text-sm font-medium ${rounded === 100 ? "text-green-600" : "text-red-500"}`}>
-                            Total: {total % 1 === 0 ? total : total.toFixed(1)}%{rounded === 100 ? ", all set" : ", must equal 100%"}
-                          </p>
-                        </div>
-                      );
-                    })()}
-                  </div>
-                )}
-              </>
-            )}
           </>
         );
 
@@ -750,16 +688,13 @@ export default function TrustPage() {
               ? "Custom split"
               : "Equal shares"
             : "Sole beneficiary";
-        const contingentSummary =
-          intake.hasContingentBeneficiary === "Yes" && intake.contingentBeneficiaries.length > 0
-            ? intake.contingentBeneficiaries
-                .map((b) =>
-                  intake.contingentEqualShares === "No" && b.share
-                    ? `${b.name} (${b.relationship}) — ${b.share}%`
-                    : `${b.name} (${b.relationship})`
-                )
-                .join(", ")
-            : "None designated";
+        const contingencyLabel = (b: { contingency?: string; contingentName?: string }) => {
+          const opt = CONTINGENCY_OPTIONS.find((o) => o.value === b.contingency);
+          if (!opt) return "Not answered";
+          return b.contingency === "named_individual"
+            ? `${opt.label}: ${b.contingentName || "(not named)"}`
+            : opt.label;
+        };
         const allOpen = Object.values(openReviewSections).every(Boolean);
         const setAll = (val: boolean) =>
           setOpenReviewSections((s) => Object.fromEntries(Object.keys(s).map((k) => [k, val])) as Record<string, boolean>);
@@ -810,13 +745,13 @@ export default function TrustPage() {
                         ? ` · ${b.share}%`
                         : ""}
                     </p>
+                    <p className="mt-1 text-xs text-charcoal/50">If they pass first: {contingencyLabel(b)}</p>
                   </div>
                 ))}
               </div>
               {hasMinorChildren && intake.distributionAge && (
                 <Row label="Distribution age" value={intake.distributionAge} />
               )}
-              <Row label="Contingent" value={contingentSummary} />
             </Section>
 
             {hasMinorChildren && (

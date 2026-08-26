@@ -336,8 +336,8 @@ describe("parser: end-to-end on real template", () => {
       successor_personal_representative: { full_name: "Sue Doe", relationship: "Sister", city: "Lansing", state: "Michigan" },
       second_successor_personal_representative: null,
       primary_beneficiaries: [
-        { full_name: "Alice Public", relationship: "daughter", share_percent: "50", per_stirpes: true },
-        { full_name: "Bob Public", relationship: "son", share_percent: "50", per_stirpes: true },
+        { full_name: "Alice Public", relationship: "daughter", share_percent: "50", per_stirpes: true, contingency: "descendants", contingent_full_name: "" },
+        { full_name: "Bob Public", relationship: "son", share_percent: "50", per_stirpes: true, contingency: "descendants", contingent_full_name: "" },
       ],
       guardian: { full_name: "Carol Adams", relationship: "Aunt", city: "Grand Rapids", state: "Michigan", phone: "(616) 555-3434" },
       successor_guardian: { full_name: "Dan Adams", relationship: "Uncle" },

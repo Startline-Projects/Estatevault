@@ -23,7 +23,7 @@ const VALID_WILL_INTAKE = {
   executorRelationship: "Spouse/Partner" as const,
   successorExecutorName: "",
   successorExecutorRelationship: "",
-  beneficiaries: [{ name: "Jane Doe", relationship: "Spouse/Partner" as const, share: "100" }],
+  beneficiaries: [{ name: "Jane Doe", relationship: "Spouse/Partner" as const, share: "100", contingency: "other_beneficiaries" as const }],
   beneficiariesEqualShares: "Yes" as const,
   guardianName: "",
   guardianRelationship: "",
@@ -62,7 +62,7 @@ const VALID_TRUST_INTAKE = {
   successorTrusteeName: "Jane Doe",
   successorTrusteeRelationship: "Spouse/Partner" as const,
   additionalSuccessorTrustees: [],
-  beneficiaries: [{ name: "Jane Doe", relationship: "Spouse/Partner" as const, share: "100" }],
+  beneficiaries: [{ name: "Jane Doe", relationship: "Spouse/Partner" as const, share: "100", contingency: "other_beneficiaries" as const }],
   beneficiariesEqualShares: "Yes" as const,
   distributionAge: "",
   hasMinorChildren: "No" as const,
@@ -120,7 +120,7 @@ describe("willCheckoutSchema", () => {
     // beneficiariesEqualShares "". That must validate — the one beneficiary gets 100%.
     expect(willCheckoutSchema.safeParse({ intakeAnswers: {
       ...VALID_WILL_INTAKE,
-      beneficiaries: [{ name: "Jane Doe", relationship: "Spouse/Partner" as const, share: "" }],
+      beneficiaries: [{ name: "Jane Doe", relationship: "Spouse/Partner" as const, share: "", contingency: "other_beneficiaries" as const }],
       beneficiariesEqualShares: "",
     } }).success).toBe(true);
   });
@@ -128,8 +128,8 @@ describe("willCheckoutSchema", () => {
     expect(willCheckoutSchema.safeParse({ intakeAnswers: {
       ...VALID_WILL_INTAKE,
       beneficiaries: [
-        { name: "A", relationship: "Child" as const, share: "60" },
-        { name: "B", relationship: "Child" as const, share: "30" },
+        { name: "A", relationship: "Child" as const, share: "60", contingency: "other_beneficiaries" as const },
+        { name: "B", relationship: "Child" as const, share: "30", contingency: "other_beneficiaries" as const },
       ],
       beneficiariesEqualShares: "No",
     } }).success).toBe(false);
@@ -160,7 +160,7 @@ describe("trustCheckoutSchema", () => {
   it("accepts a single beneficiary with blank share and blank equal-shares flag (implicit 100%)", () => {
     expect(trustCheckoutSchema.safeParse({ intakeAnswers: {
       ...VALID_TRUST_INTAKE,
-      beneficiaries: [{ name: "Jane Doe", relationship: "Spouse/Partner" as const, share: "" }],
+      beneficiaries: [{ name: "Jane Doe", relationship: "Spouse/Partner" as const, share: "", contingency: "other_beneficiaries" as const }],
       beneficiariesEqualShares: "",
     } }).success).toBe(true);
   });

@@ -32,8 +32,8 @@ function trustQuizAnswers(overrides: Record<string, unknown> = {}): Record<strin
     successorTrusteeRelationship: "Spouse",
     additionalSuccessorTrustees: [{ name: "Karim Hassan", relationship: "Sibling" }],
     beneficiaries: [
-      { name: "Layla Hassan", relationship: "Child", share: "" },
-      { name: "Omar Hassan", relationship: "Child", share: "" },
+      { name: "Layla Hassan", relationship: "Child", share: "", contingency: "other_beneficiaries" },
+      { name: "Omar Hassan", relationship: "Child", share: "", contingency: "other_beneficiaries" },
     ],
     beneficiariesEqualShares: "Yes",
     distributionAge: "25",
@@ -179,7 +179,13 @@ describe("pre-array beneficiary intakes still produce a residuary", () => {
       primaryBeneficiaryName: "Bo Lee", primaryBeneficiaryRelationship: "Spouse",
     });
     expect(d.primary_beneficiaries).toEqual([
-      { full_name: "Bo Lee", relationship: "Spouse", share_percent: "100", per_stirpes: false },
+      {
+        full_name: "Bo Lee", relationship: "Spouse", share_percent: "100",
+        per_stirpes: false,
+        // A pre-array session predates the contingency question, so it is left
+        // unanswered and strict validation asks for it.
+        contingency: "", contingent_full_name: "",
+      },
     ]);
   });
 
@@ -204,7 +210,7 @@ describe("pre-array beneficiary intakes still produce a residuary", () => {
     const d = adapt({
       firstName: "Ann", lastName: "Lee",
       primaryBeneficiaryName: "Legacy Person",
-      beneficiaries: [{ name: "Array Person", relationship: "Child", share: "100" }],
+      beneficiaries: [{ name: "Array Person", relationship: "Child", share: "100", contingency: "other_beneficiaries" }],
       beneficiariesEqualShares: "No",
     });
     expect(d.primary_beneficiaries).toHaveLength(1);
@@ -267,7 +273,7 @@ describe("a sole beneficiary means 100%, not an unanswered share", () => {
   const soleBeneficiary = {
     firstName: "Ahmed", lastName: "Hassan",
     executorName: "Raga Hassan", executorRelationship: "Spouse/Partner",
-    beneficiaries: [{ name: "Layla Hassan", relationship: "Child", share: "" }],
+    beneficiaries: [{ name: "Layla Hassan", relationship: "Child", share: "", contingency: "other_beneficiaries" }],
     beneficiariesEqualShares: "",
   };
 
@@ -285,8 +291,8 @@ describe("a sole beneficiary means 100%, not an unanswered share", () => {
     const d = adapt({
       ...soleBeneficiary,
       beneficiaries: [
-        { name: "A", relationship: "Child", share: "" },
-        { name: "B", relationship: "Child", share: "" },
+        { name: "A", relationship: "Child", share: "", contingency: "other_beneficiaries" },
+        { name: "B", relationship: "Child", share: "", contingency: "other_beneficiaries" },
       ],
       beneficiariesEqualShares: "",
     });
@@ -298,7 +304,7 @@ describe("a sole beneficiary means 100%, not an unanswered share", () => {
   it("still honours an explicit share on a lone beneficiary", () => {
     const d = adapt({
       ...soleBeneficiary,
-      beneficiaries: [{ name: "Layla Hassan", relationship: "Child", share: "100" }],
+      beneficiaries: [{ name: "Layla Hassan", relationship: "Child", share: "100", contingency: "other_beneficiaries" }],
     });
     expect(d.primary_beneficiaries[0].share_percent).toBe("100");
   });

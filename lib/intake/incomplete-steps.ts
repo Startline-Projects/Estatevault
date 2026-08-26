@@ -31,6 +31,22 @@ function nonEmptyString(field: string) {
   };
 }
 
+/**
+ * Every listed beneficiary must carry a contingency answer. Added by the
+ * per-beneficiary contingency change: sessions saved before it have
+ * beneficiaries with no answer, and a global yes/no that no longer applies.
+ */
+function everyBeneficiaryHasContingency(intake: Record<string, unknown>): boolean {
+  const list = Array.isArray(intake.beneficiaries) ? intake.beneficiaries : [];
+  if (list.length === 0) return true; // the missing-beneficiary case is Zod's
+  return list.every((b: { name?: string; contingency?: string; contingentName?: string }) => {
+    if (!b?.name?.trim()) return true;
+    if (!b.contingency) return false;
+    if (b.contingency === "named_individual") return Boolean(b.contingentName?.trim());
+    return true;
+  });
+}
+
 function nonEmptyArray(field: string) {
   return (intake: Record<string, unknown>) =>
     Array.isArray(intake[field]) && (intake[field] as unknown[]).length > 0;
@@ -42,6 +58,10 @@ function nonEmptyArray(field: string) {
  * Only fields a pre-existing session can legitimately be missing belong here.
  * Fields that were always collected stay with Zod as before.
  */
+const BENEFICIARY_REQUIREMENTS: FieldRequirement[] = [
+  { field: "beneficiaries[].contingency", step: "beneficiaries", isAnswered: everyBeneficiaryHasContingency },
+];
+
 const POA_REQUIREMENTS: FieldRequirement[] = [
   { field: "poaAgentName", step: "poa", isAnswered: nonEmptyString("poaAgentName") },
   { field: "poaAgentRelationship", step: "poa", isAnswered: nonEmptyString("poaAgentRelationship") },
@@ -57,9 +77,11 @@ const PAD_REQUIREMENTS: FieldRequirement[] = [
   { field: "organDonation", step: "healthcare", isAnswered: nonEmptyString("organDonation") },
 ];
 
+// Ordered by where the steps appear, so a client walks forward through
+// everything that is missing rather than being bounced backwards.
 export const FLOW_REQUIREMENTS: Record<IntakeFlow, FieldRequirement[]> = {
-  will: [...POA_REQUIREMENTS, ...PAD_REQUIREMENTS],
-  trust: [...POA_REQUIREMENTS, ...PAD_REQUIREMENTS],
+  will: [...BENEFICIARY_REQUIREMENTS, ...POA_REQUIREMENTS, ...PAD_REQUIREMENTS],
+  trust: [...BENEFICIARY_REQUIREMENTS, ...POA_REQUIREMENTS, ...PAD_REQUIREMENTS],
 };
 
 export interface ResumePoint {

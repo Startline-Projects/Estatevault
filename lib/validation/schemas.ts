@@ -161,7 +161,14 @@ const beneficiarySchema = z.object({
   name: z.string().min(1).max(200),
   relationship: BENEFICIARY_REL,
   share: shareString,
-});
+  // What happens to THIS beneficiary's share. Values map 1:1 to the
+  // {{#IF contingency ...}} branches in the will, trust and pour-over templates.
+  contingency: z.enum(["other_beneficiaries", "descendants", "named_individual"]),
+  contingentName: z.string().max(200).optional().default(""),
+}).refine(
+  (b) => b.contingency !== "named_individual" || (b.contingentName ?? "").trim().length > 0,
+  { message: "Name the person who takes this beneficiary's share", path: ["contingentName"] },
+);
 
 const contingentBeneficiarySchema = z.object({
   name: z.string().min(1).max(200),

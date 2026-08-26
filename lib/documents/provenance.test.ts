@@ -19,8 +19,8 @@ function trustAnswers(overrides: Record<string, unknown> = {}) {
     executorName: "Raga Hassan", executorRelationship: "Spouse/Partner",
     successorTrusteeName: "Raga Hassan", successorTrusteeRelationship: "Spouse/Partner",
     beneficiaries: [
-      { name: "Ahmed Junior", relationship: "Child", share: "" },
-      { name: "Raga Hassan", relationship: "Spouse", share: "" },
+      { name: "Ahmed Junior", relationship: "Child", share: "", contingency: "other_beneficiaries" },
+      { name: "Raga Hassan", relationship: "Spouse", share: "", contingency: "other_beneficiaries" },
     ],
     beneficiariesEqualShares: "Yes",
     ...overrides,
@@ -72,8 +72,8 @@ describe("fingerprint is recorded only where content is intake-coupled", () => {
     const sameAgain = (await tryTemplateRender("pour_over_will", trustAnswers()))!.sourceFingerprint;
     const editedShares = (await tryTemplateRender("pour_over_will", trustAnswers({
       beneficiaries: [
-        { name: "Ahmed Junior", relationship: "Child", share: "70" },
-        { name: "Raga Hassan", relationship: "Spouse", share: "30" },
+        { name: "Ahmed Junior", relationship: "Child", share: "70", contingency: "other_beneficiaries" },
+        { name: "Raga Hassan", relationship: "Spouse", share: "30", contingency: "other_beneficiaries" },
       ],
       beneficiariesEqualShares: "No",
     })))!.sourceFingerprint;

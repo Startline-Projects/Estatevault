@@ -20,7 +20,7 @@ function incompleteIntake(): Record<string, unknown> {
     state: "Michigan",
     executorName: "Raga Hassan",
     executorRelationship: "Spouse",
-    beneficiaries: [{ name: "Layla Hassan", relationship: "Child", share: "" }],
+    beneficiaries: [{ name: "Layla Hassan", relationship: "Child", share: "", contingency: "other_beneficiaries" }],
     beneficiariesEqualShares: "Yes",
     poaAgentName: "",          // ← required for a DPOA
     poaPowers: [],             // ← required for a DPOA
@@ -35,7 +35,7 @@ function completeWillIntake(): Record<string, unknown> {
     state: "Michigan",
     executorName: "Raga Hassan",
     executorRelationship: "Spouse",
-    beneficiaries: [{ name: "Layla Hassan", relationship: "Child", share: "" }],
+    beneficiaries: [{ name: "Layla Hassan", relationship: "Child", share: "", contingency: "other_beneficiaries" }],
     beneficiariesEqualShares: "Yes",
     hasSpecificGifts: "No",
   };

@@ -69,7 +69,7 @@ function intake(overrides: Partial<TemplateWillIntake>): TemplateWillIntake {
     executorName: "Raga Hassan",
     executorRelationship: "Spouse/Partner",
     successorTrusteeName: "Raga Hassan",
-    beneficiaries: [{ name: "Layla Hassan", relationship: "Child", share: "" }],
+    beneficiaries: [{ name: "Layla Hassan", relationship: "Child", share: "", contingency: "other_beneficiaries" }],
     guardianName: "Karim Hassan",
   });
   return { ...r.data!, ...overrides } as TemplateWillIntake;

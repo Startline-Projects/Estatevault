@@ -83,8 +83,8 @@ function realisticIntake(overrides: Partial<WillIntake> = {}): WillIntake {
     second_successor_personal_representative: null,
 
     primary_beneficiaries: [
-      { full_name: "Alice Sample Smith", relationship: "daughter", share_percent: "50", per_stirpes: true },
-      { full_name: "Bob Sample Smith", relationship: "son", share_percent: "50", per_stirpes: true },
+      { full_name: "Alice Sample Smith", relationship: "daughter", share_percent: "50", per_stirpes: true, contingency: "descendants", contingent_full_name: "" },
+      { full_name: "Bob Sample Smith", relationship: "son", share_percent: "50", per_stirpes: true, contingency: "descendants", contingent_full_name: "" },
     ],
     contingent_beneficiaries: [
       { full_name: "Carol Adams", relationship: "sister", share_percent: "100" },

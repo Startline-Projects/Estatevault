@@ -27,8 +27,8 @@ function willFlowAnswers(): Record<string, unknown> {
     successorExecutorName: "Karim Hassan",
     successorExecutorRelationship: "Sibling",
     beneficiaries: [
-      { name: "Layla Hassan", relationship: "Child", share: "" },
-      { name: "Omar Hassan", relationship: "Child", share: "" },
+      { name: "Layla Hassan", relationship: "Child", share: "", contingency: "other_beneficiaries" },
+      { name: "Omar Hassan", relationship: "Child", share: "", contingency: "other_beneficiaries" },
     ],
     beneficiariesEqualShares: "Yes",
     hasContingentBeneficiary: "No",

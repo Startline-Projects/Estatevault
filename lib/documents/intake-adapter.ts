@@ -53,7 +53,16 @@ const lenientWillIntakeSchema = z.object({
     full_name: z.string().default(""),
     relationship: z.string().default(""),
     share_percent: z.string().default(""),
+    /** Retained for templates that still branch on it; derived from contingency. */
     per_stirpes: z.boolean().default(false),
+    /**
+     * What happens to THIS beneficiary's share if they do not survive:
+     * "other_beneficiaries" | "descendants" | "named_individual".
+     * Empty when unanswered — never defaulted, because it is dispositive.
+     */
+    contingency: z.string().default(""),
+    /** Only meaningful when contingency is "named_individual". */
+    contingent_full_name: z.string().default(""),
   })).default([]),
   contingent_beneficiaries: z.array(z.object({
     full_name: z.string().default(""),
@@ -277,8 +286,11 @@ function mapLegacyBeneficiaries(
   const primaryRel = str(raw.primaryBeneficiaryRelationship || raw.primary_beneficiary_relationship);
   const secondaryRel = str(raw.secondBeneficiaryRelationship || raw.secondary_beneficiary_relationship);
 
+  // A pre-array session predates the per-beneficiary contingency question, so
+  // the answer is left empty and strict validation asks for it.
+  const blank = { per_stirpes: false, contingency: "", contingent_full_name: "" };
   if (!secondary) {
-    return [{ full_name: primary, relationship: primaryRel, share_percent: "100", per_stirpes: false }];
+    return [{ full_name: primary, relationship: primaryRel, share_percent: "100", ...blank }];
   }
 
   const split = str(raw.estateSplit || raw.estate_split).trim();
@@ -291,8 +303,8 @@ function mapLegacyBeneficiaries(
   }
 
   return [
-    { full_name: primary, relationship: primaryRel, share_percent: shares[0], per_stirpes: false },
-    { full_name: secondary, relationship: secondaryRel, share_percent: shares[1], per_stirpes: false },
+    { full_name: primary, relationship: primaryRel, share_percent: shares[0], ...blank },
+    { full_name: secondary, relationship: secondaryRel, share_percent: shares[1], ...blank },
   ];
 }
 
@@ -314,12 +326,19 @@ function mapBeneficiariesToPrimary(
 ): Array<{ full_name: string; relationship: string; share_percent: string; per_stirpes: boolean }> {
   if (!Array.isArray(bens)) return [];
   const equalSplit = yesNo(equalShares) ? equalShareSplit(bens.length) : null;
-  return bens.map((b, i) => ({
-    full_name: str(b?.name || b?.full_name),
-    relationship: str(b?.relationship),
-    share_percent: equalSplit ? equalSplit[i] : soleOrStatedShare(bens.length, b),
-    per_stirpes: yesNo(b?.per_stirpes),
-  }));
+  return bens.map((b, i) => {
+    const contingency = str(b?.contingency ?? b?.contingency_choice).trim();
+    return {
+      full_name: str(b?.name || b?.full_name),
+      relationship: str(b?.relationship),
+      share_percent: equalSplit ? equalSplit[i] : soleOrStatedShare(bens.length, b),
+      // per_stirpes is now a consequence of the contingency answer rather than
+      // a separate question: "descendants" is what per stirpes means.
+      per_stirpes: contingency ? contingency === "descendants" : yesNo(b?.per_stirpes),
+      contingency,
+      contingent_full_name: str(b?.contingentName ?? b?.contingent_full_name).trim(),
+    };
+  });
 }
 
 function mapBeneficiariesToContingent(
@@ -667,8 +686,14 @@ function checkBeneficiaries(d: TemplateWillIntake, out: string[]) {
     return;
   }
   d.primary_beneficiaries.forEach((b, i) => {
+    const who = b.full_name.trim() || `primary beneficiary ${i + 1}`;
     if (!b.full_name.trim()) out.push(`primary beneficiary ${i + 1} name`);
     if (!b.share_percent.trim()) out.push(`primary beneficiary ${i + 1} share`);
+    if (!b.contingency.trim()) {
+      out.push(`what happens to ${who}'s share if they do not survive`);
+    } else if (b.contingency === "named_individual" && !b.contingent_full_name.trim()) {
+      out.push(`the person who takes ${who}'s share`);
+    }
   });
 }
 

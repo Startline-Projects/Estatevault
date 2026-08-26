@@ -25,7 +25,7 @@ function intake(overrides: Partial<TemplateWillIntake> = {}): TemplateWillIntake
     state: "Michigan",
     successorTrusteeName: "Raga Hassan",
     successorTrusteeRelationship: "Spouse/Partner",
-    beneficiaries: [{ name: "Layla Hassan", relationship: "Child", share: "" }],
+    beneficiaries: [{ name: "Layla Hassan", relationship: "Child", share: "", contingency: "other_beneficiaries" }],
   });
   expect(r.error).toBeNull();
   return { ...r.data!, ...overrides } as TemplateWillIntake;

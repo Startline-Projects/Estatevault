@@ -19,7 +19,7 @@ function preDeployWillSession(): Record<string, unknown> {
     maritalStatus: "Married",
     executorName: "Raga Hassan",
     executorRelationship: "Spouse/Partner",
-    beneficiaries: [{ name: "Layla Hassan", relationship: "Child", share: "100" }],
+    beneficiaries: [{ name: "Layla Hassan", relationship: "Child", share: "100", contingency: "descendants" }],
     beneficiariesEqualShares: "Yes",
     hasSpecificGifts: "No",
     organDonation: "Yes",
@@ -42,6 +42,18 @@ function completeSession(): Record<string, unknown> {
 }
 
 describe("a pre-deploy session is redirected, not failed", () => {
+  it("routes a session that predates the per-beneficiary contingency to the beneficiaries step first", () => {
+    const old = {
+      ...preDeployWillSession(),
+      beneficiaries: [{ name: "Layla Hassan", relationship: "Child", share: "100" }],
+      hasContingentBeneficiary: "No",
+    };
+    const resume = findResumePoint("will", old);
+    expect(resume).not.toBeNull();
+    expect(resume!.step).toBe("beneficiaries");
+    expect(resume!.missingFields).toContain("beneficiaries[].contingency");
+  });
+
   it("sends a will session missing the POA answers back to the poa step", () => {
     const resume = findResumePoint("will", preDeployWillSession());
     expect(resume).not.toBeNull();

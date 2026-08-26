@@ -80,9 +80,27 @@ If {{trust_name_display}} has been revoked, is otherwise invalid, or for any rea
 
   •  {{share_percent}}% to {{full_name}}, my {{relationship}}.
 
+{{#IF contingency equals "descendants"}}
+
+        If {{full_name}} does not survive me by thirty (30) days, this share shall pass to the then-living descendants of {{full_name}}, per stirpes. If {{full_name}} leaves no then-living descendants, this share shall be distributed equally among the other persons named in this Section who survive me by thirty (30) days.
+
+{{/IF}}
+
+{{#IF contingency equals "other_beneficiaries"}}
+
+        If {{full_name}} does not survive me by thirty (30) days, this share shall be distributed equally among the other persons named in this Section who survive me by thirty (30) days.
+
+{{/IF}}
+
+{{#IF contingency equals "named_individual"}}
+
+        If {{full_name}} does not survive me by thirty (30) days, this share shall pass to {{contingent_full_name}}. If {{contingent_full_name}} also does not survive me by thirty (30) days, this share shall be distributed equally among the other persons named in this Section who survive me by thirty (30) days.
+
+{{/IF}}
+
 {{/FOREACH}}
 
-If any person named in this Section does not survive me by thirty (30) days, that person's share shall be distributed proportionally among the other persons named in this Section who do survive me by thirty (30) days. If none of them survives me by thirty (30) days, my residuary estate shall pass to my heirs at law, as determined under the laws of the State of Michigan governing intestate succession, in effect at the time of my passing.
+If none of the persons named in this Section survives me by thirty (30) days, my residuary estate shall pass to my heirs at law, as determined under the laws of the State of Michigan governing intestate succession, in effect at the time of my passing.
 
 ## ARTICLE [[ARTICLE:pr]] — PERSONAL REPRESENTATIVE
 

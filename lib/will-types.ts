@@ -11,7 +11,12 @@ export interface WillIntake {
   executorRelationship: string;
   successorExecutorName: string;
   successorExecutorRelationship: string;
-  beneficiaries: Array<{ name: string; relationship: string; share: string }>;
+  /**
+   * Each beneficiary carries its own contingency: what happens to THAT share if
+   * they do not survive. `contingency` is empty until answered — never
+   * defaulted, because it is dispositive.
+   */
+  beneficiaries: Array<{ name: string; relationship: string; share: string; contingency?: string; contingentName?: string }>;
   beneficiariesEqualShares: string;
   guardianName: string;
   guardianRelationship: string;
