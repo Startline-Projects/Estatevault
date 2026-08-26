@@ -378,13 +378,11 @@ My commission expires: _
 
 [PAGE_BREAK]
 
-[[ARTICLE:instructions]]
-
 ## OPERATION OF THIS DOCUMENT
 
 This is your Revocable Living Trust under Michigan law (MCL 700.7101 et seq., the Estates and Protected Individuals Code). During your lifetime, you retain full control over the Trust and may amend, modify, or revoke it at any time while you have legal capacity to do so. Upon your passing, this Trust becomes irrevocable and the distribution provisions take effect.
 
-### Section [[SECTION:instructions.s1]] — Funding Your Trust
+### Section A — Funding Your Trust
 
 [BOLD_STATUTORY]
 Assets must be titled into the trust for the trust to work. We have included funding instructions to assist you.
@@ -394,11 +392,11 @@ A trust controls only what it owns. Until an asset is retitled into the name of 
 
 The Trust Funding Instructions included in your Trust Package walk through each type of asset — bank and investment accounts, real property, business interests, insurance and retirement accounts — and tell you what to file once each transfer is done.
 
-### Section [[SECTION:instructions.s2]] — Making This Document Effective
+### Section B — Making This Document Effective
 
 Sign and date the Trust in front of two witnesses and a notary public, and have the notary complete the notary section. Keep the signed original somewhere safe and upload a copy to your EstateVault account.
 
-### Section [[SECTION:instructions.s3]] — Changing or Revoking the Trust
+### Section C — Changing or Revoking the Trust
 
 While you have legal capacity you may amend or revoke this Trust at any time, in writing. An amendment can be prepared through your EstateVault account.
 `;

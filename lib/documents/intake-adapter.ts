@@ -671,6 +671,9 @@ export function validateForDocument(docType: string, d: TemplateWillIntake): str
     case "pour_over_will":
       person(d.personal_representative.full_name, "personal representative", out);
       person(d.successor_trustee.full_name, "successor trustee (named in the companion trust)", out);
+      // Section 3.3 lists the trust's primary beneficiaries by name and share.
+      // Without them the backup distribution clause would render empty.
+      checkBeneficiaries(d, out);
       break;
 
     case "dpoa":
