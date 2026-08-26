@@ -11,6 +11,9 @@ import { sendDocumentEmail, sendAttorneyReviewPendingEmail, buildAssetChecklist 
 import { wantsNotification } from "@/lib/notifications/prefs";
 import { getTemplate } from "@/lib/documents/templates/resolve";
 import { tryTemplateRender } from "@/lib/documents/generate-from-template";
+import { TemplateBlockedError } from "@/lib/documents/generate-from-template";
+import { markDocumentBlocked, countBlockedForOrder, alertAdminOrderBlocked, type BlockedDocument } from "@/lib/documents/blocked";
+
 import * as auditLogRepo from "@/lib/repos/server/auditLogRepo";
 import * as documentRepo from "@/lib/repos/server/documentRepo";
 
@@ -161,6 +164,7 @@ export const GET = withRoute(async (request: NextRequest) => {
     }
 
     let failedCount = 0;
+    const blocked: BlockedDocument[] = [];
     for (const docType of documentTypes) {
       try {
         await documentRepo.updateStatusByType(supabase, order.id, docType, "generating");
@@ -210,10 +214,28 @@ export const GET = withRoute(async (request: NextRequest) => {
         await uploadDocument(storageClientId, order.id, docType, pdfBuffer, docxBuffer);
         await documentRepo.updateStatusByType(supabase, order.id, docType, "generated");
       } catch (docError) {
+        // Strict mode: the intake cannot produce a correct document. Hold the
+        // order instead of delivering something with blank clauses.
+        if (docError instanceof TemplateBlockedError) {
+          await markDocumentBlocked(supabase, order.id, docType, docError.reasons);
+          blocked.push({ docType, reasons: docError.reasons });
+          continue;
+        }
         console.error(`Error generating ${docType}:`, docError);
         await documentRepo.updateStatusByType(supabase, order.id, docType, "failed");
         failedCount++;
       }
+    }
+
+    // Fulfillment gate: an order with any blocked document is never delivered.
+    if (blocked.length > 0 || (await countBlockedForOrder(supabase, order.id)) > 0) {
+      await supabase.from("orders").update({ status: "blocked" }).eq("id", order.id);
+      await alertAdminOrderBlocked({
+        orderId: order.id,
+        clientName: String(intake.firstName || "") + " " + String(intake.lastName || ""),
+        blocked,
+      });
+      return ok({ message: "Order held: incomplete intake", order_id: order.id, blocked: blocked.length });
     }
 
     if (failedCount > 0) {
@@ -287,6 +309,8 @@ export const GET = withRoute(async (request: NextRequest) => {
   }
 
   let jobFailedCount = 0;
+  const jobBlocked: BlockedDocument[] = [];
+  let jobClientName = "";
   for (const docType of job.document_types) {
     try {
       if (ratelimit) {
@@ -300,6 +324,7 @@ export const GET = withRoute(async (request: NextRequest) => {
       await documentRepo.updateStatusByType(supabase, job.order_id, docType, "generating");
 
       const jobClientFullName = String(intake.firstName || (intake as Record<string,unknown>).first_name || "") + " " + String(intake.lastName || (intake as Record<string,unknown>).last_name || "");
+      jobClientName = jobClientFullName;
       let documentText: string;
       let pdfBuffer: Buffer;
 
@@ -348,6 +373,11 @@ export const GET = withRoute(async (request: NextRequest) => {
         metadata: { order_id: job.order_id, document_type: docType },
       });
     } catch (docError) {
+      if (docError instanceof TemplateBlockedError) {
+        await markDocumentBlocked(supabase, job.order_id, docType, docError.reasons);
+        jobBlocked.push({ docType, reasons: docError.reasons });
+        continue;
+      }
       console.error(`Error generating ${docType}:`, docError);
       await documentRepo.updateStatusByType(supabase, job.order_id, docType, "failed");
       jobFailedCount++;
@@ -365,6 +395,18 @@ export const GET = withRoute(async (request: NextRequest) => {
         .update({ answers: {}, answers_purged_at: new Date().toISOString() })
         .eq("id", jobOrder.quiz_session_id);
     }
+  }
+
+  // Fulfillment gate: an order with any blocked document is never delivered.
+  if (jobBlocked.length > 0 || (await countBlockedForOrder(supabase, job.order_id)) > 0) {
+    await updateJob(jobId, {
+      status: "blocked",
+      completed_at: new Date().toISOString(),
+      error: `${jobBlocked.length} docs blocked: incomplete intake`,
+    });
+    await supabase.from("orders").update({ status: "blocked" }).eq("id", job.order_id);
+    await alertAdminOrderBlocked({ orderId: job.order_id, clientName: jobClientName, blocked: jobBlocked });
+    return ok({ message: "Order held: incomplete intake", job_id: jobId, blocked: jobBlocked.length });
   }
 
   if (jobFailedCount > 0) {

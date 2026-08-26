@@ -8,6 +8,9 @@ import { sendDocumentEmail, sendAttorneyReviewPendingEmail, buildAssetChecklist 
 import { wantsNotification } from "@/lib/notifications/prefs";
 import { getTemplate } from "@/lib/documents/templates/resolve";
 import { tryTemplateRender } from "@/lib/documents/generate-from-template";
+import { TemplateBlockedError } from "@/lib/documents/generate-from-template";
+import { markDocumentBlocked, countBlockedForOrder, alertAdminOrderBlocked, type BlockedDocument } from "@/lib/documents/blocked";
+
 import * as auditLogRepo from "@/lib/repos/server/auditLogRepo";
 
 // Public, post-payment generation trigger fired by the order success page
@@ -113,6 +116,8 @@ export const GET = withRoute(async (request: NextRequest) => {
     await supabase.from("orders").update({ status: "generating" }).eq("id", orderId);
 
     const results: Array<{ docType: string; success: boolean; path?: string; error?: string }> = [];
+    const blocked: BlockedDocument[] = [];
+    const orderClientName = String(quizAnswers.firstName || quizAnswers.first_name || "") + " " + String(quizAnswers.lastName || quizAnswers.last_name || "");
 
     for (const docType of documentTypes) {
       try {
@@ -166,6 +171,14 @@ export const GET = withRoute(async (request: NextRequest) => {
         results.push({ docType, success: true, path });
       } catch (docError) {
         const msg = docError instanceof Error ? docError.message : String(docError);
+        // Strict mode: incomplete intake. Hold the order; a retry cannot help
+        // until a human completes the missing answers.
+        if (docError instanceof TemplateBlockedError) {
+          await markDocumentBlocked(supabase, orderId, docType, docError.reasons);
+          blocked.push({ docType, reasons: docError.reasons });
+          log.push(`   ${docType}: BLOCKED, ${msg}`);
+          continue;
+        }
         log.push(`   ${docType}: FAILED, ${msg}`);
         results.push({ docType, success: false, error: msg });
       }
@@ -177,6 +190,16 @@ export const GET = withRoute(async (request: NextRequest) => {
     // and (because delivered short-circuits this route) can never self-heal.
     const succeededTypes = results.filter((r) => r.success).map((r) => r.docType);
     const allSucceeded = results.length > 0 && results.every((r) => r.success);
+
+    // Fulfillment gate: an order with any blocked document is never delivered,
+    // and no document on it is marked delivered either.
+    const blockedCount = blocked.length || (await countBlockedForOrder(supabase, orderId));
+    if (blockedCount > 0) {
+      await supabase.from("orders").update({ status: "blocked" }).eq("id", orderId);
+      await alertAdminOrderBlocked({ orderId, clientName: orderClientName, blocked });
+      log.push(`8. ${blockedCount} document(s) BLOCKED on an incomplete intake — order held, admin alerted`);
+      return ok({ message: "Order held: incomplete intake", order_id: orderId, blocked: blockedCount, log });
+    }
 
     // Mark only the documents that actually produced a file.
     if (succeededTypes.length) {
