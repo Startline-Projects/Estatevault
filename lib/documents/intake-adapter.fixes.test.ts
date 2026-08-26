@@ -258,3 +258,48 @@ describe("strict per-document validation", () => {
     );
   });
 });
+
+describe("a sole beneficiary means 100%, not an unanswered share", () => {
+  // The questionnaire only asks about shares when there is more than one
+  // beneficiary, so a single-beneficiary intake arrives with share "" and no
+  // equal-shares answer. Found by driving the browser: every such will was
+  // blocked for a share the client was never asked for.
+  const soleBeneficiary = {
+    firstName: "Ahmed", lastName: "Hassan",
+    executorName: "Raga Hassan", executorRelationship: "Spouse/Partner",
+    beneficiaries: [{ name: "Layla Hassan", relationship: "Child", share: "" }],
+    beneficiariesEqualShares: "",
+  };
+
+  it("assigns 100% to a lone beneficiary", () => {
+    const d = adapt(soleBeneficiary);
+    expect(d.primary_beneficiaries).toHaveLength(1);
+    expect(d.primary_beneficiaries[0].share_percent).toBe("100");
+  });
+
+  it("lets that will through strict validation", () => {
+    expect(validateForDocument("will", adapt(soleBeneficiary))).toEqual([]);
+  });
+
+  it("leaves multi-beneficiary shares alone", () => {
+    const d = adapt({
+      ...soleBeneficiary,
+      beneficiaries: [
+        { name: "A", relationship: "Child", share: "" },
+        { name: "B", relationship: "Child", share: "" },
+      ],
+      beneficiariesEqualShares: "",
+    });
+    // Two beneficiaries with no equal-shares answer is genuinely unanswered.
+    expect(d.primary_beneficiaries.map((b) => b.share_percent)).toEqual(["", ""]);
+    expect(validateForDocument("will", d)).toContain("primary beneficiary 1 share");
+  });
+
+  it("still honours an explicit share on a lone beneficiary", () => {
+    const d = adapt({
+      ...soleBeneficiary,
+      beneficiaries: [{ name: "Layla Hassan", relationship: "Child", share: "100" }],
+    });
+    expect(d.primary_beneficiaries[0].share_percent).toBe("100");
+  });
+});

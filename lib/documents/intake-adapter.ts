@@ -280,6 +280,18 @@ function mapLegacyBeneficiaries(
   ];
 }
 
+/**
+ * The questionnaire only asks about shares when there is more than one
+ * beneficiary, so a sole beneficiary arrives with share "" and no equal-shares
+ * answer. That means 100%, not "unanswered" — without this a single-beneficiary
+ * will is blocked for a share the client was never asked for.
+ */
+function soleOrStatedShare(count: number, b: { share?: unknown; share_percent?: unknown } | null): string {
+  const stated = str(b?.share || b?.share_percent).trim();
+  if (stated) return stated;
+  return count === 1 ? "100" : "";
+}
+
 function mapBeneficiariesToPrimary(
   bens: unknown,
   equalShares: unknown,
@@ -289,7 +301,7 @@ function mapBeneficiariesToPrimary(
   return bens.map((b, i) => ({
     full_name: str(b?.name || b?.full_name),
     relationship: str(b?.relationship),
-    share_percent: equalSplit ? equalSplit[i] : str(b?.share || b?.share_percent),
+    share_percent: equalSplit ? equalSplit[i] : soleOrStatedShare(bens.length, b),
     per_stirpes: yesNo(b?.per_stirpes),
   }));
 }
@@ -303,7 +315,7 @@ function mapBeneficiariesToContingent(
   return bens.map((b, i) => ({
     full_name: str(b?.name || b?.full_name),
     relationship: str(b?.relationship),
-    share_percent: equalSplit ? equalSplit[i] : str(b?.share || b?.share_percent),
+    share_percent: equalSplit ? equalSplit[i] : soleOrStatedShare(bens.length, b),
   }));
 }
 

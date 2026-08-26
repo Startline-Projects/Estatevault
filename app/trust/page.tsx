@@ -56,6 +56,8 @@ export default function TrustPage() {
   const [animating, setAnimating] = useState(false);
   /** Set when a saved session was routed back for answers added after it was saved. */
   const [resumeNotice, setResumeNotice] = useState<number | null>(null);
+  /** Step id from ?resume=, applied once the card list is known. */
+  const [pendingResumeStep, setPendingResumeStep] = useState<string | null>(null);
   const [direction, setDirection] = useState<"forward" | "back">("forward");
   const [customAgeMode, setCustomAgeMode] = useState(false);
   const [customAgeError, setCustomAgeError] = useState("");
@@ -102,7 +104,31 @@ export default function TrustPage() {
 
   useEffect(() => {
     async function init() {
-      setPartnerParam(new URLSearchParams(window.location.search).get("partner") || "");
+      const params = new URLSearchParams(window.location.search);
+      setPartnerParam(params.get("partner") || "");
+
+      // Returned here from checkout because a question was added after this
+      // session was saved. Restore the answers and open the step that asks.
+      const resumeStep = params.get("resume");
+      if (resumeStep) {
+        let saved: string | null = sessionStorage.getItem("trustIntake");
+        if (!saved) {
+          try {
+            const ls = localStorage.getItem("trustIntake");
+            if (ls) { const env = JSON.parse(ls); saved = JSON.stringify(env.data ?? env); }
+          } catch { /* corrupt */ }
+        }
+        if (saved) {
+          try {
+            const parsed = JSON.parse(saved);
+            setIntake({ ...initialTrustIntake, ...parsed });
+            const resume = findResumePoint("trust", parsed);
+            if (resume) setResumeNotice(resume.missingFields.length);
+          } catch { /* corrupt */ }
+        }
+        setStage("intake");
+        setPendingResumeStep(resumeStep);
+      }
       const { data } = await getLatestQuiz();
       if (data) {
         setUserId(data.userId);
@@ -131,6 +157,15 @@ export default function TrustPage() {
   const safeIndex = Math.min(currentCard, totalCards - 1);
   const activeCardId = visibleCards[safeIndex];
   const progress = ((safeIndex + 1) / totalCards) * 100;
+
+  // Apply ?resume=<step> once the card list exists for this intake.
+  useEffect(() => {
+    if (!pendingResumeStep) return;
+    const idx = visibleCards.indexOf(pendingResumeStep as CardId);
+    if (idx >= 0) setCurrentCard(idx);
+    setPendingResumeStep(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingResumeStep, visibleCards.join(",")]);
 
   function isCardComplete(): boolean {
     switch (activeCardId) {
@@ -223,6 +258,9 @@ export default function TrustPage() {
       router.push("/trust/checkout");
       return;
     }
+    // The notice explains why this session came back here; once the client
+    // moves on it has served its purpose.
+    setResumeNotice(null);
     animateTransition("forward", () => setCurrentCard((c) => c + 1));
   }
 
