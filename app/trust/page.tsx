@@ -15,6 +15,18 @@ import CityAutocomplete from "@/components/intake/CityAutocomplete";
 import DateOfBirthInput from "@/components/intake/DateOfBirthInput";
 import NameInput from "@/components/quiz/NameInput";
 import QuestionLabel from "@/components/quiz/QuestionLabel";
+import { findResumePoint } from "@/lib/intake/incomplete-steps";
+import {
+  PoaStep,
+  PadStep,
+  isPoaStepComplete,
+  isPadStepComplete,
+  togglePoaPower,
+  ALL_POA_POWERS,
+  POA_EFFECTIVE_OPTIONS,
+  LIFE_SUSTAINING_OPTIONS,
+  ARTIFICIAL_NUTRITION_OPTIONS,
+} from "@/components/intake/PoaPadSteps";
 
 type Stage = "acknowledgment" | "intake" | "redirecting";
 
@@ -26,93 +38,6 @@ const ASSET_OPTIONS = [
   "Vehicles",
   "Personal property and valuables",
   "Digital assets and cryptocurrency",
-];
-
-const ALL_POA_POWERS = [
-  "Banking and finances",
-  "Real estate transactions",
-  "Business operations",
-  "Tax filings",
-];
-
-// PENDING ATTORNEY APPROVAL — final wording comes from the reviewing attorney.
-// `value` must stay in 1:1 correspondence with the {{#IF dpoa_effective ...}}
-// branches in lib/documents/templates/dpoa-michigan-v1.1.0.txt.
-const POA_EFFECTIVE_OPTIONS = [
-  {
-    value: "immediate",
-    label: "Immediately, as soon as I sign",
-    description: "Your agent can act on your behalf right away, even while you are managing your own affairs.",
-  },
-  {
-    value: "springing",
-    label: "Only if I become unable to manage my own affairs",
-    description: "Your agent has no authority unless and until a physician certifies in writing that you cannot manage your finances.",
-  },
-];
-
-// PENDING ATTORNEY APPROVAL — final wording comes from the reviewing attorney.
-// Each `value` must stay in 1:1 correspondence with a
-// {{#IF life_sustaining_treatment_preference ...}} branch in
-// lib/documents/templates/pad-michigan-v1.1.0.txt.
-const LIFE_SUSTAINING_OPTIONS = [
-  {
-    value: "continue_all",
-    label: "Continue all treatment",
-    description: "Keep all life-sustaining treatment going in every circumstance.",
-  },
-  {
-    value: "withhold_if_terminal",
-    label: "Stop if I have a terminal condition",
-    description: "An incurable condition with no reasonable likelihood of recovery.",
-  },
-  {
-    value: "withhold_if_pvs",
-    label: "Stop if I am permanently unconscious",
-    description: "A persistent vegetative state, with no awareness of myself or my surroundings.",
-  },
-  {
-    value: "withhold_if_terminal_or_pvs",
-    label: "Stop if either applies",
-    description: "A terminal condition or permanent unconsciousness.",
-  },
-  {
-    value: "advocate_decides",
-    label: "Leave the decision to my patient advocate",
-    description: "No set preference; your advocate decides in your best interest.",
-  },
-];
-
-// PENDING ATTORNEY APPROVAL — final wording comes from the reviewing attorney.
-// Michigan treats artificial nutrition and hydration separately from other
-// life-sustaining treatment, so it is asked separately. Each `value` maps 1:1 to
-// an {{#IF artificial_nutrition_preference ...}} branch in the PAD template.
-const ARTIFICIAL_NUTRITION_OPTIONS = [
-  {
-    value: "provide_all",
-    label: "Provide in all circumstances",
-    description: "Continue food and water by feeding tube or IV regardless of my condition.",
-  },
-  {
-    value: "withhold_if_terminal",
-    label: "Stop if I have a terminal condition",
-    description: "An incurable condition with no reasonable likelihood of recovery.",
-  },
-  {
-    value: "withhold_if_pvs",
-    label: "Stop if I am permanently unconscious",
-    description: "A persistent vegetative state, with no awareness of myself or my surroundings.",
-  },
-  {
-    value: "withhold_if_terminal_or_pvs",
-    label: "Stop if either applies",
-    description: "A terminal condition or permanent unconsciousness.",
-  },
-  {
-    value: "advocate_decides",
-    label: "Leave the decision to my patient advocate",
-    description: "No set preference; your advocate decides in your best interest.",
-  },
 ];
 
 const relOptions = ["Spouse/Partner", "Adult Child", "Sibling", "Parent", "Friend", "Other"];
@@ -129,6 +54,8 @@ export default function TrustPage() {
   const [intake, setIntake] = useState<TrustIntake>(initialTrustIntake);
   const [currentCard, setCurrentCard] = useState(0);
   const [animating, setAnimating] = useState(false);
+  /** Set when a saved session was routed back for answers added after it was saved. */
+  const [resumeNotice, setResumeNotice] = useState<number | null>(null);
   const [direction, setDirection] = useState<"forward" | "back">("forward");
   const [customAgeMode, setCustomAgeMode] = useState(false);
   const [customAgeError, setCustomAgeError] = useState("");
@@ -245,9 +172,9 @@ export default function TrustPage() {
       case "pourover":
         return intake.executorName.trim() !== "" && intake.executorRelationship !== "";
       case "poa":
-        return intake.poaAgentName.trim() !== "" && intake.poaAgentRelationship !== "" && intake.poaPowers.length > 0 && intake.poaEffective !== "";
+        return isPoaStepComplete(intake);
       case "healthcare":
-        return intake.patientAdvocateName.trim() !== "" && intake.patientAdvocateRelationship !== "" && intake.lifeSustainingTreatment !== "" && intake.artificialNutrition !== "" && intake.organDonation !== "" && intake.hasHealthcareWishes !== "" && (intake.hasHealthcareWishes === "No" || intake.healthcareWishesDescription.trim() !== "");
+        return isPadStepComplete(intake);
       case "gifts":
         return intake.hasSpecificGifts !== "" && (intake.hasSpecificGifts === "No" || intake.specificGiftsDescription.trim() !== "");
       case "review":
@@ -273,6 +200,18 @@ export default function TrustPage() {
       return;
     }
     if (activeCardId === "review") {
+      // A session saved before a question was added reaches review without an
+      // answer. Route back to the step that asks it rather than failing
+      // validation at checkout, where the client could do nothing about it.
+      const resume = findResumePoint("trust", intake as unknown as Record<string, unknown>);
+      if (resume) {
+        const idx = visibleCards.indexOf(resume.step as CardId);
+        if (idx >= 0) {
+          setResumeNotice(resume.missingFields.length);
+          animateTransition("back", () => setCurrentCard(idx));
+          return;
+        }
+      }
       const complexity = checkComplexity(intake);
       const intakeJson = JSON.stringify(intake);
       sessionStorage.setItem("trustIntake", intakeJson);
@@ -346,18 +285,7 @@ export default function TrustPage() {
   }
 
   function togglePower(power: string) {
-    if (power === "Banking and finances") return; // cannot uncheck
-    if (power === "All of the above") {
-      setIntake((prev) => ({
-        ...prev,
-        poaPowers: prev.poaPowers.length === ALL_POA_POWERS.length ? ["Banking and finances"] : [...ALL_POA_POWERS],
-      }));
-      return;
-    }
-    setIntake((prev) => ({
-      ...prev,
-      poaPowers: prev.poaPowers.includes(power) ? prev.poaPowers.filter((p) => p !== power) : [...prev.poaPowers, power],
-    }));
+    setIntake((prev) => ({ ...prev, poaPowers: togglePoaPower(prev.poaPowers, power) }));
   }
 
   function renderCard() {
@@ -721,118 +649,10 @@ export default function TrustPage() {
         );
 
       case "poa":
-        return (
-          <>
-            <p className="mb-5 text-xs text-charcoal/60">This person manages your finances if you become incapacitated.</p>
-            <QuestionLabel required>Agent name</QuestionLabel><NameInput value={intake.poaAgentName} onChange={(v) => update({ poaAgentName: v })} />
-            <div className="mt-5"><QuestionLabel>Agent relationship</QuestionLabel><div className="grid grid-cols-2 gap-3">{relOptions.map((opt) => (<ChoiceTile key={opt} label={opt} selected={intake.poaAgentRelationship === opt} onClick={() => update({ poaAgentRelationship: opt })} />))}</div></div>
-            <div className="mt-5">
-              <QuestionLabel>Successor agent name</QuestionLabel>
-              <NameInput
-                value={intake.poaSuccessorAgentName}
-                onChange={(v) => {
-                  update({ poaSuccessorAgentName: v });
-                  if (!v) update({ poaSuccessorAgentRelationship: "" });
-                }}
-                optional
-                onPartialChange={partialHandler("poa-successor")}
-              />
-              {intake.poaSuccessorAgentName.trim() !== "" && (
-                <div className="mt-3">
-                  <QuestionLabel>Successor agent relationship</QuestionLabel>
-                  <div className="grid grid-cols-2 gap-3">
-                    {relOptions.map((opt) => (
-                      <ChoiceTile
-                        key={opt}
-                        label={opt}
-                        selected={intake.poaSuccessorAgentRelationship === opt}
-                        onClick={() => update({ poaSuccessorAgentRelationship: opt })}
-                      />
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-            <div className="mt-5"><QuestionLabel>Powers granted</QuestionLabel>
-              <div className="space-y-3">
-                {ALL_POA_POWERS.map((power) => (
-                  <button key={power} type="button" onClick={() => togglePower(power)}
-                    className={`min-h-[44px] w-full rounded-xl border-2 px-5 py-3.5 text-left text-sm font-medium transition-all ${intake.poaPowers.includes(power) ? "border-gold bg-gold/10 text-navy" : "border-gray-200 bg-white text-charcoal hover:border-gold/40"} ${power === "Banking and finances" ? "opacity-80" : ""}`}>
-                    <span className="mr-2">{intake.poaPowers.includes(power) ? "☑" : "☐"}</span>{power}{power === "Banking and finances" ? " (required)" : ""}
-                  </button>
-                ))}
-                <button type="button" onClick={() => togglePower("All of the above")}
-                  className={`min-h-[44px] w-full rounded-xl border-2 px-5 py-3.5 text-left text-sm font-medium transition-all ${intake.poaPowers.length === ALL_POA_POWERS.length ? "border-gold bg-gold/10 text-navy" : "border-gray-200 bg-white text-charcoal hover:border-gold/40"}`}>
-                  <span className="mr-2">{intake.poaPowers.length === ALL_POA_POWERS.length ? "☑" : "☐"}</span>All of the above
-                </button>
-              </div>
-            </div>
-            {/* PENDING ATTORNEY APPROVAL — option wording to be confirmed by the
-                reviewing attorney. The two values map 1:1 to the branches in
-                Article III of dpoa-michigan-v1.1.0. */}
-            <div className="mt-5"><QuestionLabel>When should your agent be able to act?</QuestionLabel>
-              <div className="space-y-3">
-                {POA_EFFECTIVE_OPTIONS.map((opt) => (
-                  <button
-                    key={opt.value}
-                    type="button"
-                    onClick={() => update({ poaEffective: opt.value })}
-                    className={`min-h-[44px] w-full rounded-xl border-2 px-5 py-3.5 text-left transition-all ${intake.poaEffective === opt.value ? "border-gold bg-gold/10 text-navy" : "border-gray-200 bg-white text-charcoal hover:border-gold/40"}`}
-                  >
-                    <span className="block text-sm font-medium">{opt.label}</span>
-                    <span className="mt-1 block text-xs text-charcoal/60">{opt.description}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-          </>
-        );
+        return <PoaStep intake={intake} update={update} partialHandler={partialHandler} />;
 
       case "healthcare":
-        return (
-          <>
-            <p className="mb-5 text-xs text-charcoal/60">This person makes medical decisions for you if you cannot make them yourself.</p>
-            <QuestionLabel required>Patient advocate name</QuestionLabel><NameInput value={intake.patientAdvocateName} onChange={(v) => update({ patientAdvocateName: v })} />
-            <div className="mt-5"><QuestionLabel>Relationship</QuestionLabel><div className="grid grid-cols-2 gap-3">{relOptions.map((opt) => (<ChoiceTile key={opt} label={opt} selected={intake.patientAdvocateRelationship === opt} onClick={() => update({ patientAdvocateRelationship: opt })} />))}</div></div>
-            <div className="mt-5"><QuestionLabel>Successor patient advocate</QuestionLabel><NameInput value={intake.successorPatientAdvocateName} onChange={(v) => update({ successorPatientAdvocateName: v })} optional onPartialChange={partialHandler("successor-advocate")} /></div>
-            {/* PENDING ATTORNEY APPROVAL — option wording to be confirmed by the
-                reviewing attorney. Values map 1:1 to Article V of the PAD template. */}
-            <div className="mt-5"><QuestionLabel>If you could not recover, what should happen to life-sustaining treatment?</QuestionLabel>
-              <p className="mb-3 text-xs text-charcoal/60 leading-relaxed">Life-sustaining treatment means things like a breathing machine or CPR. Your advocate can only act on this if a physician has determined you cannot take part in the decision yourself.</p>
-              <div className="space-y-3">
-                {LIFE_SUSTAINING_OPTIONS.map((opt) => (
-                  <button key={opt.value} type="button" onClick={() => update({ lifeSustainingTreatment: opt.value })}
-                    className={`min-h-[44px] w-full rounded-xl border-2 px-5 py-3.5 text-left transition-all ${intake.lifeSustainingTreatment === opt.value ? "border-gold bg-gold/10 text-navy" : "border-gray-200 bg-white text-charcoal hover:border-gold/40"}`}>
-                    <span className="block text-sm font-medium">{opt.label}</span>
-                    <span className="mt-1 block text-xs text-charcoal/60">{opt.description}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-            {/* PENDING ATTORNEY APPROVAL — asked separately because Michigan law
-                treats artificial nutrition and hydration separately. */}
-            <div className="mt-5"><QuestionLabel>And what about food and water given through a tube or IV?</QuestionLabel>
-              <p className="mb-3 text-xs text-charcoal/60 leading-relaxed">Michigan law treats this separately from other life-sustaining treatment, so it is a separate choice.</p>
-              <div className="space-y-3">
-                {ARTIFICIAL_NUTRITION_OPTIONS.map((opt) => (
-                  <button key={opt.value} type="button" onClick={() => update({ artificialNutrition: opt.value })}
-                    className={`min-h-[44px] w-full rounded-xl border-2 px-5 py-3.5 text-left transition-all ${intake.artificialNutrition === opt.value ? "border-gold bg-gold/10 text-navy" : "border-gray-200 bg-white text-charcoal hover:border-gold/40"}`}>
-                    <span className="block text-sm font-medium">{opt.label}</span>
-                    <span className="mt-1 block text-xs text-charcoal/60">{opt.description}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-            <div className="mt-5"><QuestionLabel>Do you wish to be an organ and tissue donor?</QuestionLabel><YesNoTiles value={intake.organDonation} onChange={(v) => update({ organDonation: v })} /></div>
-            <div className="mt-5"><QuestionLabel>Do you have specific healthcare wishes to document?</QuestionLabel><YesNoTiles value={intake.hasHealthcareWishes} onChange={(v) => update({ hasHealthcareWishes: v, ...(v === "No" ? { healthcareWishesDescription: "" } : {}) })} /></div>
-            {intake.hasHealthcareWishes === "Yes" && (
-              <div className="mt-5">
-                <textarea value={intake.healthcareWishesDescription} onChange={(e) => update({ healthcareWishesDescription: e.target.value })} placeholder="Example: I do not wish to be kept on life support if there is no reasonable chance of recovery." rows={4} className="w-full rounded-xl border-2 border-gray-200 bg-white px-4 py-3 text-sm text-charcoal placeholder:text-gray-400 focus:border-gold focus:outline-none focus:ring-1 focus:ring-gold/30 transition-colors resize-none" />
-                <p className="mt-2 text-xs text-charcoal/60">This is your personal instruction, it guides your advocate&apos;s decisions.</p>
-              </div>
-            )}
-          </>
-        );
+        return <PadStep intake={intake} update={update} partialHandler={partialHandler} />;
 
       case "gifts":
         return (
@@ -1035,6 +855,15 @@ export default function TrustPage() {
           <div className="rounded-2xl bg-white p-6 md:p-8 shadow-xl">
             <p className="mb-6 text-xs font-medium uppercase tracking-wider text-gold">{moduleTitles[activeCardId]}</p>
             {activeCardId === "review" && <h2 className="mb-4 text-lg font-bold text-navy">Does everything look right?</h2>}
+            {resumeNotice !== null && (
+              <div className="mb-5 rounded-xl border-2 border-gold/40 bg-gold/5 px-4 py-3">
+                <p className="text-xs leading-relaxed text-charcoal">
+                  We&apos;ve added {resumeNotice === 1 ? "a question" : "a few questions"} since you started. Your
+                  existing answers have been kept, so you only need to complete
+                  {resumeNotice === 1 ? " this one" : " these"} to continue.
+                </p>
+              </div>
+            )}
             {renderCard()}
             {activeCardId === "review" ? (
               <div className="mt-8 flex gap-3">

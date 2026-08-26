@@ -172,6 +172,13 @@ const contingentBeneficiarySchema = z.object({
 const RELATIONSHIP_OR_EMPTY = z.union([RELATIONSHIP, z.literal("")]);
 const GUARDIAN_REL_OR_EMPTY = z.union([GUARDIAN_REL, z.literal("")]);
 
+const POA_POWERS = [
+  "Banking and finances",
+  "Real estate transactions",
+  "Business operations",
+  "Tax filings",
+] as const;
+
 const willIntakeSchema = z.object({
   email: z.string().email().optional(),
   firstName: z.string().min(1).max(100),
@@ -194,6 +201,33 @@ const willIntakeSchema = z.object({
   contingentBeneficiaries: z.array(contingentBeneficiarySchema).max(20),
   contingentEqualShares: z.string().max(10),
   organDonation: YES_NO,
+  // A will order also generates a Power of Attorney and a Patient Advocate
+  // Designation, so the will flow collects the same answers as the trust flow.
+  poaAgentName: z.string().min(1).max(200),
+  poaAgentRelationship: RELATIONSHIP,
+  poaSuccessorAgentName: z.string().max(200),
+  poaSuccessorAgentRelationship: RELATIONSHIP_OR_EMPTY,
+  poaPowers: z.array(z.enum(POA_POWERS)).min(1),
+  poaEffective: z.enum(["immediate", "springing"]),
+  patientAdvocateName: z.string().min(1).max(200),
+  patientAdvocateRelationship: RELATIONSHIP,
+  successorPatientAdvocateName: z.string().max(200),
+  lifeSustainingTreatment: z.enum([
+    "continue_all",
+    "withhold_if_terminal",
+    "withhold_if_pvs",
+    "withhold_if_terminal_or_pvs",
+    "advocate_decides",
+  ]),
+  artificialNutrition: z.enum([
+    "provide_all",
+    "withhold_if_terminal",
+    "withhold_if_pvs",
+    "withhold_if_terminal_or_pvs",
+    "advocate_decides",
+  ]),
+  hasHealthcareWishes: YES_NO,
+  healthcareWishesDescription: z.string().max(5000),
   hasSpecificGifts: YES_NO,
   specificGiftsDescription: z.string().max(5000),
 }).refine(
@@ -214,12 +248,6 @@ const TRUST_ASSET_TYPES = [
   "Digital assets and cryptocurrency",
 ] as const;
 
-const POA_POWERS = [
-  "Banking and finances",
-  "Real estate transactions",
-  "Business operations",
-  "Tax filings",
-] as const;
 
 const trustIntakeSchema = z.object({
   email: z.string().email().optional(),

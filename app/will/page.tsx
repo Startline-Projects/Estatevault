@@ -15,6 +15,16 @@ import CityAutocomplete from "@/components/intake/CityAutocomplete";
 import DateOfBirthInput from "@/components/intake/DateOfBirthInput";
 import NameInput from "@/components/quiz/NameInput";
 import QuestionLabel from "@/components/quiz/QuestionLabel";
+import { findResumePoint } from "@/lib/intake/incomplete-steps";
+import {
+  PoaStep,
+  PadStep,
+  isPoaStepComplete,
+  isPadStepComplete,
+  POA_EFFECTIVE_OPTIONS,
+  LIFE_SUSTAINING_OPTIONS,
+  ARTIFICIAL_NUTRITION_OPTIONS,
+} from "@/components/intake/PoaPadSteps";
 
 type Stage = "acknowledgment" | "intake" | "redirecting";
 
@@ -29,6 +39,8 @@ export default function WillPage() {
   const [intake, setIntake] = useState<WillIntake>(initialWillIntake);
   const [currentCard, setCurrentCard] = useState(0);
   const [animating, setAnimating] = useState(false);
+  /** Set when a saved session was routed back for answers added after it was saved. */
+  const [resumeNotice, setResumeNotice] = useState<number | null>(null);
   const [direction, setDirection] = useState<"forward" | "back">("forward");
   const hasMinorChildren = intake.hasMinorChildren === "Yes";
   const [openReviewSections, setOpenReviewSections] = useState<Record<string, boolean>>({
@@ -37,6 +49,8 @@ export default function WillPage() {
     executor: false,
     beneficiaries: false,
     guardian: false,
+    poa: false,
+    healthcare: false,
     gifts: false,
   });
   const maxDob = (() => {
@@ -87,11 +101,11 @@ export default function WillPage() {
   }, [update]);
 
   // ── Intake card logic ─────────────────────────────────────────
-  type CardId = "residency" | "about" | "executor" | "beneficiaries" | "guardian" | "gifts" | "review";
+  type CardId = "residency" | "about" | "executor" | "beneficiaries" | "guardian" | "poa" | "healthcare" | "gifts" | "review";
 
   const visibleCards: CardId[] = ["residency", "about", "executor", "beneficiaries"];
   if (hasMinorChildren) visibleCards.push("guardian");
-  visibleCards.push("gifts", "review");
+  visibleCards.push("poa", "healthcare", "gifts", "review");
 
   const totalCards = visibleCards.length;
   const safeIndex = Math.min(currentCard, totalCards - 1);
@@ -100,6 +114,10 @@ export default function WillPage() {
 
   function isCardComplete(): boolean {
     switch (activeCardId) {
+      case "poa":
+        return isPoaStepComplete(intake);
+      case "healthcare":
+        return isPadStepComplete(intake);
       case "residency":
         return intake.state === "Michigan" && intake.maritalStatus !== "";
       case "about":
@@ -183,6 +201,18 @@ export default function WillPage() {
       return;
     }
     if (activeCardId === "review") {
+      // A session saved before a question was added reaches review without an
+      // answer. Route back to the step that asks it rather than failing
+      // validation at checkout, where the client could do nothing about it.
+      const resume = findResumePoint("will", intake as unknown as Record<string, unknown>);
+      if (resume) {
+        const idx = visibleCards.indexOf(resume.step as CardId);
+        if (idx >= 0) {
+          setResumeNotice(resume.missingFields.length);
+          animateTransition("back", () => setCurrentCard(idx));
+          return;
+        }
+      }
       // Save intake to sessionStorage and go to checkout
       const intakeJson = JSON.stringify(intake);
       sessionStorage.setItem("willIntake", intakeJson);
@@ -275,6 +305,8 @@ export default function WillPage() {
     executor: "Your Executor",
     beneficiaries: "Your Beneficiaries",
     guardian: "Minor Children",
+    poa: "Power of Attorney",
+    healthcare: "Healthcare Directive",
     gifts: "Specific Gifts",
     review: "Final Review",
   };
@@ -283,6 +315,10 @@ export default function WillPage() {
 
   function renderCard() {
     switch (activeCardId) {
+      case "poa":
+        return <PoaStep intake={intake} update={update} partialHandler={partialHandler} />;
+      case "healthcare":
+        return <PadStep intake={intake} update={update} partialHandler={partialHandler} />;
       case "residency":
         return (
           <>
@@ -856,6 +892,26 @@ export default function WillPage() {
               </Section>
             )}
 
+            <Section k="poa" title="Power of Attorney" target="poa">
+              <Row label="Agent" value={intake.poaAgentName} />
+              <Row label="Relationship" value={intake.poaAgentRelationship} />
+              <Row label="Successor agent" value={intake.poaSuccessorAgentName} />
+              <Row label="Powers" value={intake.poaPowers.join(", ")} />
+              <Row label="Takes effect" value={POA_EFFECTIVE_OPTIONS.find((o) => o.value === intake.poaEffective)?.label ?? ""} />
+            </Section>
+
+            <Section k="healthcare" title="Healthcare Directive" target="healthcare">
+              <Row label="Advocate" value={intake.patientAdvocateName} />
+              <Row label="Relationship" value={intake.patientAdvocateRelationship} />
+              <Row label="Successor advocate" value={intake.successorPatientAdvocateName} />
+              <Row label="Life-sustaining treatment" value={LIFE_SUSTAINING_OPTIONS.find((o) => o.value === intake.lifeSustainingTreatment)?.label ?? ""} />
+              <Row label="Food and water by tube" value={ARTIFICIAL_NUTRITION_OPTIONS.find((o) => o.value === intake.artificialNutrition)?.label ?? ""} />
+              <Row label="Healthcare wishes" value={intake.hasHealthcareWishes} />
+              {intake.hasHealthcareWishes === "Yes" && (
+                <Row label="Wishes" value={<span className="whitespace-pre-wrap">{intake.healthcareWishesDescription}</span>} />
+              )}
+            </Section>
+
             <Section k="gifts" title="Gifts & Healthcare" target="gifts">
               <Row label="Organ donation" value={intake.organDonation} />
               <Row label="Specific gifts" value={intake.hasSpecificGifts} />
@@ -907,6 +963,15 @@ export default function WillPage() {
               </h2>
             )}
 
+            {resumeNotice !== null && (
+              <div className="mb-5 rounded-xl border-2 border-gold/40 bg-gold/5 px-4 py-3">
+                <p className="text-xs leading-relaxed text-charcoal">
+                  We&apos;ve added {resumeNotice === 1 ? "a question" : "a few questions"} since you started. Your
+                  existing answers have been kept, so you only need to complete
+                  {resumeNotice === 1 ? " this one" : " these"} to continue.
+                </p>
+              </div>
+            )}
             {renderCard()}
 
             {activeCardId === "review" ? (

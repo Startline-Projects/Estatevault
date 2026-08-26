@@ -20,6 +20,22 @@ export interface WillIntake {
   contingentBeneficiaries: Array<{ name: string; relationship: string; share: string }>;
   contingentEqualShares: string;
   organDonation: string;
+  // Power of Attorney — a will order generates a POA, so the will flow must
+  // collect the same answers the trust flow does.
+  poaAgentName: string;
+  poaAgentRelationship: string;
+  poaSuccessorAgentName: string;
+  poaSuccessorAgentRelationship: string;
+  poaPowers: string[];
+  poaEffective: string;
+  // Patient Advocate Designation — likewise.
+  patientAdvocateName: string;
+  patientAdvocateRelationship: string;
+  successorPatientAdvocateName: string;
+  lifeSustainingTreatment: string;
+  artificialNutrition: string;
+  hasHealthcareWishes: string;
+  healthcareWishesDescription: string;
   hasSpecificGifts: string;
   specificGiftsDescription: string;
 }
@@ -46,6 +62,19 @@ export const initialWillIntake: WillIntake = {
   contingentBeneficiaries: [],
   contingentEqualShares: "",
   organDonation: "",
+  poaAgentName: "",
+  poaAgentRelationship: "",
+  poaSuccessorAgentName: "",
+  poaSuccessorAgentRelationship: "",
+  poaPowers: ["Banking and finances"],
+  poaEffective: "",
+  patientAdvocateName: "",
+  patientAdvocateRelationship: "",
+  successorPatientAdvocateName: "",
+  lifeSustainingTreatment: "",
+  artificialNutrition: "",
+  hasHealthcareWishes: "",
+  healthcareWishesDescription: "",
   hasSpecificGifts: "",
   specificGiftsDescription: "",
 };
