@@ -27,7 +27,8 @@ function answers(joint: boolean) {
     firstName: "Ahmed", lastName: "Hassan", city: "Dearborn", state: "Michigan",
     trustName: "The Hassan Family Revocable Living Trust",
     successorTrusteeName: "Karim Hassan", successorTrusteeRelationship: "Sibling",
-    executorName: "Raga Hassan", executorRelationship: "Spouse/Partner",
+    executorName: "Raga Hassan",
+    funeralPreference: "family_decides", executorRelationship: "Spouse/Partner",
     beneficiaries: [{ name: "Layla Hassan", relationship: "Child", share: "", contingency: "other_beneficiaries" }],
     ...(joint ? { secondGrantorName: "Raga Hassan", secondGrantorRelationship: "Spouse" } : {}),
   };

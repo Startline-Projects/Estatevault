@@ -29,7 +29,8 @@ afterEach(() => {
 function answers(beneficiaries: Array<Record<string, unknown>>) {
   return {
     firstName: "Ahmed", lastName: "Hassan", city: "Dearborn", state: "Michigan",
-    executorName: "Raga Hassan", executorRelationship: "Spouse/Partner",
+    executorName: "Raga Hassan",
+    executorRelationship: "Spouse/Partner",
     successorTrusteeName: "Karim Hassan", successorTrusteeRelationship: "Sibling",
     beneficiaries, beneficiariesEqualShares: "Yes",
     // The POA and PAD need their own answers; a will order generates all three.
@@ -37,6 +38,7 @@ function answers(beneficiaries: Array<Record<string, unknown>>) {
     poaPowers: ["Banking and finances"], poaEffective: "immediate",
     patientAdvocateName: "Raga Hassan", patientAdvocateRelationship: "Spouse/Partner",
     organDonation: "Yes",
+    funeralPreference: "family_decides",
   };
 }
 const data = (b: Array<Record<string, unknown>>) => mapIntakeToTemplateData(answers(b)).data!;
@@ -174,6 +176,10 @@ describe("the resume mechanism routes an old session to the beneficiaries step",
     poaPowers: ["Banking and finances"], poaEffective: "immediate",
     patientAdvocateName: "Raga Hassan", patientAdvocateRelationship: "Spouse/Partner",
     organDonation: "Yes",
+    funeralPreference: "family_decides",
+    // Answered so the trust flow's own trustee-step requirements do not take
+    // precedence; this test is about the contingency question.
+    isJointTrust: "No",
   };
 
   it.each(["will", "trust"] as const)("%s flow routes to beneficiaries", (flow) => {

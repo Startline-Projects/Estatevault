@@ -67,6 +67,7 @@ function intake(overrides: Partial<TemplateWillIntake>): TemplateWillIntake {
     lastName: "Hassan",
     city: "Dearborn",
     executorName: "Raga Hassan",
+    funeralPreference: "family_decides",
     executorRelationship: "Spouse/Partner",
     successorTrusteeName: "Raga Hassan",
     beneficiaries: [{ name: "Layla Hassan", relationship: "Child", share: "", contingency: "other_beneficiaries" }],

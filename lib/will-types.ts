@@ -42,6 +42,8 @@ export interface WillIntake {
   secondSuccessorPatientAdvocateName: string;
   hasHealthcareWishes: string;
   healthcareWishesDescription: string;
+  /** "burial" | "cremation" | "family_decides" — the will's Section 8.2. */
+  funeralPreference: string;
   hasSpecificGifts: string;
   specificGiftsDescription: string;
 }
@@ -81,6 +83,7 @@ export const initialWillIntake: WillIntake = {
   secondSuccessorPatientAdvocateName: "",
   hasHealthcareWishes: "",
   healthcareWishesDescription: "",
+  funeralPreference: "",
   hasSpecificGifts: "",
   specificGiftsDescription: "",
 };

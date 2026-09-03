@@ -58,8 +58,32 @@ function nonEmptyArray(field: string) {
  * Only fields a pre-existing session can legitimately be missing belong here.
  * Fields that were always collected stay with Zod as before.
  */
+/**
+ * Joint trusts. A session saved before the joint-trust question was added has
+ * no answer, and whether two people own the trust together is dispositive, so
+ * it is asked rather than assumed. The co-trustee authority question only
+ * exists once the client says the trust is joint and names the other grantor.
+ */
+const TRUSTEE_REQUIREMENTS: FieldRequirement[] = [
+  { field: "isJointTrust", step: "trustee", isAnswered: nonEmptyString("isJointTrust") },
+  {
+    field: "jointTrusteeAuthority",
+    step: "trustee",
+    isAnswered: (intake) => {
+      const joint = String(intake.isJointTrust ?? "").trim().toLowerCase() === "yes";
+      const named = String(intake.secondGrantorName ?? "").trim() !== "";
+      if (!joint || !named) return true;
+      return nonEmptyString("jointTrusteeAuthority")(intake);
+    },
+  },
+];
+
 const BENEFICIARY_REQUIREMENTS: FieldRequirement[] = [
   { field: "beneficiaries[].contingency", step: "beneficiaries", isAnswered: everyBeneficiaryHasContingency },
+];
+
+const FINAL_WISHES_REQUIREMENTS: FieldRequirement[] = [
+  { field: "funeralPreference", step: "gifts", isAnswered: nonEmptyString("funeralPreference") },
 ];
 
 const POA_REQUIREMENTS: FieldRequirement[] = [
@@ -78,8 +102,8 @@ const PAD_REQUIREMENTS: FieldRequirement[] = [
 // Ordered by where the steps appear, so a client walks forward through
 // everything that is missing rather than being bounced backwards.
 export const FLOW_REQUIREMENTS: Record<IntakeFlow, FieldRequirement[]> = {
-  will: [...BENEFICIARY_REQUIREMENTS, ...POA_REQUIREMENTS, ...PAD_REQUIREMENTS],
-  trust: [...BENEFICIARY_REQUIREMENTS, ...POA_REQUIREMENTS, ...PAD_REQUIREMENTS],
+  will: [...BENEFICIARY_REQUIREMENTS, ...POA_REQUIREMENTS, ...PAD_REQUIREMENTS, ...FINAL_WISHES_REQUIREMENTS],
+  trust: [...TRUSTEE_REQUIREMENTS, ...BENEFICIARY_REQUIREMENTS, ...POA_REQUIREMENTS, ...PAD_REQUIREMENTS, ...FINAL_WISHES_REQUIREMENTS],
 };
 
 export interface ResumePoint {

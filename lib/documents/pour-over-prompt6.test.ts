@@ -26,6 +26,7 @@ function answers(overrides: Record<string, unknown> = {}) {
     city: "Dearborn",
     state: "Michigan",
     executorName: "Raga Hassan",
+    funeralPreference: "family_decides",
     executorRelationship: "Spouse/Partner",
     successorTrusteeName: "Raga Hassan",
     successorTrusteeRelationship: "Spouse/Partner",

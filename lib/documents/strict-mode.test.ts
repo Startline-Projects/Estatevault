@@ -37,6 +37,7 @@ function completeWillIntake(): Record<string, unknown> {
     executorRelationship: "Spouse",
     beneficiaries: [{ name: "Layla Hassan", relationship: "Child", share: "", contingency: "other_beneficiaries" }],
     beneficiariesEqualShares: "Yes",
+    funeralPreference: "family_decides",
     hasSpecificGifts: "No",
   };
 }

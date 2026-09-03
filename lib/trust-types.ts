@@ -15,7 +15,8 @@ export interface TrustIntake {
   successorTrusteeRelationship: string;
   additionalSuccessorTrustees: Array<{ name: string; relationship: string }>;
   /** Joint trusts only: "either_alone" | "jointly". */
-  /** Naming a second grantor is what makes the trust joint. */
+  /** "Yes" | "No" — a joint trust also needs the second grantor named. */
+  isJointTrust: string;
   secondGrantorName: string;
   secondGrantorRelationship: string;
   jointTrusteeAuthority: string;
@@ -63,6 +64,8 @@ export interface TrustIntake {
   contingentBeneficiaries: Array<{ name: string; relationship: string; share: string }>;
   contingentEqualShares: string;
   // Specific gifts
+  /** "burial" | "cremation" | "family_decides" — the will's Section 8.2. */
+  funeralPreference: string;
   hasSpecificGifts: string;
   specificGiftsDescription: string;
 }
@@ -81,6 +84,7 @@ export const initialTrustIntake: TrustIntake = {
   successorTrusteeName: "",
   successorTrusteeRelationship: "",
   additionalSuccessorTrustees: [],
+  isJointTrust: "",
   secondGrantorName: "",
   secondGrantorRelationship: "",
   jointTrusteeAuthority: "",
@@ -113,6 +117,7 @@ export const initialTrustIntake: TrustIntake = {
   hasContingentBeneficiary: "",
   contingentBeneficiaries: [],
   contingentEqualShares: "",
+  funeralPreference: "",
   hasSpecificGifts: "",
   specificGiftsDescription: "",
 };

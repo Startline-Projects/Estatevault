@@ -23,6 +23,7 @@ describe("mapIntakeToTemplateData", () => {
       guardianRelationship: "Sister",
       successorGuardianName: "Tom Brown",
       organDonation: "any_purpose",
+      funeralPreference: "family_decides",
       hasSpecificGifts: "No",
     });
 

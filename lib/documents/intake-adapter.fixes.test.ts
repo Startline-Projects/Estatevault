@@ -60,6 +60,7 @@ function trustQuizAnswers(overrides: Record<string, unknown> = {}): Record<strin
     hasContingentBeneficiary: "No",
     contingentBeneficiaries: [],
     contingentEqualShares: "",
+    funeralPreference: "family_decides",
     hasSpecificGifts: "Yes",
     specificGiftsDescription: "My grandfather's pocket watch to my son Omar.",
     ...overrides,
@@ -268,7 +269,7 @@ describe("a sole beneficiary means 100%, not an unanswered share", () => {
   // equal-shares answer. Found by driving the browser: every such will was
   // blocked for a share the client was never asked for.
   const soleBeneficiary = {
-    firstName: "Ahmed", lastName: "Hassan",
+    firstName: "Ahmed", lastName: "Hassan", funeralPreference: "family_decides",
     executorName: "Raga Hassan", executorRelationship: "Spouse/Partner",
     beneficiaries: [{ name: "Layla Hassan", relationship: "Child", share: "", contingency: "other_beneficiaries" }],
     beneficiariesEqualShares: "",

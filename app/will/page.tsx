@@ -17,6 +17,7 @@ import NameInput from "@/components/quiz/NameInput";
 import QuestionLabel from "@/components/quiz/QuestionLabel";
 import { findResumePoint } from "@/lib/intake/incomplete-steps";
 import { BeneficiaryContingency, contingenciesComplete, CONTINGENCY_OPTIONS } from "@/components/intake/BeneficiaryContingency";
+import { FuneralPreference, FUNERAL_PREFERENCE_OPTIONS } from "@/components/intake/FuneralPreference";
 import {
   PoaStep,
   PadStep,
@@ -191,6 +192,7 @@ export default function WillPage() {
         );
       case "gifts":
         return (
+          intake.funeralPreference !== "" &&
           intake.hasSpecificGifts !== "" &&
           (intake.hasSpecificGifts === "No" ||
             intake.specificGiftsDescription.trim() !== "")
@@ -330,7 +332,7 @@ export default function WillPage() {
     guardian: "Minor Children",
     poa: "Power of Attorney",
     healthcare: "Healthcare Directive",
-    gifts: "Specific Gifts",
+    gifts: "Gifts & Final Wishes",
     review: "Final Review",
   };
 
@@ -660,7 +662,11 @@ export default function WillPage() {
       case "gifts":
         return (
           <>
-            <div>
+            <FuneralPreference
+              value={intake.funeralPreference}
+              onChange={(v) => update({ funeralPreference: v })}
+            />
+            <div className="mt-6">
               <p className="mb-2 text-xs text-charcoal/60">
                 For example: &quot;My grandmother&apos;s ring to my daughter
                 Sarah&quot;
@@ -825,13 +831,17 @@ export default function WillPage() {
               <Row label="Relationship" value={intake.patientAdvocateRelationship} />
               <Row label="Successor advocate" value={intake.successorPatientAdvocateName} />
               <Row label="Organ donation" value={ORGAN_DONATION_OPTIONS.find((o) => o.value === intake.organDonation)?.label ?? ""} />
+              {intake.organDonation === "specific_purposes" && (
+                <Row label="Donation purposes" value={<span className="whitespace-pre-wrap">{intake.organDonationPurposes}</span>} />
+              )}
               <Row label="Healthcare wishes" value={intake.hasHealthcareWishes} />
               {intake.hasHealthcareWishes === "Yes" && (
                 <Row label="Wishes" value={<span className="whitespace-pre-wrap">{intake.healthcareWishesDescription}</span>} />
               )}
             </Section>
 
-            <Section k="gifts" title="Specific Gifts" target="gifts">
+            <Section k="gifts" title="Gifts &amp; Final Wishes" target="gifts">
+              <Row label="Remains" value={FUNERAL_PREFERENCE_OPTIONS.find((o) => o.value === intake.funeralPreference)?.label ?? ""} />
               <Row label="Specific gifts" value={intake.hasSpecificGifts} />
               {intake.hasSpecificGifts === "Yes" && (
                 <Row label="Description" value={<span className="whitespace-pre-wrap">{intake.specificGiftsDescription}</span>} />

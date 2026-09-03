@@ -26,6 +26,7 @@ function intake(overrides: Record<string, unknown> = {}): TemplateWillIntake {
     city: "Dearborn",
     state: "Michigan",
     executorName: "Raga Hassan",
+    funeralPreference: "family_decides",
     executorRelationship: "Spouse/Partner",
     beneficiaries: [{ name: "Layla Hassan", relationship: "Child", share: "", contingency: "other_beneficiaries" }],
     beneficiariesEqualShares: "",

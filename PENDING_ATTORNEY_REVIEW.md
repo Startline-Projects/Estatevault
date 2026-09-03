@@ -23,8 +23,8 @@ file is rendered.
 
 | | |
 |---|---|
-| Entries awaiting review | 22 |
-| Generated | Prompt 9 — attorney review round 3 |
+| Entries awaiting review | 24 |
+| Generated | Prompt 9B — closing items and browser walkthrough |
 | Approved | 47 entries on 2026-09-02 |
 | Withdrawn | 2 entries — the questions no longer exist |
 | Reviewing attorney | Mo Murshed |
@@ -216,10 +216,12 @@ Immediately, as soon as I sign
 Your agent can act on your behalf right away, even while you are managing your own affairs.
 
 Only if I become unable to manage my own affairs
-Your agent has no authority unless and until a physician certifies in writing that you cannot manage your finances.
+Your agent does not have authority to act unless you have been deemed incapacitated.
 ```
 
 **Why it was written:** Article III of the DPOA template already carried both effective-date branches but nothing in the intake let a client choose between them, so the document could not render. The assistant wrote the question and both option labels and descriptions; the values map 1:1 to the {{#IF dpoa_effective ...}} branches. The code marks the block "PENDING ATTORNEY APPROVAL — final wording comes from the reviewing attorney."
+
+**Note:** the springing description quoted above was reworded under item D4 (physician-certification language removed). The quote here is the wording now in the code; see the separate entry "Questionnaire — Power of Attorney step / Springing option description, reworded" for that change.
 
 **Decision:** ☐ approved as written ☐ replace with attorney wording
 
@@ -546,6 +548,53 @@ NOTE, NOT A LABEL CHANGE: there is no funeral preference question in either ques
 **Why it was written:** Item G1 asked for the questionnaire option label to be aligned with the revised clause. The clause was revised as instructed; the label does not exist.
 
 **Decision:** ☐ approved as written ☐ replace with attorney wording
+
+**Update 2026-09-02 (9B):** the question now exists in both questionnaires, with three options mapping 1:1 to the three clauses. Its wording is logged in the entry below.
+
+---
+
+### Will and Trust questionnaires — Gifts & Final Wishes step
+
+**Where:** New question "What are your wishes for your remains?" and its three answer options
+
+**Source file:** `components/intake/FuneralPreference.tsx`
+
+**Text:**
+
+```text
+What are your wishes for your remains?
+
+Burial
+You would prefer your remains to be interred by burial.
+
+Cremation
+You would prefer your remains to be disposed of by cremation.
+
+Leave the decision to my Personal Representative
+You do not state a preference; the person carrying out your will decides.
+```
+
+**Why it was written:** Section 8.2 of the will carries three approved clauses, but nothing in either questionnaire asked the client which one applied, so every will shipped the family_decides clause the client never chose. The assistant wrote the question and the three option labels and descriptions; each value maps 1:1 to a branch in the will template. There is no default and the step cannot be completed unanswered. The code marks the block "PENDING ATTORNEY APPROVAL — final wording comes from the reviewing attorney."
+
+**Decision:** ☐ approved as written ☐ replace with attorney wording
+
+---
+
+### Advance Healthcare Directive — operative document body
+
+**Where:** Nowhere yet — the client's own healthcare instruction is collected but never rendered
+
+**Source file:** `lib/documents/templates/advance-healthcare-directive-michigan-v1.0.0.txt`
+
+**Text:**
+
+```text
+(no text has been added — this entry asks where it should go and what should introduce it)
+```
+
+**Why it was written:** Both questionnaires ask "Do you have specific healthcare wishes to document?" and, when the client answers Yes, collect a free-text instruction. The review screen shows it back to the client. No section of the Advance Healthcare Directive renders it, so the client's own words never reach the delivered document. (The older Claude-generated directive did include them, so this is a regression the template pipeline would introduce.) Section 2.11, Statement of Limitations, Desires, and Special Provisions, is where such a direction would sit, but the attorney's text for that section is fixed and the assistant will not write operative language or decide the lead-in that introduces a client's own words. Two decisions are needed: which section carries the client's instruction, and the sentence that introduces it.
+
+**Decision:** ☐ attorney to supply placement and lead-in wording
 
 ---
 

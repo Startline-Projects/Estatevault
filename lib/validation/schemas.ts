@@ -225,6 +225,9 @@ const willIntakeSchema = z.object({
   secondSuccessorPatientAdvocateName: z.string().max(200).optional().default(""),
   hasHealthcareWishes: YES_NO,
   healthcareWishesDescription: z.string().max(5000),
+  // The three approved clauses of the will's Section 8.2. No default: every
+  // will previously shipped a clause the client never chose.
+  funeralPreference: z.enum(["burial", "cremation", "family_decides"]),
   hasSpecificGifts: YES_NO,
   specificGiftsDescription: z.string().max(5000),
 }).refine(
@@ -259,6 +262,10 @@ const trustIntakeSchema = z.object({
   trusteeName: z.string().max(200),
   successorTrusteeName: z.string().min(1).max(200),
   successorTrusteeRelationship: RELATIONSHIP,
+  isJointTrust: YES_NO,
+  secondGrantorName: z.string().max(200).optional().default(""),
+  secondGrantorRelationship: z.string().max(100).optional().default(""),
+  jointTrusteeAuthority: z.enum(["either_alone", "jointly"]).optional().or(z.literal("")).default(""),
   additionalSuccessorTrustees: z.array(z.object({
     name: z.string().min(1).max(200),
     relationship: RELATIONSHIP,
@@ -296,6 +303,9 @@ const trustIntakeSchema = z.object({
   hasContingentBeneficiary: YES_NO,
   contingentBeneficiaries: z.array(contingentBeneficiarySchema).max(20),
   contingentEqualShares: z.string().max(10),
+  // The three approved clauses of the will's Section 8.2. No default: every
+  // will previously shipped a clause the client never chose.
+  funeralPreference: z.enum(["burial", "cremation", "family_decides"]),
   hasSpecificGifts: YES_NO,
   specificGiftsDescription: z.string().max(5000),
 }).refine(

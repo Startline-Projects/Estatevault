@@ -16,7 +16,8 @@ afterEach(() => {
 function trustAnswers(overrides: Record<string, unknown> = {}) {
   return {
     firstName: "Ahmed", lastName: "Hassan", city: "Dearborn", state: "Michigan",
-    executorName: "Raga Hassan", executorRelationship: "Spouse/Partner",
+    executorName: "Raga Hassan",
+    funeralPreference: "family_decides", executorRelationship: "Spouse/Partner",
     successorTrusteeName: "Raga Hassan", successorTrusteeRelationship: "Spouse/Partner",
     beneficiaries: [
       { name: "Ahmed Junior", relationship: "Child", share: "", contingency: "other_beneficiaries" },

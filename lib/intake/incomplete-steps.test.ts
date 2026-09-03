@@ -21,6 +21,7 @@ function preDeployWillSession(): Record<string, unknown> {
     executorRelationship: "Spouse/Partner",
     beneficiaries: [{ name: "Layla Hassan", relationship: "Child", share: "100", contingency: "descendants" }],
     beneficiariesEqualShares: "Yes",
+    funeralPreference: "family_decides",
     hasSpecificGifts: "No",
     organDonation: "Yes",
   };
@@ -87,8 +88,17 @@ describe("a pre-deploy session is redirected, not failed", () => {
   });
 
   it("applies the same rules to the trust flow", () => {
-    expect(findResumePoint("trust", preDeployWillSession())!.step).toBe("poa");
-    expect(isIntakeComplete("trust", completeSession())).toBe(true);
+    // The trust flow asks one thing the will flow does not: whether the trust
+    // is joint. A session with that answered lands on the same POA step.
+    const single = { ...preDeployWillSession(), isJointTrust: "No" };
+    expect(findResumePoint("trust", single)!.step).toBe("poa");
+    expect(isIntakeComplete("trust", { ...completeSession(), isJointTrust: "No" })).toBe(true);
+  });
+
+  it("sends a trust session that never saw the joint-trust question to the trustee step", () => {
+    const resume = findResumePoint("trust", preDeployWillSession())!;
+    expect(resume.step).toBe("trustee");
+    expect(resume.missingFields).toContain("isJointTrust");
   });
 
   it("treats blank strings and empty arrays as unanswered", () => {

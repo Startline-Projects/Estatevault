@@ -106,7 +106,11 @@ const lenientWillIntakeSchema = z.object({
   organ_donation_purposes: z.array(z.string()).default([]),
   /** The client's own words, used only when organ_donation is "specific_purposes". */
   organ_donation_purposes_text: z.string().default(""),
-  funeral_preference: z.string().default("family_decides"),
+  /**
+   * "burial" | "cremation" | "family_decides". Empty until answered — the old
+   * default silently chose a clause on the client's behalf.
+   */
+  funeral_preference: z.string().default(""),
   has_funeral_representative: z.boolean().default(false),
   funeral_representative: personSchema3.nullable().default(null),
   successor_funeral_representative: personSchema3.nullable().default(null),
@@ -494,7 +498,10 @@ export function mapIntakeToTemplateData(
     // Joint trust. Marital status alone does not make a trust joint — the
     // client has to name a second grantor — so both are required before the
     // joint-trust branches render.
-    const secondGrantor = str(raw.secondGrantorName ?? raw.grantor2Name ?? raw.grantor_2_full_name).trim();
+    const jointAnswer = str(raw.isJointTrust ?? "").trim().toLowerCase();
+    const secondGrantor = jointAnswer === "no"
+      ? ""
+      : str(raw.secondGrantorName ?? raw.grantor2Name ?? raw.grantor_2_full_name).trim();
     if (secondGrantor) {
       mapped.grantor_2_full_name = secondGrantor;
       mapped.grantor_2_relationship = str(raw.secondGrantorRelationship ?? raw.grantor_2_relationship ?? "Spouse");
@@ -575,6 +582,11 @@ export function mapIntakeToTemplateData(
       }));
     }
 
+    if (raw.funeralPreference !== undefined || raw.funeral_preference !== undefined) {
+      const v = str(raw.funeralPreference ?? raw.funeral_preference).trim();
+      if (["burial", "cremation", "family_decides"].includes(v)) mapped.funeral_preference = v;
+    }
+
     // Organ donation — normalized to the tokens the PAD template branches on.
     const organ = mapOrganDonation(raw.organDonation ?? raw.organ_donation);
     if (organ) mapped.organ_donation = organ;
@@ -635,7 +647,11 @@ export function mapIntakeToTemplateData(
       };
     }
     if (raw.organDonationPurposes !== undefined || raw.organ_donation_purposes_text !== undefined) {
-      mapped.organ_donation_purposes_text = str(raw.organDonationPurposes ?? raw.organ_donation_purposes_text).trim();
+      // Both templates close the sentence with their own period, so a client
+      // who types one produces "...education..". Drop the trailing stop.
+      mapped.organ_donation_purposes_text = str(raw.organDonationPurposes ?? raw.organ_donation_purposes_text)
+        .trim()
+        .replace(/\s*\.+$/, "");
     }
     if (raw.successorPatientAdvocateName || raw.successorHealthcareAgentName) {
       mapped.successor_patient_advocate = {
@@ -718,6 +734,9 @@ export function validateForDocument(docType: string, d: TemplateWillIntake): str
   switch (docType) {
     case "will":
       person(d.personal_representative.full_name, "personal representative", out);
+      if (!["burial", "cremation", "family_decides"].includes(d.funeral_preference)) {
+        out.push("your wishes for your remains");
+      }
       checkBeneficiaries(d, out);
       checkGifts(d, out);
       break;

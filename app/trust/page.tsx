@@ -18,6 +18,7 @@ import QuestionLabel from "@/components/quiz/QuestionLabel";
 import { findResumePoint } from "@/lib/intake/incomplete-steps";
 import { BeneficiaryContingency, contingenciesComplete, CONTINGENCY_OPTIONS } from "@/components/intake/BeneficiaryContingency";
 import { JointTrusteeAuthority, JOINT_TRUSTEE_AUTHORITY_OPTIONS } from "@/components/intake/JointTrusteeAuthority";
+import { FuneralPreference, FUNERAL_PREFERENCE_OPTIONS } from "@/components/intake/FuneralPreference";
 import {
   PoaStep,
   PadStep,
@@ -64,7 +65,7 @@ export default function TrustPage() {
   const [customAgeError, setCustomAgeError] = useState("");
   const hasMinorChildren = intake.hasMinorChildren === "Yes";
   /** A trust is joint when the client actually names a second grantor. */
-  const isJointTrust = (intake.secondGrantorName ?? "").trim() !== "";
+  const isJointTrust = intake.isJointTrust === "Yes" && (intake.secondGrantorName ?? "").trim() !== "";
   const [openReviewSections, setOpenReviewSections] = useState<Record<string, boolean>>({
     residency: false,
     personal: false,
@@ -177,11 +178,14 @@ export default function TrustPage() {
       case "about":
         return intake.firstName.trim() !== "" && intake.lastName.trim() !== "" && intake.dateOfBirth !== "" && intake.dateOfBirth <= maxDob && intake.city.trim() !== "" && intake.hasMinorChildren !== "" && intake.hasSpecialNeedsDependent !== "";
       case "trustee":
+        if (intake.isJointTrust === "") return false;
+        if (intake.isJointTrust === "Yes" && intake.secondGrantorName.trim() === "") return false;
         if (isJointTrust && !intake.jointTrusteeAuthority) return false;
         return intake.primaryTrustee !== "" && (intake.primaryTrustee === "Myself" || intake.trusteeName.trim() !== "") && intake.successorTrusteeName.trim() !== "" && intake.successorTrusteeRelationship !== "" && intake.additionalSuccessorTrustees.every(st => !st.name.trim() || st.relationship !== "");
       case "beneficiaries": {
         if (intake.beneficiaries.length === 0) return false;
         if (intake.beneficiaries.some((b) => !b.name.trim() || !b.relationship)) return false;
+        if (!contingenciesComplete(intake.beneficiaries)) return false;
         if (intake.beneficiaries.length > 1) {
           if (!intake.beneficiariesEqualShares) return false;
           if (intake.beneficiariesEqualShares === "No") {
@@ -203,7 +207,7 @@ export default function TrustPage() {
       case "healthcare":
         return isPadStepComplete(intake);
       case "gifts":
-        return intake.hasSpecificGifts !== "" && (intake.hasSpecificGifts === "No" || intake.specificGiftsDescription.trim() !== "");
+        return intake.funeralPreference !== "" && intake.hasSpecificGifts !== "" && (intake.hasSpecificGifts === "No" || intake.specificGiftsDescription.trim() !== "");
       case "review":
         return true;
       default:
@@ -303,7 +307,7 @@ export default function TrustPage() {
     pourover: "Your Pour-Over Will",
     poa: "Power of Attorney",
     healthcare: "Healthcare Directive",
-    gifts: "Specific Gifts",
+    gifts: "Gifts & Final Wishes",
     review: "Final Review",
   };
 
@@ -397,6 +401,28 @@ export default function TrustPage() {
       case "trustee":
         return (
           <>
+            {/* PENDING ATTORNEY APPROVAL — question wording. A trust is joint
+                when a second grantor is actually named. */}
+            <div className="mb-5">
+              <QuestionLabel required>Are you creating this trust jointly with your spouse or partner?</QuestionLabel>
+              <YesNoTiles
+                value={intake.isJointTrust}
+                onChange={(v) => update({
+                  isJointTrust: v,
+                  ...(v === "No" ? { secondGrantorName: "", secondGrantorRelationship: "", jointTrusteeAuthority: "" } : {}),
+                })}
+              />
+              {intake.isJointTrust === "Yes" && (
+                <div className="mt-4">
+                  <QuestionLabel required>Their full name</QuestionLabel>
+                  <NameInput
+                    value={intake.secondGrantorName}
+                    onChange={(v) => update({ secondGrantorName: v })}
+                    onPartialChange={partialHandler("second-grantor")}
+                  />
+                </div>
+              )}
+            </div>
             {isJointTrust && (
               <JointTrusteeAuthority
                 value={intake.jointTrusteeAuthority}
@@ -490,6 +516,11 @@ export default function TrustPage() {
                 </div>
                 <NameInput value={b.name} onChange={(v) => { const u = [...intake.beneficiaries]; u[idx] = { ...u[idx], name: v }; update({ beneficiaries: u }); }} />
                 <div className="mt-3"><QuestionLabel required>Relationship</QuestionLabel><div className="grid grid-cols-2 gap-2">{benRelOptions.map((opt) => (<ChoiceTile key={opt} label={opt} selected={b.relationship === opt} onClick={() => { const u = [...intake.beneficiaries]; u[idx] = { ...u[idx], relationship: opt }; update({ beneficiaries: u }); }} />))}</div></div>
+                <BeneficiaryContingency
+                  beneficiary={b}
+                  soleBeneficiary={intake.beneficiaries.length === 1}
+                  onChange={(patch) => { const u = [...intake.beneficiaries]; u[idx] = { ...u[idx], ...patch }; update({ beneficiaries: u }); }}
+                />
               </div>
             ))}
             <button type="button" onClick={() => update({ beneficiaries: [...intake.beneficiaries, { name: "", relationship: "", share: "" }] })} className="mt-3 text-sm text-gold font-medium hover:text-gold/80">+ Add another beneficiary</button>
@@ -642,7 +673,11 @@ export default function TrustPage() {
       case "gifts":
         return (
           <>
-            <p className="mb-2 text-xs text-charcoal/60">For example: &quot;My grandmother&apos;s ring to my daughter Sarah&quot;</p>
+            <FuneralPreference
+              value={intake.funeralPreference}
+              onChange={(v) => update({ funeralPreference: v })}
+            />
+            <p className="mb-2 mt-6 text-xs text-charcoal/60">For example: &quot;My grandmother&apos;s ring to my daughter Sarah&quot;</p>
             <QuestionLabel>Do you have any specific gifts you&apos;d like to leave?</QuestionLabel>
             <YesNoTiles value={intake.hasSpecificGifts} onChange={(v) => update({ hasSpecificGifts: v, ...(v === "No" ? { specificGiftsDescription: "" } : {}) })} />
             {intake.hasSpecificGifts === "Yes" && (
@@ -735,6 +770,8 @@ export default function TrustPage() {
             <Section k="trust" title="Trust & Trustees" target="trustee">
               <Row label="Trust name" value={intake.trustName || `The ${intake.firstName} ${intake.lastName} Revocable Living Trust`.trim()} />
               <Row label="Primary trustee" value={intake.primaryTrustee === "Myself" ? "Yourself" : intake.trusteeName} />
+              <Row label="Joint trust" value={intake.isJointTrust} />
+              {isJointTrust && <Row label="Second grantor" value={intake.secondGrantorName} />}
               {isJointTrust && (
                 <Row label="Co-Trustees act" value={JOINT_TRUSTEE_AUTHORITY_OPTIONS.find((o) => o.value === intake.jointTrusteeAuthority)?.label ?? ""} />
               )}
@@ -805,13 +842,17 @@ export default function TrustPage() {
               <Row label="Relationship" value={intake.patientAdvocateRelationship} />
               <Row label="Successor advocate" value={intake.successorPatientAdvocateName} />
               <Row label="Organ donation" value={ORGAN_DONATION_OPTIONS.find((o) => o.value === intake.organDonation)?.label ?? ""} />
+              {intake.organDonation === "specific_purposes" && (
+                <Row label="Donation purposes" value={<span className="whitespace-pre-wrap">{intake.organDonationPurposes}</span>} />
+              )}
               <Row label="Healthcare wishes" value={intake.hasHealthcareWishes} />
               {intake.hasHealthcareWishes === "Yes" && (
                 <Row label="Wishes" value={<span className="whitespace-pre-wrap">{intake.healthcareWishesDescription}</span>} />
               )}
             </Section>
 
-            <Section k="gifts" title="Specific Gifts" target="gifts">
+            <Section k="gifts" title="Gifts &amp; Final Wishes" target="gifts">
+              <Row label="Remains" value={FUNERAL_PREFERENCE_OPTIONS.find((o) => o.value === intake.funeralPreference)?.label ?? ""} />
               <Row label="Has gifts" value={intake.hasSpecificGifts} />
               {intake.hasSpecificGifts === "Yes" && (
                 <Row label="Description" value={<span className="whitespace-pre-wrap">{intake.specificGiftsDescription}</span>} />

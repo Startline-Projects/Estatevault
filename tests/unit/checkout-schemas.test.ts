@@ -45,6 +45,7 @@ const VALID_WILL_INTAKE = {
   secondSuccessorPatientAdvocateName: "",
   hasHealthcareWishes: "No" as const,
   healthcareWishesDescription: "",
+  funeralPreference: "family_decides" as const,
   hasSpecificGifts: "No" as const,
   specificGiftsDescription: "",
 };
@@ -61,6 +62,10 @@ const VALID_TRUST_INTAKE = {
   trusteeName: "",
   successorTrusteeName: "Jane Doe",
   successorTrusteeRelationship: "Spouse/Partner" as const,
+  isJointTrust: "No" as const,
+  secondGrantorName: "",
+  secondGrantorRelationship: "",
+  jointTrusteeAuthority: "" as const,
   additionalSuccessorTrustees: [],
   beneficiaries: [{ name: "Jane Doe", relationship: "Spouse/Partner" as const, share: "100", contingency: "other_beneficiaries" as const }],
   beneficiariesEqualShares: "Yes" as const,
@@ -91,6 +96,7 @@ const VALID_TRUST_INTAKE = {
   hasContingentBeneficiary: "No" as const,
   contingentBeneficiaries: [],
   contingentEqualShares: "",
+  funeralPreference: "family_decides" as const,
   hasSpecificGifts: "No" as const,
   specificGiftsDescription: "",
 };

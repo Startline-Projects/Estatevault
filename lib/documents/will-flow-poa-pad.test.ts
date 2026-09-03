@@ -47,6 +47,7 @@ function willFlowAnswers(): Record<string, unknown> {
     successorPatientAdvocateName: "Karim Hassan",
     hasHealthcareWishes: "No",
     healthcareWishesDescription: "",
+    funeralPreference: "family_decides",
     hasSpecificGifts: "No",
     specificGiftsDescription: "",
   };
