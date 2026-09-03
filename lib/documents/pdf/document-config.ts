@@ -20,6 +20,7 @@ export type DocumentType =
   | "will"
   | "dpoa"
   | "pad"
+  | "ahcd"
   | "hipaa"
   | "funeral_rep"
   | "guardian_nomination"
@@ -67,11 +68,21 @@ export const DOCUMENT_CONFIG: Record<DocumentType, DocumentConfig> = {
     version: "1.1.0-michigan",
     filenameLabel: "Durable Power of Attorney",
   },
+  // The Patient Advocate Designation was replaced wholesale by the attorney's
+  // Advance Healthcare Directive. "pad" is kept as an alias because the key may
+  // appear in persisted rows and in older code paths; both resolve to the new
+  // document.
   pad: {
-    title: "PATIENT ADVOCATE DESIGNATION",
-    templateFile: "pad-michigan-v1.1.0.txt",
-    version: "1.1.0-michigan",
-    filenameLabel: "Patient Advocate Designation",
+    title: "ADVANCE HEALTHCARE DIRECTIVE",
+    templateFile: "advance-healthcare-directive-michigan-v1.0.0.txt",
+    version: "1.0.0-michigan",
+    filenameLabel: "Advance Healthcare Directive",
+  },
+  ahcd: {
+    title: "ADVANCE HEALTHCARE DIRECTIVE",
+    templateFile: "advance-healthcare-directive-michigan-v1.0.0.txt",
+    version: "1.0.0-michigan",
+    filenameLabel: "Advance Healthcare Directive",
   },
   hipaa: {
     title: "HIPAA AUTHORIZATION",

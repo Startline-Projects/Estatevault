@@ -3,7 +3,8 @@ import type { DocumentType } from "./document-config";
 const TEMPLATE_IMPORTS: Record<DocumentType, () => Promise<{ default: string }>> = {
   will: () => import("@/lib/documents/templates/will-michigan-v1.1.0"),
   dpoa: () => import("@/lib/documents/templates/dpoa-michigan-v1.1.0"),
-  pad: () => import("@/lib/documents/templates/pad-michigan-v1.1.0"),
+  pad: () => import("@/lib/documents/templates/advance-healthcare-directive-michigan-v1.0.0"),
+  ahcd: () => import("@/lib/documents/templates/advance-healthcare-directive-michigan-v1.0.0"),
   hipaa: () => import("@/lib/documents/templates/hipaa-authorization-v1.1.0"),
   funeral_rep: () => import("@/lib/documents/templates/funeral-rep-michigan-v1.0.0"),
   guardian_nomination: () => import("@/lib/documents/templates/guardian-nomination-michigan-v1.0.0"),

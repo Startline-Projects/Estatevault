@@ -84,16 +84,11 @@ Although this Durable Power of Attorney is effective immediately, I retain full 
 
 ### Section 3.1 — Springing Effectiveness.
 
-This Durable Power of Attorney is a "springing" power of attorney. The Agent's authority under this document shall not become effective until a physician licensed to practice medicine in the United States has examined me and certified in writing that I am unable to manage my own financial affairs by reason of mental or physical incapacity.
+This Durable Power of Attorney is a "springing" power of attorney. The Agent's authority under this document shall not become effective unless and until I am deemed incapacitated.
 
-### Section 3.2 — Certification of Incapacity.
+### Section 3.2 — Restoration of Capacity.
 
-The physician's certification shall be in the form of a signed, dated written statement that includes the physician's full name, address, and professional license number; a statement that the physician has examined me; the physician's professional opinion that I am unable to manage my own financial affairs by reason of mental or physical incapacity; and the physician's signature. A copy of the physician's written certification shall be attached to this Durable Power of Attorney before the Agent exercises any authority under it. The Agent may rely on the physician's written certification in good faith.
-
-### Section 3.3 — Restoration of Capacity.
-
-If I subsequently regain capacity, the Agent's authority under this document shall be suspended for the duration of my restored capacity. The Agent's authority shall again become effective upon a new physician's certification of incapacity made after the period of restored capacity.
-
+If I am subsequently no longer incapacitated, the Agent's authority under this document shall be suspended for so long as I remain able to manage my own financial affairs.
 {{/IF}}
 
 ## ARTICLE IV — POWERS GRANTED TO THE AGENT
@@ -232,47 +227,11 @@ The Agent is NOT authorized to access, manage, or dispose of my digital assets o
 
 {{/IF}}
 
-### Section 4.3 — Hot Powers (Specifically Granted or Withheld).
+### Section 4.3 — Limitations on Agent's Authority.
 
-Under the Michigan Uniform Power of Attorney Act, the following two powers are "hot powers" that cannot be inferred from a general grant of authority. Each power is either expressly granted or expressly NOT granted based on my selections.
+The Agent shall NOT make or amend a will on my behalf; vote in any public election on my behalf; execute, modify, or revoke an Advance Healthcare Directive on my behalf (medical decisions are governed by a separate Advance Healthcare Directive); take any action that would be in violation of Michigan or federal law; or take any action that would be a breach of the Agent's fiduciary duties under MCL 556.214.
 
-{{#IF dpoa_powers contains "gift_making"}}
-
-■  Gift-Making Authority.  GRANTED.
-
-I specifically and expressly grant the Agent the authority to make gifts of my property to other persons. This authority includes making gifts that do not exceed the annual federal gift tax exclusion (as adjusted for inflation) per donee per calendar year; making larger gifts where the Agent determines, in the Agent's reasonable judgment, that such gifts are consistent with my prior pattern of gifting, my estate plan, or planning for my long-term care needs; making gifts to qualified charitable organizations consistent with my prior pattern of charitable giving; and making gifts as part of Medicaid planning, gift-tax planning, or estate-tax planning that the Agent determines, in good faith, to be in my best interest. The Agent shall not make gifts that benefit the Agent personally without first obtaining written consent from at least one other adult family member of the Principal who is not a beneficiary of the gift.
-
-{{/IF}}
-
-{{#IF dpoa_powers does_not_contain "gift_making"}}
-
-□  Gift-Making Authority.  NOT GRANTED.
-
-The Agent is NOT authorized to make gifts of my property. Any gift made by the Agent of my property without my express written consent is unauthorized and a breach of the Agent's fiduciary duty.
-
-{{/IF}}
-
-{{#IF dpoa_powers contains "amend_estate_plan"}}
-
-■  Authority to Make Changes to Estate Plan.  GRANTED.
-
-I specifically and expressly grant the Agent the authority to amend, modify, or revoke any trust agreement, beneficiary designation, transfer-on-death designation, or other estate planning instrument that I have executed. This authority shall be exercised only in furtherance of my reasonably understood goals and only when the Agent determines, in good faith, that such amendment, modification, or revocation is necessary or appropriate in my best interest. The Agent shall not exercise this authority to redirect property to the Agent personally, to the Agent's family members, or to any other party in a manner inconsistent with my prior estate plan, unless I have given the Agent specific written instructions to do so.
-
-{{/IF}}
-
-{{#IF dpoa_powers does_not_contain "amend_estate_plan"}}
-
-□  Authority to Make Changes to Estate Plan.  NOT GRANTED.
-
-The Agent is NOT authorized to amend, modify, or revoke any trust agreement, beneficiary designation, transfer-on-death designation, or other estate planning instrument that I have executed. Any attempt by the Agent to do so without my express written consent is unauthorized.
-
-{{/IF}}
-
-### Section 4.4 — Limitations on Agent's Authority.
-
-The Agent shall NOT make or amend a will on my behalf; vote in any public election on my behalf; execute, modify, or revoke a Patient Advocate Designation on my behalf (medical decisions are governed by a separate Patient Advocate Designation); take any action that would be in violation of Michigan or federal law; or take any action that would be a breach of the Agent's fiduciary duties under MCL 556.214.
-
-### Section 4.5 — Incorporation of Statutory Authority.
+### Section 4.4 — Incorporation of Statutory Authority.
 
 In addition to the powers expressly granted in this Article IV, the Agent shall have all of the general authority granted to agents under the Michigan Uniform Power of Attorney Act, except where such authority is expressly limited or excluded in this document.
 
@@ -364,9 +323,17 @@ The headings of Articles and Sections are for convenience of reference only and 
 
 ## EXECUTION BY THE PRINCIPAL
 
-IN WITNESS WHEREOF, I, {{client_full_name}}, the Principal, sign my name to this Durable Power of Attorney on this _ day of _, 20_, in {{city}}, {{county}} County, Michigan.
+IN WITNESS WHEREOF, I, {{client_full_name}}, the Principal, sign my name to this Durable Power of Attorney on this _ day of _, 20_, in {{city}}, {{county}} County, Michigan, in the presence of the two witnesses named below.
 
 [SIGNATURE] Principal
+
+## WITNESS ATTESTATION
+
+The foregoing Durable Power of Attorney was signed, sealed, published, and declared by the above-named Principal in our presence as the Principal's free and voluntary act for the purposes set forth therein. We, in the Principal's presence and in the presence of each other, have subscribed our names as witnesses. Neither of us is the Agent named in this document.
+
+[SIGNATURE] Witness One — Printed Name and Address
+
+[SIGNATURE] Witness Two — Printed Name and Address
 
 [NOTARY_BLOCK]
 ## NOTARY ACKNOWLEDGMENT
@@ -424,7 +391,7 @@ Second Successor Agent (sign when assuming role): {{second_successor_dpoa_agent.
 
 ## OPERATION OF THIS DOCUMENT
 
-This is your Durable Power of Attorney under the Michigan Uniform Power of Attorney Act (MCL 556.201 et seq., effective July 1, 2024). It authorizes the person you name (your Agent) to handle your financial matters. "Durable" means it remains effective if you later become unable to manage your own affairs. It does NOT authorize medical decisions, which are governed by a separate Patient Advocate Designation under MCL 700.5506. This document terminates automatically upon your passing.
+This is your Durable Power of Attorney under the Michigan Uniform Power of Attorney Act effective July 1, 2024). It authorizes the person you name (your Agent) to handle your financial matters. "Durable" means it remains effective if you later become unable to manage your own affairs. It does NOT authorize medical decisions, which are governed by a separate Patient Advocate Designation This document terminates automatically upon your passing.
 
 ### Section A — When Your Agent Can Act
 
@@ -440,15 +407,15 @@ You keep full control of your own money and property for as long as you are able
 
 You chose a "springing" power of attorney. Your Agent has no power to act, and cannot act, unless and until you become unable to manage your own financial affairs.
 
-Before your Agent may do anything under this document, a licensed physician must examine you and sign a written statement saying that you are unable to manage your own financial affairs. That signed statement must be attached to this document. Until that happens, your Agent may not touch your accounts, sign for you, or act for you in any way. A bank or other institution that asks to see this document will also expect to see the physician's statement.
+Your Agent does not have authority to act unless you have been deemed incapacitated. Until that point your Agent may not touch your accounts, sign for you, or act for you in any way.
 
-If you later recover, your Agent's authority stops again. It can only restart if a physician signs a new statement after your recovery.
+If you later recover, your Agent's authority is suspended again for as long as you are able to manage your own affairs.
 
 {{/IF}}
 
 ### Section B — Making This Document Effective
 
-Sign and date this document in front of a notary public, and have the notary complete the notary section. Michigan does not require witnesses for a power of attorney, so no witness signatures are included.
+Sign and date this document in front of two witnesses and a notary public, and have the notary complete the notary section.
 
 Give a signed copy to your Agent, and to any bank or institution that will be asked to accept it. Keep the signed original somewhere safe and upload a copy to your EstateVault account.
 
@@ -462,6 +429,6 @@ It is included because some institutions require a signed acceptance from the Ag
 
 You may revoke this power of attorney at any time while you are able to make your own decisions. Do it in writing, give the written revocation to your Agent, and notify any institution that has been relying on the document.
 
-State of Michigan  ·  Michigan Uniform Power of Attorney Act, MCL 556.201 et seq.
+State of Michigan · Michigan Uniform Power of Attorney Act,
 
-Michigan Uniform Fiduciary Access to Digital Assets Act, MCL 700.1003 et seq.
+Michigan Uniform Fiduciary Access to Digital Assets Act,

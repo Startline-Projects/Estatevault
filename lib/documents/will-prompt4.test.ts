@@ -113,10 +113,13 @@ describe("4. the sheet explains the three things in plain language", () => {
   it("the two-witness requirement", () => {
     expect(sheet).toContain("a will requires two witnesses to be valid");
     expect(sheet).toContain("must not be people who inherit under this Will");
+    // Prompt 9 removed the beneficiary-witness sentence.
+    expect(sheet).not.toContain("jeopardise their own gift");
   });
 
   it("what the self-proving affidavit does and why it is included", () => {
-    expect(sheet).toContain("self-proving affidavit under MCL 700.2504");
+    expect(sheet).toContain("self-proving affidavit");
+    expect(sheet).not.toMatch(/MCL/);
     expect(sheet).toContain("without tracking down your witnesses");
     expect(sheet).toContain("does not replace the witness requirement");
   });

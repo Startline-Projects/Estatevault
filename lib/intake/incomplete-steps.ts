@@ -72,8 +72,6 @@ const POA_REQUIREMENTS: FieldRequirement[] = [
 const PAD_REQUIREMENTS: FieldRequirement[] = [
   { field: "patientAdvocateName", step: "healthcare", isAnswered: nonEmptyString("patientAdvocateName") },
   { field: "patientAdvocateRelationship", step: "healthcare", isAnswered: nonEmptyString("patientAdvocateRelationship") },
-  { field: "lifeSustainingTreatment", step: "healthcare", isAnswered: nonEmptyString("lifeSustainingTreatment") },
-  { field: "artificialNutrition", step: "healthcare", isAnswered: nonEmptyString("artificialNutrition") },
   { field: "organDonation", step: "healthcare", isAnswered: nonEmptyString("organDonation") },
 ];
 

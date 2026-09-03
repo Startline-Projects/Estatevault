@@ -26,7 +26,7 @@ This HIPAA Authorization is a federal document governed by the Health Insurance 
 
 Federal Health Insurance Portability and Accountability Act of 1996 (HIPAA)
 
-45 C.F.R. Part 160  ·  45 C.F.R. Part 164  ·  45 C.F.R. § 164.508
+45 C.F.R. Part 160 · 45 C.F.R. Part 164 · 45 C.F.R. § 164.508
 
 {{#IF attorney_review_purchased}}
 

@@ -83,8 +83,7 @@ const SHEETS: Record<string, Omit<InstructionSheet, "title">> = {
         text:
           "You and both witnesses sign the notary section, and the notary completes and seals it.",
       },
-      { type: "step", text: "Store the signed original and upload a copy to your EstateVault account." },
-      ...CLOSING_BLOCKS,
+      { type: "step", text: "Store the signed original and upload a copy to your EstateVault account." },...CLOSING_BLOCKS,
     ],
   },
 
@@ -113,8 +112,7 @@ const SHEETS: Record<string, Omit<InstructionSheet, "title">> = {
         type: "paragraph",
         text:
           "A trust that holds nothing, or holds only part of what you own, does not control the assets left outside of it. Work through the funding instructions asset by asset, and keep proof of each transfer in your Vault.",
-      },
-      ...CLOSING_BLOCKS,
+      },...CLOSING_BLOCKS,
     ],
   },
 
@@ -157,8 +155,7 @@ const SHEETS: Record<string, Omit<InstructionSheet, "title">> = {
         type: "paragraph",
         text:
           "The Pour-Over Will is a safety net, not a substitute for funding your trust. Assets that pass through this will must still go through probate before reaching the trust.",
-      },
-      ...CLOSING_BLOCKS,
+      },...CLOSING_BLOCKS,
     ],
   },
 
@@ -169,7 +166,7 @@ const SHEETS: Record<string, Omit<InstructionSheet, "title">> = {
       {
         type: "paragraph",
         text:
-          "Your Durable Power of Attorney authorizes the Agent you named to handle financial and property matters on your behalf. It is durable, which means it remains in force if you later become unable to manage your own affairs.",
+          "Your Durable Power of Attorney authorizes the Agent you named to handle financial and property matters on your behalf. It is durable, which means it remains in force if you later become unable to manage your own affairs. Where you chose a springing power, your Agent does not have authority to act unless you have been deemed incapacitated.",
       },
       { type: "heading", text: "Making This Document Effective" },
       { type: "step", text: "Read the entire document before signing anything." },
@@ -186,8 +183,7 @@ const SHEETS: Record<string, Omit<InstructionSheet, "title">> = {
         type: "paragraph",
         text:
           "You may revoke this power of attorney at any time by giving written notice to your Agent, and by notifying any institution that has been relying on it.",
-      },
-      ...CLOSING_BLOCKS,
+      },...CLOSING_BLOCKS,
     ],
   },
 
@@ -213,7 +209,7 @@ const SHEETS: Record<string, Omit<InstructionSheet, "title">> = {
       {
         type: "step",
         text:
-          "Your patient advocate signs the acceptance page. The designation gives your advocate no authority until that acceptance is signed.",
+          "Your patient advocate signs the acceptance page. The directive gives your advocate no authority until that acceptance is signed.",
       },
       {
         type: "step",
@@ -225,9 +221,8 @@ const SHEETS: Record<string, Omit<InstructionSheet, "title">> = {
       {
         type: "paragraph",
         text:
-          "Your patient advocate may act only after your attending physician and one other physician have examined you and determined that you are unable to participate in medical treatment decisions. Authority to withhold or withdraw life-sustaining treatment applies only if you specifically granted it in this document.",
-      },
-      ...CLOSING_BLOCKS,
+          "Your patient advocate may act only once you have been deemed unable to participate in medical treatment decisions.",
+      },...CLOSING_BLOCKS,
     ],
   },
 };
@@ -240,5 +235,5 @@ const SHEETS: Record<string, Omit<InstructionSheet, "title">> = {
 export function getInstructionSheet(documentType: string): InstructionSheet | null {
   const sheet = SHEETS[documentType];
   if (!sheet) return null;
-  return { title: INSTRUCTION_SHEET_TITLE, ...sheet };
+  return { title: INSTRUCTION_SHEET_TITLE,...sheet };
 }

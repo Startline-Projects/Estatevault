@@ -21,8 +21,17 @@
  * points at an article which is not there.
  */
 
-const ARTICLE_RE = /\[\[ARTICLE:([A-Za-z0-9_]+)\]\]/g;
-const SECTION_RE = /\[\[SECTION:([A-Za-z0-9_]+)\.([A-Za-z0-9_]+)\]\]/g;
+/**
+ * Declarations may carry a format after a pipe, so a document keeps the
+ * numbering style its author wrote:
+ *   [[ARTICLE:id]]         → I, II, III      (default)
+ *   [[ARTICLE:id|words]]   → One, Two, Three
+ *   [[SECTION:a.s]]        → 1.1             (default)
+ *   [[SECTION:a.s|pad2]]   → 1.01
+ * A [[REF:...]] renders in whatever format its target declared.
+ */
+const ARTICLE_RE = /\[\[ARTICLE:([A-Za-z0-9_]+)(?:\|([a-z0-9]+))?\]\]/g;
+const SECTION_RE = /\[\[SECTION:([A-Za-z0-9_]+)\.([A-Za-z0-9_]+)(?:\|([a-z0-9]+))?\]\]/g;
 const REF_RE = /\[\[REF:([A-Za-z0-9_]+(?:\.[A-Za-z0-9_]+)?)\]\]/g;
 /** Arabic ordinal of an article, for section numbers built inside a FOREACH. */
 const REF_NUM_RE = /\[\[REF_NUM:([A-Za-z0-9_]+)\]\]/g;
@@ -34,6 +43,24 @@ const ROMAN: Array<[number, string]> = [
   [100, "C"], [90, "XC"], [50, "L"], [40, "XL"],
   [10, "X"], [9, "IX"], [5, "V"], [4, "IV"], [1, "I"],
 ];
+
+const WORD_ONES = [
+  "", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine",
+  "Ten", "Eleven", "Twelve", "Thirteen", "Fourteen", "Fifteen", "Sixteen",
+  "Seventeen", "Eighteen", "Nineteen",
+];
+const WORD_TENS = ["", "", "Twenty", "Thirty", "Forty", "Fifty"];
+
+/** Spelled-out ordinal-style article number, e.g. 1 → "One", 21 → "Twenty-One". */
+export function toWords(n: number): string {
+  if (!Number.isInteger(n) || n < 1 || n > 59) {
+    throw new Error(`Cannot express ${n} in words as an article number.`);
+  }
+  if (n < 20) return WORD_ONES[n];
+  const tens = WORD_TENS[Math.floor(n / 10)];
+  const ones = n % 10;
+  return ones ? `${tens}-${WORD_ONES[ones]}` : tens;
+}
 
 export function toRoman(n: number): string {
   if (!Number.isInteger(n) || n < 1) throw new Error(`Cannot express ${n} as a roman numeral.`);
@@ -72,9 +99,13 @@ export function assignNumbering(text: string): NumberingResult {
   const sections: Record<string, string> = {};
   const sectionCounts: Record<string, number> = {};
 
+  const formatArticle = (n: number, fmt?: string) => (fmt === "words" ? toWords(n) : toRoman(n));
+  const formatSection = (a: number, s2: number, fmt?: string) =>
+    fmt === "pad2" ? `${a}.${String(s2).padStart(2, "0")}` : `${a}.${s2}`;
+
   // ── Pass 1: number declarations in order of appearance ──
   let articleCount = 0;
-  const declarationRe = /\[\[ARTICLE:([A-Za-z0-9_]+)\]\]|\[\[SECTION:([A-Za-z0-9_]+)\.([A-Za-z0-9_]+)\]\]/g;
+  const declarationRe = /\[\[ARTICLE:([A-Za-z0-9_]+)(?:\|([a-z0-9]+))?\]\]|\[\[SECTION:([A-Za-z0-9_]+)\.([A-Za-z0-9_]+)(?:\|([a-z0-9]+))?\]\]/g;
   let m: RegExpExecArray | null;
   while ((m = declarationRe.exec(text)) !== null) {
     if (m[1] !== undefined) {
@@ -82,12 +113,12 @@ export function assignNumbering(text: string): NumberingResult {
       if (articles[id] === undefined) {
         articleCount += 1;
         articleOrdinals[id] = articleCount;
-        articles[id] = toRoman(articleCount);
+        articles[id] = formatArticle(articleCount, m[2]);
       }
       continue;
     }
-    const articleId = m[2];
-    const sectionId = m[3];
+    const articleId = m[3];
+    const sectionId = m[4];
     const key = `${articleId}.${sectionId}`;
     if (articleOrdinals[articleId] === undefined) {
       throw new Error(
@@ -97,7 +128,7 @@ export function assignNumbering(text: string): NumberingResult {
     }
     if (sections[key] === undefined) {
       sectionCounts[articleId] = (sectionCounts[articleId] ?? 0) + 1;
-      sections[key] = `${articleOrdinals[articleId]}.${sectionCounts[articleId]}`;
+      sections[key] = formatSection(articleOrdinals[articleId], sectionCounts[articleId], m[5]);
     }
   }
 

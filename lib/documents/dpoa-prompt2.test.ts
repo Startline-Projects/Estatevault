@@ -54,17 +54,19 @@ describe("1. effective-date branching", () => {
   it("renders the springing branch and not the immediate branch", () => {
     const out = render({ poaEffective: "springing" });
     expect(out).toContain("Section 3.1 — Springing Effectiveness");
-    expect(out).toContain("shall not become effective until a physician");
-    expect(out).toContain("Section 3.3 — Restoration of Capacity");
+    expect(out).toContain("shall not become effective unless and until I am deemed incapacitated");
+    expect(out).toContain("Section 3.2 — Restoration of Capacity");
     expect(out).not.toContain("Section 3.1 — Effective Immediately");
+    // Prompt 9: no physician certification anywhere in the trigger.
+    expect(out).not.toMatch(/physician/i);
   });
 
   it("explains in plain language that a springing agent has no power until incapacity", () => {
     const out = render({ poaEffective: "springing" });
     const sheet = out.slice(out.indexOf("## OPERATION OF THIS DOCUMENT"));
-    expect(sheet).toContain("has no power to act");
-    expect(sheet).toContain("unless and until you become unable to manage your own financial affairs");
+    expect(sheet).toContain("does not have authority to act unless you have been deemed incapacitated");
     expect(sheet).toContain("may not touch your accounts");
+    expect(sheet).not.toMatch(/physician/i);
     // The immediate wording must not leak into a springing document.
     expect(sheet).not.toContain("as soon as you have signed this document");
   });
@@ -77,14 +79,14 @@ describe("1. effective-date branching", () => {
   });
 });
 
-describe("2. witness attestation removed", () => {
-  it("has no witness signature lines and no attestation section", () => {
+describe("2. witness attestation restored (Prompt 9 reverses Prompt 2)", () => {
+  it("has both witness signature lines and the attestation section", () => {
     const out = render();
-    expect(out).not.toContain("[SIGNATURE] Witness One");
-    expect(out).not.toContain("[SIGNATURE] Witness Two");
-    expect(out).not.toContain("## ATTESTATION");
-    expect(out).not.toContain("subscribed our names as witnesses");
-    expect(out).not.toContain("in the presence of the two witnesses");
+    expect(out).toContain("## WITNESS ATTESTATION");
+    expect(out).toContain("[SIGNATURE] Witness One — Printed Name and Address");
+    expect(out).toContain("[SIGNATURE] Witness Two — Printed Name and Address");
+    expect(out).toContain("subscribed our names as witnesses");
+    expect(out).toContain("in the presence of the two witnesses named below");
   });
 
   it("keeps the principal's signature and the notary acknowledgment", () => {
@@ -94,8 +96,9 @@ describe("2. witness attestation removed", () => {
     expect(out).toContain("[NOTARY_BLOCK]");
   });
 
-  it("tells the client no witnesses are needed", () => {
-    expect(render()).toContain("Michigan does not require witnesses for a power of attorney");
+  it("no longer claims Michigan requires no witnesses", () => {
+    expect(render()).not.toContain("Michigan does not require witnesses");
+    expect(render()).toContain("in front of two witnesses and a notary public");
   });
 });
 
@@ -164,7 +167,8 @@ describe("powers still honour the client's selection", () => {
 });
 
 describe("powers the client declined are stated, not silently absent", () => {
-  it("prints NOT GRANTED for every core power that was not selected", () => {
+  it("prints NOT GRANTED for every core power the client unchecked", () => {
+    // Powers now default to granted; this client unchecked everything but banking.
     const out = render({ poaPowers: ["Banking and finances"] });
     expect(out).toContain("Banking and Financial Institution Transactions.  GRANTED.");
     for (const name of [
@@ -192,7 +196,8 @@ describe("powers the client declined are stated, not silently absent", () => {
     const out = render({ poaPowers: ["Banking and finances"] });
     const granted = (out.match(/\.\s\sGRANTED\./g) ?? []).length;
     const notGranted = (out.match(/\.\s\sNOT GRANTED\./g) ?? []).length;
-    // 8 core powers + 2 hot powers, each stated exactly once.
-    expect(granted + notGranted).toBe(10);
+    // Eight core powers, each stated exactly once. Gift-making and estate-plan
+    // amendment were removed on attorney instruction (Prompt 9).
+    expect(granted + notGranted).toBe(8);
   });
 });

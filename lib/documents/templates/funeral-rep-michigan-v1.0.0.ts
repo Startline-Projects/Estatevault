@@ -22,9 +22,9 @@ Successor Funeral Representative: {{#IF successor_funeral_representative}}{{succ
 
 ## OPERATION OF THIS DOCUMENT
 
-This is your Funeral Representative Designation under Michigan law (MCL 700.3206). It authorizes the person you name (your Funeral Representative) to make decisions about your funeral, the disposition of your remains, and related arrangements after your death. This document takes effect at the moment of your death. The Funeral Representative has priority over your family members and any other person under Michigan law in making these decisions. You may revoke this document at any time while you are alive and competent.
+This is your Funeral Representative Designation under Michigan law It authorizes the person you name (your Funeral Representative) to make decisions about your funeral, the disposition of your remains, and related arrangements after your death. This document takes effect at the moment of your death. The Funeral Representative has priority over your family members and any other person under Michigan law in making these decisions. You may revoke this document at any time while you are alive and competent.
 
-State of Michigan  ·  MCL 700.3206  ·  Estates and Protected Individuals Code
+State of Michigan · · Estates and Protected Individuals Code
 
 Funeral Representative Designation
 

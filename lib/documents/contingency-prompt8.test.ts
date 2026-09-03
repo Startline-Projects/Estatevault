@@ -36,7 +36,6 @@ function answers(beneficiaries: Array<Record<string, unknown>>) {
     poaAgentName: "Raga Hassan", poaAgentRelationship: "Spouse/Partner",
     poaPowers: ["Banking and finances"], poaEffective: "immediate",
     patientAdvocateName: "Raga Hassan", patientAdvocateRelationship: "Spouse/Partner",
-    lifeSustainingTreatment: "withhold_if_terminal", artificialNutrition: "advocate_decides",
     organDonation: "Yes",
   };
 }
@@ -174,7 +173,6 @@ describe("the resume mechanism routes an old session to the beneficiaries step",
     poaAgentName: "Raga Hassan", poaAgentRelationship: "Spouse/Partner",
     poaPowers: ["Banking and finances"], poaEffective: "immediate",
     patientAdvocateName: "Raga Hassan", patientAdvocateRelationship: "Spouse/Partner",
-    lifeSustainingTreatment: "withhold_if_terminal", artificialNutrition: "advocate_decides",
     organDonation: "Yes",
   };
 

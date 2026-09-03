@@ -22,7 +22,7 @@ describe("mapIntakeToTemplateData", () => {
       guardianName: "Alice Johnson",
       guardianRelationship: "Sister",
       successorGuardianName: "Tom Brown",
-      organDonation: "yes_all",
+      organDonation: "any_purpose",
       hasSpecificGifts: "No",
     });
 
@@ -43,7 +43,7 @@ describe("mapIntakeToTemplateData", () => {
     expect(d.primary_beneficiaries[0].share_percent).toBe("100");
     expect(d.guardian?.full_name).toBe("Alice Johnson");
     expect(d.successor_guardian?.full_name).toBe("Tom Brown");
-    expect(d.organ_donation).toBe("yes_all");
+    expect(d.organ_donation).toBe("any_purpose");
     expect(d.has_specific_gifts).toBe(false);
   });
 

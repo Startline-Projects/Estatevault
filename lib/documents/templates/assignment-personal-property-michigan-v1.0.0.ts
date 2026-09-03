@@ -40,7 +40,7 @@ Acting in the County of ______________________
 
 ## OPERATION OF THIS DOCUMENT
 
-This Assignment moves your tangible personal property — the things you own that are not titled, such as furniture, jewellery, artwork, books and household goods — into your trust in one step, without listing each item.
+This Assignment moves your tangible personal property — the things you own that are not titled, such as furniture, jewellery, artwork, vehicles, books and household goods — into your trust in one step, without listing each item.
 
 ### Section A — Signing It
 

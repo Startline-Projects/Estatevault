@@ -22,9 +22,9 @@ Successor Guardian: {{successor_guardian.full_name}}  ·  {{successor_guardian.r
 
 ## OPERATION OF THIS DOCUMENT
 
-This is your Standalone Nomination of Guardian for your minor children under Michigan law (MCL 700.5202 and MCL 700.5204). It nominates a guardian to care for your minor children if you are deceased or, where you have elected, temporarily incapacitated. It is a separate document from the guardian nomination in your Will so that the guardian can step in immediately when needed, without waiting for probate or court proceedings. You may revoke this document at any time while you are alive and competent.
+This is your Standalone Nomination of Guardian for your minor children under Michigan law and It nominates a guardian to care for your minor children if you are deceased or, where you have elected, temporarily incapacitated. It is a separate document from the guardian nomination in your Will so that the guardian can step in immediately when needed, without waiting for probate or court proceedings. You may revoke this document at any time while you are alive and competent.
 
-State of Michigan  ·  MCL 700.5202 (testamentary)  ·  MCL 700.5204 (lifetime nomination)
+State of Michigan · (testamentary) · (lifetime nomination)
 
 Estates and Protected Individuals Code
 

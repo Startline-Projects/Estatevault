@@ -98,8 +98,14 @@ const lenientWillIntakeSchema = z.object({
   digital_executor: personSchema3.nullable().default(null),
   digital_asset_instructions: z.string().default("Decision left to my digital executor."),
 
+  /**
+   * "none" | "any_purpose" | "specific_purposes" | "silent".
+   * Empty until answered — never defaulted, because it is dispositive.
+   */
   organ_donation: z.string().default(""),
   organ_donation_purposes: z.array(z.string()).default([]),
+  /** The client's own words, used only when organ_donation is "specific_purposes". */
+  organ_donation_purposes_text: z.string().default(""),
   funeral_preference: z.string().default("family_decides"),
   has_funeral_representative: z.boolean().default(false),
   funeral_representative: personSchema3.nullable().default(null),
@@ -124,6 +130,11 @@ const lenientWillIntakeSchema = z.object({
   grantor_2_address: z.string().default(""),
   /** Date the trust was executed, printed on the certification and assignment. */
   trust_date: z.string().default(""),
+  /**
+   * Joint trusts only: "either_alone" | "jointly". Empty until answered —
+   * never defaulted, because it governs who can bind the Trust.
+   */
+  joint_trustee_authority: z.string().default(""),
   /** Filled per-document when an Assignment of Personal Property is rendered. */
   assignor_full_name: z.string().default(""),
   assignor_city: z.string().default(""),
@@ -149,8 +160,8 @@ const lenientWillIntakeSchema = z.object({
 
   patient_advocate: personSchema5.default({ full_name: "", relationship: "", city: "", state: "", phone: "" }),
   successor_patient_advocate: personSchema5.default({ full_name: "", relationship: "", city: "", state: "", phone: "" }),
-  life_sustaining_treatment_preference: z.string().default(""),
-  artificial_nutrition_preference: z.string().default(""),
+  /** The Advance Healthcare Directive names a second alternate. */
+  second_successor_patient_advocate: personSchema5.default({ full_name: "", relationship: "", city: "", state: "", phone: "" }),
   pain_management_preference: z.string().default("provide_even_if_shortens"),
   pregnancy_exclusion: z.string().default("no_pregnancy_restriction"),
   mental_health_treatment_authority: z.boolean().default(true),
@@ -256,17 +267,22 @@ function mapPoaPowers(raw: Record<string, unknown>): string[] | undefined {
 }
 
 // ── Organ donation ────────────────────────────────────────────────────────────
-// The questionnaire stores Yes/No; the PAD template branches on
-// yes_all / yes_specific / no / advocate_decides. An unmapped value matches no
-// branch and renders a blank statutory section.
+// Four answers, per the attorney's instruction: refuse, give for any purpose,
+// give for stated purposes, or stay silent. Older sessions carry Yes/No or the
+// previous tokens, which are folded onto the new set rather than dropped.
+const ORGAN_DONATION_VALUES = ["none", "any_purpose", "specific_purposes", "silent"];
+
 function mapOrganDonation(v: unknown): string | undefined {
   const raw = str(v).trim();
   if (!raw) return undefined;
   const lower = raw.toLowerCase();
-  if (["yes_all", "yes_specific", "no", "advocate_decides"].includes(lower)) return lower;
-  if (lower === "yes" || lower === "true") return "yes_all";
-  if (lower === "no" || lower === "false") return "no";
-  if (lower.startsWith("advocate")) return "advocate_decides";
+  if (ORGAN_DONATION_VALUES.includes(lower)) return lower;
+  if (lower === "yes" || lower === "true" || lower === "yes_all") return "any_purpose";
+  if (lower === "no" || lower === "false") return "none";
+  if (lower === "yes_specific") return "specific_purposes";
+  // "advocate_decides" no longer exists; it maps to staying silent, which is
+  // the answer that leaves the decision open.
+  if (lower.startsWith("advocate")) return "silent";
   return undefined;
 }
 
@@ -487,6 +503,10 @@ export function mapIntakeToTemplateData(
     } else if (raw.isJointTrust !== undefined) {
       mapped.is_joint_trust = yesNo(raw.isJointTrust);
     }
+    if (raw.jointTrusteeAuthority !== undefined || raw.joint_trustee_authority !== undefined) {
+      const v = str(raw.jointTrusteeAuthority ?? raw.joint_trustee_authority).trim();
+      if (v === "either_alone" || v === "jointly") mapped.joint_trustee_authority = v;
+    }
     if (raw.trustDate !== undefined || raw.trust_date !== undefined) {
       mapped.trust_date = str(raw.trustDate ?? raw.trust_date);
     }
@@ -607,6 +627,16 @@ export function mapIntakeToTemplateData(
         phone: "",
       };
     }
+    if (raw.secondSuccessorPatientAdvocateName) {
+      mapped.second_successor_patient_advocate = {
+        full_name: str(raw.secondSuccessorPatientAdvocateName),
+        relationship: str(raw.secondSuccessorPatientAdvocateRelationship || ""),
+        city: "", state: "", phone: "",
+      };
+    }
+    if (raw.organDonationPurposes !== undefined || raw.organ_donation_purposes_text !== undefined) {
+      mapped.organ_donation_purposes_text = str(raw.organDonationPurposes ?? raw.organ_donation_purposes_text).trim();
+    }
     if (raw.successorPatientAdvocateName || raw.successorHealthcareAgentName) {
       mapped.successor_patient_advocate = {
         full_name: str(raw.successorPatientAdvocateName || raw.successorHealthcareAgentName),
@@ -617,17 +647,6 @@ export function mapIntakeToTemplateData(
       };
     }
 
-    // Healthcare directive preferences
-    if (raw.lifeSustainingTreatment !== undefined || raw.life_sustaining_treatment_preference !== undefined) {
-      mapped.life_sustaining_treatment_preference = str(
-        raw.lifeSustainingTreatment ?? raw.life_sustaining_treatment_preference,
-      );
-    }
-    if (raw.artificialNutrition !== undefined || raw.artificial_nutrition_preference !== undefined) {
-      mapped.artificial_nutrition_preference = str(
-        raw.artificialNutrition ?? raw.artificial_nutrition_preference,
-      );
-    }
     if (raw.healthcareWishesDescription !== undefined && yesNo(raw.hasHealthcareWishes ?? "Yes")) {
       mapped.healthcare_wishes_freeform = str(raw.healthcareWishesDescription).trim();
     }
@@ -652,22 +671,6 @@ export function mapIntakeToTemplateData(
 // error. These checks are the gate that has to pass before a document is
 // rendered for delivery.
 
-/** Values the PAD template branches on. Anything else renders an empty section. */
-const LIFE_SUSTAINING_VALUES = [
-  "continue_all",
-  "withhold_if_terminal",
-  "withhold_if_pvs",
-  "withhold_if_terminal_or_pvs",
-  "advocate_decides",
-];
-const ARTIFICIAL_NUTRITION_VALUES = [
-  "provide_all",
-  "withhold_if_terminal",
-  "withhold_if_pvs",
-  "withhold_if_terminal_or_pvs",
-  "advocate_decides",
-];
-const ORGAN_DONATION_VALUES = ["yes_all", "yes_specific", "no", "advocate_decides"];
 
 function person(name: string, label: string, out: string[]) {
   if (!name.trim()) out.push(label);
@@ -721,6 +724,9 @@ export function validateForDocument(docType: string, d: TemplateWillIntake): str
 
     case "trust":
       person(d.successor_trustee.full_name, "successor trustee", out);
+      if (d.is_joint_trust && !d.joint_trustee_authority) {
+        out.push("whether the Co-Trustees may act alone or must act jointly");
+      }
       checkBeneficiaries(d, out);
       checkGifts(d, out);
       break;
@@ -741,16 +747,16 @@ export function validateForDocument(docType: string, d: TemplateWillIntake): str
       }
       break;
 
+    // "pad" is the historical key for what is now the Advance Healthcare
+    // Directive; both resolve here.
     case "pad":
+    case "ahcd":
       person(d.patient_advocate.full_name, "patient advocate", out);
-      if (!LIFE_SUSTAINING_VALUES.includes(d.life_sustaining_treatment_preference)) {
-        out.push("life-sustaining treatment preference (not collected by the current questionnaire)");
-      }
-      if (!ARTIFICIAL_NUTRITION_VALUES.includes(d.artificial_nutrition_preference)) {
-        out.push("artificial nutrition preference (not collected by the current questionnaire)");
-      }
       if (!ORGAN_DONATION_VALUES.includes(d.organ_donation)) {
         out.push("organ donation preference");
+      }
+      if (d.organ_donation === "specific_purposes" && !d.organ_donation_purposes_text.trim()) {
+        out.push("the purposes the organ donation is limited to");
       }
       break;
 

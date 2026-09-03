@@ -290,29 +290,27 @@ I leave the decisions regarding the management and disposition of my digital ass
 
 ## ARTICLE [[ARTICLE:final_wishes]] — FINAL WISHES
 
+{{#IF organ_donation equals "none"}}
+
 ### Section [[SECTION:final_wishes.s1]] — Organ and Tissue Donation.
 
-{{#IF organ_donation equals "yes_all"}}
-
-I authorize the donation of any of my organs, tissues, eyes, or other body parts that may be useful for the purposes of transplantation, therapy, research, or education. This authorization is made pursuant to Michigan's Uniform Anatomical Gift Act, MCL 333.10101 et seq.
+I do not wish to make an anatomical gift of any organ, tissue, or other part of my body upon my passing.
 
 {{/IF}}
 
-{{#IF organ_donation equals "yes_specific"}}
+{{#IF organ_donation equals "any_purpose"}}
 
-I authorize the donation of my organs, tissues, eyes, or other body parts for the following specific purposes only: {{organ_donation_purposes_joined}}. No donation shall be made for any purpose not listed above.
+### Section [[SECTION:final_wishes.s1]] — Organ and Tissue Donation.
 
-{{/IF}}
-
-{{#IF organ_donation equals "no"}}
-
-I do not authorize the donation of any of my organs, tissues, or body parts. My wishes regarding non-donation shall be respected to the fullest extent permitted by law.
+Upon my passing, I give any needed organ, tissue, or other part of my body for any purpose authorized by law.
 
 {{/IF}}
 
-{{#IF organ_donation equals "advocate_decides"}}
+{{#IF organ_donation equals "specific_purposes"}}
 
-I leave the decision regarding organ, tissue, and body part donation to my Patient Advocate designated in my separate Patient Advocate Designation, or, if no Patient Advocate is available, to my surviving family members in accordance with the priorities established under Michigan's Uniform Anatomical Gift Act, MCL 333.10101 et seq.
+### Section [[SECTION:final_wishes.s1]] — Organ and Tissue Donation.
+
+Upon my passing, I give any needed organ, tissue, or other part of my body for the following purposes only: {{organ_donation_purposes_text}}. No gift shall be made for any purpose not stated above.
 
 {{/IF}}
 
@@ -332,7 +330,7 @@ It is my preference that my remains be disposed of by cremation. My Personal Rep
 
 {{#IF funeral_preference equals "family_decides"}}
 
-I leave the decision regarding the manner of disposition of my remains (whether burial, cremation, or other lawful method) to my Personal Representative, in consultation with my surviving family members.
+I leave the decision regarding the manner of disposition of my remains (whether burial, cremation, or other lawful method) to my Personal Representative.
 
 {{/IF}}
 
@@ -446,17 +444,17 @@ My commission expires: _
 
 ## OPERATION OF THIS DOCUMENT
 
-This is your Last Will and Testament under Michigan law (MCL 700.2502 et seq.). It takes effect only after you are gone. While you are living, you continue to own and control your property exactly as before, and you may revoke or amend this Will at any time while you are competent.
+This is your Last Will and Testament under Michigan law It takes effect only after you are gone. While you are living, you continue to own and control your property exactly as before, and you may revoke or amend this Will at any time while you are competent.
 
 ### Section A — Two Witnesses Are Required
 
 In Michigan, a will requires two witnesses to be valid. This is not optional and it is not a formality: a will signed without two witnesses can be refused by the probate court, and your estate would then be distributed under the state's default rules rather than by your instructions.
 
-Your witnesses must be adults, and they must not be people who inherit under this Will. A beneficiary who also witnesses can jeopardise their own gift. Choose two people who receive nothing under this Will.
+Your witnesses must be adults, and they must not be people who inherit under this Will. Choose two people who receive nothing under this Will.
 
 ### Section B — Why There Is Also a Notary Section
 
-Michigan does not require a notary for a will to be valid. The notary section in this document creates a self-proving affidavit under MCL 700.2504, which is included for stronger protection.
+Michigan does not require a notary for a will to be valid. The notary section in this document creates a self-proving affidavit which is included for stronger protection.
 
 Here is what it does for your family. Without it, the probate court may require your witnesses to be located years later and to testify that they watched you sign. People move, lose touch, and are not always still available. A self-proving affidavit lets the court accept your Will without tracking down your witnesses, because they already swore to what they saw, in front of a notary, on the day you signed.
 
@@ -498,6 +496,6 @@ STEP 7 - INFORM YOUR PERSONAL REPRESENTATIVE
 
 Tell your Personal Representative that they have been named, confirm they are willing to serve, and tell them where the signed original is kept. Keep their contact details current.
 
-State of Michigan  ·  Michigan EPIC, MCL 700.2502 et seq.
+State of Michigan · Michigan EPIC,
 
-Michigan Uniform Fiduciary Access to Digital Assets Act, MCL 700.1003 et seq.
+Michigan Uniform Fiduciary Access to Digital Assets Act,

@@ -14,6 +14,11 @@ export interface TrustIntake {
   successorTrusteeName: string;
   successorTrusteeRelationship: string;
   additionalSuccessorTrustees: Array<{ name: string; relationship: string }>;
+  /** Joint trusts only: "either_alone" | "jointly". */
+  /** Naming a second grantor is what makes the trust joint. */
+  secondGrantorName: string;
+  secondGrantorRelationship: string;
+  jointTrusteeAuthority: string;
   // Beneficiaries
   /**
    * Each beneficiary carries its own contingency: what happens to THAT share if
@@ -47,11 +52,10 @@ export interface TrustIntake {
   patientAdvocateName: string;
   patientAdvocateRelationship: string;
   successorPatientAdvocateName: string;
-  /** Maps 1:1 to the {{#IF life_sustaining_treatment_preference ...}} branches. */
-  lifeSustainingTreatment: string;
-  /** Maps 1:1 to the {{#IF artificial_nutrition_preference ...}} branches. */
-  artificialNutrition: string;
+  secondSuccessorPatientAdvocateName: string;
   organDonation: string;
+  /** Only meaningful when organDonation is "specific_purposes". */
+  organDonationPurposes: string;
   hasHealthcareWishes: string;
   healthcareWishesDescription: string;
   // Contingent beneficiaries
@@ -77,6 +81,9 @@ export const initialTrustIntake: TrustIntake = {
   successorTrusteeName: "",
   successorTrusteeRelationship: "",
   additionalSuccessorTrustees: [],
+  secondGrantorName: "",
+  secondGrantorRelationship: "",
+  jointTrusteeAuthority: "",
   beneficiaries: [{ name: "", relationship: "", share: "" }],
   beneficiariesEqualShares: "",
   distributionAge: "",
@@ -93,14 +100,14 @@ export const initialTrustIntake: TrustIntake = {
   poaAgentRelationship: "",
   poaSuccessorAgentName: "",
   poaSuccessorAgentRelationship: "",
-  poaPowers: ["Banking and finances"],
+  poaPowers: ["Banking and finances", "Real estate transactions", "Business operations", "Tax filings"],
   poaEffective: "immediate",
   patientAdvocateName: "",
   patientAdvocateRelationship: "",
   successorPatientAdvocateName: "",
-  lifeSustainingTreatment: "",
-  artificialNutrition: "",
+  secondSuccessorPatientAdvocateName: "",
   organDonation: "",
+  organDonationPurposes: "",
   hasHealthcareWishes: "",
   healthcareWishesDescription: "",
   hasContingentBeneficiary: "",

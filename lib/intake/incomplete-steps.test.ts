@@ -36,8 +36,6 @@ function completeSession(): Record<string, unknown> {
     poaEffective: "immediate",
     patientAdvocateName: "Raga Hassan",
     patientAdvocateRelationship: "Spouse/Partner",
-    lifeSustainingTreatment: "withhold_if_terminal_or_pvs",
-    artificialNutrition: "withhold_if_terminal_or_pvs",
   };
 }
 
@@ -68,8 +66,6 @@ describe("a pre-deploy session is redirected, not failed", () => {
         "poaAgentRelationship",
         "poaEffective",
         "patientAdvocateName",
-        "lifeSustainingTreatment",
-        "artificialNutrition",
       ]),
     );
   });

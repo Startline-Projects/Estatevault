@@ -210,7 +210,7 @@ My commission expires: _
 
 ## OPERATION OF THIS DOCUMENT
 
-This is your Pour-Over Will under Michigan law (MCL 700.2502 et seq.). It works alongside your {{trust_name_display}}. Its purpose is to catch anything you did not transfer into the Trust during your lifetime and direct it into the Trust, so that all of your property ends up administered and distributed under the Trust's terms.
+This is your Pour-Over Will under Michigan law It works alongside your {{trust_name_display}}. Its purpose is to catch anything you did not transfer into the Trust during your lifetime and direct it into the Trust, so that all of your property ends up administered and distributed under the Trust's terms.
 
 ### Section A — This Is a Safety Net, Not a Substitute for Funding
 
@@ -226,7 +226,7 @@ Your witnesses must be adults, and they must not be people who inherit under thi
 
 ### Section C — Why There Is Also a Notary Section
 
-Michigan does not require a notary for a will to be valid. The notary section here creates a self-proving affidavit under MCL 700.2504, included for stronger protection.
+Michigan does not require a notary for a will to be valid. The notary section here creates a self-proving affidavit included for stronger protection.
 
 Without it, the probate court may require your witnesses to be located years later and to testify that they watched you sign. A self-proving affidavit lets the court accept this Will without tracking them down, because they already swore to what they saw in front of a notary on the day you signed.
 
@@ -266,7 +266,7 @@ STEP 7 - INFORM YOUR PERSONAL REPRESENTATIVE
 
 Tell your Personal Representative that they have been named, confirm they are willing to serve, and tell them where the signed original and the Trust are kept. Keep their contact details current.
 
-State of Michigan  ·  Michigan EPIC, MCL 700.2502 et seq.
+State of Michigan · Michigan EPIC,
 `;
 
 export default template;

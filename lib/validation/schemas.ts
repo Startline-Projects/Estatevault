@@ -207,7 +207,10 @@ const willIntakeSchema = z.object({
   hasContingentBeneficiary: YES_NO,
   contingentBeneficiaries: z.array(contingentBeneficiarySchema).max(20),
   contingentEqualShares: z.string().max(10),
-  organDonation: YES_NO,
+  // Four answers per the attorney's instruction. Values map 1:1 to the organ
+  // donation branches in the Advance Healthcare Directive.
+  organDonation: z.enum(["none", "any_purpose", "specific_purposes", "silent"]),
+  organDonationPurposes: z.string().max(2000).optional().default(""),
   // A will order also generates a Power of Attorney and a Patient Advocate
   // Designation, so the will flow collects the same answers as the trust flow.
   poaAgentName: z.string().min(1).max(200),
@@ -219,20 +222,7 @@ const willIntakeSchema = z.object({
   patientAdvocateName: z.string().min(1).max(200),
   patientAdvocateRelationship: RELATIONSHIP,
   successorPatientAdvocateName: z.string().max(200),
-  lifeSustainingTreatment: z.enum([
-    "continue_all",
-    "withhold_if_terminal",
-    "withhold_if_pvs",
-    "withhold_if_terminal_or_pvs",
-    "advocate_decides",
-  ]),
-  artificialNutrition: z.enum([
-    "provide_all",
-    "withhold_if_terminal",
-    "withhold_if_pvs",
-    "withhold_if_terminal_or_pvs",
-    "advocate_decides",
-  ]),
+  secondSuccessorPatientAdvocateName: z.string().max(200).optional().default(""),
   hasHealthcareWishes: YES_NO,
   healthcareWishesDescription: z.string().max(5000),
   hasSpecificGifts: YES_NO,
@@ -296,24 +286,11 @@ const trustIntakeSchema = z.object({
   patientAdvocateName: z.string().min(1).max(200),
   patientAdvocateRelationship: RELATIONSHIP,
   successorPatientAdvocateName: z.string().max(200),
-  // These drive Article V of the Patient Advocate Designation. Each value must
-  // stay in 1:1 correspondence with a {{#IF ...}} branch in pad-michigan-v1.1.0;
-  // an unmatched value renders a blank statutory section.
-  lifeSustainingTreatment: z.enum([
-    "continue_all",
-    "withhold_if_terminal",
-    "withhold_if_pvs",
-    "withhold_if_terminal_or_pvs",
-    "advocate_decides",
-  ]),
-  artificialNutrition: z.enum([
-    "provide_all",
-    "withhold_if_terminal",
-    "withhold_if_pvs",
-    "withhold_if_terminal_or_pvs",
-    "advocate_decides",
-  ]),
-  organDonation: YES_NO,
+  secondSuccessorPatientAdvocateName: z.string().max(200).optional().default(""),
+  // Four answers per the attorney's instruction. Values map 1:1 to the organ
+  // donation branches in the Advance Healthcare Directive.
+  organDonation: z.enum(["none", "any_purpose", "specific_purposes", "silent"]),
+  organDonationPurposes: z.string().max(2000).optional().default(""),
   hasHealthcareWishes: YES_NO,
   healthcareWishesDescription: z.string().max(5000),
   hasContingentBeneficiary: YES_NO,

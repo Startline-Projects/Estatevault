@@ -79,7 +79,7 @@ function realisticIntake(): WillIntake {
       { item_description: "my vintage record collection", recipient_full_name: "Bob Public", recipient_relationship: "son", fallback: "to_children" },
     ],
 
-    organ_donation: "yes_all",
+    organ_donation: "any_purpose",
     funeral_preference: "burial",
     has_funeral_representative: true,
     funeral_representative: { full_name: "Greg Hall", relationship: "Brother", phone: "(313) 555-7777" },
@@ -101,8 +101,6 @@ function realisticIntake(): WillIntake {
 
     patient_advocate: { full_name: "Ed Brown", relationship: "Friend", city: "Detroit", state: "Michigan", phone: "(313) 555-9999" },
     successor_patient_advocate: { full_name: "Fay Green", relationship: "Friend", city: "Detroit", state: "Michigan", phone: "(313) 555-1234" },
-    life_sustaining_treatment_preference: "withhold_if_terminal_or_pvs",
-    artificial_nutrition_preference: "withhold_if_terminal_or_pvs",
 
     has_hipaa_additional_parties: true,
     hipaa_additional_authorized_parties: [
@@ -167,7 +165,7 @@ describe("template integration — will-michigan-v1.1.0", () => {
     expect(out).toContain("MCL 700.5204");
 
     // Final wishes — organ donation yes_all branch chosen
-    expect(out).toContain("authorize the donation of any of my organs");
+    expect(out).toContain("I give any needed organ, tissue, or other part of my body for any purpose authorized by law");
     // funeral_preference = burial
     expect(out).toContain("interred by burial");
 
@@ -198,10 +196,9 @@ describe("template integration — dpoa-michigan-v1.1.0", () => {
     expect(out).toContain("Banking and Financial Institution Transactions.  GRANTED.");
     expect(out).toContain("Real Estate Transactions.  GRANTED.");
     expect(out).toContain("Digital Assets.  GRANTED.");
-
-    // Hot powers not selected = NOT GRANTED (gift_making + amend_estate_plan)
-    expect(out).toContain("Gift-Making Authority.  NOT GRANTED.");
-    expect(out).toContain("Authority to Make Changes to Estate Plan.  NOT GRANTED.");
+    // Gift-making and estate-plan amendment were removed as options (Prompt 9).
+    expect(out).not.toContain("Gift-Making Authority");
+    expect(out).not.toContain("Authority to Make Changes to Estate Plan");
 
     // Compensation = reasonable
     expect(out).toContain('"Reasonable compensation" shall be determined');
@@ -213,44 +210,6 @@ describe("template integration — dpoa-michigan-v1.1.0", () => {
   });
 });
 
-describe("template integration — pad-michigan-v1.1.0", () => {
-  it("renders patient advocates, treatment preference branches, and HIPAA parties", () => {
-    const tpl = loadTemplate("pad-michigan-v1.1.0");
-    const out = renderTemplate(tpl, realisticIntake());
-    assertFullyResolved(out);
-
-    expect(out).toContain("JANE QUINCY PUBLIC");
-    expect(out).toMatch(/^## ARTICLE I —/m);
-
-    // Patient advocate + successor
-    expect(out).toContain("Ed Brown");
-    expect(out).toContain("Fay Green");
-
-    // Life-sustaining preference = withhold_if_terminal_or_pvs (branch taken)
-    expect(out).toContain("Withhold if Terminal Condition or Persistent Vegetative State");
-    // Continue-all branch NOT taken
-    expect(out).not.toContain("all reasonable measures be taken to extend my life");
-
-    // Artificial nutrition = withhold_if_terminal_or_pvs
-    expect(out).toContain("withholding or withdrawal of artificial nutrition and hydration");
-
-    // Pain management default = provide_even_if_shortens
-    expect(out).toContain("Provide Pain Relief Even if Life-Shortening");
-
-    // Pregnancy exclusion default = no_pregnancy_restriction
-    expect(out).toContain("No Additional Pregnancy Restriction");
-
-    // Mental health treatment authority = true → GRANTED
-    expect(out).toContain("Mental Health Treatment Authority.  GRANTED.");
-
-    // HIPAA additional parties FOREACH expanded
-    expect(out).toContain("Carol Adams, my sister");
-    expect(out).toContain("Greg Hall, my brother");
-
-    // Organ donation yes_all
-    expect(out).toContain("authorize the donation of any of my organs");
-  });
-});
 
 describe("template integration — hipaa-authorization-v1.1.0", () => {
   it("renders patient identity, HIPAA expiration date, and FOREACH additional parties", () => {

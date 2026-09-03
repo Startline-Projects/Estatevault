@@ -128,7 +128,8 @@ describe("2 & 3. signing steps on a separate final sheet", () => {
   it("explains the two-witness rule and the self-proving affidavit for this document", () => {
     const sheet = sheetOf(render());
     expect(sheet).toContain("a will requires two witnesses to be valid, and a Pour-Over Will is a will");
-    expect(sheet).toContain("self-proving affidavit under MCL 700.2504");
+    expect(sheet).toContain("self-proving affidavit");
+    expect(sheet).not.toMatch(/MCL/);
     expect(sheet).toContain("does not replace the witness requirement");
     expect(sheet).toContain("revokes and voids all prior wills");
   });

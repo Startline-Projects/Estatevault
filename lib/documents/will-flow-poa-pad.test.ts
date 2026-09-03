@@ -45,8 +45,6 @@ function willFlowAnswers(): Record<string, unknown> {
     patientAdvocateName: "Raga Hassan",
     patientAdvocateRelationship: "Spouse/Partner",
     successorPatientAdvocateName: "Karim Hassan",
-    lifeSustainingTreatment: "withhold_if_terminal_or_pvs",
-    artificialNutrition: "withhold_if_terminal_or_pvs",
     hasHealthcareWishes: "No",
     healthcareWishesDescription: "",
     hasSpecificGifts: "No",
@@ -81,8 +79,7 @@ describe("will-flow answers satisfy every document in the will package", () => {
   it("carries the will-flow patient advocate answers through the adapter", () => {
     expect(data.patient_advocate.full_name).toBe("Raga Hassan");
     expect(data.successor_patient_advocate.full_name).toBe("Karim Hassan");
-    expect(data.life_sustaining_treatment_preference).toBe("withhold_if_terminal_or_pvs");
-    expect(data.artificial_nutrition_preference).toBe("withhold_if_terminal_or_pvs");
+    expect(data.organ_donation).toBe("any_purpose");
   });
 });
 
@@ -90,7 +87,7 @@ describe("all three documents render under strict mode", () => {
   it.each([
     ["will", "LAST WILL AND TESTAMENT"],
     ["poa", "DURABLE POWER OF ATTORNEY"],
-    ["healthcare_directive", "PATIENT ADVOCATE DESIGNATION"],
+    ["healthcare_directive", "ADVANCE HEALTHCARE DIRECTIVE"],
   ])("%s renders instead of blocking", async (routeDocType, title) => {
     process.env.PDF_RENDERER = "react-pdf-strict";
     const { tryTemplateRender } = await import("./generate-from-template");

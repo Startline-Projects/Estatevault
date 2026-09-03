@@ -23,16 +23,21 @@ file is rendered.
 
 | | |
 |---|---|
-| Entries awaiting review | 60 |
-| Generated | Prompt 8, backfilled across Prompts 1–8 |
+| Entries awaiting review | 22 |
+| Generated | Prompt 9 — attorney review round 3 |
+| Approved | 47 entries on 2026-09-02 |
+| Withdrawn | 2 entries — the questions no longer exist |
 | Reviewing attorney | Mo Murshed |
 | Also pending | Drake (UPL review), Mike (legal sign-off) — see the compliance checklist |
 | Related | `PROMPT6_REGENERATION.md` — schema proposal, not a review item |
 
 ---
 
+---
 
-## Operative document body — language inside the legal instrument
+## Still pending review
+
+Not yet approved. Work top to bottom.
 
 ### Last Will and Testament — operative document body
 
@@ -87,28 +92,6 @@ If the Grantor is unable or unwilling to continue serving as Trustee, ceases to 
 ```
 
 **Why it was written:** The attorney's instruction was that the Grantor is always the initial Trustee, which collapsed the two trustee_is_self branches into one. The clause previously read "If the initial Trustee is unable or unwilling to serve..."; because "the initial Trustee" could no longer refer to a third party, the assistant rewrote the trigger as "If the Grantor is unable or unwilling to continue serving as Trustee...". This is operative succession language rewritten by the assistant.
-
-**Decision:** ☐ approved as written ☐ replace with attorney wording
-
----
-
-### Pour-Over Will — operative document body
-
-**Where:** Article III (Trust Reference and Pour-Over Clause), Section 3.3 — retitled from "Failure of Trust" to "Backup Distribution"  
-
-**Source file:** `lib/documents/templates/pour-over-will-michigan-v1.1.0.txt`
-
-**Text:**
-
-```text
-If {{trust_name_display}} has been revoked, is otherwise invalid, or for any reason fails to take effect at the time of my passing, my residuary estate shall be distributed to the following persons in the shares indicated:
-
-  •  {{share_percent}}% to {{full_name}}, my {{relationship}}.
-
-If any person named in this Section does not survive me by thirty (30) days, that person's share shall be distributed proportionally among the other persons named in this Section who do survive me by thirty (30) days. If none of them survives me by thirty (30) days, my residuary estate shall pass to my heirs at law, as determined under the laws of the State of Michigan governing intestate succession, in effect at the time of my passing.
-```
-
-**Why it was written:** Uncommitted Prompt 6 work, and the most consequential self-written text in this catalogue: the clause previously sent the residuary estate straight to heirs at law if the Trust failed, and now redirects it to the client's named primary beneficiaries with a new 30-day survivorship and proportional-lapse rule. This is operative dispositive language drafted by the assistant and should not ship without attorney sign-off.
 
 **Decision:** ☐ approved as written ☐ replace with attorney wording
 
@@ -171,7 +154,6 @@ The Agent is NOT authorized to access, manage, or dispose of my digital assets o
 **Text:**
 
 ```text
-## EXECUTION BY THE PRINCIPAL
 
 IN WITNESS WHEREOF, I, {{client_full_name}}, the Principal, sign my name to this Durable Power of Attorney on this _ day of _, 20_, in {{city}}, {{county}} County, Michigan.
 ```
@@ -182,8 +164,418 @@ IN WITNESS WHEREOF, I, {{client_full_name}}, the Principal, sign my name to this
 
 ---
 
+### Section D — How to Sign This Will
 
-## Instruction sheets
+STEP 1 - CHOOSE YOUR WITNESSES
+
+Select two adult witnesses, age 18 or older. Your witnesses must NOT be named beneficiaries in this Will. Both must be present at the same time as each other and as you when signing.
+
+STEP 2 - GATHER ALL PARTIES
+
+Arrange for yourself, both witnesses, and a notary public to be in the same location at the same time. All parties must be physically present together throughout the signing.
+
+STEP 3 - YOU SIGN FIRST
+
+Sign and date this Will in the presence of both witnesses simultaneously. Do not sign before both witnesses are present. Sign on the signature line designated for the Testator.
+
+STEP 4 - WITNESSES SIGN
+
+Immediately after you sign, each witness signs the Will in your presence and in the presence of each other. Each witness should print their name and provide their address on the lines provided.
+
+STEP 5 - COMPLETE THE NOTARY SECTION
+
+You and both witnesses sign the notary section, and the notary completes and seals it. This is what makes your Will self-proving, as explained in Section B.
+
+STEP 6 - STORE YOUR WILL SAFELY
+
+Keep the original signed Will in a secure location such as a fireproof safe or safe deposit box, and upload a copy to your EstateVault account. Do not store the original where your Personal Representative cannot reach it without a court order.
+
+STEP 7 - INFORM YOUR PERSONAL REPRESENTATIVE
+
+Tell your Personal Representative that they have been named, confirm they are willing to serve, and tell them where the signed original is kept. Keep their contact details current.
+```
+
+**Why it was written:** Partly derived, partly self-written, and the self-written parts are substantial. The v1.1.0 template never carried these steps; they were lifted from the legacy Claude prompt in lib/documents/templates/michigan-will.ts and then rewritten. The heading "Section D — How to Sign This Will" is new; the legacy intro ("To make this Will legally valid under Michigan law (MCL 700.2502), you must follow each step below carefully. Failure to follow these steps may render this Will invalid.") was dropped. STEP 5 is entirely new prose replacing legacy "STEP 5 - NOTARY (OPTIONAL BUT STRONGLY RECOMMENDED)" and its paragraph; STEP 2 gained "and a notary public" and "All parties" (legacy said "yourself and both witnesses" / "All three parties"); STEP 6 swapped "or with your estate planning attorney. Inform your Executor of its location" for "and upload a copy to your EstateVault account"; STEP 7 is rewritten end to end. Every "Executor" was retargeted to "Personal Representative". Commit d21cd45.
+
+**Decision:** ☐ approved as written ☐ replace with attorney wording
+
+---
+
+### Will and Trust questionnaires — Power of Attorney step
+
+**Where:** PoaStep — question "When should your agent be able to act?" and its two answer options (POA_EFFECTIVE_OPTIONS)  
+
+**Source file:** `components/intake/PoaPadSteps.tsx`
+
+**Text:**
+
+```text
+When should your agent be able to act?
+
+Immediately, as soon as I sign
+Your agent can act on your behalf right away, even while you are managing your own affairs.
+
+Only if I become unable to manage my own affairs
+Your agent has no authority unless and until a physician certifies in writing that you cannot manage your finances.
+```
+
+**Why it was written:** Article III of the DPOA template already carried both effective-date branches but nothing in the intake let a client choose between them, so the document could not render. The assistant wrote the question and both option labels and descriptions; the values map 1:1 to the {{#IF dpoa_effective ...}} branches. The code marks the block "PENDING ATTORNEY APPROVAL — final wording comes from the reviewing attorney."
+
+**Decision:** ☐ approved as written ☐ replace with attorney wording
+
+---
+
+### Will and Trust questionnaires — final review screen
+
+**Where:** Review screen — new summary row labels in the Power of Attorney and Healthcare Directive sections  
+
+**Source file:** `app/will/page.tsx and app/trust/page.tsx`
+
+**Text:**
+
+```text
+Takes effect
+
+Life-sustaining treatment
+
+Food and water by tube
+```
+
+**Why it was written:** Labels invented by the assistant to display the three new answers back to the client on the review screen. "Food and water by tube" in particular is the assistant's lay rendering of artificial nutrition and hydration and should match whatever term the attorney approves for the question itself.
+
+**Decision:** ☐ approved as written ☐ replace with attorney wording
+
+---
+
+### Will and Trust questionnaires — final review screen
+
+**Where:** Review screen — resume notice shown when a saved session is routed back for newly added questions  
+
+**Source file:** `app/will/page.tsx and app/trust/page.tsx`
+
+**Text:**
+
+```text
+We've added a question since you started. Your existing answers have been kept, so you only need to complete this one to continue.
+
+(plural form) We've added a few questions since you started. Your existing answers have been kept, so you only need to complete these to continue.
+```
+
+**Why it was written:** Prompt 3B and the browser-walkthrough commit route a session saved before the POA/PAD questions existed back to the step that asks them. Nothing in the attorney's notes covers what to tell the client when this happens; the assistant wrote the notice, and it is client-facing copy that appears mid-flow in a paid legal-document purchase. The same text is duplicated in both files.
+
+**Decision:** ☐ approved as written ☐ replace with attorney wording
+
+---
+
+### Trust Funding Instructions
+
+**Where:** Section headings and lettered section structure  
+
+**Source file:** `lib/documents/templates/trust-funding-instructions-v1.0.0.txt`
+
+**Text:**
+
+```text
+Section A — Cash Accounts, Section B — Investment Accounts, ... Section P — Reviewing Your Estate Plan
+```
+
+**Why it was written:** The body text is Part 2's UPL-rewritten text verbatim. What the development team added is structure only: the source's bold sub-headings were turned into lettered instruction-sheet sections so the document renders through the platform's heading system. No sentence of the source text was altered. Flagged so the attorney can confirm the re-sectioning does not change meaning.
+
+**Decision:** ☐ approved as written ☐ replace with attorney wording
+
+---
+
+### Questionnaire — beneficiaries step (will flow and trust flow)
+
+**Where:** components/intake/BeneficiaryContingency.tsx — the question, the three options and their descriptions  
+
+**Source file:** `components/intake/BeneficiaryContingency.tsx`
+
+**Text:**
+
+```text
+If [beneficiary name] passes away before you, what happens to their share?
+
+To the other named beneficiaries equally
+Their share is divided equally among the other people you named above.
+
+To their descendants equally, if any
+Their children take their share. If they have none, it goes to the other people you named above.
+
+To someone else I name
+Their share goes to one person you choose, who does not have to be named above.
+
+Who should receive [beneficiary name]'s share?
+```
+
+**Why it was written:** The attorney's note gives the three options in shorthand; the labels, the plain-language descriptions and the follow-up name question are the development team's wording, marked PENDING ATTORNEY APPROVAL in the code. Note one behaviour worth confirming: with a single beneficiary the "other named beneficiaries" option is hidden, because there are no others.
+
+**Decision:** ☐ approved as written ☐ replace with attorney wording
+
+---
+
+### Questionnaire — beneficiaries step
+
+**Where:** Migration notice shown to a client whose saved session named several contingent beneficiaries  
+
+**Source file:** `lib/intake/contingency-migration.ts`
+
+**Text:**
+
+```text
+You previously named [names] as contingent beneficiaries. That answer applied to your whole estate; this question is now asked for each beneficiary separately, so please choose again below.
+```
+
+**Why it was written:** Written by the development team. A session saved under the old global question can name several contingents, which cannot be expressed as one per-beneficiary answer. Rather than discard the answer or guess at a mapping, the previous answer is shown back to the client and they choose again.
+
+**Decision:** ☐ approved as written ☐ replace with attorney wording
+
+---
+
+### Advance Healthcare Directive — operative document body
+
+**Where:** Article Two, Section 2.10 — Organ Donation, all three clause variants  
+
+**Source file:** `lib/documents/templates/advance-healthcare-directive-michigan-v1.0.0.txt`
+
+**Text:**
+
+```text
+REFUSAL:
+I do not wish to make an anatomical gift of any organ, tissue, or other part of my body upon my death. My Patient Advocate is not authorized to make an anatomical gift on my behalf.
+
+ANY PURPOSE:
+Upon my death, I give any needed organ, tissue, or other part of my body for any purpose authorized by law. I authorize my Patient Advocate to make this anatomical gift on my behalf and to execute any document required to carry it out.
+
+SPECIFIC PURPOSES:
+Upon my death, I give any needed organ, tissue, or other part of my body for the following purposes only: {{organ_donation_purposes_text}}. I authorize my Patient Advocate to make this anatomical gift on my behalf, limited to the purposes stated, and to execute any document required to carry it out.
+```
+
+**Why it was written:** Operative dispositive language, written by the development team. The attorney's source document contains no organ donation section; the instruction gave the four client answers but no clause wording. Three drafting decisions to confirm: the refusal variant expressly withholds the Patient Advocate's authority to make a gift; the two gift variants expressly authorise the Advocate to execute the paperwork; and the specific-purposes variant inserts the client's free text verbatim into an operative sentence.
+
+**Decision:** ☐ approved as written ☐ replace with attorney wording
+
+---
+
+### Last Will and Testament — operative document body
+
+**Where:** Article VIII, Section 8.1 — Organ and Tissue Donation, rewritten to the four answers  
+
+**Source file:** `lib/documents/templates/will-michigan-v1.1.0.txt`
+
+**Text:**
+
+```text
+I do not wish to make an anatomical gift of any organ, tissue, or other part of my body upon my passing.
+
+Upon my passing, I give any needed organ, tissue, or other part of my body for any purpose authorized by law.
+
+Upon my passing, I give any needed organ, tissue, or other part of my body for the following purposes only: {{organ_donation_purposes_text}}. No gift shall be made for any purpose not stated above.
+```
+
+**Why it was written:** The will carried its own organ donation article on the old four values (yes_all / yes_specific / no / advocate_decides). It was rewritten onto the new answers so the will and the directive cannot disagree. Choosing to stay silent now renders no section at all. Written by the development team.
+
+**Decision:** ☐ approved as written ☐ replace with attorney wording
+
+---
+
+### Revocable Living Trust — operative document body
+
+**Where:** Article III, Section 3.1 — Co-Trustees acting jointly (the new branch)  
+
+**Source file:** `lib/documents/templates/trust-michigan-v1.1.0.txt`
+
+**Text:**
+
+```text
+The Co-Trustees shall act jointly. No Co-Trustee, acting alone, may transact business on behalf of the Trust, and any exercise of the powers granted under this Trust requires the signature or written consent of both Co-Trustees.
+```
+
+**Why it was written:** Operative legal text, written by the development team. Item F made co-trustee authority a client choice; the act-alone branch is the attorney's existing approved text, and this is its counterpart. It requires both signatures for any exercise of trust powers, which is a stronger reading than merely requiring agreement — worth confirming.
+
+**Decision:** ☐ approved as written ☐ replace with attorney wording
+
+---
+
+### Revocable Living Trust — operative document body
+
+**Where:** Article IV — Incapacity, physician certification removed  
+
+**Source file:** `lib/documents/templates/trust-michigan-v1.1.0.txt`
+
+**Text:**
+
+```text
+The Grantor shall be treated as incapacitated for the purposes of this Trust when the Grantor has been deemed incapacitated and is unable to manage the Grantor's financial affairs.
+
+If the Grantor is subsequently no longer incapacitated, the Grantor shall resume serving as Trustee and the Successor Trustee's authority shall terminate.
+```
+
+**Why it was written:** CONSEQUENCE OF THE PLATFORM-WIDE SWEEP, NOT A DIRECT INSTRUCTION. Item D4 required removing all physician-examination and certification language platform-wide and a test asserting none survives anywhere. The trust's incapacity article previously required written certification by two licensed physicians. That language is now gone and the trigger matches the DPOA. If the intention was to change only the springing power of attorney, this should be reverted — flagging explicitly because it changes who decides that a Grantor is incapacitated.
+
+**Decision:** ☐ approved as written ☐ replace with attorney wording
+
+---
+
+### Advance Healthcare Directive — instruction sheet
+
+**Where:** Sections A to E — the whole sheet  
+
+**Source file:** `lib/documents/templates/advance-healthcare-directive-michigan-v1.0.0.txt`
+
+**Text:**
+
+```text
+Two witnesses must watch you sign, and then sign themselves. No notary is needed: this document is witnessed, not notarized.
+
+This document does not work until the person you named signs. Your Patient Advocate cannot exercise any authority until they have signed the Acceptance page included here.
+
+Your Patient Advocate can act only once you are unable to participate in medical or mental health treatment decisions. While you can take part in a decision, the decision remains yours, whatever this document says. You do not need a court to declare you incapacitated for your Patient Advocate to act.
+
+Give a signed copy to your Patient Advocate, both alternates, and your primary care physician, and ask that a copy be added to your medical record. Keep the signed original somewhere safe and upload a copy to your EstateVault account. A copy is as useful as the original in an emergency, so a document nobody can find protects nobody.
+
+You may revoke your Patient Advocate's authority at any time, orally or in writing. Tell your Patient Advocate and your physician, and remove the copies you handed out. Mental health treatment decisions follow a separate rule, which is set out in the body of the document.
+```
+
+**Why it was written:** The attorney's source document has no instruction sheet. This one follows the established pattern and carries no statute citations per item E. Written by the development team.
+
+**Decision:** ☐ approved as written ☐ replace with attorney wording
+
+---
+
+### Questionnaire — Advance Healthcare Directive step
+
+**Where:** Organ donation question, the four option labels and descriptions  
+
+**Source file:** `components/intake/PoaPadSteps.tsx`
+
+**Text:**
+
+```text
+What are your wishes about organ donation?
+
+No organ donation — You do not wish to donate any organ, tissue, or other part of your body.
+Yes, organ donation for any purpose — Any needed organ or tissue may be given for any purpose allowed by law.
+Organ donation for specific purposes — You choose which purposes your donation may be used for, and state them below.
+Say nothing about organ donation — The document does not address donation, leaving the decision to be made later.
+
+Which purposes?
+```
+
+**Why it was written:** The instruction gave the four answers in shorthand; the question, labels, descriptions and the free-text prompt are the development team's wording, marked PENDING ATTORNEY APPROVAL in the code. No default; required to advance.
+
+**Decision:** ☐ approved as written ☐ replace with attorney wording
+
+---
+
+### Questionnaire — trustee step (joint trusts only)
+
+**Where:** Co-trustee authority question and its two option labels  
+
+**Source file:** `components/intake/JointTrusteeAuthority.tsx`
+
+**Text:**
+
+```text
+How should your Co-Trustees act?
+
+Either of us may act alone — Either Co-Trustee can transact business for the Trust without the other.
+We must act together — Every exercise of the Trust's powers needs both Co-Trustees.
+```
+
+**Why it was written:** Item F made this a client choice. Question and option wording written by the development team, marked PENDING ATTORNEY APPROVAL. No default; required for joint trusts only.
+
+**Decision:** ☐ approved as written ☐ replace with attorney wording
+
+---
+
+### Questionnaire — Power of Attorney step
+
+**Where:** Springing option description, reworded  
+
+**Source file:** `components/intake/PoaPadSteps.tsx`
+
+**Text:**
+
+```text
+Your agent does not have authority to act unless you have been deemed incapacitated.
+```
+
+**Why it was written:** Item D4 replaced the previous description, which referred to a physician certifying in writing. Wording written by the development team.
+
+**Decision:** ☐ approved as written ☐ replace with attorney wording
+
+---
+
+### Durable Power of Attorney — operative document body and instruction sheet
+
+**Where:** Article III — springing trigger, and the matching sheet paragraphs  
+
+**Source file:** `lib/documents/templates/dpoa-michigan-v1.1.0.txt`
+
+**Text:**
+
+```text
+This Durable Power of Attorney is a "springing" power of attorney. The Agent's authority under this document shall not become effective unless and until I am deemed incapacitated.
+
+If I am subsequently no longer incapacitated, the Agent's authority under this document shall be suspended for so long as I remain able to manage my own financial affairs.
+
+(sheet) Your Agent does not have authority to act unless you have been deemed incapacitated. Until that point your Agent may not touch your accounts, sign for you, or act for you in any way.
+
+(sheet) If you later recover, your Agent's authority is suspended again for as long as you are able to manage your own affairs.
+```
+
+**Why it was written:** Item D4 required the trigger to be simply the Principal's incapacity, with all physician-examination, certification and written-statement language removed. The replacement wording, including the restoration-of-capacity sentence, is the development team's.
+
+**Decision:** ☐ approved as written ☐ replace with attorney wording
+
+---
+
+### Will and Trust — questionnaire label change
+
+**Where:** Funeral preference option label (item G1)  
+
+**Source file:** `lib/documents/templates/will-michigan-v1.1.0.txt`
+
+**Text:**
+
+```text
+NOTE, NOT A LABEL CHANGE: there is no funeral preference question in either questionnaire. `funeral_preference` is never asked and always takes its default of family_decides, so the clause the attorney revised is the only branch that ever renders. No label exists to align. Flagged so the attorney knows the choice is not currently offered to clients.
+```
+
+**Why it was written:** Item G1 asked for the questionnaire option label to be aligned with the revised clause. The clause was revised as instructed; the label does not exist.
+
+**Decision:** ☐ approved as written ☐ replace with attorney wording
+
+---
+
+---
+
+## APPROVED — 2026-09-02
+
+Approved as written by Mo Murshed on 2026-09-02 (attorney review round 3), no changes needed. Kept as the record of what was reviewed and when.
+
+### Pour-Over Will — operative document body
+
+**Where:** Article III (Trust Reference and Pour-Over Clause), Section 3.3 — retitled from "Failure of Trust" to "Backup Distribution"  
+
+**Source file:** `lib/documents/templates/pour-over-will-michigan-v1.1.0.txt`
+
+**Text:**
+
+```text
+If {{trust_name_display}} has been revoked, is otherwise invalid, or for any reason fails to take effect at the time of my passing, my residuary estate shall be distributed to the following persons in the shares indicated:
+
+  •  {{share_percent}}% to {{full_name}}, my {{relationship}}.
+
+If any person named in this Section does not survive me by thirty (30) days, that person's share shall be distributed proportionally among the other persons named in this Section who do survive me by thirty (30) days. If none of them survives me by thirty (30) days, my residuary estate shall pass to my heirs at law, as determined under the laws of the State of Michigan governing intestate succession, in effect at the time of my passing.
+```
+
+**Why it was written:** Uncommitted Prompt 6 work, and the most consequential self-written text in this catalogue: the clause previously sent the residuary estate straight to heirs at law if the Trust failed, and now redirects it to the client's named primary beneficiaries with a new 30-day survivorship and proportional-lapse rule. This is operative dispositive language drafted by the assistant and should not ship without attorney sign-off.
+
+**Decision:** ☐ approved as written ☐ replace with attorney wording
+
+---
 
 ### Last Will and Testament — instruction sheet
 
@@ -274,42 +666,6 @@ If you have an older signed will in a drawer, a safe, or with another firm, dest
 **Text:**
 
 ```text
-### Section D — How to Sign This Will
-
-STEP 1 - CHOOSE YOUR WITNESSES
-
-Select two adult witnesses, age 18 or older. Your witnesses must NOT be named beneficiaries in this Will. Both must be present at the same time as each other and as you when signing.
-
-STEP 2 - GATHER ALL PARTIES
-
-Arrange for yourself, both witnesses, and a notary public to be in the same location at the same time. All parties must be physically present together throughout the signing.
-
-STEP 3 - YOU SIGN FIRST
-
-Sign and date this Will in the presence of both witnesses simultaneously. Do not sign before both witnesses are present. Sign on the signature line designated for the Testator.
-
-STEP 4 - WITNESSES SIGN
-
-Immediately after you sign, each witness signs the Will in your presence and in the presence of each other. Each witness should print their name and provide their address on the lines provided.
-
-STEP 5 - COMPLETE THE NOTARY SECTION
-
-You and both witnesses sign the notary section, and the notary completes and seals it. This is what makes your Will self-proving, as explained in Section B.
-
-STEP 6 - STORE YOUR WILL SAFELY
-
-Keep the original signed Will in a secure location such as a fireproof safe or safe deposit box, and upload a copy to your EstateVault account. Do not store the original where your Personal Representative cannot reach it without a court order.
-
-STEP 7 - INFORM YOUR PERSONAL REPRESENTATIVE
-
-Tell your Personal Representative that they have been named, confirm they are willing to serve, and tell them where the signed original is kept. Keep their contact details current.
-```
-
-**Why it was written:** Partly derived, partly self-written, and the self-written parts are substantial. The v1.1.0 template never carried these steps; they were lifted from the legacy Claude prompt in lib/documents/templates/michigan-will.ts and then rewritten. The heading "Section D — How to Sign This Will" is new; the legacy intro ("To make this Will legally valid under Michigan law (MCL 700.2502), you must follow each step below carefully. Failure to follow these steps may render this Will invalid.") was dropped. STEP 5 is entirely new prose replacing legacy "STEP 5 - NOTARY (OPTIONAL BUT STRONGLY RECOMMENDED)" and its paragraph; STEP 2 gained "and a notary public" and "All parties" (legacy said "yourself and both witnesses" / "All three parties"); STEP 6 swapped "or with your estate planning attorney. Inform your Executor of its location" for "and upload a copy to your EstateVault account"; STEP 7 is rewritten end to end. Every "Executor" was retargeted to "Personal Representative". Commit d21cd45.
-
-**Decision:** ☐ approved as written ☐ replace with attorney wording
-
----
 
 ### Revocable Living Trust — instruction sheet
 
@@ -659,148 +1015,6 @@ You may revoke this designation at any time and in any way that communicates you
 
 ---
 
-
-## Questionnaire and interface text
-
-### Will and Trust questionnaires — Patient Advocate step
-
-**Where:** PadStep — question "And what about food and water given through a tube or IV?", its helper paragraph, and its five answer options (ARTIFICIAL_NUTRITION_OPTIONS)  
-
-**Source file:** `components/intake/PoaPadSteps.tsx`
-
-**Text:**
-
-```text
-And what about food and water given through a tube or IV?
-
-Michigan law treats this separately from other life-sustaining treatment, so it is a separate choice.
-
-Provide in all circumstances
-Continue food and water by feeding tube or IV regardless of my condition.
-
-Stop if I have a terminal condition
-An incurable condition with no reasonable likelihood of recovery.
-
-Stop if I am permanently unconscious
-A persistent vegetative state, with no awareness of myself or my surroundings.
-
-Stop if either applies
-A terminal condition or permanent unconsciousness.
-
-Leave the decision to my patient advocate
-No set preference; your advocate decides in your best interest.
-```
-
-**Why it was written:** Asked separately from life-sustaining treatment because Michigan treats artificial nutrition and hydration separately; the assistant made that call and wrote the question, the explanatory line asserting the legal position, and all five labels and descriptions. Values map 1:1 to the {{#IF artificial_nutrition_preference ...}} branches in the PAD template. Marked "PENDING ATTORNEY APPROVAL" in the code.
-
-**Decision:** ☐ approved as written ☐ replace with attorney wording
-
----
-
-### Will and Trust questionnaires — Patient Advocate step
-
-**Where:** PadStep — question "If you could not recover, what should happen to life-sustaining treatment?", its helper paragraph, and its five answer options (LIFE_SUSTAINING_OPTIONS)  
-
-**Source file:** `components/intake/PoaPadSteps.tsx`
-
-**Text:**
-
-```text
-If you could not recover, what should happen to life-sustaining treatment?
-
-Life-sustaining treatment means things like a breathing machine or CPR. Your advocate can only act on this if a physician has determined you cannot take part in the decision yourself.
-
-Continue all treatment
-Keep all life-sustaining treatment going in every circumstance.
-
-Stop if I have a terminal condition
-An incurable condition with no reasonable likelihood of recovery.
-
-Stop if I am permanently unconscious
-A persistent vegetative state, with no awareness of myself or my surroundings.
-
-Stop if either applies
-A terminal condition or permanent unconsciousness.
-
-Leave the decision to my patient advocate
-No set preference; your advocate decides in your best interest.
-```
-
-**Why it was written:** Article V of the PAD template had {{#IF life_sustaining_treatment_preference ...}} branches but no question fed them, so the section rendered blank and strict validation blocked every PAD. The assistant wrote the question, the explanatory paragraph, and all five labels and descriptions — including the lay definitions of "terminal condition" and "persistent vegetative state", which determine which operative branch prints in the client's healthcare document. Marked "PENDING ATTORNEY APPROVAL" in the code.
-
-**Decision:** ☐ approved as written ☐ replace with attorney wording
-
----
-
-### Will and Trust questionnaires — Power of Attorney step
-
-**Where:** PoaStep — question "When should your agent be able to act?" and its two answer options (POA_EFFECTIVE_OPTIONS)  
-
-**Source file:** `components/intake/PoaPadSteps.tsx`
-
-**Text:**
-
-```text
-When should your agent be able to act?
-
-Immediately, as soon as I sign
-Your agent can act on your behalf right away, even while you are managing your own affairs.
-
-Only if I become unable to manage my own affairs
-Your agent has no authority unless and until a physician certifies in writing that you cannot manage your finances.
-```
-
-**Why it was written:** Article III of the DPOA template already carried both effective-date branches but nothing in the intake let a client choose between them, so the document could not render. The assistant wrote the question and both option labels and descriptions; the values map 1:1 to the {{#IF dpoa_effective ...}} branches. The code marks the block "PENDING ATTORNEY APPROVAL — final wording comes from the reviewing attorney."
-
-**Decision:** ☐ approved as written ☐ replace with attorney wording
-
----
-
-### Will and Trust questionnaires — final review screen
-
-**Where:** Review screen — new summary row labels in the Power of Attorney and Healthcare Directive sections  
-
-**Source file:** `app/will/page.tsx and app/trust/page.tsx`
-
-**Text:**
-
-```text
-Takes effect
-
-Life-sustaining treatment
-
-Food and water by tube
-```
-
-**Why it was written:** Labels invented by the assistant to display the three new answers back to the client on the review screen. "Food and water by tube" in particular is the assistant's lay rendering of artificial nutrition and hydration and should match whatever term the attorney approves for the question itself.
-
-**Decision:** ☐ approved as written ☐ replace with attorney wording
-
----
-
-### Will and Trust questionnaires — final review screen
-
-**Where:** Review screen — resume notice shown when a saved session is routed back for newly added questions  
-
-**Source file:** `app/will/page.tsx and app/trust/page.tsx`
-
-**Text:**
-
-```text
-We've added a question since you started. Your existing answers have been kept, so you only need to complete this one to continue.
-
-(plural form) We've added a few questions since you started. Your existing answers have been kept, so you only need to complete these to continue.
-```
-
-**Why it was written:** Prompt 3B and the browser-walkthrough commit route a session saved before the POA/PAD questions existed back to the step that asks them. Nothing in the attorney's notes covers what to tell the client when this happens; the assistant wrote the notice, and it is client-facing copy that appears mid-flow in a paid legal-document purchase. The same text is duplicated in both files.
-
-**Decision:** ☐ approved as written ☐ replace with attorney wording
-
----
-
-
-## Legacy pdf-lib instruction sheets (shared, `lib/documents/instruction-sheets.ts`)
-
 ### All five documents — legacy pdf-lib instruction sheet
 
 **Where:** CLOSING_BLOCKS — heading "Important Notice"  
@@ -1117,8 +1331,6 @@ Your Revocable Living Trust holds title to the assets you transfer into it, stat
 
 ---
 
-## Prompt 7 — Trust Package documents and joint trusts
-
 ### Revocable Living Trust — operative document body
 
 **Where:** Article III, Section 3.1 — Initial Co-Trustees (joint trust branch)  
@@ -1245,26 +1457,6 @@ File a copy of the signed assignment in the Trust Assets section of your Vault, 
 
 ---
 
-### Trust Funding Instructions
-
-**Where:** Section headings and lettered section structure  
-
-**Source file:** `lib/documents/templates/trust-funding-instructions-v1.0.0.txt`
-
-**Text:**
-
-```text
-Section A — Cash Accounts, Section B — Investment Accounts, ... Section P — Reviewing Your Estate Plan
-```
-
-**Why it was written:** The body text is Part 2's UPL-rewritten text verbatim. What the development team added is structure only: the source's bold sub-headings were turned into lettered instruction-sheet sections so the document renders through the platform's heading system. No sentence of the source text was altered. Flagged so the attorney can confirm the re-sectioning does not change meaning.
-
-**Decision:** ☐ approved as written ☐ replace with attorney wording
-
----
-
-## Prompt 8 — per-beneficiary contingency
-
 ### Last Will and Testament, Revocable Living Trust, Pour-Over Will — operative document body
 
 **Where:** Residuary / Distribution / Section 3.3 — the three per-beneficiary contingency clauses  
@@ -1305,48 +1497,77 @@ If none of the beneficiaries named in Section [X], and no person named to take a
 
 ---
 
-### Questionnaire — beneficiaries step (will flow and trust flow)
+---
 
-**Where:** components/intake/BeneficiaryContingency.tsx — the question, the three options and their descriptions  
+## Withdrawn
 
-**Source file:** `components/intake/BeneficiaryContingency.tsx`
+These covered questionnaire text that no longer exists. The life-sustaining treatment and artificial nutrition questions were removed entirely on attorney instruction (2026-09-02); the directive's language now ships as fixed text with no client choice.
+
+### Will and Trust questionnaires — Patient Advocate step
+
+**Where:** PadStep — question "And what about food and water given through a tube or IV?", its helper paragraph, and its five answer options (ARTIFICIAL_NUTRITION_OPTIONS)  
+
+**Source file:** `components/intake/PoaPadSteps.tsx`
 
 **Text:**
 
 ```text
-If [beneficiary name] passes away before you, what happens to their share?
+And what about food and water given through a tube or IV?
 
-To the other named beneficiaries equally
-Their share is divided equally among the other people you named above.
+Michigan law treats this separately from other life-sustaining treatment, so it is a separate choice.
 
-To their descendants equally, if any
-Their children take their share. If they have none, it goes to the other people you named above.
+Provide in all circumstances
+Continue food and water by feeding tube or IV regardless of my condition.
 
-To someone else I name
-Their share goes to one person you choose, who does not have to be named above.
+Stop if I have a terminal condition
+An incurable condition with no reasonable likelihood of recovery.
 
-Who should receive [beneficiary name]'s share?
+Stop if I am permanently unconscious
+A persistent vegetative state, with no awareness of myself or my surroundings.
+
+Stop if either applies
+A terminal condition or permanent unconsciousness.
+
+Leave the decision to my patient advocate
+No set preference; your advocate decides in your best interest.
 ```
 
-**Why it was written:** The attorney's note gives the three options in shorthand; the labels, the plain-language descriptions and the follow-up name question are the development team's wording, marked PENDING ATTORNEY APPROVAL in the code. Note one behaviour worth confirming: with a single beneficiary the "other named beneficiaries" option is hidden, because there are no others.
+**Why it was written:** Asked separately from life-sustaining treatment because Michigan treats artificial nutrition and hydration separately; the assistant made that call and wrote the question, the explanatory line asserting the legal position, and all five labels and descriptions. Values map 1:1 to the {{#IF artificial_nutrition_preference ...}} branches in the PAD template. Marked "PENDING ATTORNEY APPROVAL" in the code.
 
 **Decision:** ☐ approved as written ☐ replace with attorney wording
 
 ---
 
-### Questionnaire — beneficiaries step
+### Will and Trust questionnaires — Patient Advocate step
 
-**Where:** Migration notice shown to a client whose saved session named several contingent beneficiaries  
+**Where:** PadStep — question "If you could not recover, what should happen to life-sustaining treatment?", its helper paragraph, and its five answer options (LIFE_SUSTAINING_OPTIONS)  
 
-**Source file:** `lib/intake/contingency-migration.ts`
+**Source file:** `components/intake/PoaPadSteps.tsx`
 
 **Text:**
 
 ```text
-You previously named [names] as contingent beneficiaries. That answer applied to your whole estate; this question is now asked for each beneficiary separately, so please choose again below.
+If you could not recover, what should happen to life-sustaining treatment?
+
+Life-sustaining treatment means things like a breathing machine or CPR. Your advocate can only act on this if a physician has determined you cannot take part in the decision yourself.
+
+Continue all treatment
+Keep all life-sustaining treatment going in every circumstance.
+
+Stop if I have a terminal condition
+An incurable condition with no reasonable likelihood of recovery.
+
+Stop if I am permanently unconscious
+A persistent vegetative state, with no awareness of myself or my surroundings.
+
+Stop if either applies
+A terminal condition or permanent unconsciousness.
+
+Leave the decision to my patient advocate
+No set preference; your advocate decides in your best interest.
 ```
 
-**Why it was written:** Written by the development team. A session saved under the old global question can name several contingents, which cannot be expressed as one per-beneficiary answer. Rather than discard the answer or guess at a mapping, the previous answer is shown back to the client and they choose again.
+**Why it was written:** Article V of the PAD template had {{#IF life_sustaining_treatment_preference ...}} branches but no question fed them, so the section rendered blank and strict validation blocked every PAD. The assistant wrote the question, the explanatory paragraph, and all five labels and descriptions — including the lay definitions of "terminal condition" and "persistent vegetative state", which determine which operative branch prints in the client's healthcare document. Marked "PENDING ATTORNEY APPROVAL" in the code.
 
 **Decision:** ☐ approved as written ☐ replace with attorney wording
 

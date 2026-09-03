@@ -345,14 +345,12 @@ describe("parser: end-to-end on real template", () => {
       specific_gifts: [
         { item_description: "my grandmother's wedding ring", recipient_full_name: "Alice Public", recipient_relationship: "daughter", fallback: "residuary" },
       ],
-      organ_donation: "yes_all",
+      organ_donation: "any_purpose",
       funeral_preference: "burial",
       has_funeral_representative: true,
       funeral_representative: { full_name: "Greg Hall", relationship: "Brother", phone: "(313) 555-7777" },
       patient_advocate: { full_name: "Ed Brown", relationship: "Friend", city: "Detroit", state: "Michigan", phone: "(313) 555-9999" },
       successor_patient_advocate: { full_name: "Fay Green", relationship: "Friend", city: "Detroit", state: "Michigan", phone: "(313) 555-1234" },
-      life_sustaining_treatment_preference: "withhold_if_terminal_or_pvs",
-      artificial_nutrition_preference: "withhold_if_terminal_or_pvs",
     };
   }
 

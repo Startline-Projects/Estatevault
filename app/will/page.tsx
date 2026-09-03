@@ -23,8 +23,7 @@ import {
   isPoaStepComplete,
   isPadStepComplete,
   POA_EFFECTIVE_OPTIONS,
-  LIFE_SUSTAINING_OPTIONS,
-  ARTIFICIAL_NUTRITION_OPTIONS,
+  ORGAN_DONATION_OPTIONS,
 } from "@/components/intake/PoaPadSteps";
 
 type Stage = "acknowledgment" | "intake" | "redirecting";
@@ -825,9 +824,7 @@ export default function WillPage() {
               <Row label="Advocate" value={intake.patientAdvocateName} />
               <Row label="Relationship" value={intake.patientAdvocateRelationship} />
               <Row label="Successor advocate" value={intake.successorPatientAdvocateName} />
-              <Row label="Organ donation" value={intake.organDonation} />
-              <Row label="Life-sustaining treatment" value={LIFE_SUSTAINING_OPTIONS.find((o) => o.value === intake.lifeSustainingTreatment)?.label ?? ""} />
-              <Row label="Food and water by tube" value={ARTIFICIAL_NUTRITION_OPTIONS.find((o) => o.value === intake.artificialNutrition)?.label ?? ""} />
+              <Row label="Organ donation" value={ORGAN_DONATION_OPTIONS.find((o) => o.value === intake.organDonation)?.label ?? ""} />
               <Row label="Healthcare wishes" value={intake.hasHealthcareWishes} />
               {intake.hasHealthcareWishes === "Yes" && (
                 <Row label="Wishes" value={<span className="whitespace-pre-wrap">{intake.healthcareWishesDescription}</span>} />

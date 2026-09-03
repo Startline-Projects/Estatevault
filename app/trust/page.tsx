@@ -17,6 +17,7 @@ import NameInput from "@/components/quiz/NameInput";
 import QuestionLabel from "@/components/quiz/QuestionLabel";
 import { findResumePoint } from "@/lib/intake/incomplete-steps";
 import { BeneficiaryContingency, contingenciesComplete, CONTINGENCY_OPTIONS } from "@/components/intake/BeneficiaryContingency";
+import { JointTrusteeAuthority, JOINT_TRUSTEE_AUTHORITY_OPTIONS } from "@/components/intake/JointTrusteeAuthority";
 import {
   PoaStep,
   PadStep,
@@ -25,8 +26,7 @@ import {
   togglePoaPower,
   ALL_POA_POWERS,
   POA_EFFECTIVE_OPTIONS,
-  LIFE_SUSTAINING_OPTIONS,
-  ARTIFICIAL_NUTRITION_OPTIONS,
+  ORGAN_DONATION_OPTIONS,
 } from "@/components/intake/PoaPadSteps";
 
 type Stage = "acknowledgment" | "intake" | "redirecting";
@@ -63,6 +63,8 @@ export default function TrustPage() {
   const [customAgeMode, setCustomAgeMode] = useState(false);
   const [customAgeError, setCustomAgeError] = useState("");
   const hasMinorChildren = intake.hasMinorChildren === "Yes";
+  /** A trust is joint when the client actually names a second grantor. */
+  const isJointTrust = (intake.secondGrantorName ?? "").trim() !== "";
   const [openReviewSections, setOpenReviewSections] = useState<Record<string, boolean>>({
     residency: false,
     personal: false,
@@ -175,6 +177,7 @@ export default function TrustPage() {
       case "about":
         return intake.firstName.trim() !== "" && intake.lastName.trim() !== "" && intake.dateOfBirth !== "" && intake.dateOfBirth <= maxDob && intake.city.trim() !== "" && intake.hasMinorChildren !== "" && intake.hasSpecialNeedsDependent !== "";
       case "trustee":
+        if (isJointTrust && !intake.jointTrusteeAuthority) return false;
         return intake.primaryTrustee !== "" && (intake.primaryTrustee === "Myself" || intake.trusteeName.trim() !== "") && intake.successorTrusteeName.trim() !== "" && intake.successorTrusteeRelationship !== "" && intake.additionalSuccessorTrustees.every(st => !st.name.trim() || st.relationship !== "");
       case "beneficiaries": {
         if (intake.beneficiaries.length === 0) return false;
@@ -394,6 +397,12 @@ export default function TrustPage() {
       case "trustee":
         return (
           <>
+            {isJointTrust && (
+              <JointTrusteeAuthority
+                value={intake.jointTrusteeAuthority}
+                onChange={(v) => update({ jointTrusteeAuthority: v })}
+              />
+            )}
             <p className="mb-2 text-xs text-charcoal/60 leading-relaxed">Your trustee is responsible for managing the assets inside your trust. While you are alive and capable, you remain in full control as your own trustee.</p>
             <p className="mb-5 text-xs text-charcoal/50">Most people name <strong>Myself</strong> as the primary trustee. Your successor trustee automatically takes over only if you become incapacitated or pass away, they have no control during your lifetime.</p>
             <QuestionLabel>Who are you creating trust for?</QuestionLabel>
@@ -726,6 +735,9 @@ export default function TrustPage() {
             <Section k="trust" title="Trust & Trustees" target="trustee">
               <Row label="Trust name" value={intake.trustName || `The ${intake.firstName} ${intake.lastName} Revocable Living Trust`.trim()} />
               <Row label="Primary trustee" value={intake.primaryTrustee === "Myself" ? "Yourself" : intake.trusteeName} />
+              {isJointTrust && (
+                <Row label="Co-Trustees act" value={JOINT_TRUSTEE_AUTHORITY_OPTIONS.find((o) => o.value === intake.jointTrusteeAuthority)?.label ?? ""} />
+              )}
               <Row label="Successor trustee" value={intake.successorTrusteeName} />
               <Row label="Relationship" value={intake.successorTrusteeRelationship} />
               {intake.additionalSuccessorTrustees.filter((s) => s.name.trim()).map((s, i) => (
@@ -792,9 +804,7 @@ export default function TrustPage() {
               <Row label="Advocate" value={intake.patientAdvocateName} />
               <Row label="Relationship" value={intake.patientAdvocateRelationship} />
               <Row label="Successor advocate" value={intake.successorPatientAdvocateName} />
-              <Row label="Life-sustaining treatment" value={LIFE_SUSTAINING_OPTIONS.find((o) => o.value === intake.lifeSustainingTreatment)?.label ?? ""} />
-              <Row label="Food and water by tube" value={ARTIFICIAL_NUTRITION_OPTIONS.find((o) => o.value === intake.artificialNutrition)?.label ?? ""} />
-              <Row label="Organ donation" value={intake.organDonation} />
+              <Row label="Organ donation" value={ORGAN_DONATION_OPTIONS.find((o) => o.value === intake.organDonation)?.label ?? ""} />
               <Row label="Healthcare wishes" value={intake.hasHealthcareWishes} />
               {intake.hasHealthcareWishes === "Yes" && (
                 <Row label="Wishes" value={<span className="whitespace-pre-wrap">{intake.healthcareWishesDescription}</span>} />

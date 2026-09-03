@@ -126,7 +126,19 @@ The Grantor shall serve as the initial Trustee of this Trust during the Grantor'
 
 ### Section [[SECTION:trustees.s1]] — Initial Co-Trustees.
 
-The Grantors, {{client_full_name}} and {{grantor_2_full_name}}, shall serve together as the initial Co-Trustees of this Trust during their joint lifetimes and while each has legal capacity to manage the Trust assets. Either Co-Trustee, acting alone, may transact business on behalf of the Trust.
+The Grantors, {{client_full_name}} and {{grantor_2_full_name}}, shall serve together as the initial Co-Trustees of this Trust during their joint lifetimes and while each has legal capacity to manage the Trust assets.
+
+{{#IF joint_trustee_authority equals "either_alone"}}
+
+Either Co-Trustee, acting alone, may transact business on behalf of the Trust.
+
+{{/IF}}
+
+{{#IF joint_trustee_authority equals "jointly"}}
+
+The Co-Trustees shall act jointly. No Co-Trustee, acting alone, may transact business on behalf of the Trust, and any exercise of the powers granted under this Trust requires the signature or written consent of both Co-Trustees.
+
+{{/IF}}
 
 If one Grantor ceases to serve as Co-Trustee for any reason, the surviving or remaining Grantor shall continue to serve alone as sole Trustee, with all of the powers granted to the Co-Trustees under this Trust, and no successor Trustee shall take office while that Grantor is willing and able to serve.
 
@@ -160,7 +172,7 @@ Any Trustee serving under this Trust shall be entitled to reasonable compensatio
 
 ### Section [[SECTION:incapacity.s1]] — Determination of Incapacity.
 
-The Grantor shall be deemed incapacitated only upon written certification by two (2) licensed physicians that the Grantor is unable to manage the Grantor's financial affairs. Each physician's certification shall be in the form of a signed, dated written statement that includes the physician's full name, professional license number, a statement that the physician has examined the Grantor, and the physician's professional opinion that the Grantor is unable to manage the Grantor's financial affairs by reason of mental or physical incapacity.
+The Grantor shall be treated as incapacitated for the purposes of this Trust when the Grantor has been deemed incapacitated and is unable to manage the Grantor's financial affairs.
 
 ### Section [[SECTION:incapacity.s2]] — Authority of Successor Trustee During Incapacity.
 
@@ -168,7 +180,7 @@ Upon the determination of the Grantor's incapacity as provided in Section [[REF:
 
 ### Section [[SECTION:incapacity.s3]] — Restoration of Capacity.
 
-If the Grantor subsequently regains capacity, as certified in writing by a licensed physician, the Grantor shall resume serving as Trustee and the Successor Trustee's authority shall terminate.
+If the Grantor is subsequently no longer incapacitated, the Grantor shall resume serving as Trustee and the Successor Trustee's authority shall terminate.
 
 ## ARTICLE [[ARTICLE:trustee_powers]] — TRUSTEE POWERS
 
@@ -392,7 +404,7 @@ My commission expires: _
 
 ## OPERATION OF THIS DOCUMENT
 
-This is your Revocable Living Trust under Michigan law (MCL 700.7101 et seq., the Estates and Protected Individuals Code). During your lifetime, you retain full control over the Trust and may amend, modify, or revoke it at any time while you have legal capacity to do so. Upon your passing, this Trust becomes irrevocable and the distribution provisions take effect.
+This is your Revocable Living Trust under Michigan law the Estates and Protected Individuals Code). During your lifetime, you retain full control over the Trust and may amend, modify, or revoke it at any time while you have legal capacity to do so. Upon your passing, this Trust becomes irrevocable and the distribution provisions take effect.
 
 ### Section A — Funding Your Trust
 

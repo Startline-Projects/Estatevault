@@ -100,7 +100,7 @@ function realisticIntake(overrides: Partial<WillIntake> = {}): WillIntake {
       { item_description: "my vintage record collection", recipient_full_name: "Bob Sample Smith", recipient_relationship: "son", fallback: "to_children" },
     ],
 
-    organ_donation: "yes_all",
+    organ_donation: "any_purpose",
     funeral_preference: "burial",
     has_funeral_representative: true,
     funeral_representative: { full_name: "Greg Hall", relationship: "Brother", phone: "(313) 555-7777" },

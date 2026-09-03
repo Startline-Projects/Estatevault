@@ -93,9 +93,9 @@ describe("DPOA powers — granted only when selected", () => {
     expect(out).toContain("NOT authorized to buy, sell, lease, mortgage, encumber");
     expect(out).not.toMatch(/The Agent is authorized to buy, sell, lease, mortgage, encumber/);
 
-    // The two "hot" powers stay explicitly withheld.
-    expect(out).toContain("Gift-Making Authority.  NOT GRANTED.");
-    expect(out).toContain("Authority to Make Changes to Estate Plan.  NOT GRANTED.");
+    // Gift-making and estate-plan amendment were removed as options (Prompt 9).
+    expect(out).not.toContain("Gift-Making Authority");
+    expect(out).not.toContain("Authority to Make Changes to Estate Plan");
   });
 
   it("maps each questionnaire label to its template token", () => {
@@ -146,8 +146,8 @@ describe("previously dropped fields are now mapped", () => {
   });
 
   it("normalizes organ donation to a token the template branches on", () => {
-    expect(d.organ_donation).toBe("yes_all");
-    expect(adapt(trustQuizAnswers({ organDonation: "No" })).organ_donation).toBe("no");
+    expect(d.organ_donation).toBe("any_purpose");
+    expect(adapt(trustQuizAnswers({ organDonation: "No" })).organ_donation).toBe("none");
   });
 
   it("derives the county from the city when the questionnaire did not ask", () => {
@@ -243,18 +243,15 @@ describe("strict per-document validation", () => {
     expect(validateForDocument("dpoa", d)).toContain("power of attorney agent");
   });
 
-  it("fails a PAD because treatment preferences are not collected yet", () => {
-    const reasons = validateForDocument("pad", adapt(trustQuizAnswers()));
-    expect(reasons.some((r) => r.startsWith("life-sustaining treatment preference"))).toBe(true);
-    expect(reasons.some((r) => r.startsWith("artificial nutrition preference"))).toBe(true);
+  it("passes the Advance Healthcare Directive once the advocate and donation answer exist", () => {
+    // The two treatment-preference questions were removed on attorney
+    // instruction; the directive's language is fixed text.
+    expect(validateForDocument("ahcd", adapt(trustQuizAnswers()))).toEqual([]);
   });
 
-  it("passes a PAD once the preferences are supplied", () => {
-    const d = adapt(trustQuizAnswers({
-      lifeSustainingTreatment: "withhold_if_terminal_or_pvs",
-      artificialNutrition: "withhold_if_terminal_or_pvs",
-    }));
-    expect(validateForDocument("pad", d)).toEqual([]);
+  it("blocks the directive when organ donation is unanswered", () => {
+    const d = adapt(trustQuizAnswers({ organDonation: "" }));
+    expect(validateForDocument("ahcd", d)).toContain("organ donation preference");
   });
 
   it("fails when gifts were requested but nothing was captured", () => {
