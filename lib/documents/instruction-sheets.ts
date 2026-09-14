@@ -9,8 +9,8 @@
  * updated. Never give legal advice, never use "we recommend", never use the word "death".
  *
  * Template Version: 1.0.0-michigan
- * Attorney Approval Date: [TO BE FILLED]
- * Approved By: [TO BE FILLED]
+ * Attorney Approval Date: 2026-09-14
+ * Approved By: Mo Murshed
  */
 
 export type InstructionBlock =

@@ -29,7 +29,9 @@ Branch `template-revisions-v2`, pushed to
 | 19 | `432c48a` | Prompt 9B — funeral preference, joint co-trustee UI, walkthrough fixes |
 | 20 | `de07230` | Prompt 10B — the attorney's healthcare-wishes clause and How to Sign sheet |
 | 21 | `23545fc` | Prompt 10C — final approval, sweep repairs, the review queue closes empty |
-| 22 | — | Prompt 10D — funeral section into the Pour-Over Will, his remains copy, sibling sheet |
+| 22 | `59b907f` | Prompt 10D — funeral section into the Pour-Over Will, his remains copy, sibling sheet |
+| 23 | `b03fe6c` | Addendum — witness-sentence provenance, retired document name |
+| 24 | — | Prompt 10E — his two restorations; the review record closes |
 
 **131 files changed, +12,513 / −2,296** across 21 commits on `origin/staging` (`8b62c58`).
 
@@ -54,7 +56,7 @@ runs in `prebuild`.
 
 ## Tests
 
-**1,032 total: 1,022 passing, 10 failing.**
+**1,034 total: 1,024 passing, 10 failing.**
 
 All 10 failures are **pre-existing on `origin/staging`** — verified by running
 the suite in a clean worktree of `8b62c58`, which produces the identical 10.
@@ -64,7 +66,7 @@ They live in `bug12-farewell-leak`, `checkout-schemas` (amendment schema),
 expects `150000`, gets `30000`, tagged BUG-4 against the fixed-$300
 attorney-review invariant.
 
-Test count went from 528 to 1,032. Part of that is ~340 new tests; part is that
+Test count went from 528 to 1,034. Part of that is ~340 new tests; part is that
 **vitest was never collecting `lib/documents/**`** — six files and ~1,500 lines
 had never run. Added to the include globs, along with `lib/intake/**`.
 
@@ -73,28 +75,21 @@ Two harnesses beyond unit tests:
 - `Testing Scripts/verify-template-pipeline.ts` — v1.1.0 path, 50 checks,
   reading text and coordinates back out of the produced PDF bytes
 
-## Attorney review
+## Attorney review — closed
 
-`PENDING_ATTORNEY_REVIEW.md` — **one entry awaiting review**, the Pour-Over
-Will's Section E: his seven signing steps applied to a sibling document, which
-is the development team's call rather than his instruction. 27 entries approved
-2026-09-13, 47 approved 2026-09-02, 2 withdrawn.
+`PENDING_ATTORNEY_REVIEW.md` — **nothing awaiting review, nothing outside the
+counts.** 5 entries approved 2026-09-14, 27 on 2026-09-13, 47 on 2026-09-02,
+2 withdrawn.
 
-Two pieces of his own text were supplied and integrated verbatim: the
-healthcare-wishes lead-in in the Advance Healthcare Directive, and the Will's
-"How to Sign This Will" sheet. Step 5 of that sheet was held back — his version
-sent the client to the notary to have a self-proving affidavit prepared and the
-Will already contains one — and the correction was approved as written on
-2026-09-13, along with the reading of item 16 that made the Personal
-Representative sentence the third remains option rather than a further change to
-the item 6 clause.
+The last of these is a blanket email approval from Mo Murshed covering both
+review packages, the corrected Step 5, the remains wording, the Pour-Over Will's
+adapted signing sheet, and the strings written after his last package. **Keep
+that email with the file** — it is what the file's sign-off marks rest on. His
+one instruction, restoring two points to the Pour-Over Will's Section E, is
+carried out and recorded.
 
-Four short questionnaire strings were written after the round-4 material went to
-him and have not been put in front of him: the joint-trust question and the
-second grantor's field label in `app/trust/page.tsx`, and the "Second grantor"
-and "Donation purposes" review-screen rows. They are listed in their own section
-of the review file. None is operative language in a document, but the
-joint-trust answer is dispositive, so it is flagged rather than left silent.
+The file is a record now, not a queue. Anything client-facing written from here
+belongs in a new pending section and goes back to him.
 
 Still outstanding from the compliance checklist, and unrelated to his review:
 Drake (UPL review of the rewritten Funding Instructions and the new
@@ -129,10 +124,13 @@ Assignment templates).
   jeopardise their own gift." during round 3 with no instruction on record.
   Flagged in the review file for him to decide; Michigan's EPIC does not purge a
   gift to an interested witness, so it may be right that it is gone.
-- The Pour-Over Will's Section E is now his steps, pending his sign-off on the
-  adaptation. Two points the old steps made are gone with them: that witnesses
-  must not be beneficiaries under the companion Trust either, and that the
-  original should be stored with the Trust.
+- The Funeral Representative Designation's operative body still refers three
+  times to the retired Patient Advocate Designation. Nothing generates that
+  document today — it has a template but no route mapping — so it does not
+  ship, but it needs his eye before it is ever wired up.
+- The legacy Claude prompt files still carry "[TO BE FILLED]" approval headers.
+  That is correct: those drive model-generated output, which no approval of
+  verbatim text can cover.
 - The client's free-text healthcare wishes render only in the v1.1.0 Advance
   Healthcare Directive. The legacy Claude path includes them too, but by
   instruction to the model rather than verbatim.

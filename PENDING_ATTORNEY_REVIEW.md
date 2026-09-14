@@ -1,8 +1,15 @@
-# Pending Attorney Review
+# Attorney Review Record — CLOSED
 
 Client-facing prose in the EstateVault documents that was **written by the
-development team**, not supplied verbatim by the reviewing attorney. Every entry
-here needs attorney sign-off before deploy.
+development team**, not supplied verbatim by the reviewing attorney.
+
+**Nothing here is awaiting review.** Every entry was signed off by Mo Murshed
+across four rounds, the last of them a blanket email approval on 2026-09-14
+covering both review packages and everything written after them. Keep the email
+with this file: it is what the ☑ marks below rest on.
+
+This file is now a record, not a queue. Anything client-facing written from here
+on belongs in a new section at the top, marked pending, and goes back to him.
 
 This file is the review source of truth. Prose markers are deliberately **not**
 placed inside the `.txt` templates, because a marker inside a template renders
@@ -23,10 +30,10 @@ file is rendered.
 
 | | |
 |---|---|
-| Entries awaiting review | 1 — the Pour-Over Will's Section E |
-| Not yet put to him | 4 groups of strings, incl. 3 sentences in the live legacy sheets — see the section below |
-| Generated | Prompt 10D — the funeral section, his remains copy, the sibling sheet |
-| Approved | 27 entries on 2026-09-13 · 47 entries on 2026-09-02 |
+| Entries awaiting review | none — the record is closed |
+| Approval on file | blanket email from Mo Murshed, 2026-09-14 |
+| Closed | Prompt 10E — final edit of the engagement |
+| Approved | 5 entries on 2026-09-14 · 27 on 2026-09-13 · 47 on 2026-09-02 |
 | Withdrawn | 2 entries — the questions no longer exist |
 | Reviewing attorney | Mo Murshed |
 | Also pending | Drake (UPL review), Mike (legal sign-off) — see the compliance checklist |
@@ -38,7 +45,17 @@ file is rendered.
 
 ## Still pending review
 
-One entry.
+None. The record is closed.
+
+---
+
+## APPROVED — 2026-09-14
+
+Blanket email approval from Mo Murshed covering both review packages, the
+corrected Step 5, the remains wording, the Pour-Over Will's adapted signing
+sheet, and the appendix of strings written after his last review package.
+His one instruction — restoring two points to the Pour-Over Will's Section E —
+is recorded in the first entry and has been carried out.
 
 ### Pour-Over Will — instruction sheet, Section E
 
@@ -46,23 +63,23 @@ One entry.
 
 **Source file:** `lib/documents/templates/pour-over-will-michigan-v1.1.0.txt`
 
-**Text:** his seven steps for the Last Will, approved 2026-09-13, applied here unchanged. "This Will" reads correctly for a pour-over will, so nothing needed rewording. Step 5 is the corrected version he approved in the same round; this document contains a self-proving affidavit under its own heading, so the step is accurate here too.
+**Text:** his seven steps for the Last Will, approved 2026-09-13, applied here. "This Will" reads correctly for a pour-over will, so nothing needed rewording. Step 5 is the corrected version he approved in the same round; this document carries a self-proving affidavit under its own heading, so the step is accurate here too.
 
-**Why it is pending:** he wrote those steps for one document. Applying them to a sibling is the development team's decision, not his instruction, which is why the sheet is marked PENDING ATTORNEY APPROVAL in a template comment the renderer strips.
+**Restored on his instruction, 2026-09-14**, in his own sentences and changing nothing else:
 
-**What the change dropped:** the steps it replaced said the witnesses must not be beneficiaries "under this Will or the companion Trust" — his Step 3 says only "under this Will" — and told the client to store the original together with the Trust and to tell the Personal Representative where both are kept. Nothing replaces the second point. Both are worth his eye.
+```text
+(Step 3) Immediately after you sign, both witnesses must sign their names and provide their full addresses on the signature page. Witnesses should not be beneficiaries under this Will or the companion Trust.
 
-**Decision:** ☐ approved as written ☐ replace with attorney wording ☐ keep the sheet the Pour-Over Will had
+(Step 6) Store your original signed Will together with your {{trust_name_bare}} in a safe place, such as a safe deposit box, fireproof safe, or with your Personal Representative. Do not store it where it might be damaged, lost, or mistaken for a draft. You may also upload a copy to your EstateVault account for safekeeping.
+
+(Step 7) Inform your Personal Representative (the person you named to carry out your Will) where this original Will and the Trust are stored and provide them with a copy. Give them any password or access information they may need to locate it.
+```
+
+**Why it is closed:** applying his steps to a sibling document was the development team's call, so it was put back to him. He approved it by email on 2026-09-14 with the one instruction above — the two points the harmonization had dropped, the companion Trust in the beneficiary bar and the storage guidance, restored.
+
+**Decision:** ☑ approved by email, 2026-09-14
 
 ---
-
-## Written after the last review — not yet put to the attorney
-
-Not review items he has seen, and not counted above. These are client-facing
-strings that went in after the material he reviewed, so nothing in this file
-covers them. They are listed so the record is complete. The first group is the
-one that matters: those three sentences ship today, because the legacy pdf-lib
-path is what production renders while `PDF_RENDERER` is unset.
 
 ### Legacy pdf-lib instruction sheets — rewritten during round 3
 
@@ -90,6 +107,8 @@ Sign and date the directive in the presence of both witnesses.
 
 The last three lines are a naming fix made on 2026-09-14: round 3 renamed the document to the Advance Healthcare Directive and rewrote one step to match, but left the sheet's subtitle and its opening paragraph calling it the Patient Advocate Designation, so a single sheet used both names for the same document. The substance is unchanged — only the document's own name.
 
+---
+
 ### Questionnaire — trustee step
 
 **Where:** The question that gates the joint-trust branch, and the second grantor's field label
@@ -105,6 +124,8 @@ Their full name
 ```
 
 **Why it was written:** the co-trustee authority question he approved only appears once a client says the trust is joint and names the other grantor, and nothing asked either thing. The question and the field label are the development team's. The answer is dispositive — it decides whether the instrument is drafted for one Grantor or two — so it is flagged rather than left silent.
+
+---
 
 ### Questionnaire — example text shown inside answer boxes
 
@@ -122,6 +143,8 @@ Example: transplantation and therapy only.
 
 **Why it was written:** both boxes take free text that is carried verbatim into the client's Advance Healthcare Directive — the first under the lead-in he supplied, the second into the organ donation clause. A placeholder that suggests what to write shapes the operative sentence a client ends up with, which is why it is flagged rather than treated as chrome.
 
+---
+
 ### Questionnaire and review screen — field and row labels
 
 **Where:** Labels naming a person or an answer already approved elsewhere
@@ -137,6 +160,8 @@ Second grantor (trust flow only) · Donation purposes
 ```
 
 **Why it was written:** labels for collecting or displaying answers whose questions and documents he has already approved. None appears in a generated document. Listed for completeness rather than because any reading of them is in doubt.
+
+---
 
 ---
 

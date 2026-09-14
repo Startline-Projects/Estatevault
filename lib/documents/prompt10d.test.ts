@@ -197,16 +197,23 @@ describe("the Pour-Over Will's signing steps are the attorney's", () => {
     }
   });
 
-  it("is marked pending in the source and nowhere in the document", () => {
-    expect(POUR).toContain("PENDING ATTORNEY APPROVAL — the whole of Section E");
-    expect(out()).not.toContain("PENDING ATTORNEY APPROVAL");
+  it("carries its provenance in a comment and nothing in the document", () => {
+    expect(POUR).toContain("approved for this document by email on 2026-09-14");
+    expect(POUR).not.toContain("PENDING ATTORNEY APPROVAL");
     expect(out()).not.toContain("{{!--");
+    expect(stripComments(POUR)).not.toContain("approved for this document by email");
   });
 
-  it("says in the marker what the adaptation dropped", () => {
-    const comment = POUR.slice(POUR.indexOf("{{!--"), POUR.indexOf("--}}"));
-    expect(comment).toContain("companion\nTrust");
-    expect(comment).toContain("Nothing replaces the second.");
-    expect(stripComments(POUR)).not.toContain("Nothing replaces the second.");
+  it("restores the two points his steps did not carry", () => {
+    const o = out();
+    expect(o).toContain("Witnesses should not be beneficiaries under this Will or the companion Trust.");
+    expect(o).toContain("Store your original signed Will together with your Ahmed Hassan Revocable Living Trust in a safe place");
+    expect(o).toContain("where this original Will and the Trust are stored");
+  });
+
+  it("changes nothing else in his Step 6 and Step 7", () => {
+    const o = out();
+    expect(o).toContain("Do not store it where it might be damaged, lost, or mistaken for a draft. You may also upload a copy to your EstateVault account for safekeeping.");
+    expect(o).toContain("Give them any password or access information they may need to locate it.");
   });
 });

@@ -28,26 +28,38 @@ function section(heading: string): string {
 const entries = (s: string) => (s.match(/^### /gm) ?? []).length;
 
 describe("the review queue is empty", () => {
-  it("holds only the Pour-Over Will's adapted sheet", () => {
-    const pending = section("Still pending review");
-    expect(entries(pending)).toBe(1);
-    expect(pending).toContain("### Pour-Over Will — instruction sheet, Section E");
+  it("no entry is awaiting review", () => {
+    expect(entries(section("Still pending review"))).toBe(0);
+    expect(section("Still pending review")).toContain("None. The record is closed.");
   });
 
   it("the status table agrees with the entries actually filed", () => {
-    expect(REVIEW).toContain("| Entries awaiting review | 1 — the Pour-Over Will\u0027s Section E |");
+    expect(REVIEW).toContain("| Entries awaiting review | none — the record is closed |");
     expect(entries(section("APPROVED — 2026-09-13"))).toBe(27);
-    expect(REVIEW).toContain("| Approved | 27 entries on 2026-09-13 · 47 entries on 2026-09-02 |");
+    expect(REVIEW).toContain("| Approved | 5 entries on 2026-09-14 · 27 on 2026-09-13 · 47 on 2026-09-02 |");
+    expect(entries(section("APPROVED — 2026-09-14"))).toBe(5);
     expect(entries(section("APPROVED — 2026-09-02"))).toBe(47);
     expect(entries(section("Withdrawn"))).toBe(2);
   });
 
-  it("keeps the strings written after the last review visible", () => {
-    const late = section("Written after the last review — not yet put to the attorney");
-    expect(late).toContain("Are you creating this trust jointly with your spouse or partner?");
-    expect(late).toContain("Their full name");
-    expect(late).toContain("Second grantor");
-    expect(late).toContain("Donation purposes");
+  it("the strings written after his last package are filed as approved, not left outside the counts", () => {
+    expect(REVIEW).not.toContain("not yet put to the attorney");
+    const approved = section("APPROVED — 2026-09-14");
+    for (const s of [
+      "Are you creating this trust jointly with your spouse or partner?",
+      "Their full name",
+      "Second grantor",
+      "Donation purposes",
+      "Example: transplantation and therapy only.",
+      "Where you chose a springing power",
+    ]) {
+      expect(approved, s).toContain(s);
+    }
+  });
+
+  it("says what the approval rests on", () => {
+    expect(REVIEW).toContain("# Attorney Review Record — CLOSED");
+    expect(REVIEW).toContain("| Approval on file | blanket email from Mo Murshed, 2026-09-14 |");
   });
 
   it("its code fences are balanced, so every entry renders as written", () => {
@@ -56,14 +68,10 @@ describe("the review queue is empty", () => {
 });
 
 describe("no approved wording still calls itself pending", () => {
-  it("a pending marker only ever sits in a comment, never in the document", () => {
+  it("no template carries a pending marker", () => {
     for (const f of readdirSync(TEMPLATE_DIR).filter((n) => n.endsWith(".txt"))) {
-      const text = readFileSync(join(TEMPLATE_DIR, f), "utf8");
-      expect(stripComments(text), f).not.toContain("PENDING ATTORNEY APPROVAL");
+      expect(readFileSync(join(TEMPLATE_DIR, f), "utf8"), f).not.toContain("PENDING ATTORNEY APPROVAL");
     }
-    // exactly one is open, and it says which document it belongs to
-    const pour = readFileSync(join(TEMPLATE_DIR, "pour-over-will-michigan-v1.1.0.txt"), "utf8");
-    expect(pour).toContain("PENDING ATTORNEY APPROVAL — the whole of Section E");
   });
 
   it("no questionnaire component carries one either", () => {
@@ -73,9 +81,9 @@ describe("no approved wording still calls itself pending", () => {
     }
   });
 
-  it("the one questionnaire string he has not seen says so plainly", () => {
+  it("no questionnaire page still says a string is unreviewed", () => {
     const page = readFileSync(join(ROOT, "app", "trust", "page.tsx"), "utf8");
-    expect(page).toContain("NOT YET PUT TO THE ATTORNEY");
+    expect(page).not.toContain("NOT YET PUT TO THE ATTORNEY");
     expect(page).not.toContain("PENDING ATTORNEY APPROVAL");
   });
 });

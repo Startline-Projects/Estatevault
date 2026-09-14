@@ -255,22 +255,15 @@ Signing before a notary does not replace the witness requirement. You need both.
 Signing this Will revokes and voids all prior wills and codicils you have made. If you have an older signed will elsewhere, destroy those copies once this one is signed.
 
 {{!--
-PENDING ATTORNEY APPROVAL — the whole of Section E.
+Section E is Mo Murshed's seven steps for the Last Will, approved 2026-09-13 and
+approved for this document by email on 2026-09-14. Step 5 is the correction he
+approved in the same round; this document carries a self-proving affidavit under
+its own heading, so the step is accurate here.
 
-These are Mo Murshed's seven steps for the Last Will, approved 2026-09-13,
-applied to the Pour-Over Will. He wrote them for one document; nobody asked for
-them here. Every step is his wording unchanged — "this Will" reads correctly for
-a pour-over will — except Step 5, which is the correction he approved in the
-same round because the Will already contains a self-proving affidavit, as this
-document does.
-
-Two sentences the development team's own steps carried are gone with them: that
-the witnesses must not be beneficiaries "under this Will or the companion
-Trust", and that the original should be stored together with the Trust and the
-Personal Representative told where both are. His Step 3 covers the first in
-general terms. Nothing replaces the second.
-
-Logged in PENDING_ATTORNEY_REVIEW.md as the one entry still open.
+Two points his steps did not carry are restored on his instruction, in his
+sentences: Step 3 bars beneficiaries of the companion Trust as well as this
+Will, and Steps 6 and 7 keep the original with the Trust and tell the Personal
+Representative where both documents are.
 --}}
 ### Section E — How to Sign This Will
 
@@ -286,7 +279,7 @@ You, both witnesses, and a notary public must all be physically present together
 
 STEP 3 - Witnesses Sign
 
-Immediately after you sign, both witnesses must sign their names and provide their full addresses on the signature page. Witnesses should not be beneficiaries under this Will.
+Immediately after you sign, both witnesses must sign their names and provide their full addresses on the signature page. Witnesses should not be beneficiaries under this Will or the companion Trust.
 
 STEP 4 - Notary Signs and Seals
 
@@ -298,10 +291,10 @@ This Will includes a self-proving affidavit on its final pages. You, your witnes
 
 STEP 6 - Store Your Original Safely
 
-Store your original signed Will in a safe place, such as a safe deposit box, fireproof safe, or with your Personal Representative. Do not store it where it might be damaged, lost, or mistaken for a draft. You may also upload a copy to your EstateVault account for safekeeping.
+Store your original signed Will together with your {{trust_name_bare}} in a safe place, such as a safe deposit box, fireproof safe, or with your Personal Representative. Do not store it where it might be damaged, lost, or mistaken for a draft. You may also upload a copy to your EstateVault account for safekeeping.
 
 STEP 7 - Inform Your Personal Representative
 
-Inform your Personal Representative (the person you named to carry out your Will) where this original Will is stored and provide them with a copy. Give them any password or access information they may need to locate it.
+Inform your Personal Representative (the person you named to carry out your Will) where this original Will and the Trust are stored and provide them with a copy. Give them any password or access information they may need to locate it.
 
 State of Michigan · Michigan EPIC
