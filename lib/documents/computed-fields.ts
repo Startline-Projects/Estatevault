@@ -90,6 +90,10 @@ export function computeDerivedFields(intake: WillIntake): Record<string, unknown
     hipaa_additional_authorized_parties_not_empty: hipaaParties.length > 0,
     trust_name_display: trustNameDisplay,
     trust_name_display_upper: trustNameDisplay.toUpperCase(),
+    // A trust's name carries its own "The", so a sentence that supplies one
+    // would otherwise read "the The Hassan Revocable Living Trust". Use this
+    // after an article and `trust_name_display` where the name stands alone.
+    trust_name_bare: trustNameDisplay.replace(/^the\s+/i, ""),
     has_assets: trustAssets.length > 0,
 
     // ── Trust Package documents ──

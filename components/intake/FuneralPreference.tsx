@@ -12,7 +12,7 @@
 
 import QuestionLabel from "@/components/quiz/QuestionLabel";
 
-// PENDING ATTORNEY APPROVAL — final wording comes from the reviewing attorney.
+// Approved as written by the reviewing attorney, 2026-09-13.
 // Each `value` maps 1:1 to a {{#IF funeral_preference ...}} branch in
 // lib/documents/templates/will-michigan-v1.1.0.txt.
 export const FUNERAL_PREFERENCE_OPTIONS = [

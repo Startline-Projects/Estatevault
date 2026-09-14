@@ -152,12 +152,18 @@ describe("the Will's How to Sign sheet is the attorney's", () => {
     expect(o.indexOf("STATE OF MICHIGAN")).toBeLessThan(o.indexOf("STEP 5 -"));
   });
 
-  it("leaves no review marker in the delivered document", () => {
+  it("leaves no comment in the delivered document", () => {
     const o = out();
-    expect(o).not.toContain("PENDING ATTORNEY APPROVAL");
     expect(o).not.toContain("{{!--");
     expect(o).not.toContain("--}}");
-    expect(WILL).toContain("PENDING ATTORNEY APPROVAL");
+    // the comment is in the source and never in the output
+    expect(WILL).toContain("{{!--");
+    expect(WILL).toContain("Mo Murshed's text, integrated verbatim");
+  });
+
+  it("Step 5 is now final, not held", () => {
+    expect(WILL).not.toContain("PENDING ATTORNEY APPROVAL");
+    expect(WILL).toContain("he approved it as written on 2026-09-13");
   });
 });
 
@@ -197,7 +203,8 @@ describe("the citation sweep left no dangling fragments", () => {
       "will-michigan-v1.1.0.txt", "dpoa-michigan-v1.1.0.txt", "pour-over-will-michigan-v1.1.0.txt",
       "trust-michigan-v1.1.0.txt", "advance-healthcare-directive-michigan-v1.0.0.txt",
     ]) {
-      const dangling = T(f).split("\n").filter((l) => /,$/.test(l.trim()));
+      // comments never reach a client, so they are not document lines
+      const dangling = stripComments(T(f)).split("\n").filter((l) => /,$/.test(l.trim()));
       expect(dangling, `${f}: ${dangling.join(" | ")}`).toEqual([]);
     }
   });

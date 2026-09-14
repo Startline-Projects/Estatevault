@@ -487,16 +487,14 @@ STEP 4 - Notary Signs and Seals
 The notary public must sign, date, and affix their official seal to the signature page while all parties are still present together.
 
 {{!--
-PENDING ATTORNEY APPROVAL — Step 5 only. The rest of Section D is Mo Murshed's
-text, integrated verbatim on 2026-09-13.
+Section D is Mo Murshed's text, integrated verbatim on 2026-09-13.
 
-His Step 5 told the client to ask the notary to prepare a self-proving
-affidavit. This Will already contains one (the STATE OF MICHIGAN / COUNTY OF
-block under MCL 700.2504, signed by the Testator and both witnesses before the
-notary), so that instruction would send clients to have a second one drawn up.
-The step below is the development team's corrected version, pending his
-decision. If he confirms his original wording, it replaces this verbatim.
-See PENDING_ATTORNEY_REVIEW.md — the only entry still open.
+Step 5 is the one exception. His version told the client to ask the notary to
+prepare a self-proving affidavit, and this Will already contains one (the STATE
+OF MICHIGAN / COUNTY OF block under MCL 700.2504, signed by the Testator and
+both witnesses before the notary), so that instruction would have sent clients
+to have a second one drawn up. The replacement below is the development team's,
+and he approved it as written on 2026-09-13.
 --}}
 STEP 5 - Complete the Self-Proving Affidavit (Strongly Recommended)
 

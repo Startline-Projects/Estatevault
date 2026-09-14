@@ -40,19 +40,19 @@ As a general rule, everything you own now and everything you acquire later shoul
 
 {{#IF is_joint_trust equals true}}
 
-{{client_full_name}} and {{grantor_2_full_name}}, Trustees of the {{trust_name_display}} dated {{trust_date}}, and any amendments to it
+{{client_full_name}} and {{grantor_2_full_name}}, Trustees of the {{trust_name_bare}} dated {{trust_date}}, and any amendments to it
 
 {{/IF}}
 
 {{#IF is_joint_trust equals false}}
 
-{{client_full_name}}, Trustee of the {{trust_name_display}} dated {{trust_date}}, and any amendments to it
+{{client_full_name}}, Trustee of the {{trust_name_bare}} dated {{trust_date}}, and any amendments to it
 
 {{/IF}}
 
 OR
 
-The {{trust_name_display}} dated {{trust_date}}
+The {{trust_name_bare}} dated {{trust_date}}
 
 ## INSTRUCTIONS FOR TRANSFERRING SPECIFIC ASSETS
 
@@ -132,7 +132,7 @@ If you do name your Revocable Living Trust as a beneficiary, keep the following 
 
 Each carrier has its own preferred wording. A typical format looks like this:
 
-Primary Beneficiary: The {{trust_name_display}} dated {{trust_date}}
+Primary Beneficiary: The {{trust_name_bare}} dated {{trust_date}}
 
 Secondary Beneficiary: Spouse, partner, children, or other heirs
 

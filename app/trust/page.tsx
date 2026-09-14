@@ -401,8 +401,10 @@ export default function TrustPage() {
       case "trustee":
         return (
           <>
-            {/* PENDING ATTORNEY APPROVAL — question wording. A trust is joint
-                when a second grantor is actually named. */}
+            {/* NOT YET PUT TO THE ATTORNEY — this question and the second
+                grantor's field label were written after his last review; see
+                PENDING_ATTORNEY_REVIEW.md. A trust is joint when a second
+                grantor is actually named. */}
             <div className="mb-5">
               <QuestionLabel required>Are you creating this trust jointly with your spouse or partner?</QuestionLabel>
               <YesNoTiles

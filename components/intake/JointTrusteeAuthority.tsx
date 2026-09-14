@@ -9,7 +9,7 @@
 
 import QuestionLabel from "@/components/quiz/QuestionLabel";
 
-// PENDING ATTORNEY APPROVAL — final wording comes from the reviewing attorney.
+// Approved as written by the reviewing attorney, 2026-09-13.
 // Values map 1:1 to the {{#IF joint_trustee_authority ...}} branches in
 // lib/documents/templates/trust-michigan-v1.1.0.txt.
 export const JOINT_TRUSTEE_AUTHORITY_OPTIONS = [

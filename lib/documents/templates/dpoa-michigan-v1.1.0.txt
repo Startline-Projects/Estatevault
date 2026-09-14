@@ -391,7 +391,7 @@ Second Successor Agent (sign when assuming role): {{second_successor_dpoa_agent.
 
 ## OPERATION OF THIS DOCUMENT
 
-This is your Durable Power of Attorney under the Michigan Uniform Power of Attorney Act effective July 1, 2024). It authorizes the person you name (your Agent) to handle your financial matters. "Durable" means it remains effective if you later become unable to manage your own affairs. It does NOT authorize medical decisions, which are governed by a separate Patient Advocate Designation This document terminates automatically upon your passing.
+This is your Durable Power of Attorney under the Michigan Uniform Power of Attorney Act, effective July 1, 2024. It authorizes the person you name (your Agent) to handle your financial matters. "Durable" means it remains effective if you later become unable to manage your own affairs. It does NOT authorize medical decisions, which are governed by your Advance Healthcare Directive. This document terminates automatically upon your passing.
 
 ### Section A — When Your Agent Can Act
 

@@ -4,6 +4,7 @@ import { mapIntakeToTemplateData, validateForDocument } from "./intake-adapter";
 import { beneficiaryFingerprint } from "./staleness";
 import { readTemplateFile } from "./pdf/template-reader";
 import { renderTemplate } from "./render-template";
+import { computeDerivedFields } from "./computed-fields";
 import { renderReactPdf } from "./pdf/render";
 import { DOCUMENT_CONFIG } from "./pdf/document-config";
 
@@ -36,9 +37,16 @@ function withAssignor(
 ) {
   const first = [data.first_name, data.middle_name, data.last_name].filter(Boolean).join(" ").trim();
   const assignor = isSecondGrantor ? data.grantor_2_full_name : first;
+  // `trust_name` is the raw questionnaire answer, blank whenever the client
+  // accepted the default name — which left this line reading "Trustees of the
+  //  dated", naming no trust at all on a document that transfers property into
+  // one. Use the same display name and date rule the rest of the package uses.
+  const derived = computeDerivedFields(data as unknown as Parameters<typeof computeDerivedFields>[0]);
+  const trustName = derived.trust_name_bare;
+  const trustDate = derived.trust_date;
   const trusteeLine = data.is_joint_trust && data.grantor_2_full_name
-    ? `${first} and ${data.grantor_2_full_name}, Trustees of the ${data.trust_name || ""} dated`
-    : `${first}, Trustee of the ${data.trust_name || ""} dated`;
+    ? `${first} and ${data.grantor_2_full_name}, Trustees of the ${trustName} dated ${trustDate}`
+    : `${first}, Trustee of the ${trustName} dated ${trustDate}`;
   return {
     ...data,
     assignor_full_name: assignor,

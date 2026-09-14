@@ -35,7 +35,7 @@ export const DEFAULT_POA_POWERS = [...ALL_POA_POWERS];
 
 export const POA_REL_OPTIONS = ["Spouse/Partner", "Adult Child", "Sibling", "Parent", "Friend", "Other"];
 
-// PENDING ATTORNEY APPROVAL — final wording comes from the reviewing attorney.
+// Approved as written by the reviewing attorney, 2026-09-13.
 // `value` must stay in 1:1 correspondence with the {{#IF dpoa_effective ...}}
 // branches in lib/documents/templates/dpoa-michigan-v1.1.0.txt.
 export const POA_EFFECTIVE_OPTIONS = [
@@ -62,7 +62,7 @@ export interface PoaFields {
 }
 
 /** The patient-advocate answers every flow collects. */
-// PENDING ATTORNEY APPROVAL — final wording comes from the reviewing attorney.
+// Approved as written by the reviewing attorney, 2026-09-13.
 // Each `value` maps 1:1 to an {{#IF organ_donation ...}} branch in
 // lib/documents/templates/advance-healthcare-directive-michigan-v1.0.0.txt.
 export const ORGAN_DONATION_OPTIONS = [
@@ -208,9 +208,8 @@ export function PoaStep<T extends PoaFields>({
           </button>
         </div>
       </div>
-      {/* PENDING ATTORNEY APPROVAL — option wording to be confirmed by the
-          reviewing attorney. The two values map 1:1 to the branches in
-          Article III of dpoa-michigan-v1.1.0. */}
+      {/* Approved as written, 2026-09-13. The two values map 1:1 to the
+          branches in Article III of dpoa-michigan-v1.1.0. */}
       <div className="mt-5"><QuestionLabel>When should your agent be able to act?</QuestionLabel>
         <OptionList options={POA_EFFECTIVE_OPTIONS} value={intake.poaEffective} onSelect={(v) => set({ poaEffective: v })} />
       </div>
@@ -236,9 +235,8 @@ export function PadStep<T extends PadFields>({
       <div className="mt-5"><QuestionLabel>Relationship</QuestionLabel><div className="grid grid-cols-2 gap-3">{POA_REL_OPTIONS.map((opt) => (<ChoiceTile key={opt} label={opt} selected={intake.patientAdvocateRelationship === opt} onClick={() => set({ patientAdvocateRelationship: opt })} />))}</div></div>
       <div className="mt-5"><QuestionLabel>Successor patient advocate</QuestionLabel><NameInput value={intake.successorPatientAdvocateName} onChange={(v) => set({ successorPatientAdvocateName: v })} optional onPartialChange={partialHandler("successor-advocate")} /></div>
       <div className="mt-5"><QuestionLabel>Second alternate patient advocate</QuestionLabel><NameInput value={intake.secondSuccessorPatientAdvocateName} onChange={(v) => set({ secondSuccessorPatientAdvocateName: v })} optional onPartialChange={partialHandler("second-successor-advocate")} /></div>
-      {/* PENDING ATTORNEY APPROVAL — option wording to be confirmed by the
-          reviewing attorney. Values map 1:1 to the organ donation branches in
-          the Advance Healthcare Directive. */}
+      {/* Approved as written, 2026-09-13. Values map 1:1 to the organ
+          donation branches in the Advance Healthcare Directive. */}
       <div className="mt-5"><QuestionLabel required>What are your wishes about organ donation?</QuestionLabel>
         <OptionList options={ORGAN_DONATION_OPTIONS} value={intake.organDonation} onSelect={(v) => set({ organDonation: v, ...(v === "specific_purposes" ? {} : { organDonationPurposes: "" }) })} />
         {intake.organDonation === "specific_purposes" && (

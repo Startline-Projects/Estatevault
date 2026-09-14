@@ -23,9 +23,10 @@ file is rendered.
 
 | | |
 |---|---|
-| Entries awaiting review | 1 — Section D, Step 5 |
-| Generated | Prompt 10B — the attorney's final two answers |
-| Approved | 24 entries on 2026-09-13 · 47 entries on 2026-09-02 |
+| Entries awaiting review | none |
+| Not yet put to him | 4 groups of strings, incl. 3 sentences in the live legacy sheets — see the section below |
+| Generated | Prompt 10C — closing the engagement |
+| Approved | 26 entries on 2026-09-13 · 47 entries on 2026-09-02 |
 | Withdrawn | 2 entries — the questions no longer exist |
 | Reviewing attorney | Mo Murshed |
 | Also pending | Drake (UPL review), Mike (legal sign-off) — see the compliance checklist |
@@ -37,11 +38,93 @@ file is rendered.
 
 ## Still pending review
 
-One entry. Everything else in this file has been reviewed.
+None. Every entry in this file has been reviewed.
 
-### Section D — How to Sign This Will, Step 5 only
+---
 
-**Where:** Instruction sheet, Section D — Step 5 of seven. Steps 1 to 4, 6 and 7 are the attorney's own text and are approved below.
+## Written after the last review — not yet put to the attorney
+
+Not review items he has seen, and not counted above. These are client-facing
+strings that went in after the material he reviewed, so nothing in this file
+covers them. They are listed so the record is complete. The first group is the
+one that matters: those three sentences ship today, because the legacy pdf-lib
+path is what production renders while `PDF_RENDERER` is unset.
+
+### Legacy pdf-lib instruction sheets — rewritten during round 3
+
+**Where:** `SHEETS.poa` ("What This Document Does") and `SHEETS.healthcare_directive` ("What This Document Does", "When Your Advocate May Act")
+
+**Source file:** `lib/documents/instruction-sheets.ts`
+
+**Text:**
+
+```text
+Where you chose a springing power, your Agent does not have authority to act unless you have been deemed incapacitated.
+
+Your patient advocate signs the acceptance page. The directive gives your advocate no authority until that acceptance is signed.
+
+Your patient advocate may act only once you have been deemed unable to participate in medical treatment decisions.
+```
+
+**Why it was written:** item D4 required physician-examination and certification language to come out of every sheet, and item B replaced the Patient Advocate Designation with the Advance Healthcare Directive. The approved paragraphs these replaced are in the 2026-09-02 log and carry Superseded notes; the replacements themselves are the development team's and were never filed. The file header still reads "Attorney Approval Date: [TO BE FILLED]", which is accurate for exactly this reason.
+
+### Questionnaire — trustee step
+
+**Where:** The question that gates the joint-trust branch, and the second grantor's field label
+
+**Source file:** `app/trust/page.tsx`
+
+**Text:**
+
+```text
+Are you creating this trust jointly with your spouse or partner?
+
+Their full name
+```
+
+**Why it was written:** the co-trustee authority question he approved only appears once a client says the trust is joint and names the other grantor, and nothing asked either thing. The question and the field label are the development team's. The answer is dispositive — it decides whether the instrument is drafted for one Grantor or two — so it is flagged rather than left silent.
+
+### Questionnaire — example text shown inside answer boxes
+
+**Where:** Placeholder text in the healthcare wishes box and the organ donation purposes box
+
+**Source file:** `components/intake/PoaPadSteps.tsx`
+
+**Text:**
+
+```text
+Example: I do not wish to be kept on life support if there is no reasonable chance of recovery.
+
+Example: transplantation and therapy only.
+```
+
+**Why it was written:** both boxes take free text that is carried verbatim into the client's Advance Healthcare Directive — the first under the lead-in he supplied, the second into the organ donation clause. A placeholder that suggests what to write shapes the operative sentence a client ends up with, which is why it is flagged rather than treated as chrome.
+
+### Questionnaire and review screen — field and row labels
+
+**Where:** Labels naming a person or an answer already approved elsewhere
+
+**Source file:** `components/intake/PoaPadSteps.tsx`, `app/will/page.tsx`, `app/trust/page.tsx`
+
+**Text:**
+
+```text
+Agent name · Agent relationship · Successor agent name · Successor agent relationship
+Patient advocate name · Second alternate patient advocate
+Second grantor (trust flow only) · Donation purposes
+```
+
+**Why it was written:** labels for collecting or displaying answers whose questions and documents he has already approved. None appears in a generated document. Listed for completeness rather than because any reading of them is in doubt.
+
+---
+
+## APPROVED — 2026-09-13
+
+Attorney review round 4. The two entries the attorney answered in this round carry his text; the rest were approved as written by Mo Murshed on 2026-09-13, no changes needed. Kept as the record of what was reviewed and when.
+
+### Section D — How to Sign This Will, Step 5
+
+**Where:** Instruction sheet, Section D — Step 5 of seven
 
 **Source file:** `lib/documents/templates/will-michigan-v1.1.0.txt`
 
@@ -53,17 +136,34 @@ STEP 5 - Complete the Self-Proving Affidavit (Strongly Recommended)
 This Will includes a self-proving affidavit on its final pages. You, your witnesses, and the notary complete it during the same signing session. This makes it easier for your Personal Representative to probate your Will without requiring witness testimony later.
 ```
 
-**What was held:** the attorney's own Step 5. His other six steps and the opening warning arrived as text and went into the template unchanged; his Step 5 reached the development team only as a description of what it does — direct the client to ask the notary to prepare a self-proving affidavit — so it is not quoted here. Nothing but his exact words should be recorded as his.
+**Why it was written:** the attorney's own Step 5 directed the client to ask the notary to prepare a self-proving affidavit. This Will already contains one — the STATE OF MICHIGAN / COUNTY OF block under MCL 700.2504, signed by the Testator and both witnesses before the notary, immediately after the attestation — so that instruction would have sent clients to have a second affidavit drawn up. The step above is the development team's correction: the same recommendation, pointed at the affidavit already in the document. It was held out of Section D and put back to him rather than shipped on the development team's judgement.
 
-**Why it was written:** The Will already contains a self-proving affidavit — the STATE OF MICHIGAN / COUNTY OF block under MCL 700.2504, signed by the Testator and both witnesses before the notary, immediately after the attestation. Telling the client to ask the notary to prepare one would send them to have a second affidavit drawn up, or leave them thinking the one in front of them is not the thing being described. The step above is the development team's correction: same recommendation, pointed at the affidavit already in the document. The template marks it PENDING ATTORNEY APPROVAL in a comment the renderer strips, so nothing reaches the client.
-
-**Decision:** ☐ approved as written ☐ restore your own Step 5 (supply it verbatim and it goes in unchanged) ☐ replace with other wording
+**Decision:** ☑ approved as written, 2026-09-13
 
 ---
 
-## APPROVED — 2026-09-13
+### Will and Trust questionnaires — the Personal Representative sentence (item 16)
 
-Attorney review round 4. The two entries the attorney answered in this round carry his text; the rest were approved as written by Mo Murshed on 2026-09-13, no changes needed. Kept as the record of what was reviewed and when.
+**Where:** Third option under "What are your wishes for your remains?", and Article VIII, Section 8.2 of the Will
+
+**Source file:** `components/intake/FuneralPreference.tsx` and `lib/documents/templates/will-michigan-v1.1.0.txt`
+
+**Text:**
+
+```text
+(questionnaire, third option)
+Leave the decision to my Personal Representative
+You do not state a preference; the person carrying out your will decides.
+
+(Will, Section 8.2, family_decides branch — unchanged)
+I leave the decision regarding the manner of disposition of my remains (whether burial, cremation, or other lawful method) to my Personal Representative.
+```
+
+**Why it was written:** item 16 was read as describing the answer a client picks, not as a further change to the clause the Will renders. It was implemented that way: the Personal Representative sentence became the description of the third remains option in both questionnaires, and the item 6 clause in Section 8.2 was left as it stands. The reading itself was the development team's, so it was put back to him alongside Step 5.
+
+**Decision:** ☑ the interpretation, as implemented, approved 2026-09-13
+
+---
 
 ### Advance Healthcare Directive — operative document body
 
@@ -119,6 +219,8 @@ I leave the decision regarding the manner of disposition of my remains (whether 
 
 **Why it was written:** The attorney's note directed that funeral and burial preferences be addressed to the Personal Representative rather than to a "Funeral Representative (if any)". Striking the phrase was mechanical in the burial and cremation branches, but the third branch previously read "...to my Funeral Representative (if any) or, if no Funeral Representative has been designated, to my surviving family members." The assistant rewrote it as a new operative clause naming the Personal Representative "in consultation with my surviving family members" — that consultation requirement is the assistant's own drafting and changes who decides.
 
+**Superseded:** the family_decides branch quoted above ended "to my Personal Representative, in consultation with my surviving family members." The consultation phrase came out in round 3; the branch now ends at "to my Personal Representative." The burial and cremation branches are unchanged.
+
 **Decision:** ☐ approved as written ☐ replace with attorney wording
 
 ---
@@ -134,8 +236,10 @@ I leave the decision regarding the manner of disposition of my remains (whether 
 **Text:**
 
 ```text
-I leave the decision regarding the manner of disposition of my remains (whether burial, cremation, or other lawful method) to my Personal Representative, in consultation with my surviving family members.
+I leave the decision regarding the manner of disposition of my remains (whether burial, cremation, or other lawful method) to my Personal Representative.
 ```
+
+**Note:** this entry previously quoted the clause as it read before the round-3 revisions, which ended "to my Personal Representative, in consultation with my surviving family members." The consultation phrase came out then; the quote above is what the Will renders today and what was approved.
 
 **Why it was written:** Operative legal text in the instrument, drafted by the assistant. The note said funeral and burial preferences go to the Personal Representative; it did not supply a clause. The two other branches of 8.2 were satisfied by deleting "in coordination with my Funeral Representative (if any),", but this branch had no Personal Representative to fall back on — the original read "to my Funeral Representative (if any) or, if no Funeral Representative has been designated, to my surviving family members." The assistant invented a new decision structure: the Personal Representative decides, family are consulted. Commit d21cd45.
 
@@ -254,7 +358,7 @@ Only if I become unable to manage my own affairs
 Your agent does not have authority to act unless you have been deemed incapacitated.
 ```
 
-**Why it was written:** Article III of the DPOA template already carried both effective-date branches but nothing in the intake let a client choose between them, so the document could not render. The assistant wrote the question and both option labels and descriptions; the values map 1:1 to the {{#IF dpoa_effective ...}} branches. The code marks the block "PENDING ATTORNEY APPROVAL — final wording comes from the reviewing attorney."
+**Why it was written:** Article III of the DPOA template already carried both effective-date branches but nothing in the intake let a client choose between them, so the document could not render. The assistant wrote the question and both option labels and descriptions; the values map 1:1 to the {{#IF dpoa_effective ...}} branches. The code carried a "PENDING ATTORNEY APPROVAL" marker until this approval; it now records the approval date.
 
 **Note:** the springing description quoted above was reworded under item D4 (physician-certification language removed). The quote here is the wording now in the code; see the separate entry "Questionnaire — Power of Attorney step / Springing option description, reworded" for that change.
 
@@ -303,6 +407,8 @@ We've added a question since you started. Your existing answers have been kept, 
 ```
 
 **Why it was written:** Prompt 3B and the browser-walkthrough commit route a session saved before the POA/PAD questions existed back to the step that asks them. Nothing in the attorney's notes covers what to tell the client when this happens; the assistant wrote the notice, and it is client-facing copy that appears mid-flow in a paid legal-document purchase. The same text is duplicated in both files.
+
+**Note:** the sentence is assembled at render time and has a singular and a plural form — "a question … this one" and "a few questions … these" — so it does not appear in the source as one literal string. Both forms were checked in the browser.
 
 **Decision:** ☐ approved as written ☐ replace with attorney wording
 
@@ -353,7 +459,7 @@ Their share goes to one person you choose, who does not have to be named above.
 Who should receive [beneficiary name]'s share?
 ```
 
-**Why it was written:** The attorney's note gives the three options in shorthand; the labels, the plain-language descriptions and the follow-up name question are the development team's wording, marked PENDING ATTORNEY APPROVAL in the code. Note one behaviour worth confirming: with a single beneficiary the "other named beneficiaries" option is hidden, because there are no others.
+**Why it was written:** The attorney's note gives the three options in shorthand; the labels, the plain-language descriptions and the follow-up name question are the development team's wording, Marked "PENDING ATTORNEY APPROVAL" in the code until this approval; the marker now records the approval date. Note one behaviour worth confirming: with a single beneficiary the "other named beneficiaries" option is hidden, because there are no others.
 
 **Decision:** ☐ approved as written ☐ replace with attorney wording
 
@@ -521,7 +627,7 @@ Say nothing about organ donation — The document does not address donation, lea
 Which purposes?
 ```
 
-**Why it was written:** The instruction gave the four answers in shorthand; the question, labels, descriptions and the free-text prompt are the development team's wording, marked PENDING ATTORNEY APPROVAL in the code. No default; required to advance.
+**Why it was written:** The instruction gave the four answers in shorthand; the question, labels, descriptions and the free-text prompt are the development team's wording, Marked "PENDING ATTORNEY APPROVAL" in the code until this approval; the marker now records the approval date. No default; required to advance.
 
 **Decision:** ☐ approved as written ☐ replace with attorney wording
 
@@ -544,7 +650,7 @@ Either of us may act alone — Either Co-Trustee can transact business for the T
 We must act together — Every exercise of the Trust's powers needs both Co-Trustees.
 ```
 
-**Why it was written:** Item F made this a client choice. Question and option wording written by the development team, marked PENDING ATTORNEY APPROVAL. No default; required for joint trusts only.
+**Why it was written:** Item F made this a client choice. Question and option wording written by the development team, marked PENDING ATTORNEY APPROVAL until this approval; the marker now records the approval date. No default; required for joint trusts only.
 
 **Decision:** ☐ approved as written ☐ replace with attorney wording
 
@@ -614,7 +720,7 @@ NOTE, NOT A LABEL CHANGE: there is no funeral preference question in either ques
 
 **Decision:** ☐ approved as written ☐ replace with attorney wording
 
-**Update 2026-09-02 (9B):** the question now exists in both questionnaires, with three options mapping 1:1 to the three clauses. Its wording is logged in the entry below.
+**Superseded:** the note above no longer describes the product. The question now exists in both questionnaires, with three options mapping 1:1 to the three clauses of Section 8.2, and its wording is logged under "Will and Trust questionnaires — Gifts & Final Wishes step".
 
 ---
 
@@ -641,7 +747,7 @@ Leave the decision to my Personal Representative
 You do not state a preference; the person carrying out your will decides.
 ```
 
-**Why it was written:** Section 8.2 of the will carries three approved clauses, but nothing in either questionnaire asked the client which one applied, so every will shipped the family_decides clause the client never chose. The assistant wrote the question and the three option labels and descriptions; each value maps 1:1 to a branch in the will template. There is no default and the step cannot be completed unanswered. The code marks the block "PENDING ATTORNEY APPROVAL — final wording comes from the reviewing attorney."
+**Why it was written:** Section 8.2 of the will carries three approved clauses, but nothing in either questionnaire asked the client which one applied, so every will shipped the family_decides clause the client never chose. The assistant wrote the question and the three option labels and descriptions; each value maps 1:1 to a branch in the will template. There is no default and the step cannot be completed unanswered. The code carried a "PENDING ATTORNEY APPROVAL" marker until this approval; it now records the approval date.
 
 **Decision:** ☐ approved as written ☐ replace with attorney wording
 
@@ -652,6 +758,13 @@ You do not state a preference; the person carrying out your will decides.
 ## APPROVED — 2026-09-02
 
 Approved as written by Mo Murshed on 2026-09-02 (attorney review round 3), no changes needed. Kept as the record of what was reviewed and when.
+
+Twelve of these entries quote text his own later instructions went on to change
+or remove — the Patient Advocate Designation being replaced by the Advance
+Healthcare Directive, physician-certification language coming out, statute
+citations leaving the instruction sheets. Those entries carry a **Superseded**
+line saying what happened. The quoted wording is left as he approved it, so this
+stays a record of the decision rather than a description of what ships today.
 
 ### Pour-Over Will — operative document body
 
@@ -671,6 +784,8 @@ If any person named in this Section does not survive me by thirty (30) days, tha
 
 **Why it was written:** Uncommitted Prompt 6 work, and the most consequential self-written text in this catalogue: the clause previously sent the residuary estate straight to heirs at law if the Trust failed, and now redirects it to the client's named primary beneficiaries with a new 30-day survivorship and proportional-lapse rule. This is operative dispositive language drafted by the assistant and should not ship without attorney sign-off.
 
+**Superseded:** Superseded 2026-09-13: the per-beneficiary contingency change replaced this single lapse rule with a clause per beneficiary, reflecting the answer each one was given.
+
 **Decision:** ☐ approved as written ☐ replace with attorney wording
 
 ---
@@ -688,6 +803,8 @@ This is your Last Will and Testament under Michigan law (MCL 700.2502 et seq.). 
 ```
 
 **Why it was written:** Rewritten by the assistant from the pre-existing paragraph: "This document takes effect upon your death" became "It takes effect only after you are gone", and the last two sentences were merged. The replacement phrasing is the assistant's, chosen for the house voice rule against the word "death".
+
+**Superseded:** Superseded 2026-09-13: item E removed statute citations from every instruction sheet, so this sentence now ends "under Michigan law." The citation stays in the instrument itself.
 
 **Decision:** ☐ approved as written ☐ replace with attorney wording
 
@@ -708,6 +825,8 @@ Your witnesses must be adults, and they must not be people who inherit under thi
 ```
 
 **Why it was written:** The attorney's note asked that the sheet explain in plain language that Michigan requires two witnesses, why that is not a formality, and that a beneficiary who witnesses can jeopardise their own gift. The requirement was given; the wording — including the consequence stated ("can be refused by the probate court" and distribution under default rules) — was written by the assistant.
+
+**Superseded:** Changed 2026-09-13, and flagged: the sentence "A beneficiary who also witnesses can jeopardise their own gift." was removed from this sheet during round 3. No instruction on record covers it — the round-3 sweep was about statute citations, and this sentence carries none. The sheet still tells the client to choose two people who receive nothing under the Will, so the guidance stands; what is gone is the stated consequence. The attorney should decide whether it goes back, since Michigan's Estates and Protected Individuals Code does not purge a gift to an interested witness the way some states do.
 
 **Decision:** ☐ approved as written ☐ replace with attorney wording
 
@@ -730,6 +849,8 @@ Signing before a notary does not replace the witness requirement. You need both:
 ```
 
 **Why it was written:** Prompt 4 removed the "SELF-PROVING AFFIDAVIT" heading from the will body per the attorney's note, leaving the notary pages unlabelled. The attorney asked that the sheet explain what the affidavit does, that without it witnesses may have to be found and testify years later, and that it does not replace the witnesses — but supplied no wording. The whole section is the assistant's.
+
+**Superseded:** Superseded 2026-09-13: item E removed statute citations from the instruction sheets, so the sentence now reads "creates a self-proving affidavit which is included for stronger protection". The citation stays in the instrument itself.
 
 **Decision:** ☐ approved as written ☐ replace with attorney wording
 
@@ -877,6 +998,8 @@ Signing before a notary does not replace the witness requirement. You need both.
 
 **Why it was written:** Uncommitted Prompt 6 work. Assistant-written, a condensed variant of the will sheet's Section B.
 
+**Superseded:** Superseded 2026-09-13: item E removed statute citations from the instruction sheets. The citation stays in the instrument itself.
+
 **Decision:** ☐ approved as written ☐ replace with attorney wording
 
 ---
@@ -931,6 +1054,8 @@ This is your Durable Power of Attorney under the Michigan Uniform Power of Attor
 
 **Why it was written:** The paragraph itself predates the work, but two phrases inside it were rewritten by the assistant in Prompt 2: "incapacitated" became "unable to manage your own affairs" (to match the new springing/immediate branch language), and "upon your death" became "upon your passing" (house voice rule). The substituted wording is the assistant's, not the attorney's.
 
+**Superseded:** Superseded 2026-09-13: item E removed the citation and item B replaced the Patient Advocate Designation with the Advance Healthcare Directive, so the paragraph now reads "under the Michigan Uniform Power of Attorney Act, effective July 1, 2024" and points medical decisions at the Directive.
+
 **Decision:** ☐ approved as written ☐ replace with attorney wording
 
 ---
@@ -953,6 +1078,8 @@ If you later recover, your Agent's authority stops again. It can only restart if
 
 **Why it was written:** The attorney's note required that a springing document explain, in plain language, that the Agent has no power until a physician certifies incapacity, that the certification must be attached, and that authority stops again on recovery — but supplied no wording for any of it. All three paragraphs are the assistant's.
 
+**Superseded:** Superseded 2026-09-13: item D4 replaced this with the plain incapacity trigger — the Agent's authority begins when the Principal is deemed incapacitated, with no examination or certificate.
+
 **Decision:** ☐ approved as written ☐ replace with attorney wording
 
 ---
@@ -972,6 +1099,8 @@ Give a signed copy to your Agent, and to any bank or institution that will be as
 ```
 
 **Why it was written:** Prompt 2 removed the witness attestation section and both witness signature lines because Michigan requires no witnesses for a power of attorney. The attorney's note said to remove them; it did not supply text explaining to the client why the witness lines are gone or what to do instead. The assistant wrote the replacement execution instructions.
+
+**Superseded:** Superseded 2026-09-13: the sheet now reads "in front of two witnesses and a notary public", matching the execution page.
 
 **Decision:** ☐ approved as written ☐ replace with attorney wording
 
@@ -1031,6 +1160,8 @@ Your witnesses must both watch you sign, and then sign themselves. A witness can
 
 **Why it was written:** The Round 2 attorney clarification established (as binding) that a PAD executes on two witnesses under MCL 700.5506 and carries no notary block and no self-proving affidavit. It supplied the rule, not client-facing wording. The assistant wrote this section, including the plain-language summary of the statutory disqualified-witness list.
 
+**Superseded:** Superseded 2026-09-13: the Patient Advocate Designation was replaced by the Advance Healthcare Directive in round 3, and `pad-michigan-v1.1.0.txt` no longer exists. The sheet approved here does not ship. Kept as the record of what was approved on 2026-09-02.
+
 **Decision:** ☐ approved as written ☐ replace with attorney wording
 
 ---
@@ -1050,6 +1181,8 @@ Give the document to your Patient Advocate and ask them to sign that page. Do th
 ```
 
 **Why it was written:** The attorney's note required the sheet to state that the advocate's Acceptance is a legal prerequisite under MCL 700.5507(5). Only the legal point was given; the explanation, the contrast with the other documents in the plan, and the instructions to the client are the assistant's wording.
+
+**Superseded:** Superseded 2026-09-13: same as above — the Patient Advocate Designation and its sheet were replaced by the Advance Healthcare Directive.
 
 **Decision:** ☐ approved as written ☐ replace with attorney wording
 
@@ -1071,6 +1204,8 @@ Authority to withhold or withdraw life-sustaining treatment applies only where y
 
 **Why it was written:** The expanded five-section sheet required a section on when the advocate may act. No attorney wording was supplied for it; the assistant wrote the whole section, including the statement that the mental-health determination is made separately and the reassurance that the decision remains the client's while they can take part.
 
+**Superseded:** Superseded 2026-09-13: the Patient Advocate Designation was replaced by the Advance Healthcare Directive, and item D4 removed physician-determination language wherever it gated authority.
+
 **Decision:** ☐ approved as written ☐ replace with attorney wording
 
 ---
@@ -1089,6 +1224,8 @@ Give a signed copy to your Patient Advocate, your Successor Patient Advocate, an
 
 **Why it was written:** The attorney's note asked that the sheet cover who should hold a copy, without supplying text. The distribution list and the closing line ("a document nobody can find protects nobody") are the assistant's.
 
+**Superseded:** Superseded 2026-09-13: replaced by the Advance Healthcare Directive's own sheet, which names a second alternate advocate.
+
 **Decision:** ☐ approved as written ☐ replace with attorney wording
 
 ---
@@ -1106,6 +1243,8 @@ You may revoke this designation at any time and in any way that communicates you
 ```
 
 **Why it was written:** The attorney's note asked that the sheet cover revocation, without supplying text. This section replaced the deleted statute strip ("State of Michigan · MCL 700.5506 et seq. · ... Michigan Uniform Anatomical Gift Act...") at the foot of the sheet. Written by the assistant.
+
+**Superseded:** Superseded 2026-09-13: replaced by Section E of the Advance Healthcare Directive's sheet.
 
 **Decision:** ☐ approved as written ☐ replace with attorney wording
 
@@ -1289,6 +1428,8 @@ Store the signed original and upload a copy to your EstateVault account.
 
 **Why it was written:** Assistant-written. The disqualified-witness list here is an abridged version of the statutory list and differs from the fuller list the assistant later wrote for the v1.1.0 PAD sheet (which adds "known devisee", "your physician", insurer employees, homes for the aged and mental health programs). Both are the assistant's paraphrase of the statute, not the attorney's text.
 
+**Superseded:** Superseded 2026-09-13: this is the legacy pdf-lib sheet. Item D4 removed the physician-certification language it carried, so the wording approved here is no longer what that sheet contains.
+
 **Decision:** ☐ approved as written ☐ replace with attorney wording
 
 ---
@@ -1324,6 +1465,8 @@ Your patient advocate may act only after your attending physician and one other 
 ```
 
 **Why it was written:** Assistant-written, and it states a two-physician requirement that contradicts the assistant's own v1.1.0 PAD instruction sheet and the PAD template body, both of which say the attending physician alone makes the determination. The attorney needs to settle which is correct.
+
+**Superseded:** Superseded 2026-09-13: item D4 removed the two-physician determination from this sheet.
 
 **Decision:** ☐ approved as written ☐ replace with attorney wording
 
@@ -1464,6 +1607,8 @@ If both Grantors and all named Successor Trustees are unable or unwilling to ser
 ```
 
 **Why it was written:** Operative legal text, written by the development team. The single-grantor triggers had to be rephrased for two grantors so a successor takes office only when BOTH have ceased to serve — otherwise the survivor would be displaced by the named successor. The single-grantor wording is unchanged.
+
+**Superseded:** Superseded 2026-09-13: joint-trust support made "both Grantors" conditional — the clause now reads "the Grantor" for a single-grantor trust and "both Grantors" for a joint one. The rule is unchanged.
 
 **Decision:** ☐ approved as written ☐ replace with attorney wording
 
@@ -1628,7 +1773,7 @@ Leave the decision to my patient advocate
 No set preference; your advocate decides in your best interest.
 ```
 
-**Why it was written:** Asked separately from life-sustaining treatment because Michigan treats artificial nutrition and hydration separately; the assistant made that call and wrote the question, the explanatory line asserting the legal position, and all five labels and descriptions. Values map 1:1 to the {{#IF artificial_nutrition_preference ...}} branches in the PAD template. Marked "PENDING ATTORNEY APPROVAL" in the code.
+**Why it was written:** Asked separately from life-sustaining treatment because Michigan treats artificial nutrition and hydration separately; the assistant made that call and wrote the question, the explanatory line asserting the legal position, and all five labels and descriptions. Values map 1:1 to the {{#IF artificial_nutrition_preference ...}} branches in the PAD template. Marked "PENDING ATTORNEY APPROVAL" in the code until this approval; the marker now records the approval date.
 
 **Decision:** ☐ approved as written ☐ replace with attorney wording
 
@@ -1663,7 +1808,7 @@ Leave the decision to my patient advocate
 No set preference; your advocate decides in your best interest.
 ```
 
-**Why it was written:** Article V of the PAD template had {{#IF life_sustaining_treatment_preference ...}} branches but no question fed them, so the section rendered blank and strict validation blocked every PAD. The assistant wrote the question, the explanatory paragraph, and all five labels and descriptions — including the lay definitions of "terminal condition" and "persistent vegetative state", which determine which operative branch prints in the client's healthcare document. Marked "PENDING ATTORNEY APPROVAL" in the code.
+**Why it was written:** Article V of the PAD template had {{#IF life_sustaining_treatment_preference ...}} branches but no question fed them, so the section rendered blank and strict validation blocked every PAD. The assistant wrote the question, the explanatory paragraph, and all five labels and descriptions — including the lay definitions of "terminal condition" and "persistent vegetative state", which determine which operative branch prints in the client's healthcare document. Marked "PENDING ATTORNEY APPROVAL" in the code until this approval; the marker now records the approval date.
 
 **Decision:** ☐ approved as written ☐ replace with attorney wording
 

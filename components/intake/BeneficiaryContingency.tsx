@@ -27,7 +27,7 @@ export interface BeneficiaryWithContingency {
   contingentName?: string;
 }
 
-// PENDING ATTORNEY APPROVAL — final wording comes from the reviewing attorney.
+// Approved as written by the reviewing attorney, 2026-09-13.
 // Each `value` must stay in 1:1 correspondence with the {{#IF contingency ...}}
 // branches in the will, trust and pour-over templates.
 export const CONTINGENCY_OPTIONS: Array<{ value: ContingencyChoice; label: string; description: string }> = [
@@ -81,7 +81,7 @@ export function BeneficiaryContingency({
 
   return (
     <div className="mt-4 rounded-xl border-2 border-gray-100 bg-gray-50/60 px-4 py-4">
-      {/* PENDING ATTORNEY APPROVAL — question wording. */}
+      {/* Question wording approved as written, 2026-09-13. */}
       <QuestionLabel required>
         If {displayName} passes away before you, what happens to their share?
       </QuestionLabel>

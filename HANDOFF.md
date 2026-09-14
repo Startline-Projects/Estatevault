@@ -27,7 +27,10 @@ Branch `template-revisions-v2`, pushed to
 | 17 | `504e337` | Prompt 8 — per-beneficiary contingency |
 | 18 | `a82ea4e` | Prompt 9 — attorney round 3: AHCD replaces the PAD, DPOA changes, citation sweep |
 | 19 | `432c48a` | Prompt 9B — funeral preference, joint co-trustee UI, walkthrough fixes |
-| 20 | — | Prompt 10B — the attorney's healthcare-wishes clause and How to Sign sheet |
+| 20 | `de07230` | Prompt 10B — the attorney's healthcare-wishes clause and How to Sign sheet |
+| 21 | — | Prompt 10C — final approval, sweep repairs, the review queue closes empty |
+
+**131 files changed, +12,513 / −2,296** across 21 commits on `origin/staging` (`8b62c58`).
 
 ## Templates
 
@@ -50,7 +53,7 @@ runs in `prebuild`.
 
 ## Tests
 
-**972 total: 962 passing, 10 failing.**
+**1,008 total: 998 passing, 10 failing.**
 
 All 10 failures are **pre-existing on `origin/staging`** — verified by running
 the suite in a clean worktree of `8b62c58`, which produces the identical 10.
@@ -60,7 +63,7 @@ They live in `bug12-farewell-leak`, `checkout-schemas` (amendment schema),
 expects `150000`, gets `30000`, tagged BUG-4 against the fixed-$300
 attorney-review invariant.
 
-Test count went from 528 to 972. Part of that is ~340 new tests; part is that
+Test count went from 528 to 1,008. Part of that is ~340 new tests; part is that
 **vitest was never collecting `lib/documents/**`** — six files and ~1,500 lines
 had never run. Added to the include globs, along with `lib/intake/**`.
 
@@ -69,24 +72,31 @@ Two harnesses beyond unit tests:
 - `Testing Scripts/verify-template-pipeline.ts` — v1.1.0 path, 50 checks,
   reading text and coordinates back out of the produced PDF bytes
 
-## Blocking on attorney approval
+## Attorney review — closed
 
-`PENDING_ATTORNEY_REVIEW.md` — **one entry**: Step 5 of the Will's "How to Sign
-This Will" sheet.
+`PENDING_ATTORNEY_REVIEW.md` — **nothing awaiting review.** 26 entries approved
+2026-09-13, 47 approved 2026-09-02, 2 withdrawn.
 
-The attorney reviewed the rest across three rounds: 47 entries approved
-2026-09-02, 24 approved 2026-09-13, 2 withdrawn. Two pieces of his own text were
-supplied and integrated verbatim in Prompt 10B — the healthcare-wishes lead-in
-in the Advance Healthcare Directive, and six of the seven signing steps.
+Two pieces of his own text were supplied and integrated verbatim: the
+healthcare-wishes lead-in in the Advance Healthcare Directive, and the Will's
+"How to Sign This Will" sheet. Step 5 of that sheet was held back — his version
+sent the client to the notary to have a self-proving affidavit prepared and the
+Will already contains one — and the correction was approved as written on
+2026-09-13, along with the reading of item 16 that made the Personal
+Representative sentence the third remains option rather than a further change to
+the item 6 clause.
 
-Step 5 is held because his version told clients to ask the notary to prepare a
-self-proving affidavit and the Will already contains one. A corrected step ships
-in its place, marked in a template comment the renderer strips. If he confirms
-his original wording it goes in verbatim.
+Four short questionnaire strings were written after the round-4 material went to
+him and have not been put in front of him: the joint-trust question and the
+second grantor's field label in `app/trust/page.tsx`, and the "Second grantor"
+and "Donation purposes" review-screen rows. They are listed in their own section
+of the review file. None is operative language in a document, but the
+joint-trust answer is dispositive, so it is flagged rather than left silent.
 
-Also outstanding from the compliance checklist: Drake (UPL review of the
-rewritten Funding Instructions and the new questionnaire language), Mike (legal
-sign-off on the Certification of Trust and Assignment templates).
+Still outstanding from the compliance checklist, and unrelated to his review:
+Drake (UPL review of the rewritten Funding Instructions and the new
+questionnaire language), Mike (legal sign-off on the Certification of Trust and
+Assignment templates).
 
 ## Before deploy
 
@@ -109,6 +119,13 @@ sign-off on the Certification of Trust and Assignment templates).
   exist in the live DB but their DDL is not in version control.
 - The trustee question (`primaryTrustee` / `trusteeName`) is vestigial since the
   Grantor is always initial trustee. Left as-is pending an attorney decision.
+- The legacy pdf-lib instruction sheets carry three sentences rewritten during
+  round 3 that were never put to the attorney, and that path is what production
+  renders while `PDF_RENDERER` is unset. Listed in the review file.
+- The Will's Section A lost the sentence "A beneficiary who also witnesses can
+  jeopardise their own gift." during round 3 with no instruction on record.
+  Flagged in the review file for him to decide; Michigan's EPIC does not purge a
+  gift to an interested witness, so it may be right that it is gone.
 - The Pour-Over Will still carries the development team's seven signing steps
   (its Section E). The attorney's replacement was supplied for the Will only, so
   the two documents now describe the same signing act in different words. No

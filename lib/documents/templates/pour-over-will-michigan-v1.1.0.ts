@@ -210,7 +210,7 @@ My commission expires: _
 
 ## OPERATION OF THIS DOCUMENT
 
-This is your Pour-Over Will under Michigan law. It works alongside your {{trust_name_display}}. Its purpose is to catch anything you did not transfer into the Trust during your lifetime and direct it into the Trust, so that all of your property ends up administered and distributed under the Trust's terms.
+This is your Pour-Over Will under Michigan law. It works alongside your {{trust_name_bare}}. Its purpose is to catch anything you did not transfer into the Trust during your lifetime and direct it into the Trust, so that all of your property ends up administered and distributed under the Trust's terms.
 
 ### Section A — This Is a Safety Net, Not a Substitute for Funding
 
@@ -260,7 +260,7 @@ You and both witnesses sign the notary section, and the notary completes and sea
 
 STEP 6 - STORE YOUR WILL SAFELY
 
-Keep the original signed Will together with your {{trust_name_display}} in a secure location such as a fireproof safe or safe deposit box, and upload a copy to your EstateVault account. Do not store the original where your Personal Representative cannot reach it without a court order.
+Keep the original signed Will together with your {{trust_name_bare}} in a secure location such as a fireproof safe or safe deposit box, and upload a copy to your EstateVault account. Do not store the original where your Personal Representative cannot reach it without a court order.
 
 STEP 7 - INFORM YOUR PERSONAL REPRESENTATIVE
 

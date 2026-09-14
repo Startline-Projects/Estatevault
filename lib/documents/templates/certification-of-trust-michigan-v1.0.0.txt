@@ -6,7 +6,7 @@
 
 #sub dated {{trust_date}}
 
-This Certification of Trust is made under Mich. Comp. Laws § 700.7913 and is signed by each Trustee presently serving under the {{trust_name_display}} dated {{trust_date}}. The undersigned {{#IF is_joint_trust equals true}}Trustees certify{{/IF}}{{#IF is_joint_trust equals false}}Trustee certifies{{/IF}} the following:
+This Certification of Trust is made under Mich. Comp. Laws § 700.7913 and is signed by each Trustee presently serving under the {{trust_name_bare}} dated {{trust_date}}. The undersigned {{#IF is_joint_trust equals true}}Trustees certify{{/IF}}{{#IF is_joint_trust equals false}}Trustee certifies{{/IF}} the following:
 
 ## ARTICLE [[ARTICLE:grantors]] — GRANTORS AND REVOCABILITY
 
@@ -52,19 +52,19 @@ Assets belonging to the trust are to be titled in either of the following forms:
 
 {{#IF is_joint_trust equals true}}
 
-{{client_full_name}} and {{grantor_2_full_name}}, Trustees of the {{trust_name_display}} dated {{trust_date}}, and any amendments to it
+{{client_full_name}} and {{grantor_2_full_name}}, Trustees of the {{trust_name_bare}} dated {{trust_date}}, and any amendments to it
 
 {{/IF}}
 
 {{#IF is_joint_trust equals false}}
 
-{{client_full_name}}, Trustee of the {{trust_name_display}} dated {{trust_date}}, and any amendments to it
+{{client_full_name}}, Trustee of the {{trust_name_bare}} dated {{trust_date}}, and any amendments to it
 
 {{/IF}}
 
 OR
 
-The {{trust_name_display}} dated {{trust_date}}
+The {{trust_name_bare}} dated {{trust_date}}
 
 ## ARTICLE [[ARTICLE:alternates]] — ALTERNATE DESCRIPTIONS
 
