@@ -188,13 +188,13 @@ const SHEETS: Record<string, Omit<InstructionSheet, "title">> = {
   },
 
   healthcare_directive: {
-    subtitle: "Patient Advocate Designation",
+    subtitle: "Advance Healthcare Directive",
     blocks: [
       { type: "heading", text: "What This Document Does" },
       {
         type: "paragraph",
         text:
-          "Your Patient Advocate Designation names the person who will make medical and care decisions for you if you become unable to participate in those decisions yourself, and records your wishes about the care you want to receive.",
+          "Your Advance Healthcare Directive names the person who will make medical and care decisions for you if you become unable to participate in those decisions yourself, and records your wishes about the care you want to receive.",
       },
       { type: "heading", text: "Making This Document Effective" },
       {
@@ -204,7 +204,7 @@ const SHEETS: Record<string, Omit<InstructionSheet, "title">> = {
       },
       { type: "step", text: "Read the entire document before signing anything." },
       { type: "step", text: "Gather two adult witnesses who meet the requirements above." },
-      { type: "step", text: "Sign and date the designation in the presence of both witnesses." },
+      { type: "step", text: "Sign and date the directive in the presence of both witnesses." },
       { type: "step", text: "Each witness then signs and prints their name and address in your presence." },
       {
         type: "step",

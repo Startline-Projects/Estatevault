@@ -78,9 +78,17 @@ Where you chose a springing power, your Agent does not have authority to act unl
 Your patient advocate signs the acceptance page. The directive gives your advocate no authority until that acceptance is signed.
 
 Your patient advocate may act only once you have been deemed unable to participate in medical treatment decisions.
+
+(sheet subtitle) Advance Healthcare Directive
+
+Your Advance Healthcare Directive names the person who will make medical and care decisions for you if you become unable to participate in those decisions yourself, and records your wishes about the care you want to receive.
+
+Sign and date the directive in the presence of both witnesses.
 ```
 
 **Why it was written:** item D4 required physician-examination and certification language to come out of every sheet, and item B replaced the Patient Advocate Designation with the Advance Healthcare Directive. The approved paragraphs these replaced are in the 2026-09-02 log and carry Superseded notes; the replacements themselves are the development team's and were never filed. The file header still reads "Attorney Approval Date: [TO BE FILLED]", which is accurate for exactly this reason.
+
+The last three lines are a naming fix made on 2026-09-14: round 3 renamed the document to the Advance Healthcare Directive and rewrote one step to match, but left the sheet's subtitle and its opening paragraph calling it the Patient Advocate Designation, so a single sheet used both names for the same document. The substance is unchanged — only the document's own name.
 
 ### Questionnaire — trustee step
 
@@ -856,7 +864,7 @@ Your witnesses must be adults, and they must not be people who inherit under thi
 
 **Why it was written:** The attorney's note asked that the sheet explain in plain language that Michigan requires two witnesses, why that is not a formality, and that a beneficiary who witnesses can jeopardise their own gift. The requirement was given; the wording — including the consequence stated ("can be refused by the probate court" and distribution under default rules) — was written by the assistant.
 
-**Superseded:** Changed 2026-09-13, and flagged: the sentence "A beneficiary who also witnesses can jeopardise their own gift." was removed from this sheet during round 3. No instruction on record covers it — the round-3 sweep was about statute citations, and this sentence carries none. The sheet still tells the client to choose two people who receive nothing under the Will, so the guidance stands; what is gone is the stated consequence. The attorney should decide whether it goes back, since Michigan's Estates and Protected Individuals Code does not purge a gift to an interested witness the way some states do.
+**Superseded:** the sentence "A beneficiary who also witnesses can jeopardise their own gift." is gone from this sheet, on the attorney's own instruction — his round 1 markup on the first review package asked for it to come out, and it was executed as round-3 item G2. It is not an unexplained deletion. The guidance itself survives twice over: this sheet still tells the client to choose two people who receive nothing under the Will, and his own replacement Section D reinstates the concept in his words at Step 3 — "Witnesses should not be beneficiaries under this Will." 
 
 **Decision:** ☐ approved as written ☐ replace with attorney wording
 
