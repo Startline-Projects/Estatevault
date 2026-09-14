@@ -28,7 +28,8 @@ Branch `template-revisions-v2`, pushed to
 | 18 | `a82ea4e` | Prompt 9 — attorney round 3: AHCD replaces the PAD, DPOA changes, citation sweep |
 | 19 | `432c48a` | Prompt 9B — funeral preference, joint co-trustee UI, walkthrough fixes |
 | 20 | `de07230` | Prompt 10B — the attorney's healthcare-wishes clause and How to Sign sheet |
-| 21 | — | Prompt 10C — final approval, sweep repairs, the review queue closes empty |
+| 21 | `23545fc` | Prompt 10C — final approval, sweep repairs, the review queue closes empty |
+| 22 | — | Prompt 10D — funeral section into the Pour-Over Will, his remains copy, sibling sheet |
 
 **131 files changed, +12,513 / −2,296** across 21 commits on `origin/staging` (`8b62c58`).
 
@@ -38,7 +39,7 @@ Branch `template-revisions-v2`, pushed to
 |---|---|
 | `will-michigan-v1.1.0` | changed — Prompts 1, 4, 5, 8, 9, 9B, 10B |
 | `trust-michigan-v1.1.0` | changed — Prompts 1, 5, 7, 8, 9, 9B |
-| `pour-over-will-michigan-v1.1.0` | changed — Prompts 1, 6, 8, 10B |
+| `pour-over-will-michigan-v1.1.0` | changed — Prompts 1, 6, 8, 10B, 10D |
 | `dpoa-michigan-v1.1.0` | changed — Prompts 1, 2, 3, 9, 10B |
 | `advance-healthcare-directive-michigan-v1.0.0` | **replaced the PAD** — Prompts 9, 10B |
 | `certification-of-trust-michigan-v1.0.0` | **new** — Prompt 7 |
@@ -53,7 +54,7 @@ runs in `prebuild`.
 
 ## Tests
 
-**1,008 total: 998 passing, 10 failing.**
+**1,032 total: 1,022 passing, 10 failing.**
 
 All 10 failures are **pre-existing on `origin/staging`** — verified by running
 the suite in a clean worktree of `8b62c58`, which produces the identical 10.
@@ -63,7 +64,7 @@ They live in `bug12-farewell-leak`, `checkout-schemas` (amendment schema),
 expects `150000`, gets `30000`, tagged BUG-4 against the fixed-$300
 attorney-review invariant.
 
-Test count went from 528 to 1,008. Part of that is ~340 new tests; part is that
+Test count went from 528 to 1,032. Part of that is ~340 new tests; part is that
 **vitest was never collecting `lib/documents/**`** — six files and ~1,500 lines
 had never run. Added to the include globs, along with `lib/intake/**`.
 
@@ -72,9 +73,11 @@ Two harnesses beyond unit tests:
 - `Testing Scripts/verify-template-pipeline.ts` — v1.1.0 path, 50 checks,
   reading text and coordinates back out of the produced PDF bytes
 
-## Attorney review — closed
+## Attorney review
 
-`PENDING_ATTORNEY_REVIEW.md` — **nothing awaiting review.** 26 entries approved
+`PENDING_ATTORNEY_REVIEW.md` — **one entry awaiting review**, the Pour-Over
+Will's Section E: his seven signing steps applied to a sibling document, which
+is the development team's call rather than his instruction. 27 entries approved
 2026-09-13, 47 approved 2026-09-02, 2 withdrawn.
 
 Two pieces of his own text were supplied and integrated verbatim: the
@@ -126,12 +129,10 @@ Assignment templates).
   jeopardise their own gift." during round 3 with no instruction on record.
   Flagged in the review file for him to decide; Michigan's EPIC does not purge a
   gift to an interested witness, so it may be right that it is gone.
-- The Pour-Over Will still carries the development team's seven signing steps
-  (its Section E). The attorney's replacement was supplied for the Will only, so
-  the two documents now describe the same signing act in different words. No
-  single package contains both — a Trust Package has the Pour-Over Will and a
-  Will Package has the Will — so no client sees the two side by side, but the
-  attorney's corrections reached only one of them.
+- The Pour-Over Will's Section E is now his steps, pending his sign-off on the
+  adaptation. Two points the old steps made are gone with them: that witnesses
+  must not be beneficiaries under the companion Trust either, and that the
+  original should be stored with the Trust.
 - The client's free-text healthcare wishes render only in the v1.1.0 Advance
   Healthcare Directive. The legacy Claude path includes them too, but by
   instruction to the model rather than verbatim.

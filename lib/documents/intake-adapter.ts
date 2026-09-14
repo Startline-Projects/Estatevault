@@ -753,6 +753,12 @@ export function validateForDocument(docType: string, d: TemplateWillIntake): str
     case "pour_over_will":
       person(d.personal_representative.full_name, "personal representative", out);
       person(d.successor_trustee.full_name, "successor trustee (named in the companion trust)", out);
+      // The Pour-Over Will carries the same Funeral and Burial Preference
+      // clause as the Will, so it has the same unanswerable-question problem:
+      // without the answer the article renders with nothing under its heading.
+      if (!["burial", "cremation", "family_decides"].includes(d.funeral_preference)) {
+        out.push("your wishes for your remains");
+      }
       // Section 3.3 lists the trust's primary beneficiaries by name and share.
       // Without them the backup distribution clause would render empty.
       checkBeneficiaries(d, out);

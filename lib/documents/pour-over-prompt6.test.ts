@@ -159,8 +159,9 @@ describe("5. auto-numbering, no hardcoded numerals", () => {
   it.each([true, false])("numbers contiguously with minor children = %s", (minors) => {
     const out = renderTemplate(POUR_OVER, { ...intake(), has_minor_children: minors } as TemplateWillIntake);
     const numerals = (out.match(/## ARTICLE ([IVXLCDM]+) —/g) ?? []).map((h) => h.replace("## ARTICLE ", "").replace(" —", ""));
-    expect(numerals).toEqual(["I", "II", "III", "IV", "V", "VI", "VII"].slice(0, numerals.length));
-    expect(numerals).toHaveLength(minors ? 7 : 6);
+    expect(numerals).toEqual(["I", "II", "III", "IV", "V", "VI", "VII", "VIII"].slice(0, numerals.length));
+    // Final Wishes joined the document when the funeral section was added to it
+    expect(numerals).toHaveLength(minors ? 8 : 7);
   });
 
   it("renders with no unresolved tags or markers", () => {

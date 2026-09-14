@@ -12,24 +12,26 @@
 
 import QuestionLabel from "@/components/quiz/QuestionLabel";
 
-// Approved as written by the reviewing attorney, 2026-09-13.
-// Each `value` maps 1:1 to a {{#IF funeral_preference ...}} branch in
-// lib/documents/templates/will-michigan-v1.1.0.txt.
+// Option descriptions supplied by the reviewing attorney (round 2, items 15
+// and 16) and integrated verbatim. The labels were approved 2026-09-13.
+// Each `value` maps 1:1 to a {{#IF funeral_preference ...}} branch in the Will
+// and, since the funeral section was added to it, the Pour-Over Will.
 export const FUNERAL_PREFERENCE_OPTIONS = [
   {
     value: "burial",
     label: "Burial",
-    description: "You would prefer your remains to be interred by burial.",
+    description: "I prefer to be buried.",
   },
   {
     value: "cremation",
     label: "Cremation",
-    description: "You would prefer your remains to be disposed of by cremation.",
+    description: "I prefer to be cremated.",
   },
   {
     value: "family_decides",
     label: "Leave the decision to my Personal Representative",
-    description: "You do not state a preference; the person carrying out your will decides.",
+    description:
+      "My Personal Representative shall make all decisions regarding my funeral, burial, and other final arrangements.",
   },
 ];
 

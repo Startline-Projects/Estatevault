@@ -23,10 +23,10 @@ file is rendered.
 
 | | |
 |---|---|
-| Entries awaiting review | none |
+| Entries awaiting review | 1 — the Pour-Over Will's Section E |
 | Not yet put to him | 4 groups of strings, incl. 3 sentences in the live legacy sheets — see the section below |
-| Generated | Prompt 10C — closing the engagement |
-| Approved | 26 entries on 2026-09-13 · 47 entries on 2026-09-02 |
+| Generated | Prompt 10D — the funeral section, his remains copy, the sibling sheet |
+| Approved | 27 entries on 2026-09-13 · 47 entries on 2026-09-02 |
 | Withdrawn | 2 entries — the questions no longer exist |
 | Reviewing attorney | Mo Murshed |
 | Also pending | Drake (UPL review), Mike (legal sign-off) — see the compliance checklist |
@@ -38,7 +38,21 @@ file is rendered.
 
 ## Still pending review
 
-None. Every entry in this file has been reviewed.
+One entry.
+
+### Pour-Over Will — instruction sheet, Section E
+
+**Where:** Section E — How to Sign This Will, the whole sheet
+
+**Source file:** `lib/documents/templates/pour-over-will-michigan-v1.1.0.txt`
+
+**Text:** his seven steps for the Last Will, approved 2026-09-13, applied here unchanged. "This Will" reads correctly for a pour-over will, so nothing needed rewording. Step 5 is the corrected version he approved in the same round; this document contains a self-proving affidavit under its own heading, so the step is accurate here too.
+
+**Why it is pending:** he wrote those steps for one document. Applying them to a sibling is the development team's decision, not his instruction, which is why the sheet is marked PENDING ATTORNEY APPROVAL in a template comment the renderer strips.
+
+**What the change dropped:** the steps it replaced said the witnesses must not be beneficiaries "under this Will or the companion Trust" — his Step 3 says only "under this Will" — and told the client to store the original together with the Trust and to tell the Personal Representative where both are kept. Nothing replaces the second point. Both are worth his eye.
+
+**Decision:** ☐ approved as written ☐ replace with attorney wording ☐ keep the sheet the Pour-Over Will had
 
 ---
 
@@ -121,6 +135,20 @@ Second grantor (trust flow only) · Donation purposes
 ## APPROVED — 2026-09-13
 
 Attorney review round 4. The two entries the attorney answered in this round carry his text; the rest were approved as written by Mo Murshed on 2026-09-13, no changes needed. Kept as the record of what was reviewed and when.
+
+### Pour-Over Will — operative document body
+
+**Where:** New Final Wishes article — Funeral and Burial Preference, all three {{#IF funeral_preference}} branches
+
+**Source file:** `lib/documents/templates/pour-over-will-michigan-v1.1.0.txt`
+
+**Text:** the Will's Section 8.2, unchanged. The rendered clause is byte-identical between the two documents for the same answer, in all three branches, and a test holds it that way.
+
+**Why it is closed:** decision D3 put the funeral section into the Pour-Over Will. The language is the Section 8.2 wording already approved for the Will, reading the same intake field, so nothing new was drafted. The article renders through the numbering engine and sits after the guardian article, before general provisions; strict validation blocks the document rather than rendering the heading with nothing under it.
+
+**Decision:** ☑ approved language applied under decision D3
+
+---
 
 ### Section D — How to Sign This Will, Step 5
 
@@ -738,18 +766,20 @@ NOTE, NOT A LABEL CHANGE: there is no funeral preference question in either ques
 What are your wishes for your remains?
 
 Burial
-You would prefer your remains to be interred by burial.
+I prefer to be buried.
 
 Cremation
-You would prefer your remains to be disposed of by cremation.
+I prefer to be cremated.
 
 Leave the decision to my Personal Representative
-You do not state a preference; the person carrying out your will decides.
+My Personal Representative shall make all decisions regarding my funeral, burial, and other final arrangements.
 ```
 
-**Why it was written:** Section 8.2 of the will carries three approved clauses, but nothing in either questionnaire asked the client which one applied, so every will shipped the family_decides clause the client never chose. The assistant wrote the question and the three option labels and descriptions; each value maps 1:1 to a branch in the will template. There is no default and the step cannot be completed unanswered. The code carried a "PENDING ATTORNEY APPROVAL" marker until this approval; it now records the approval date.
+**Why it was written:** Section 8.2 of the will carries three approved clauses, but nothing in either questionnaire asked the client which one applied, so every will shipped the family_decides clause the client never chose. The assistant wrote the question and the three option labels, which were approved as written on 2026-09-13. Each value maps 1:1 to a branch in the Will and, since the funeral section was added to it, the Pour-Over Will. There is no default and the step cannot be completed unanswered.
 
-**Decision:** ☐ approved as written ☐ replace with attorney wording
+**Updated:** the three option descriptions above are the attorney's own, supplied under round-2 items 15 and 16 and confirmed by follow-up. They replaced the development team's descriptions verbatim. The labels and the question itself are unchanged, and so is the clause each option selects inside the documents.
+
+**Decision:** ☑ labels approved as written 2026-09-13 · ☑ descriptions supplied by attorney
 
 ---
 

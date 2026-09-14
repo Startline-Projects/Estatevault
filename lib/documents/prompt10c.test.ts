@@ -10,6 +10,7 @@ import { describe, it, expect } from "vitest";
 import { readFileSync, readdirSync } from "fs";
 import { stripComments } from "./render-template";
 import { computeDerivedFields } from "./computed-fields";
+import { initialTemplateWillIntake } from "./intake-adapter";
 import { join } from "path";
 
 const ROOT = join(__dirname, "..", "..");
@@ -27,15 +28,16 @@ function section(heading: string): string {
 const entries = (s: string) => (s.match(/^### /gm) ?? []).length;
 
 describe("the review queue is empty", () => {
-  it("no entry is awaiting review", () => {
-    expect(entries(section("Still pending review"))).toBe(0);
-    expect(section("Still pending review")).toContain("None.");
+  it("holds only the Pour-Over Will's adapted sheet", () => {
+    const pending = section("Still pending review");
+    expect(entries(pending)).toBe(1);
+    expect(pending).toContain("### Pour-Over Will — instruction sheet, Section E");
   });
 
   it("the status table agrees with the entries actually filed", () => {
-    expect(REVIEW).toContain("| Entries awaiting review | none |");
-    expect(entries(section("APPROVED — 2026-09-13"))).toBe(26);
-    expect(REVIEW).toContain("| Approved | 26 entries on 2026-09-13 · 47 entries on 2026-09-02 |");
+    expect(REVIEW).toContain("| Entries awaiting review | 1 — the Pour-Over Will\u0027s Section E |");
+    expect(entries(section("APPROVED — 2026-09-13"))).toBe(27);
+    expect(REVIEW).toContain("| Approved | 27 entries on 2026-09-13 · 47 entries on 2026-09-02 |");
     expect(entries(section("APPROVED — 2026-09-02"))).toBe(47);
     expect(entries(section("Withdrawn"))).toBe(2);
   });
@@ -54,10 +56,14 @@ describe("the review queue is empty", () => {
 });
 
 describe("no approved wording still calls itself pending", () => {
-  it("no template carries a pending marker", () => {
+  it("a pending marker only ever sits in a comment, never in the document", () => {
     for (const f of readdirSync(TEMPLATE_DIR).filter((n) => n.endsWith(".txt"))) {
-      expect(readFileSync(join(TEMPLATE_DIR, f), "utf8"), f).not.toContain("PENDING ATTORNEY APPROVAL");
+      const text = readFileSync(join(TEMPLATE_DIR, f), "utf8");
+      expect(stripComments(text), f).not.toContain("PENDING ATTORNEY APPROVAL");
     }
+    // exactly one is open, and it says which document it belongs to
+    const pour = readFileSync(join(TEMPLATE_DIR, "pour-over-will-michigan-v1.1.0.txt"), "utf8");
+    expect(pour).toContain("PENDING ATTORNEY APPROVAL — the whole of Section E");
   });
 
   it("no questionnaire component carries one either", () => {
@@ -135,16 +141,16 @@ describe("a trust is named once, not twice", () => {
   });
 
   it("strips the client's own leading article for those positions", () => {
-    const named = computeDerivedFields({ trust_name: "The Hassan Family Trust" });
+    const named = computeDerivedFields({ ...initialTemplateWillIntake, trust_name: "The Hassan Family Trust" });
     expect(named.trust_name_display).toBe("The Hassan Family Trust");
     expect(named.trust_name_bare).toBe("Hassan Family Trust");
-    const unnamed = computeDerivedFields({ first_name: "Ahmed", last_name: "Hassan" });
+    const unnamed = computeDerivedFields({ ...initialTemplateWillIntake, first_name: "Ahmed", last_name: "Hassan" });
     expect(unnamed.trust_name_display).toBe("The Ahmed Hassan Revocable Living Trust");
     expect(unnamed.trust_name_bare).toBe("Ahmed Hassan Revocable Living Trust");
   });
 
   it("leaves a name that has no article alone", () => {
-    expect(computeDerivedFields({ trust_name: "Hassan Family Trust" }).trust_name_bare)
+    expect(computeDerivedFields({ ...initialTemplateWillIntake, trust_name: "Hassan Family Trust" }).trust_name_bare)
       .toBe("Hassan Family Trust");
   });
 });
