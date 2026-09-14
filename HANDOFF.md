@@ -25,18 +25,19 @@ Branch `template-revisions-v2`, pushed to
 | 15 | `48118ba` | Webhook clobber fix, real `template_version`, `source_fingerprint` |
 | 16 | `c262cd8` | Prompt 7 — three Trust Package documents + joint trusts |
 | 17 | `504e337` | Prompt 8 — per-beneficiary contingency |
-
-**120 files changed, +10,421 / −1,386.**
+| 18 | `a82ea4e` | Prompt 9 — attorney round 3: AHCD replaces the PAD, DPOA changes, citation sweep |
+| 19 | `432c48a` | Prompt 9B — funeral preference, joint co-trustee UI, walkthrough fixes |
+| 20 | — | Prompt 10B — the attorney's healthcare-wishes clause and How to Sign sheet |
 
 ## Templates
 
 | Template | Status |
 |---|---|
-| `will-michigan-v1.1.0` | changed — Prompts 1, 4, 5, 8 |
-| `trust-michigan-v1.1.0` | changed — Prompts 1, 5, 7, 8 |
-| `pour-over-will-michigan-v1.1.0` | changed — Prompts 1, 6, 8 |
-| `dpoa-michigan-v1.1.0` | changed — Prompts 1, 2, 3 |
-| `pad-michigan-v1.1.0` | changed — Prompts 1, 3 |
+| `will-michigan-v1.1.0` | changed — Prompts 1, 4, 5, 8, 9, 9B, 10B |
+| `trust-michigan-v1.1.0` | changed — Prompts 1, 5, 7, 8, 9, 9B |
+| `pour-over-will-michigan-v1.1.0` | changed — Prompts 1, 6, 8, 10B |
+| `dpoa-michigan-v1.1.0` | changed — Prompts 1, 2, 3, 9, 10B |
+| `advance-healthcare-directive-michigan-v1.0.0` | **replaced the PAD** — Prompts 9, 10B |
 | `certification-of-trust-michigan-v1.0.0` | **new** — Prompt 7 |
 | `assignment-personal-property-michigan-v1.0.0` | **new** — Prompt 7 |
 | `trust-funding-instructions-v1.0.0` | **new** — Prompt 7 |
@@ -49,7 +50,7 @@ runs in `prebuild`.
 
 ## Tests
 
-**880 total: 870 passing, 10 failing.**
+**972 total: 962 passing, 10 failing.**
 
 All 10 failures are **pre-existing on `origin/staging`** — verified by running
 the suite in a clean worktree of `8b62c58`, which produces the identical 10.
@@ -59,7 +60,7 @@ They live in `bug12-farewell-leak`, `checkout-schemas` (amendment schema),
 expects `150000`, gets `30000`, tagged BUG-4 against the fixed-$300
 attorney-review invariant.
 
-Test count went from 528 to 880. Part of that is ~340 new tests; part is that
+Test count went from 528 to 972. Part of that is ~340 new tests; part is that
 **vitest was never collecting `lib/documents/**`** — six files and ~1,500 lines
 had never run. Added to the include globs, along with `lib/intake/**`.
 
@@ -70,26 +71,18 @@ Two harnesses beyond unit tests:
 
 ## Blocking on attorney approval
 
-`PENDING_ATTORNEY_REVIEW.md` — **60 entries**, operative-body first.
+`PENDING_ATTORNEY_REVIEW.md` — **one entry**: Step 5 of the Will's "How to Sign
+This Will" sheet.
 
-Highest risk, all operative dispositive language written by the development
-team with no supplied wording:
+The attorney reviewed the rest across three rounds: 47 entries approved
+2026-09-02, 24 approved 2026-09-13, 2 withdrawn. Two pieces of his own text were
+supplied and integrated verbatim in Prompt 10B — the healthcare-wishes lead-in
+in the Advance Healthcare Directive, and six of the seven signing steps.
 
-1. **Per-beneficiary contingency clauses** (will, trust, pour-over). Two
-   drafting decisions to confirm: the descendants fallback is phrased "equally"
-   where the template previously said "proportionally"; and the named-individual
-   option adds a second-level fallback the note does not mention, without which
-   a share could lapse with no taker.
-2. **Pour-Over Will Section 3.3.** Previously sent the residuary to heirs at
-   law; now redirects to the named beneficiaries, with a 30-day survivorship and
-   proportional-lapse rule that was added.
-3. **Trust Article III joint co-trustees.** "Either Co-Trustee may act alone"
-   and "the survivor continues as sole Trustee ahead of any named successor".
-4. **Will Section 8.2 `family_decides`.** A new decision structure was invented:
-   Personal Representative decides, family consulted.
-5. **The two medical questions** (life-sustaining treatment, artificial
-   nutrition) — lay glosses of "terminal condition" and "persistent vegetative
-   state" that a client acts on.
+Step 5 is held because his version told clients to ask the notary to prepare a
+self-proving affidavit and the Will already contains one. A corrected step ships
+in its place, marked in a template comment the renderer strips. If he confirms
+his original wording it goes in verbatim.
 
 Also outstanding from the compliance checklist: Drake (UPL review of the
 rewritten Funding Instructions and the new questionnaire language), Mike (legal
@@ -116,4 +109,12 @@ sign-off on the Certification of Trust and Assignment templates).
   exist in the live DB but their DDL is not in version control.
 - The trustee question (`primaryTrustee` / `trusteeName`) is vestigial since the
   Grantor is always initial trustee. Left as-is pending an attorney decision.
-- Joint-trust intake fields are mapped but no questionnaire asks for them yet.
+- The Pour-Over Will still carries the development team's seven signing steps
+  (its Section E). The attorney's replacement was supplied for the Will only, so
+  the two documents now describe the same signing act in different words. No
+  single package contains both — a Trust Package has the Pour-Over Will and a
+  Will Package has the Will — so no client sees the two side by side, but the
+  attorney's corrections reached only one of them.
+- The client's free-text healthcare wishes render only in the v1.1.0 Advance
+  Healthcare Directive. The legacy Claude path includes them too, but by
+  instruction to the model rather than verbatim.

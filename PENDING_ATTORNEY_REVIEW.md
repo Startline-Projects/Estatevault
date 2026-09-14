@@ -23,9 +23,9 @@ file is rendered.
 
 | | |
 |---|---|
-| Entries awaiting review | 24 |
-| Generated | Prompt 9B — closing items and browser walkthrough |
-| Approved | 47 entries on 2026-09-02 |
+| Entries awaiting review | 1 — Section D, Step 5 |
+| Generated | Prompt 10B — the attorney's final two answers |
+| Approved | 24 entries on 2026-09-13 · 47 entries on 2026-09-02 |
 | Withdrawn | 2 entries — the questions no longer exist |
 | Reviewing attorney | Mo Murshed |
 | Also pending | Drake (UPL review), Mike (legal sign-off) — see the compliance checklist |
@@ -37,7 +37,69 @@ file is rendered.
 
 ## Still pending review
 
-Not yet approved. Work top to bottom.
+One entry. Everything else in this file has been reviewed.
+
+### Section D — How to Sign This Will, Step 5 only
+
+**Where:** Instruction sheet, Section D — Step 5 of seven. Steps 1 to 4, 6 and 7 are the attorney's own text and are approved below.
+
+**Source file:** `lib/documents/templates/will-michigan-v1.1.0.txt`
+
+**Text:**
+
+```text
+STEP 5 - Complete the Self-Proving Affidavit (Strongly Recommended)
+
+This Will includes a self-proving affidavit on its final pages. You, your witnesses, and the notary complete it during the same signing session. This makes it easier for your Personal Representative to probate your Will without requiring witness testimony later.
+```
+
+**What was held:** the attorney's own Step 5. His other six steps and the opening warning arrived as text and went into the template unchanged; his Step 5 reached the development team only as a description of what it does — direct the client to ask the notary to prepare a self-proving affidavit — so it is not quoted here. Nothing but his exact words should be recorded as his.
+
+**Why it was written:** The Will already contains a self-proving affidavit — the STATE OF MICHIGAN / COUNTY OF block under MCL 700.2504, signed by the Testator and both witnesses before the notary, immediately after the attestation. Telling the client to ask the notary to prepare one would send them to have a second affidavit drawn up, or leave them thinking the one in front of them is not the thing being described. The step above is the development team's correction: same recommendation, pointed at the affidavit already in the document. The template marks it PENDING ATTORNEY APPROVAL in a comment the renderer strips, so nothing reaches the client.
+
+**Decision:** ☐ approved as written ☐ restore your own Step 5 (supply it verbatim and it goes in unchanged) ☐ replace with other wording
+
+---
+
+## APPROVED — 2026-09-13
+
+Attorney review round 4. The two entries the attorney answered in this round carry his text; the rest were approved as written by Mo Murshed on 2026-09-13, no changes needed. Kept as the record of what was reviewed and when.
+
+### Advance Healthcare Directive — operative document body
+
+**Where:** Article Two, Statement of Limitations, Desires, and Special Provisions (currently Section 2.11) — concluding paragraph, rendered only when the client wrote something
+
+**Source file:** `lib/documents/templates/advance-healthcare-directive-michigan-v1.0.0.txt`
+
+**Text:**
+
+```text
+In addition to the directives above, I want my healthcare agent and medical providers to be aware of the following personal healthcare wishes and values:
+
+{{healthcare_wishes_freeform}}
+```
+
+**Why it is closed:** both questionnaires ask "Do you have specific healthcare wishes to document?" and collect a free-text instruction, which until now reached no document. The attorney supplied the lead-in sentence on 2026-09-13 and it is integrated verbatim; the client's own words follow it as their own paragraph, unchanged apart from the trimming the intake already did. When the client wrote nothing, neither the lead-in nor the paragraph renders.
+
+**Observation, not a change:** the attorney's sentence says "healthcare agent" where the rest of the instrument says "Patient Advocate" — the Michigan term, and the title used in every other section. His wording ships as written. Flagged only so he can decide whether the two should match.
+
+**Decision:** ☑ supplied by attorney, 2026-09-13
+
+---
+
+### Section D — How to Sign This Will
+
+**Where:** Instruction sheet, Section D — the whole sheet, seven steps and the opening warning
+
+**Source file:** `lib/documents/templates/will-michigan-v1.1.0.txt`
+
+**Text:** supplied by the attorney on 2026-09-13 and integrated verbatim. Steps 1 to 4, 6 and 7 and the "Important:" opening are his words unchanged. Step 5 is held — see the one open entry at the top of this file.
+
+**Why it is closed:** the development team's seven steps, logged since Prompt 4, are gone. They were partly lifted from the legacy Claude prompt and partly self-written, and the attorney replaced them end to end.
+
+**Decision:** ☑ replaced with attorney wording, 2026-09-13
+
+---
 
 ### Last Will and Testament — operative document body
 
@@ -61,6 +123,8 @@ I leave the decision regarding the manner of disposition of my remains (whether 
 
 ---
 
+---
+
 ### Last Will and Testament — operative document body
 
 **Where:** Article VIII, Section 8.2 — Funeral and Burial Preferences, family_decides branch ({{#IF funeral_preference equals "family_decides"}})  
@@ -79,6 +143,8 @@ I leave the decision regarding the manner of disposition of my remains (whether 
 
 ---
 
+---
+
 ### Revocable Living Trust — operative document body
 
 **Where:** Article III (Trustee Appointment and Succession), Section — First Successor Trustee  
@@ -94,6 +160,8 @@ If the Grantor is unable or unwilling to continue serving as Trustee, ceases to 
 **Why it was written:** The attorney's instruction was that the Grantor is always the initial Trustee, which collapsed the two trustee_is_self branches into one. The clause previously read "If the initial Trustee is unable or unwilling to serve..."; because "the initial Trustee" could no longer refer to a third party, the assistant rewrote the trigger as "If the Grantor is unable or unwilling to continue serving as Trustee...". This is operative succession language rewritten by the assistant.
 
 **Decision:** ☐ approved as written ☐ replace with attorney wording
+
+---
 
 ---
 
@@ -145,6 +213,8 @@ The Agent is NOT authorized to access, manage, or dispose of my digital assets o
 
 ---
 
+---
+
 ### Durable Power of Attorney — operative document body
 
 **Where:** Execution page — heading and attestation sentence (replacing the former "ATTESTATION" section)  
@@ -163,41 +233,6 @@ IN WITNESS WHEREOF, I, {{client_full_name}}, the Principal, sign my name to this
 **Decision:** ☐ approved as written ☐ replace with attorney wording
 
 ---
-
-### Section D — How to Sign This Will
-
-STEP 1 - CHOOSE YOUR WITNESSES
-
-Select two adult witnesses, age 18 or older. Your witnesses must NOT be named beneficiaries in this Will. Both must be present at the same time as each other and as you when signing.
-
-STEP 2 - GATHER ALL PARTIES
-
-Arrange for yourself, both witnesses, and a notary public to be in the same location at the same time. All parties must be physically present together throughout the signing.
-
-STEP 3 - YOU SIGN FIRST
-
-Sign and date this Will in the presence of both witnesses simultaneously. Do not sign before both witnesses are present. Sign on the signature line designated for the Testator.
-
-STEP 4 - WITNESSES SIGN
-
-Immediately after you sign, each witness signs the Will in your presence and in the presence of each other. Each witness should print their name and provide their address on the lines provided.
-
-STEP 5 - COMPLETE THE NOTARY SECTION
-
-You and both witnesses sign the notary section, and the notary completes and seals it. This is what makes your Will self-proving, as explained in Section B.
-
-STEP 6 - STORE YOUR WILL SAFELY
-
-Keep the original signed Will in a secure location such as a fireproof safe or safe deposit box, and upload a copy to your EstateVault account. Do not store the original where your Personal Representative cannot reach it without a court order.
-
-STEP 7 - INFORM YOUR PERSONAL REPRESENTATIVE
-
-Tell your Personal Representative that they have been named, confirm they are willing to serve, and tell them where the signed original is kept. Keep their contact details current.
-```
-
-**Why it was written:** Partly derived, partly self-written, and the self-written parts are substantial. The v1.1.0 template never carried these steps; they were lifted from the legacy Claude prompt in lib/documents/templates/michigan-will.ts and then rewritten. The heading "Section D — How to Sign This Will" is new; the legacy intro ("To make this Will legally valid under Michigan law (MCL 700.2502), you must follow each step below carefully. Failure to follow these steps may render this Will invalid.") was dropped. STEP 5 is entirely new prose replacing legacy "STEP 5 - NOTARY (OPTIONAL BUT STRONGLY RECOMMENDED)" and its paragraph; STEP 2 gained "and a notary public" and "All parties" (legacy said "yourself and both witnesses" / "All three parties"); STEP 6 swapped "or with your estate planning attorney. Inform your Executor of its location" for "and upload a copy to your EstateVault account"; STEP 7 is rewritten end to end. Every "Executor" was retargeted to "Personal Representative". Commit d21cd45.
-
-**Decision:** ☐ approved as written ☐ replace with attorney wording
 
 ---
 
@@ -227,6 +262,8 @@ Your agent does not have authority to act unless you have been deemed incapacita
 
 ---
 
+---
+
 ### Will and Trust questionnaires — final review screen
 
 **Where:** Review screen — new summary row labels in the Power of Attorney and Healthcare Directive sections  
@@ -246,6 +283,8 @@ Food and water by tube
 **Why it was written:** Labels invented by the assistant to display the three new answers back to the client on the review screen. "Food and water by tube" in particular is the assistant's lay rendering of artificial nutrition and hydration and should match whatever term the attorney approves for the question itself.
 
 **Decision:** ☐ approved as written ☐ replace with attorney wording
+
+---
 
 ---
 
@@ -269,6 +308,8 @@ We've added a question since you started. Your existing answers have been kept, 
 
 ---
 
+---
+
 ### Trust Funding Instructions
 
 **Where:** Section headings and lettered section structure  
@@ -284,6 +325,8 @@ Section A — Cash Accounts, Section B — Investment Accounts, ... Section P �
 **Why it was written:** The body text is Part 2's UPL-rewritten text verbatim. What the development team added is structure only: the source's bold sub-headings were turned into lettered instruction-sheet sections so the document renders through the platform's heading system. No sentence of the source text was altered. Flagged so the attorney can confirm the re-sectioning does not change meaning.
 
 **Decision:** ☐ approved as written ☐ replace with attorney wording
+
+---
 
 ---
 
@@ -316,6 +359,8 @@ Who should receive [beneficiary name]'s share?
 
 ---
 
+---
+
 ### Questionnaire — beneficiaries step
 
 **Where:** Migration notice shown to a client whose saved session named several contingent beneficiaries  
@@ -331,6 +376,8 @@ You previously named [names] as contingent beneficiaries. That answer applied to
 **Why it was written:** Written by the development team. A session saved under the old global question can name several contingents, which cannot be expressed as one per-beneficiary answer. Rather than discard the answer or guess at a mapping, the previous answer is shown back to the client and they choose again.
 
 **Decision:** ☐ approved as written ☐ replace with attorney wording
+
+---
 
 ---
 
@@ -359,6 +406,8 @@ Upon my death, I give any needed organ, tissue, or other part of my body for the
 
 ---
 
+---
+
 ### Last Will and Testament — operative document body
 
 **Where:** Article VIII, Section 8.1 — Organ and Tissue Donation, rewritten to the four answers  
@@ -381,6 +430,8 @@ Upon my passing, I give any needed organ, tissue, or other part of my body for t
 
 ---
 
+---
+
 ### Revocable Living Trust — operative document body
 
 **Where:** Article III, Section 3.1 — Co-Trustees acting jointly (the new branch)  
@@ -396,6 +447,8 @@ The Co-Trustees shall act jointly. No Co-Trustee, acting alone, may transact bus
 **Why it was written:** Operative legal text, written by the development team. Item F made co-trustee authority a client choice; the act-alone branch is the attorney's existing approved text, and this is its counterpart. It requires both signatures for any exercise of trust powers, which is a stronger reading than merely requiring agreement — worth confirming.
 
 **Decision:** ☐ approved as written ☐ replace with attorney wording
+
+---
 
 ---
 
@@ -416,6 +469,8 @@ If the Grantor is subsequently no longer incapacitated, the Grantor shall resume
 **Why it was written:** CONSEQUENCE OF THE PLATFORM-WIDE SWEEP, NOT A DIRECT INSTRUCTION. Item D4 required removing all physician-examination and certification language platform-wide and a test asserting none survives anywhere. The trust's incapacity article previously required written certification by two licensed physicians. That language is now gone and the trigger matches the DPOA. If the intention was to change only the springing power of attorney, this should be reverted — flagging explicitly because it changes who decides that a Grantor is incapacitated.
 
 **Decision:** ☐ approved as written ☐ replace with attorney wording
+
+---
 
 ---
 
@@ -445,6 +500,8 @@ You may revoke your Patient Advocate's authority at any time, orally or in writi
 
 ---
 
+---
+
 ### Questionnaire — Advance Healthcare Directive step
 
 **Where:** Organ donation question, the four option labels and descriptions  
@@ -470,6 +527,8 @@ Which purposes?
 
 ---
 
+---
+
 ### Questionnaire — trustee step (joint trusts only)
 
 **Where:** Co-trustee authority question and its two option labels  
@@ -491,6 +550,8 @@ We must act together — Every exercise of the Trust's powers needs both Co-Trus
 
 ---
 
+---
+
 ### Questionnaire — Power of Attorney step
 
 **Where:** Springing option description, reworded  
@@ -506,6 +567,8 @@ Your agent does not have authority to act unless you have been deemed incapacita
 **Why it was written:** Item D4 replaced the previous description, which referred to a physician certifying in writing. Wording written by the development team.
 
 **Decision:** ☐ approved as written ☐ replace with attorney wording
+
+---
 
 ---
 
@@ -533,6 +596,8 @@ If I am subsequently no longer incapacitated, the Agent's authority under this d
 
 ---
 
+---
+
 ### Will and Trust — questionnaire label change
 
 **Where:** Funeral preference option label (item G1)  
@@ -550,6 +615,8 @@ NOTE, NOT A LABEL CHANGE: there is no funeral preference question in either ques
 **Decision:** ☐ approved as written ☐ replace with attorney wording
 
 **Update 2026-09-02 (9B):** the question now exists in both questionnaires, with three options mapping 1:1 to the three clauses. Its wording is logged in the entry below.
+
+---
 
 ---
 
@@ -577,24 +644,6 @@ You do not state a preference; the person carrying out your will decides.
 **Why it was written:** Section 8.2 of the will carries three approved clauses, but nothing in either questionnaire asked the client which one applied, so every will shipped the family_decides clause the client never chose. The assistant wrote the question and the three option labels and descriptions; each value maps 1:1 to a branch in the will template. There is no default and the step cannot be completed unanswered. The code marks the block "PENDING ATTORNEY APPROVAL — final wording comes from the reviewing attorney."
 
 **Decision:** ☐ approved as written ☐ replace with attorney wording
-
----
-
-### Advance Healthcare Directive — operative document body
-
-**Where:** Nowhere yet — the client's own healthcare instruction is collected but never rendered
-
-**Source file:** `lib/documents/templates/advance-healthcare-directive-michigan-v1.0.0.txt`
-
-**Text:**
-
-```text
-(no text has been added — this entry asks where it should go and what should introduce it)
-```
-
-**Why it was written:** Both questionnaires ask "Do you have specific healthcare wishes to document?" and, when the client answers Yes, collect a free-text instruction. The review screen shows it back to the client. No section of the Advance Healthcare Directive renders it, so the client's own words never reach the delivered document. (The older Claude-generated directive did include them, so this is a regression the template pipeline would introduce.) Section 2.11, Statement of Limitations, Desires, and Special Provisions, is where such a direction would sit, but the attorney's text for that section is fixed and the assistant will not write operative language or decide the lead-in that introduces a client's own words. Two decisions are needed: which section carries the client's instruction, and the sentence that introduces it.
-
-**Decision:** ☐ attorney to supply placement and lead-in wording
 
 ---
 
@@ -712,9 +761,7 @@ If you have an older signed will in a drawer, a safe, or with another firm, dest
 
 **Source file:** `lib/documents/templates/will-michigan-v1.1.0.txt`
 
-**Text:**
-
-```text
+**Text:** this entry's quoted block was left empty when the entry was written, and an unclosed code fence here was corrupting the rendering of every entry below it. The steps it referred to were the development team's, and the attorney replaced them verbatim on 2026-09-13 — see the entry "Section D — How to Sign This Will" under APPROVED — 2026-09-13. The superseded wording is in git history at commit `432c48a`.
 
 ### Revocable Living Trust — instruction sheet
 

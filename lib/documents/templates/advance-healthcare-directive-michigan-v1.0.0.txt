@@ -134,6 +134,14 @@ Even if a decision is made to withhold life-sustaining treatment, my Patient Adv
 
 I understand that if life-sustaining treatment is withheld or withdrawn, I will or may die as a result. I cannot foresee every possible circumstance, but I trust my Patient Advocate to carry out my wishes even under circumstances not specifically addressed here. My Patient Advocate may exercise substituted judgment in those unforeseen circumstances.
 
+{{#IF healthcare_wishes_freeform}}
+
+In addition to the directives above, I want my healthcare agent and medical providers to be aware of the following personal healthcare wishes and values:
+
+{{healthcare_wishes_freeform}}
+
+{{/IF}}
+
 ## ARTICLE [[ARTICLE:legal_admin|words]] — LEGAL AND ADMINISTRATIVE POWERS AND PROVISIONS
 
 ### Section [[SECTION:legal_admin.s1|pad2]] — Guardian

@@ -210,7 +210,7 @@ My commission expires: _
 
 ## OPERATION OF THIS DOCUMENT
 
-This is your Pour-Over Will under Michigan law It works alongside your {{trust_name_display}}. Its purpose is to catch anything you did not transfer into the Trust during your lifetime and direct it into the Trust, so that all of your property ends up administered and distributed under the Trust's terms.
+This is your Pour-Over Will under Michigan law. It works alongside your {{trust_name_display}}. Its purpose is to catch anything you did not transfer into the Trust during your lifetime and direct it into the Trust, so that all of your property ends up administered and distributed under the Trust's terms.
 
 ### Section A — This Is a Safety Net, Not a Substitute for Funding
 
@@ -266,7 +266,7 @@ STEP 7 - INFORM YOUR PERSONAL REPRESENTATIVE
 
 Tell your Personal Representative that they have been named, confirm they are willing to serve, and tell them where the signed original and the Trust are kept. Keep their contact details current.
 
-State of Michigan · Michigan EPIC,
+State of Michigan · Michigan EPIC
 `;
 
 export default template;

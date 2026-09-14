@@ -15,12 +15,18 @@
 import { describe, it, expect } from "vitest";
 import { readFileSync, readdirSync } from "fs";
 import { join } from "path";
+import { stripComments } from "./render-template";
 
 const TEMPLATE_DIR = join(__dirname, "templates");
 const TEMPLATES = readdirSync(TEMPLATE_DIR).filter((f) => f.endsWith(".txt"));
 const SHEET_MARKER = "## OPERATION OF THIS DOCUMENT";
 
-const read = (f: string) => readFileSync(join(TEMPLATE_DIR, f), "utf8");
+/**
+ * Templates are read the way the renderer reads them: comments stripped. A
+ * review marker may cite the statute a clause rests on; it never reaches a
+ * client, so it is not a citation in the sheet.
+ */
+const read = (f: string) => stripComments(readFileSync(join(TEMPLATE_DIR, f), "utf8"));
 /**
  * The instruction sheet is the OPERATION block. In most templates it sits last,
  * but funeral-rep, guardian-nomination and hipaa still carry theirs at the top,

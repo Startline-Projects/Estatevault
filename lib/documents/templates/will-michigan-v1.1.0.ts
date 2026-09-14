@@ -448,7 +448,7 @@ My commission expires: _
 
 ## OPERATION OF THIS DOCUMENT
 
-This is your Last Will and Testament under Michigan law It takes effect only after you are gone. While you are living, you continue to own and control your property exactly as before, and you may revoke or amend this Will at any time while you are competent.
+This is your Last Will and Testament under Michigan law. It takes effect only after you are gone. While you are living, you continue to own and control your property exactly as before, and you may revoke or amend this Will at any time while you are competent.
 
 ### Section A — Two Witnesses Are Required
 
@@ -472,37 +472,51 @@ If you have an older signed will in a drawer, a safe, or with another firm, dest
 
 ### Section D — How to Sign This Will
 
-STEP 1 - CHOOSE YOUR WITNESSES
+Important: To make this Will legally valid under Michigan law, you must follow each step below carefully. Failure to follow these steps exactly may render your Will invalid and unenforceable.
 
-Select two adult witnesses, age 18 or older. Your witnesses must NOT be named beneficiaries in this Will. Both must be present at the same time as each other and as you when signing.
+STEP 1 - Gather Your Materials
 
-STEP 2 - GATHER ALL PARTIES
+Print this Will on plain white paper. Do not sign until you have completed all the following steps.
 
-Arrange for yourself, both witnesses, and a notary public to be in the same location at the same time. All parties must be physically present together throughout the signing.
+STEP 2 - Sign in Front of Two Witnesses and a Notary Public
 
-STEP 3 - YOU SIGN FIRST
+You, both witnesses, and a notary public must all be physically present together at the same time. Sign your name at the end of this Will exactly as it appears in the opening paragraph. Your two witnesses and notary must watch you sign.
 
-Sign and date this Will in the presence of both witnesses simultaneously. Do not sign before both witnesses are present. Sign on the signature line designated for the Testator.
+STEP 3 - Witnesses Sign
 
-STEP 4 - WITNESSES SIGN
+Immediately after you sign, both witnesses must sign their names and provide their full addresses on the signature page. Witnesses should not be beneficiaries under this Will.
 
-Immediately after you sign, each witness signs the Will in your presence and in the presence of each other. Each witness should print their name and provide their address on the lines provided.
+STEP 4 - Notary Signs and Seals
 
-STEP 5 - COMPLETE THE NOTARY SECTION
+The notary public must sign, date, and affix their official seal to the signature page while all parties are still present together.
 
-You and both witnesses sign the notary section, and the notary completes and seals it. This is what makes your Will self-proving, as explained in Section B.
+{{!--
+PENDING ATTORNEY APPROVAL — Step 5 only. The rest of Section D is Mo Murshed's
+text, integrated verbatim on 2026-09-13.
 
-STEP 6 - STORE YOUR WILL SAFELY
+His Step 5 told the client to ask the notary to prepare a self-proving
+affidavit. This Will already contains one (the STATE OF MICHIGAN / COUNTY OF
+block under MCL 700.2504, signed by the Testator and both witnesses before the
+notary), so that instruction would send clients to have a second one drawn up.
+The step below is the development team's corrected version, pending his
+decision. If he confirms his original wording, it replaces this verbatim.
+See PENDING_ATTORNEY_REVIEW.md — the only entry still open.
+--}}
+STEP 5 - Complete the Self-Proving Affidavit (Strongly Recommended)
 
-Keep the original signed Will in a secure location such as a fireproof safe or safe deposit box, and upload a copy to your EstateVault account. Do not store the original where your Personal Representative cannot reach it without a court order.
+This Will includes a self-proving affidavit on its final pages. You, your witnesses, and the notary complete it during the same signing session. This makes it easier for your Personal Representative to probate your Will without requiring witness testimony later.
 
-STEP 7 - INFORM YOUR PERSONAL REPRESENTATIVE
+STEP 6 - Store Your Original Safely
 
-Tell your Personal Representative that they have been named, confirm they are willing to serve, and tell them where the signed original is kept. Keep their contact details current.
+Store your original signed Will in a safe place, such as a safe deposit box, fireproof safe, or with your Personal Representative. Do not store it where it might be damaged, lost, or mistaken for a draft. You may also upload a copy to your EstateVault account for safekeeping.
 
-State of Michigan · Michigan EPIC,
+STEP 7 - Inform Your Personal Representative
 
-Michigan Uniform Fiduciary Access to Digital Assets Act,
+Inform your Personal Representative (the person you named to carry out your Will) where this original Will is stored and provide them with a copy. Give them any password or access information they may need to locate it.
+
+State of Michigan · Michigan EPIC
+
+Michigan Uniform Fiduciary Access to Digital Assets Act
 `;
 
 export default template;

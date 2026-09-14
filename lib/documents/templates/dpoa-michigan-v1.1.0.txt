@@ -429,6 +429,6 @@ It is included because some institutions require a signed acceptance from the Ag
 
 You may revoke this power of attorney at any time while you are able to make your own decisions. Do it in writing, give the written revocation to your Agent, and notify any institution that has been relying on the document.
 
-State of Michigan · Michigan Uniform Power of Attorney Act,
+State of Michigan · Michigan Uniform Power of Attorney Act
 
-Michigan Uniform Fiduciary Access to Digital Assets Act,
+Michigan Uniform Fiduciary Access to Digital Assets Act
