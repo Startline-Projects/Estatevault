@@ -21,8 +21,8 @@ import {
   DEFAULT_ATTORNEY_REVIEW_FEE,
   ATTORNEY_REVIEW_FEE_RANGE,
   clampAttorneyReviewFee,
-  PROMO_CODES,
 } from "@/lib/orders/pricing";
+import { getPromoCodes, promoKind, isPromoEnabled } from "@/lib/orders/promo";
 import { calculateSplit } from "@/lib/stripe-payouts";
 
 // Characterization: these are the amounts checkout charges today and the prices
@@ -47,10 +47,41 @@ describe("PRICES — fixed by CLAUDE.md (cents)", () => {
     expect(DEFAULT_ATTORNEY_REVIEW_FEE).toBe(30000);
   });
 
-  it("knows the recognized promo codes", () => {
-    expect(PROMO_CODES.FREE134).toBe("free");
-    expect(PROMO_CODES.TEST).toBe("test");
-    expect(PROMO_CODES.TPFP).toBe("free");
+  it("recognizes no promo code unless one is configured", () => {
+    const original = process.env.PROMO_CODES;
+    try {
+      delete process.env.PROMO_CODES;
+      expect(getPromoCodes()).toEqual({});
+      expect(promoKind("FREE134")).toBeNull();
+      expect(isPromoEnabled("TPFP")).toBe(false);
+    } finally {
+      if (original === undefined) delete process.env.PROMO_CODES;
+      else process.env.PROMO_CODES = original;
+    }
+  });
+
+  it("reads codes from configuration, case-insensitively", () => {
+    const original = process.env.PROMO_CODES;
+    try {
+      process.env.PROMO_CODES = "LAUNCH24:free, SMOKE:test";
+      expect(promoKind("launch24")).toBe("free");
+      expect(promoKind("SMOKE")).toBe("test");
+      expect(promoKind("NOPE")).toBeNull();
+    } finally {
+      if (original === undefined) delete process.env.PROMO_CODES;
+      else process.env.PROMO_CODES = original;
+    }
+  });
+
+  it("drops a malformed entry rather than guessing at it", () => {
+    const original = process.env.PROMO_CODES;
+    try {
+      process.env.PROMO_CODES = "GOOD:free,TYPO:fre,NOKIND";
+      expect(getPromoCodes()).toEqual({ GOOD: "free" });
+    } finally {
+      if (original === undefined) delete process.env.PROMO_CODES;
+      else process.env.PROMO_CODES = original;
+    }
   });
 });
 

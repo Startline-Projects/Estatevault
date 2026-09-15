@@ -8,7 +8,8 @@ import { checkPlanConflict } from "@/lib/orders/plan-conflict";
 import { evaluateHardStop } from "@/lib/compliance/hardStop";
 import { peekVerifiedToken } from "@/lib/auth/emailVerification";
 import { createAdminClient } from "@/lib/api/auth";
-import { PRICES, PROMO_CODES, REFERRAL_FEE_CENTS } from "@/lib/orders/pricing";
+import { PRICES, REFERRAL_FEE_CENTS } from "@/lib/orders/pricing";
+import { promoKind } from "@/lib/orders/promo";
 import { resolveReviewRouting } from "@/lib/attorney-review/routing";
 import { getPlatformDefaultReviewFee } from "@/lib/attorney-review/fee";
 import * as clientRepo from "@/lib/repos/server/clientRepo";
@@ -74,9 +75,9 @@ export async function createCheckoutSession(
     (typeof promoEmail === "string" && promoEmail) ||
     (intakeAnswers?.email as string | undefined);
 
-  const upperPromo = promoCode?.toUpperCase() as keyof typeof PROMO_CODES | undefined;
-  const isPromoFree = upperPromo && upperPromo in PROMO_CODES && PROMO_CODES[upperPromo] === "free";
-  const isTestCode = upperPromo && upperPromo in PROMO_CODES && PROMO_CODES[upperPromo] === "test";
+  const kind = promoKind(promoCode);
+  const isPromoFree = kind === "free";
+  const isTestCode = kind === "test";
 
   const supabase = createAdminClient();
 

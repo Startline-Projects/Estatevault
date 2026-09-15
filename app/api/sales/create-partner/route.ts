@@ -9,7 +9,7 @@ import { partnerUrl, normalizeBusinessDomain } from "@/lib/hosts";
 import * as partnerRepo from "@/lib/repos/server/partnerRepo";
 import * as profileRepo from "@/lib/repos/server/profileRepo";
 import * as auditLogRepo from "@/lib/repos/server/auditLogRepo";
-import { PROMO_CODES } from "@/lib/orders/pricing";
+import { isPromoEnabled } from "@/lib/orders/promo";
 
 export const POST = withRoute(async (req: NextRequest) => {
   const auth = await requireAuth(["sales_rep", "admin", "review_attorney"], req);
@@ -64,8 +64,8 @@ export const POST = withRoute(async (req: NextRequest) => {
     await auth.admin.from("profiles").update({ user_type: "partner", full_name: ownerName, phone }).eq("id", userId);
   }
 
-  const upperPromo = promoCode?.toUpperCase() as keyof typeof PROMO_CODES | undefined;
-  const validPromo = upperPromo && upperPromo in PROMO_CODES ? upperPromo : null;
+  const upperPromo = promoCode?.trim().toUpperCase() || undefined;
+  const validPromo = upperPromo && isPromoEnabled(upperPromo) ? upperPromo : null;
 
   const { data: partner, error: partnerErr } = await auth.admin.from("partners").insert({
     profile_id: userId,

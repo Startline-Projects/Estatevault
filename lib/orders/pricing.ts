@@ -45,14 +45,10 @@ export function clampAttorneyReviewFee(cents: number): number {
   );
 }
 
-export const PROMO_CODES = {
-  FREE134: "free",
-  TEST: "test",
-  TPFP: "free",
-  FREE676: "free",
-} as const;
-
-export type PromoCode = keyof typeof PROMO_CODES;
+// Promo codes moved to lib/orders/promo.ts and are now configuration, empty by
+// default. The old hardcoded set (FREE134, TPFP, FREE676, TEST) was permanently
+// active in the published source.
+export type PromoCode = string;
 
 export const PARTNER_SPLITS: Record<
   string,

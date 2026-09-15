@@ -6,7 +6,8 @@ import { withRoute } from "@/lib/api/route";
 import * as profileRepo from "@/lib/repos/server/profileRepo";
 import * as partnerRepo from "@/lib/repos/server/partnerRepo";
 import { attorneyCheckoutSchema } from "@/lib/validation/schemas";
-import { PROMO_CODES, PARTNER_PLATFORM_FEE, DEFAULT_ATTORNEY_REVIEW_FEE } from "@/lib/orders/pricing";
+import { PARTNER_PLATFORM_FEE, DEFAULT_ATTORNEY_REVIEW_FEE } from "@/lib/orders/pricing";
+import { isPromoEnabled } from "@/lib/orders/promo";
 
 export const POST = withRoute(async (request: Request) => {
   try {
@@ -33,7 +34,7 @@ export const POST = withRoute(async (request: Request) => {
       promo_code,
     } = parsed.data;
 
-    const isPromoFree = promo_code && promo_code.toUpperCase() in PROMO_CODES;
+    const isPromoFree = isPromoEnabled(promo_code);
 
     // If promo code makes it free, skip Stripe, create account directly
     if (isPromoFree) {
@@ -97,7 +98,7 @@ export const POST = withRoute(async (request: Request) => {
         resource_type: "partner",
         metadata: {
           tier,
-          promo_code: promo_code.toUpperCase(),
+          promo_code: (promo_code || "").toUpperCase(),
           bar_number,
         },
       });
@@ -111,7 +112,7 @@ export const POST = withRoute(async (request: Request) => {
           from: "EstateVault <info@estatevault.us>",
           to: salesEmail,
           subject: `New Attorney Partner (PROMO), Bar Verification Needed, ${firm_name || name}`,
-          html: `<p><strong>New attorney partner signed up with promo code ${promo_code.toUpperCase()}</strong></p>
+          html: `<p><strong>New attorney partner signed up with promo code ${(promo_code || "").toUpperCase()}</strong></p>
             <p>Name: ${name}<br>Email: ${email}<br>Phone: ${phone || "N/A"}<br>
             Firm: ${firm_name || "N/A"}<br>Bar Number: ${bar_number}<br>
             Tier: ${tier}<br>Review Fee: $${DEFAULT_ATTORNEY_REVIEW_FEE / 100} (admin-controlled)<br>
