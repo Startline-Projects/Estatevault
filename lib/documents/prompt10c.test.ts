@@ -28,13 +28,14 @@ function section(heading: string): string {
 const entries = (s: string) => (s.match(/^### /gm) ?? []).length;
 
 describe("the review queue is empty", () => {
-  it("no entry is awaiting review", () => {
-    expect(entries(section("Still pending review"))).toBe(0);
-    expect(section("Still pending review")).toContain("None. The record is closed.");
+  it("holds only the hard-stop question wording, reopened after the close", () => {
+    const pending = section("Still pending review");
+    expect(entries(pending)).toBe(1);
+    expect(pending).toContain("### Questionnaire — hard-stop questions");
   });
 
   it("the status table agrees with the entries actually filed", () => {
-    expect(REVIEW).toContain("| Entries awaiting review | none — the record is closed |");
+    expect(REVIEW).toContain("| Entries awaiting review | 1 — the hard-stop question wording |");
     expect(entries(section("APPROVED — 2026-09-13"))).toBe(27);
     expect(REVIEW).toContain("| Approved | 5 entries on 2026-09-14 · 27 on 2026-09-13 · 47 on 2026-09-02 |");
     expect(entries(section("APPROVED — 2026-09-14"))).toBe(5);
@@ -58,7 +59,7 @@ describe("the review queue is empty", () => {
   });
 
   it("says what the approval rests on", () => {
-    expect(REVIEW).toContain("# Attorney Review Record — CLOSED");
+    expect(REVIEW).toContain("# Attorney Review Record —");
     expect(REVIEW).toContain("| Approval on file | blanket email from Mo Murshed, 2026-09-14 |");
   });
 
@@ -74,11 +75,19 @@ describe("no approved wording still calls itself pending", () => {
     }
   });
 
-  it("no questionnaire component carries one either", () => {
+  it("the only questionnaire component marked pending is the one with an open entry", () => {
     const dir = join(ROOT, "components", "intake");
-    for (const f of readdirSync(dir).filter((n) => n.endsWith(".tsx"))) {
-      expect(readFileSync(join(dir, f), "utf8"), f).not.toContain("PENDING ATTORNEY APPROVAL");
-    }
+    const marked = readdirSync(dir)
+      .filter((n) => n.endsWith(".tsx"))
+      .filter((f) => readFileSync(join(dir, f), "utf8").includes("PENDING ATTORNEY APPROVAL"));
+    expect(marked).toEqual(["HardStopQuestions.tsx"]);
+    // and that marker has a matching entry in the file
+    expect(section("Still pending review")).toContain("HardStopQuestions.tsx");
+  });
+
+  it("the reopening is explained in the header, not just in the table", () => {
+    expect(REVIEW).toContain("Reopened 2026-09-15");
+    expect(REVIEW).toContain("anything client-facing written after the close goes back to him");
   });
 
   it("no questionnaire page still says a string is unreviewed", () => {

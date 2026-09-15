@@ -7,6 +7,9 @@ export interface WillIntake {
   maritalStatus: string;
   hasMinorChildren: string;
   hasSpecialNeedsDependent: string;
+  wantsIrrevocableTrust: string;
+  hasMedicaidPlanning: string;
+  hasEstateDispute: string;
   executorName: string;
   executorRelationship: string;
   successorExecutorName: string;
@@ -57,6 +60,9 @@ export const initialWillIntake: WillIntake = {
   maritalStatus: "",
   hasMinorChildren: "",
   hasSpecialNeedsDependent: "",
+  wantsIrrevocableTrust: "",
+  hasMedicaidPlanning: "",
+  hasEstateDispute: "",
   executorName: "",
   executorRelationship: "",
   successorExecutorName: "",

@@ -19,6 +19,8 @@ import { findResumePoint } from "@/lib/intake/incomplete-steps";
 import { BeneficiaryContingency, contingenciesComplete, CONTINGENCY_OPTIONS } from "@/components/intake/BeneficiaryContingency";
 import { JointTrusteeAuthority, JOINT_TRUSTEE_AUTHORITY_OPTIONS } from "@/components/intake/JointTrusteeAuthority";
 import { FuneralPreference, FUNERAL_PREFERENCE_OPTIONS } from "@/components/intake/FuneralPreference";
+import { HardStopQuestions, hardStopQuestionsAnswered } from "@/components/intake/HardStopQuestions";
+import { evaluateHardStop } from "@/lib/compliance/hardStop";
 import {
   PoaStep,
   PadStep,
@@ -176,7 +178,7 @@ export default function TrustPage() {
       case "residency":
         return intake.state === "Michigan" && intake.maritalStatus !== "";
       case "about":
-        return intake.firstName.trim() !== "" && intake.lastName.trim() !== "" && intake.dateOfBirth !== "" && intake.dateOfBirth <= maxDob && intake.city.trim() !== "" && intake.hasMinorChildren !== "" && intake.hasSpecialNeedsDependent !== "";
+        return intake.firstName.trim() !== "" && intake.lastName.trim() !== "" && intake.dateOfBirth !== "" && intake.dateOfBirth <= maxDob && intake.city.trim() !== "" && intake.hasMinorChildren !== "" && intake.hasSpecialNeedsDependent !== "" && hardStopQuestionsAnswered(intake);
       case "trustee":
         if (intake.isJointTrust === "") return false;
         if (intake.isJointTrust === "Yes" && intake.secondGrantorName.trim() === "") return false;
@@ -223,10 +225,12 @@ export default function TrustPage() {
 
   function handleContinue() {
     if (!isCardComplete() || hasPartialName) return;
-    // Hard stop (Core Rule 4) — special-needs dependent halts generation. The
-    // referral (with the lead's contact details) is logged by HardStopCard's
-    // contact form, so the partner can see WHO applied.
-    if (intake.hasSpecialNeedsDependent === "Yes") {
+    // Hard stop (Core Rule 4). Asks the shared evaluator rather than testing one
+    // field, so all four triggers halt here and the screen can never drift from
+    // what the server gates on. The referral (with the lead's contact details)
+    // is logged by HardStopCard's contact form, so the partner can see WHO
+    // applied.
+    if (evaluateHardStop(intake as unknown as Record<string, unknown>).halted) {
       setHardStopped(true);
       return;
     }
@@ -390,6 +394,7 @@ export default function TrustPage() {
             <div className="mt-5"><QuestionLabel required>City of residence</QuestionLabel><CityAutocomplete value={intake.city} onChange={(v) => update({ city: v })} placeholder="e.g. Grand Rapids" /></div>
             <div className="mt-5"><QuestionLabel required>Do you have minor children (under 18)?</QuestionLabel><YesNoTiles value={intake.hasMinorChildren} onChange={(v) => update({ hasMinorChildren: v, ...(v === "No" ? { guardianName: "", guardianRelationship: "", successorGuardianName: "" } : {}) })} /></div>
             <div className="mt-5"><QuestionLabel required>Do you have a dependent with special needs?</QuestionLabel><YesNoTiles value={intake.hasSpecialNeedsDependent} onChange={(v) => update({ hasSpecialNeedsDependent: v })} /></div>
+            <HardStopQuestions intake={intake} onChange={(patch) => update(patch)} />
             <div className="mt-5">
               <QuestionLabel>Trust name (optional)</QuestionLabel>
               <p className="mb-2 text-xs text-charcoal/50">Leave blank to use the default: &quot;The [Your Name] Revocable Living Trust&quot;</p>
@@ -765,6 +770,10 @@ export default function TrustPage() {
               <Row label="Date of birth" value={intake.dateOfBirth} />
               <Row label="City" value={intake.city} />
               <Row label="Minor children" value={intake.hasMinorChildren} />
+              <Row label="Special-needs dependent" value={intake.hasSpecialNeedsDependent} />
+              <Row label="Irrevocable trust" value={intake.wantsIrrevocableTrust} />
+              <Row label="Medicaid planning" value={intake.hasMedicaidPlanning} />
+              <Row label="Estate dispute" value={intake.hasEstateDispute} />
             </Section>
 
             <Section k="trust" title="Trust & Trustees" target="trustee">

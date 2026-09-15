@@ -1,12 +1,8 @@
-// Core Rule 4 — hard stops. A special-needs dependent must halt document
-// generation and route the family to a licensed attorney. This is the single
-// source of truth, used by the intake pages, the checkout route, and the
-// Stripe webhook. Hardcoded, no override (a client flag can never relax it).
-//
-// Note: irrevocable-trust is intentionally NOT enforced here — the platform
-// only ever generates a *revocable* trust, so there is no intake path that can
-// produce one. See BUG-3. If an irrevocable-trust intake question is ever
-// added, extend this predicate so all callers pick it up.
+// Core Rule 4 — hard stops. Four situations must halt document generation and
+// route the family to a licensed attorney. This is the single source of truth,
+// used by the intake pages, the checkout route, the quiz personalization route
+// and the Stripe webhook. Hardcoded, no override (a client flag can never
+// relax it).
 
 export type HardStopResult = {
   halted: boolean;
@@ -14,10 +10,25 @@ export type HardStopResult = {
 };
 
 /**
- * Re-derive hard stops from raw intake answers. Accepts both the new
- * will/trust intake shape (`hasSpecialNeedsDependent`) and the legacy quiz
- * answer keys (`specialNeedsChildren`, `additionalSituation`) so every entry
- * point is covered regardless of where the answers came from.
+ * The canonical reason strings. Every caller reports a hard stop using one of
+ * these — the quiz route used to have its own parallel vocabulary
+ * ("special_needs_dependent", "special_needs_family_member"), so the same
+ * situation was named differently depending on which door the client came in.
+ */
+export const HARD_STOP_REASONS = {
+  specialNeeds: "Special-needs dependent",
+  irrevocableTrust: "Irrevocable trust",
+  medicaid: "Medicaid planning",
+  estateDispute: "Active estate dispute",
+} as const;
+
+export type HardStopReason = (typeof HARD_STOP_REASONS)[keyof typeof HARD_STOP_REASONS];
+
+/**
+ * Re-derive hard stops from raw intake answers. Accepts the will/trust intake
+ * shape, the legacy marketing-quiz answer keys, and the snake_case shape the
+ * webhook reads back off the order, so every entry point is covered regardless
+ * of where the answers came from.
  */
 export function evaluateHardStop(
   intake: Record<string, unknown> | null | undefined,
@@ -25,25 +36,56 @@ export function evaluateHardStop(
   const reasons: string[] = [];
   if (!intake) return { halted: false, reasons };
 
-  const yes = (v: unknown) =>
-    typeof v === "string" && v.trim().toLowerCase() === "yes";
+  const yes = (...keys: string[]) =>
+    keys.some((k) => {
+      const v = intake[k];
+      return typeof v === "string" && v.trim().toLowerCase() === "yes";
+    });
 
-  // New will/trust intake question.
-  if (yes(intake.hasSpecialNeedsDependent)) {
-    reasons.push("Special-needs dependent");
-  }
-
-  // Legacy marketing-quiz answers (B2 / G1).
-  if (yes(intake.specialNeedsChildren)) {
-    reasons.push("Special-needs dependent");
-  }
+  // 1. Special-needs dependent. Three input shapes: the will/trust question,
+  //    the legacy quiz question (B2), and the legacy quiz free-choice (G1).
   if (
-    typeof intake.additionalSituation === "string" &&
+    yes("hasSpecialNeedsDependent", "has_special_needs_dependent", "specialNeedsChildren") ||
     intake.additionalSituation === "I have a family member with special needs"
   ) {
-    reasons.push("Special-needs dependent");
+    reasons.push(HARD_STOP_REASONS.specialNeeds);
+  }
+
+  // 2. Irrevocable trust. The platform only ever drafts a revocable trust, so
+  //    a client who needs an irrevocable one needs an attorney, not this
+  //    questionnaire. (Was previously not enforced at all — see BUG-3.)
+  if (yes("wantsIrrevocableTrust", "wants_irrevocable_trust", "irrevocableTrust")) {
+    reasons.push(HARD_STOP_REASONS.irrevocableTrust);
+  }
+
+  // 3. Medicaid planning. Transfer timing and look-back rules change what the
+  //    documents should say; generating from a questionnaire could cost the
+  //    client their eligibility.
+  if (yes("hasMedicaidPlanning", "has_medicaid_planning", "medicaidPlanning")) {
+    reasons.push(HARD_STOP_REASONS.medicaid);
+  }
+
+  // 4. Active estate dispute. A contested estate is litigation, not document
+  //    preparation.
+  if (yes("hasEstateDispute", "has_estate_dispute", "estateDispute")) {
+    reasons.push(HARD_STOP_REASONS.estateDispute);
   }
 
   const unique = Array.from(new Set(reasons));
   return { halted: unique.length > 0, reasons: unique };
+}
+
+/**
+ * Quiz-route shim: the first reason, or null. The marketing quiz reports a
+ * single reason in its JSON response rather than a list.
+ *
+ * Replaces the old detectQuizHardStop in lib/validation/schemas.ts, which was a
+ * second, divergent evaluator that knew nothing about the will/trust intake
+ * shape or the three triggers added here.
+ */
+export function firstHardStopReason(
+  intake: Record<string, unknown> | null | undefined,
+): string | null {
+  const { reasons } = evaluateHardStop(intake);
+  return reasons[0] ?? null;
 }

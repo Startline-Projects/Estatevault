@@ -18,6 +18,8 @@ import QuestionLabel from "@/components/quiz/QuestionLabel";
 import { findResumePoint } from "@/lib/intake/incomplete-steps";
 import { BeneficiaryContingency, contingenciesComplete, CONTINGENCY_OPTIONS } from "@/components/intake/BeneficiaryContingency";
 import { FuneralPreference, FUNERAL_PREFERENCE_OPTIONS } from "@/components/intake/FuneralPreference";
+import { HardStopQuestions, hardStopQuestionsAnswered } from "@/components/intake/HardStopQuestions";
+import { evaluateHardStop } from "@/lib/compliance/hardStop";
 import {
   PoaStep,
   PadStep,
@@ -164,7 +166,8 @@ export default function WillPage() {
           intake.dateOfBirth <= maxDob &&
           intake.city.trim() !== "" &&
           intake.hasMinorChildren !== "" &&
-          intake.hasSpecialNeedsDependent !== ""
+          intake.hasSpecialNeedsDependent !== "" &&
+          hardStopQuestionsAnswered(intake)
         );
       case "executor":
         return (
@@ -215,10 +218,12 @@ export default function WillPage() {
 
   function handleContinue() {
     if (!isCardComplete() || hasPartialName) return;
-    // Hard stop (Core Rule 4) — special-needs dependent halts generation. The
-    // referral (with the lead's contact details) is logged by HardStopCard's
-    // contact form, so the partner can see WHO applied.
-    if (intake.hasSpecialNeedsDependent === "Yes") {
+    // Hard stop (Core Rule 4). Asks the shared evaluator rather than testing one
+    // field, so all four triggers halt here and the screen can never drift from
+    // what the server gates on. The referral (with the lead's contact details)
+    // is logged by HardStopCard's contact form, so the partner can see WHO
+    // applied.
+    if (evaluateHardStop(intake as unknown as Record<string, unknown>).halted) {
       setHardStopped(true);
       return;
     }
@@ -450,6 +455,7 @@ export default function WillPage() {
                 onChange={(v) => update({ hasSpecialNeedsDependent: v })}
               />
             </div>
+            <HardStopQuestions intake={intake} onChange={(patch) => update(patch)} />
           </>
         );
 
@@ -781,6 +787,10 @@ export default function WillPage() {
               <Row label="Date of birth" value={intake.dateOfBirth} />
               <Row label="City" value={intake.city} />
               <Row label="Minor children" value={intake.hasMinorChildren} />
+              <Row label="Special-needs dependent" value={intake.hasSpecialNeedsDependent} />
+              <Row label="Irrevocable trust" value={intake.wantsIrrevocableTrust} />
+              <Row label="Medicaid planning" value={intake.hasMedicaidPlanning} />
+              <Row label="Estate dispute" value={intake.hasEstateDispute} />
             </Section>
 
             <Section k="executor" title="Executor" target="executor">

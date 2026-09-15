@@ -78,6 +78,18 @@ const TRUSTEE_REQUIREMENTS: FieldRequirement[] = [
   },
 ];
 
+/**
+ * Core Rule 4 hard stops. Three of the four triggers had no question until
+ * they were added; a session saved before then reaches checkout having never
+ * been asked, and the server would let it through because an unanswered
+ * trigger is not a "Yes". Route those sessions back rather than assuming No.
+ */
+const HARD_STOP_REQUIREMENTS: FieldRequirement[] = [
+  { field: "wantsIrrevocableTrust", step: "about", isAnswered: nonEmptyString("wantsIrrevocableTrust") },
+  { field: "hasMedicaidPlanning", step: "about", isAnswered: nonEmptyString("hasMedicaidPlanning") },
+  { field: "hasEstateDispute", step: "about", isAnswered: nonEmptyString("hasEstateDispute") },
+];
+
 const BENEFICIARY_REQUIREMENTS: FieldRequirement[] = [
   { field: "beneficiaries[].contingency", step: "beneficiaries", isAnswered: everyBeneficiaryHasContingency },
 ];
@@ -102,8 +114,8 @@ const PAD_REQUIREMENTS: FieldRequirement[] = [
 // Ordered by where the steps appear, so a client walks forward through
 // everything that is missing rather than being bounced backwards.
 export const FLOW_REQUIREMENTS: Record<IntakeFlow, FieldRequirement[]> = {
-  will: [...BENEFICIARY_REQUIREMENTS, ...POA_REQUIREMENTS, ...PAD_REQUIREMENTS, ...FINAL_WISHES_REQUIREMENTS],
-  trust: [...TRUSTEE_REQUIREMENTS, ...BENEFICIARY_REQUIREMENTS, ...POA_REQUIREMENTS, ...PAD_REQUIREMENTS, ...FINAL_WISHES_REQUIREMENTS],
+  will: [...HARD_STOP_REQUIREMENTS, ...BENEFICIARY_REQUIREMENTS, ...POA_REQUIREMENTS, ...PAD_REQUIREMENTS, ...FINAL_WISHES_REQUIREMENTS],
+  trust: [...HARD_STOP_REQUIREMENTS, ...TRUSTEE_REQUIREMENTS, ...BENEFICIARY_REQUIREMENTS, ...POA_REQUIREMENTS, ...PAD_REQUIREMENTS, ...FINAL_WISHES_REQUIREMENTS],
 };
 
 export interface ResumePoint {

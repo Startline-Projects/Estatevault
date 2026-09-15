@@ -129,15 +129,11 @@ export const quizAnswersSchema = z.object({
   shareWithAdvisor: z.boolean(),
 });
 
-export function detectQuizHardStop(answers: z.infer<typeof quizAnswersSchema>): string | null {
-  if (answers.specialNeedsChildren === HARD_STOP_VALUES.specialNeedsChildren) {
-    return "special_needs_dependent";
-  }
-  if (answers.additionalSituation === HARD_STOP_VALUES.additionalSituation) {
-    return "special_needs_family_member";
-  }
-  return null;
-}
+// detectQuizHardStop used to live here: a second evaluator with its own reason
+// vocabulary that knew nothing about the will/trust intake shape. It was folded
+// into lib/compliance/hardStop.ts so there is one evaluator and one set of
+// reason strings. Use firstHardStopReason() for the quiz route's single-reason
+// response, evaluateHardStop() everywhere else.
 
 // ---- Checkout (Phase 3) ----
 
@@ -195,6 +191,11 @@ const willIntakeSchema = z.object({
   state: z.string().min(1).max(50),
   maritalStatus: MARITAL_STATUS,
   hasMinorChildren: YES_NO,
+  // Core Rule 4 hard stops. A "Yes" to any of these halts generation, so the
+  // schema requires an answer rather than letting one default to "No".
+  wantsIrrevocableTrust: YES_NO,
+  hasMedicaidPlanning: YES_NO,
+  hasEstateDispute: YES_NO,
   executorName: z.string().min(1).max(200),
   executorRelationship: RELATIONSHIP,
   successorExecutorName: z.string().max(200),
@@ -258,6 +259,11 @@ const trustIntakeSchema = z.object({
   state: z.string().min(1).max(50),
   maritalStatus: MARITAL_STATUS,
   trustName: z.string().max(300),
+  // Core Rule 4 hard stops. A "Yes" to any of these halts generation, so the
+  // schema requires an answer rather than letting one default to "No".
+  wantsIrrevocableTrust: YES_NO,
+  hasMedicaidPlanning: YES_NO,
+  hasEstateDispute: YES_NO,
   primaryTrustee: z.enum(["Myself", "Someone else"]),
   trusteeName: z.string().max(200),
   successorTrusteeName: z.string().min(1).max(200),

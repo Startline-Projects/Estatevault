@@ -1,15 +1,17 @@
-# Attorney Review Record — CLOSED
+# Attorney Review Record — ONE ENTRY OPEN
 
 Client-facing prose in the EstateVault documents that was **written by the
 development team**, not supplied verbatim by the reviewing attorney.
 
-**Nothing here is awaiting review.** Every entry was signed off by Mo Murshed
-across four rounds, the last of them a blanket email approval on 2026-09-14
-covering both review packages and everything written after them. Keep the email
-with this file: it is what the ☑ marks below rest on.
+**Reopened 2026-09-15 with one entry.** The record had closed: every entry was
+signed off by Mo Murshed across four rounds, the last a blanket email approval
+on 2026-09-14 covering both review packages and everything written after them.
+Keep that email with this file — it is what the ☑ marks below rest on.
 
-This file is now a record, not a queue. Anything client-facing written from here
-on belongs in a new section at the top, marked pending, and goes back to him.
+A compliance audit then found that three of Core Rule 4's four hard stops had no
+question behind them and halted nothing. The questions were written and wired;
+their wording is the one open entry, filed under the rule this file sets for
+itself — anything client-facing written after the close goes back to him.
 
 This file is the review source of truth. Prose markers are deliberately **not**
 placed inside the `.txt` templates, because a marker inside a template renders
@@ -30,9 +32,9 @@ file is rendered.
 
 | | |
 |---|---|
-| Entries awaiting review | none — the record is closed |
+| Entries awaiting review | 1 — the hard-stop question wording |
 | Approval on file | blanket email from Mo Murshed, 2026-09-14 |
-| Closed | Prompt 10E — final edit of the engagement |
+| Reopened | 2026-09-15 — audit fix pass, Core Rule 4 questions |
 | Approved | 5 entries on 2026-09-14 · 27 on 2026-09-13 · 47 on 2026-09-02 |
 | Withdrawn | 2 entries — the questions no longer exist |
 | Reviewing attorney | Mo Murshed |
@@ -45,7 +47,32 @@ file is rendered.
 
 ## Still pending review
 
-None. The record is closed.
+One entry, opened after the record was closed. See the note in the header.
+
+### Questionnaire — hard-stop questions (will flow and trust flow)
+
+**Where:** Three new questions on the About You step, beside the existing special-needs question
+
+**Source file:** `components/intake/HardStopQuestions.tsx`
+
+**Text:**
+
+```text
+Are you looking to create an irrevocable trust?
+An irrevocable trust generally cannot be changed or cancelled once it is signed. This platform prepares revocable trusts, which you can change at any time.
+
+Are you planning for Medicaid or long-term care costs?
+Medicaid has rules about how and when assets can be transferred. Those rules affect what your documents should say.
+
+Is there a disagreement in your family about your estate?
+For example, a contested will, a dispute over who should inherit, or a court matter that is already underway.
+```
+
+**Why it was written:** Core Rule 4 names four hard stops. Only one — special-needs dependent — had a question behind it; the other three were promised on the marketing pages and enforced nowhere, because nothing asked. These are the questions. Each maps 1:1 to a branch of `evaluateHardStop()`, a "Yes" to any of them halts generation at both server gates, none has a default, and the step cannot be completed unanswered. The wording and the explanatory line under each question are the development team's.
+
+**Worth his attention specifically:** each explanatory line states why the situation is out of scope, which is the closest this questionnaire comes to saying something legal. The irrevocable-trust line asserts that such a trust "generally cannot be changed or cancelled once it is signed"; the Medicaid line refers to transfer timing rules without naming the look-back period.
+
+**Decision:** ☐ approved as written ☐ replace with attorney wording
 
 ---
 

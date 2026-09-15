@@ -29,6 +29,7 @@ afterEach(() => {
 function answers(beneficiaries: Array<Record<string, unknown>>) {
   return {
     firstName: "Ahmed", lastName: "Hassan", city: "Dearborn", state: "Michigan",
+    wantsIrrevocableTrust: "No", hasMedicaidPlanning: "No", hasEstateDispute: "No",
     executorName: "Raga Hassan",
     executorRelationship: "Spouse/Partner",
     successorTrusteeName: "Karim Hassan", successorTrusteeRelationship: "Sibling",
@@ -177,8 +178,10 @@ describe("the resume mechanism routes an old session to the beneficiaries step",
     patientAdvocateName: "Raga Hassan", patientAdvocateRelationship: "Spouse/Partner",
     organDonation: "Yes",
     funeralPreference: "family_decides",
-    // Answered so the trust flow's own trustee-step requirements do not take
-    // precedence; this test is about the contingency question.
+    // Answered so the trust flow's own trustee-step requirements, and the
+    // hard-stop questions that precede every step, do not take precedence;
+    // this test is about the contingency question.
+    wantsIrrevocableTrust: "No", hasMedicaidPlanning: "No", hasEstateDispute: "No",
     isJointTrust: "No",
   };
 
