@@ -6,6 +6,7 @@ import { calculateSplit } from "@/lib/stripe-payouts";
 import { AFFILIATE_COOKIE } from "@/lib/affiliate";
 import { checkPlanConflict } from "@/lib/orders/plan-conflict";
 import { evaluateHardStop } from "@/lib/compliance/hardStop";
+import { peekVerifiedToken } from "@/lib/auth/emailVerification";
 import { createAdminClient } from "@/lib/api/auth";
 import { PRICES, PROMO_CODES, REFERRAL_FEE_CENTS } from "@/lib/orders/pricing";
 import { resolveReviewRouting } from "@/lib/attorney-review/routing";
@@ -49,6 +50,12 @@ export type CheckoutInput = {
   complexityReasons?: string[];
   declinedAttorneyReview?: boolean;
   confirmOverride?: boolean;
+  /**
+   * Proof that the caller controls `email`, minted by the email-verification
+   * flow. Only consulted on the free-promo path, and only to decide whether a
+   * guest may claim an email that already has an account.
+   */
+  verifiedToken?: string;
 };
 
 export async function createCheckoutSession(
@@ -528,7 +535,7 @@ async function handleFreePromo(
   orderId: string,
   clientId: string,
 ): Promise<NextResponse> {
-  const { userId, intakeAnswers, promoCode, email: promoEmail } = input;
+  const { userId, intakeAnswers, promoCode, email: promoEmail, verifiedToken } = input;
 
   const emailAddr = (promoEmail || intakeAnswers.email) as string | undefined;
   if (!emailAddr) {
@@ -546,44 +553,57 @@ async function handleFreePromo(
   const tempPassword = generateTempPassword();
 
   if (!profileId) {
-    const { data: existingUser } = await profileRepo.findIdByEmail(supabase, emailAddr);
-    if (existingUser) {
-      profileId = existingUser.id;
-      await supabase.auth.admin.updateUserById(existingUser.id, { password: tempPassword });
-    } else {
-      const fullName = `${(intakeAnswers.firstName as string) || ""} ${(intakeAnswers.lastName as string) || ""}`.trim();
-      const { data: authMatch } = await supabase
-        .rpc("find_auth_user_by_email", { lookup_email: emailAddr })
-        .returns<{ id: string; email: string }[]>()
-        .maybeSingle();
+    const fullName = `${(intakeAnswers.firstName as string) || ""} ${(intakeAnswers.lastName as string) || ""}`.trim();
 
-      if (authMatch) {
-        profileId = authMatch.id;
-        await supabase.auth.admin.updateUserById(authMatch.id, { password: tempPassword });
+    // An anonymous caller may CREATE an account for an unclaimed email, never
+    // touch one that already exists. This branch used to reset the password of
+    // any account whose address the caller typed in, which locked the real
+    // owner out of their vault. Claiming an existing account now needs the same
+    // mailbox proof /api/auth/set-password requires.
+    const { data: existingUser } = await profileRepo.findIdByEmail(supabase, emailAddr);
+    const { data: authMatch } = await supabase
+      .rpc("find_auth_user_by_email", { lookup_email: emailAddr })
+      .returns<{ id: string; email: string }[]>()
+      .maybeSingle();
+    const existingId = existingUser?.id ?? authMatch?.id ?? null;
+
+    if (existingId) {
+      const proved =
+        !!verifiedToken && (await peekVerifiedToken(emailAddr, verifiedToken));
+      if (!proved) {
+        // Neutral on purpose: the same message whether or not the address has
+        // an account, so this cannot be used to enumerate customers.
+        return NextResponse.json(
+          { error: "Please sign in to continue with this email address." },
+          { status: 409 },
+        );
+      }
+      profileId = existingId;
+      if (!existingUser) {
         await profileRepo.upsert(supabase, {
-          id: authMatch.id,
+          id: existingId,
           email: emailAddr,
           full_name: fullName,
           user_type: "client",
         });
-      } else {
-        const { data: newUser, error: createErr } = await supabase.auth.admin.createUser({
+      }
+    } else {
+      const { data: newUser, error: createErr } = await supabase.auth.admin.createUser({
+        email: emailAddr,
+        password: tempPassword,
+        email_confirm: true,
+        user_metadata: { full_name: fullName, user_type: "client" },
+      });
+      if (newUser?.user) {
+        profileId = newUser.user.id;
+        await profileRepo.upsert(supabase, {
+          id: newUser.user.id,
           email: emailAddr,
-          password: tempPassword,
-          email_confirm: true,
-          user_metadata: { full_name: fullName, user_type: "client" },
+          full_name: fullName,
+          user_type: "client",
         });
-        if (newUser?.user) {
-          profileId = newUser.user.id;
-          await profileRepo.upsert(supabase, {
-            id: newUser.user.id,
-            email: emailAddr,
-            full_name: fullName,
-            user_type: "client",
-          });
-        } else if (createErr) {
-          console.error("Failed to create auth user:", createErr.message);
-        }
+      } else if (createErr) {
+        console.error("Failed to create auth user:", createErr.message);
       }
     }
     if (profileId) {
@@ -609,5 +629,7 @@ async function handleFreePromo(
     metadata: { product_type: config.productType, promo_code: promoCode, email: emailAddr },
   });
 
-  return NextResponse.json({ free: true, orderId, email: emailAddr, userId: profileId });
+  // No profile UUID in the payload: an anonymous caller should learn nothing
+  // about the account behind an email address.
+  return NextResponse.json({ free: true, orderId, email: emailAddr });
 }
