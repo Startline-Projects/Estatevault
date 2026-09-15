@@ -26,7 +26,10 @@ vi.mock("@/lib/auth/emailVerification", () => ({
 
 vi.mock("@/lib/rate-limit", () => ({
   authRateLimit: { limit: rateLimit },
+  authIpRateLimit: { limit: rateLimit },
+  recoveryRateLimit: { limit: rateLimit },
   checkoutRateLimit: { limit: rateLimit },
+  clientIp: () => "203.0.113.7",
 }));
 
 /**
@@ -157,6 +160,15 @@ describe("POST /api/auth/set-password requires mailbox proof", () => {
 
   it("is still refused when the rate limiter is exhausted", async () => {
     rateLimit.mockResolvedValue({ success: false });
+    const res = await callSetPassword({ email: KNOWN_ACCOUNT, password: "pw12345678", verifiedToken: "t" });
+    expect(res.status).toBe(429);
+    expect(updateUserById).not.toHaveBeenCalled();
+  });
+
+  it("limits by source address as well as by target email", async () => {
+    peekVerifiedToken.mockResolvedValue(true);
+    // per-email budget fine, source budget exhausted
+    rateLimit.mockResolvedValueOnce({ success: true }).mockResolvedValueOnce({ success: false });
     const res = await callSetPassword({ email: KNOWN_ACCOUNT, password: "pw12345678", verifiedToken: "t" });
     expect(res.status).toBe(429);
     expect(updateUserById).not.toHaveBeenCalled();
