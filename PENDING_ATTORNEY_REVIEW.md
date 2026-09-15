@@ -72,6 +72,27 @@ For example, a contested will, a dispute over who should inherit, or a court mat
 
 **Worth his attention specifically:** each explanatory line states why the situation is out of scope, which is the closest this questionnaire comes to saying something legal. The irrevocable-trust line asserts that such a trust "generally cannot be changed or cancelled once it is signed"; the Medicaid line refers to transfer timing rules without naming the look-back period.
 
+**Same entry, the referral screen.** The card a client lands on after a hard stop carried one fixed message about special-needs planning, which was shown whichever trigger fired. It now says why this particular situation needs an attorney:
+
+```text
+An irrevocable trust needs an attorney.
+An irrevocable trust generally cannot be undone once it is signed, so it is drafted by a licensed attorney rather than from a questionnaire. Share your details and an experienced Michigan attorney will reach out.
+
+Medicaid planning needs an attorney.
+Planning for Medicaid or long-term care involves timing rules that change what your documents should say, and getting them wrong can affect your eligibility. Share your details and an experienced Michigan attorney will reach out.
+
+A disputed estate needs an attorney.
+When there is already a disagreement about an estate, documents prepared from a questionnaire can make it harder to resolve. Share your details and an experienced Michigan attorney will reach out.
+
+(fallback, if a future trigger has no copy of its own)
+Your situation needs an attorney.
+Based on your answers, your situation calls for advice this platform cannot give. Share your details and an experienced Michigan attorney will reach out.
+```
+
+The existing special-needs heading and body are unchanged and are the ones he has already approved.
+
+**Source file (referral screen):** `components/quiz/HardStopCard.tsx`
+
 **Decision:** ☐ approved as written ☐ replace with attorney wording
 
 ---

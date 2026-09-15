@@ -36,6 +36,8 @@ export default function WillPage() {
   const [partnerParam, setPartnerParam] = useState("");
   const [stage, setStage] = useState<Stage>("acknowledgment");
   const [hardStopped, setHardStopped] = useState(false);
+  // Which trigger fired, so the referral card can say why.
+  const [hardStopReasons, setHardStopReasons] = useState<string[]>([]);
   const [userId, setUserId] = useState<string | null>(null);
 
   // Intake
@@ -223,7 +225,9 @@ export default function WillPage() {
     // what the server gates on. The referral (with the lead's contact details)
     // is logged by HardStopCard's contact form, so the partner can see WHO
     // applied.
-    if (evaluateHardStop(intake as unknown as Record<string, unknown>).halted) {
+    const hardStop = evaluateHardStop(intake as unknown as Record<string, unknown>);
+    if (hardStop.halted) {
+      setHardStopReasons(hardStop.reasons);
       setHardStopped(true);
       return;
     }
@@ -304,7 +308,7 @@ export default function WillPage() {
   if (hardStopped) {
     return (
       <PartnerThemedShell showHeader={false}>
-        <HardStopCard partnerId={partnerParam || undefined} reason="Special-needs dependent" />
+        <HardStopCard partnerId={partnerParam || undefined} reason={hardStopReasons[0]} />
       </PartnerThemedShell>
     );
   }

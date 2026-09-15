@@ -117,7 +117,8 @@ describe("both server gates ask the evaluator", () => {
   it("the questionnaire screens ask the evaluator rather than one field", () => {
     for (const page of ["app/will/page.tsx", "app/trust/page.tsx"]) {
       const src = read(page);
-      expect(src, page).toContain("evaluateHardStop(intake as unknown as Record<string, unknown>).halted");
+      expect(src, page).toContain("evaluateHardStop(intake as unknown as Record<string, unknown>)");
+      expect(src, page).toContain("setHardStopReasons(hardStop.reasons)");
       expect(src, page).not.toContain('if (intake.hasSpecialNeedsDependent === "Yes") {');
     }
   });
