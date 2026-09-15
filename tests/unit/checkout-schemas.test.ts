@@ -179,10 +179,20 @@ describe("trustCheckoutSchema", () => {
 });
 
 describe("amendmentCheckoutSchema", () => {
-  it("requires userId + changeType + description", () => {
-    expect(amendmentCheckoutSchema.safeParse({ userId: "abc", changeType: "x", description: "y" }).success).toBe(true);
-    expect(amendmentCheckoutSchema.safeParse({ userId: "", changeType: "x", description: "y" }).success).toBe(false);
-    expect(amendmentCheckoutSchema.safeParse({ userId: "abc", changeType: "", description: "y" }).success).toBe(false);
+  it("requires userId + changeType + description + the signed acknowledgment", () => {
+    const valid = { userId: "abc", changeType: "x", description: "y", acknowledgmentSigned: true as const };
+    expect(amendmentCheckoutSchema.safeParse(valid).success).toBe(true);
+    expect(amendmentCheckoutSchema.safeParse({ ...valid, userId: "" }).success).toBe(false);
+    expect(amendmentCheckoutSchema.safeParse({ ...valid, changeType: "" }).success).toBe(false);
+  });
+});
+
+describe("Core Rule 3 — the acknowledgment cannot be skipped", () => {
+  it("rejects an amendment with no acknowledgment, or a falsified one", () => {
+    const base = { userId: "abc", changeType: "x", description: "y" };
+    expect(amendmentCheckoutSchema.safeParse(base).success).toBe(false);
+    expect(amendmentCheckoutSchema.safeParse({ ...base, acknowledgmentSigned: false }).success).toBe(false);
+    expect(amendmentCheckoutSchema.safeParse({ ...base, acknowledgmentSigned: "yes" }).success).toBe(false);
   });
 });
 

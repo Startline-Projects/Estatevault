@@ -32,6 +32,11 @@ vi.mock("@/lib/api/auth", () => ({
 
 vi.mock("@/lib/repos/server/clientRepo", () => ({
   getIdByProfile: (...a: unknown[]) => getIdByProfile(...a),
+  // The route gained a vault-expiry gate after this test was written; without
+  // these two the mock throws before the ownership check it is testing.
+  getSubscriptionById: () =>
+    Promise.resolve({ data: { vault_subscription_status: "active", vault_subscription_expiry: null } }),
+  hasVaultAccess: () => true,
 }));
 vi.mock("@/lib/repos/server/farewellRepo", () => ({
   getById: (...a: unknown[]) => getById(...a),
