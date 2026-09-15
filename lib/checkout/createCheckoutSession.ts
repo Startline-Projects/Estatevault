@@ -229,10 +229,17 @@ export async function createCheckoutSession(
   }
 
   // ── AMOUNTS + SPLITS ──────────────────────────────────
-  // Attorney review fee is admin-controlled (platform default in app_settings,
-  // optional per-partner override on partners.custom_review_fee — both clamped
-  // to ATTORNEY_REVIEW_FEE_RANGE). Charge exactly what routing will transfer so
-  // collected == paid out (BUG-4). Partners cannot set this.
+  // The attorney review fee charged here is the admin-controlled platform
+  // default from app_settings, clamped to ATTORNEY_REVIEW_FEE_RANGE by
+  // getPlatformDefaultReviewFee. Charge exactly what routing will transfer so
+  // collected == paid out (BUG-4).
+  //
+  // partners.custom_review_fee is NOT read. EstateVault runs a single in-house
+  // reviewing attorney, so resolveReviewRouting sends every review — and every
+  // fee — to EstateVault regardless of the partner. The column and
+  // clampAttorneyReviewFee are kept for the post-pilot decision about attorney
+  // partners with their own reviewers; until then nothing a partner or an admin
+  // puts in that column changes what a client is charged.
   let attorneyAmount = 0;
   if (attorneyReview) {
     const platformDefault = await getPlatformDefaultReviewFee(supabase);
