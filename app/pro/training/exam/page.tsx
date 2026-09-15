@@ -2,12 +2,11 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { getMe, certifyMe } from "@/lib/api-client/partner";
+import { getMe } from "@/lib/api-client/partner";
 
 export default function ProTrainingExamPage() {
   const router = useRouter();
   const [certified, setCertified] = useState(false);
-  const [passing, setPassing] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -19,12 +18,6 @@ export default function ProTrainingExamPage() {
     load();
   }, []);
 
-  async function handlePassExam() {
-    setPassing(true);
-    await certifyMe();
-    setCertified(true);
-    setPassing(false);
-  }
 
   if (loading) {
     return (
@@ -78,24 +71,17 @@ export default function ProTrainingExamPage() {
         <span className="text-4xl">🎓</span>
         <h1 className="mt-4 text-2xl font-bold text-navy">Certification Exam</h1>
         <p className="mt-2 text-sm text-charcoal/60 max-w-md mx-auto">
-          This exam covers all 4 training modules. In a future release, this will be a
-          timed multiple-choice exam. For now, use the test button below.
+          This exam covers all 4 training modules. It is not available yet.
+          EstateVault confirms your certification once you have completed the
+          training with your account manager.
         </p>
 
-        <div className="mt-8 rounded-xl bg-amber-50 border border-amber-200 p-4">
-          <p className="text-xs text-amber-700 font-medium">TEST MODE</p>
-          <p className="mt-1 text-sm text-amber-800">
-            Click the button below to simulate passing the certification exam.
+        <div className="mt-8 rounded-xl bg-navy/5 border border-navy/10 p-4">
+          <p className="text-sm text-charcoal/70">
+            Certification is confirmed by EstateVault once you have completed the
+            training with your account manager.
           </p>
         </div>
-
-        <button
-          onClick={handlePassExam}
-          disabled={passing}
-          className="mt-6 rounded-full bg-gold px-8 py-3 text-sm font-semibold text-white hover:bg-gold/90 disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          {passing ? "Processing..." : "Pass Exam (Test Mode)"}
-        </button>
       </div>
     </div>
   );

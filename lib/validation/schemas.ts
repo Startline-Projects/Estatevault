@@ -901,3 +901,10 @@ export const clientAdvisorUpdateSchema = z.object({
 export const waitlistInviteSchema = z.object({
   client_email: z.string().email(),
 });
+
+
+// POST /api/partner/certify — Admin/sales-rep confers certification on a named
+// partner. The partner no longer certifies themselves.
+export const partnerCertifySchema = z.object({
+  partnerId: z.string().uuid(),
+});
