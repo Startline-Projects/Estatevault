@@ -18,6 +18,7 @@ import * as payoutRepo from "@/lib/repos/server/payoutRepo";
 import * as affiliateRepo from "@/lib/repos/server/affiliateRepo";
 import * as auditLogRepo from "@/lib/repos/server/auditLogRepo";
 import { evaluateHardStop } from "@/lib/compliance/hardStop";
+import { expectedDocumentTypes } from "@/lib/documents/trust-package";
 import { handleAmendmentCheckout } from "./handleAmendmentCheckout";
 import { handleAttorneyReview } from "./handleAttorneyReview";
 import type { Admin } from "./types";
@@ -397,10 +398,15 @@ export async function handleDocumentCheckout(
   }
 
   // ── 3. Create document records ─────────────────────────────
-  const documentTypes =
-    productType === "trust"
-      ? ["trust", "pour_over_will", "poa", "healthcare_directive"]
-      : ["will", "poa", "healthcare_directive"];
+  // A Trust Package is eight documents for a joint trust and seven for a single
+  // grantor — the Certification of Trust, the Assignment(s) of Personal
+  // Property and the Funding Instructions are part of what the client bought.
+  // This used to hardcode four types, so those rows were never created and the
+  // order was "complete" having delivered half the package.
+  //
+  // `intakeForStop` is the same snapshot Core Rule 4 was re-derived from above:
+  // the live quiz answers, or the order's stored intake once the quiz is purged.
+  const documentTypes = expectedDocumentTypes(productType, intakeForStop);
 
   // On replay only create rows for types not already present (no duplicates).
   const existingDocTypes = new Set((existingDocs || []).map((d) => d.document_type));

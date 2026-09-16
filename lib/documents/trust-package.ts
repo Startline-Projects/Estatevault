@@ -47,3 +47,51 @@ export function checkTrustPackageComplete(
   const missing = trustPackageDocumentTypes(isJointTrust).filter((t) => !present.has(t));
   return { complete: missing.length === 0, missing };
 }
+
+/**
+ * Whether an order's raw intake describes a joint trust.
+ *
+ * Mirrors the rule in mapIntakeToTemplateData: a second grantor's NAME makes
+ * the trust joint; an explicit isJointTrust answer decides it when no name is
+ * present; "No" clears any stale name. The webhook needs this before the
+ * adapter runs, so the rule lives here and a test pins the two together — if
+ * they ever disagree, an order creates the wrong number of document rows.
+ */
+export function isJointTrustIntake(
+  intake: Record<string, unknown> | null | undefined,
+): boolean {
+  if (!intake) return false;
+  const str = (v: unknown) => (v === null || v === undefined ? "" : String(v));
+
+  const jointAnswer = str(intake.isJointTrust ?? intake.is_joint_trust ?? "").trim().toLowerCase();
+  const secondGrantor =
+    jointAnswer === "no"
+      ? ""
+      : str(
+          intake.secondGrantorName ?? intake.grantor2Name ?? intake.grantor_2_full_name,
+        ).trim();
+
+  if (secondGrantor) return true;
+  if (intake.isJointTrust !== undefined) return jointAnswer === "yes" || jointAnswer === "true";
+  if (intake.is_joint_trust !== undefined) {
+    return intake.is_joint_trust === true || jointAnswer === "yes" || jointAnswer === "true";
+  }
+  return false;
+}
+
+/**
+ * Every document row an order owes the client, in delivery order.
+ *
+ * The webhook used to hardcode four types for a trust, so the Certification of
+ * Trust, both Assignments and the Funding Instructions were never created —
+ * their templates rendered fine but no order ever asked for them.
+ */
+export function expectedDocumentTypes(
+  productType: string,
+  intake: Record<string, unknown> | null | undefined,
+): string[] {
+  if (productType === "trust") {
+    return trustPackageDocumentTypes(isJointTrustIntake(intake));
+  }
+  return ["will", "poa", "healthcare_directive"];
+}

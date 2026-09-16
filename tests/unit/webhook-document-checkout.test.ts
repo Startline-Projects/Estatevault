@@ -122,10 +122,21 @@ describe("handleDocumentCheckout — document set per product", () => {
     expect(rows.map((r) => r.document_type)).toEqual(["will", "poa", "healthcare_directive"]);
   });
 
-  it("trust → exactly [trust, pour_over_will, poa, healthcare_directive]", async () => {
+  // This used to assert exactly the four types the handler hardcoded, which is
+  // the bug: a Trust Package is seven documents, or eight for a joint trust.
+  // With no intake on the session the order is treated as single-grantor.
+  it("trust → the full single-grantor package of seven", async () => {
     await handleDocumentCheckout(admin, session(60000), meta("trust"));
     const rows = h.insertMany.mock.calls[0][1] as Array<{ document_type: string }>;
-    expect(rows.map((r) => r.document_type)).toEqual(["trust", "pour_over_will", "poa", "healthcare_directive"]);
+    expect(rows.map((r) => r.document_type)).toEqual([
+      "trust",
+      "certification_of_trust",
+      "assignment_personal_property_g1",
+      "pour_over_will",
+      "trust_funding_instructions",
+      "poa",
+      "healthcare_directive",
+    ]);
   });
 
   it("moves the order to 'generating' and queues a generation job", async () => {

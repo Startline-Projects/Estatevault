@@ -1,0 +1,45 @@
+-- ============================================================================
+-- Deliberate divergences from production, and things production is missing.
+-- READ THIS FILE BEFORE RUNNING IT — most of it is commented out on purpose.
+-- ============================================================================
+
+-- ── 1. public.exec_sql — DELIBERATELY NOT COPIED ────────────────────────────
+-- Production has:
+--     CREATE FUNCTION public.exec_sql(sql text) RETURNS json
+--       LANGUAGE plpgsql SECURITY DEFINER
+--     AS $$ BEGIN EXECUTE sql; ... END $$;
+-- owned by postgres, with EXECUTE granted to anon and authenticated.
+--
+-- In Supabase that is exposed as POST /rest/v1/rpc/exec_sql, callable with the
+-- public anon key that ships in the browser bundle. It is arbitrary SQL as the
+-- database superuser for anyone on the internet.
+--
+-- It is not reproduced here. Copying it into a fresh database would be
+-- propagating the vulnerability, and staging does not need it.
+-- Nothing in the application calls exec_sql (verified by grep over app/ and lib/).
+
+-- ── 2. find_auth_user_by_email — MISSING IN PRODUCTION ──────────────────────
+-- The application calls this RPC in two places:
+--     lib/checkout/createCheckoutSession.ts   (free-promo account path)
+--     lib/webhooks/stripe/resolveOrCreateGuestClient.ts
+-- It does not exist in production, in any schema. The calls fail and the code
+-- treats the failure as "no matching user", silently.
+--
+-- Staging mirrors production by default, so it is NOT created here either.
+-- Uncomment to make staging diverge and exercise the intended path:
+--
+-- CREATE OR REPLACE FUNCTION public.find_auth_user_by_email(lookup_email text)
+--  RETURNS TABLE(id uuid, email text)
+--  LANGUAGE sql SECURITY DEFINER
+-- AS $function$
+--   SELECT u.id, u.email::text FROM auth.users u
+--   WHERE lower(u.email) = lower(lookup_email) LIMIT 1;
+-- $function$;
+-- REVOKE ALL ON FUNCTION public.find_auth_user_by_email(text) FROM anon, authenticated;
+-- GRANT EXECUTE ON FUNCTION public.find_auth_user_by_email(text) TO service_role;
+
+-- ── 3. documents_document_type_check — RESOLVED 2026-09-16 ─────────────────
+-- 01_schema.sql now carries the WIDENED constraint, matching migration
+-- 20260916_000_trust_package_document_types.sql, and the fulfillment path
+-- creates the full package. Staging deliberately diverges from production here
+-- until that migration is applied to production too.
