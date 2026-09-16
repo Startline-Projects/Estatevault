@@ -6,7 +6,13 @@
 -- Structure only. No rows are copied. auth.users stays empty by design; the
 -- smoke test creates its own accounts.
 --
--- Run order: 01_schema.sql → 02_rls.sql → 03_storage.sql → 04_fixups.sql
+-- Run order: 01_schema.sql → 02_rls.sql → 03_storage.sql, then read
+-- 04_divergences.sql.
+--
+-- Within this file the order is: extensions → tables → constraints → indexes →
+-- functions → triggers. Functions come AFTER tables on purpose: the get_*
+-- helpers are LANGUAGE sql, which Postgres validates at CREATE time, so they
+-- fail with "relation public.profiles does not exist" if they run first.
 -- ============================================================================
 
 -- ── Extensions ──────────────────────────────────────────────────────────────
@@ -14,119 +20,6 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 CREATE EXTENSION IF NOT EXISTS pg_stat_statements;
 -- supabase_vault is provisioned by Supabase itself; left out deliberately.
-
--- ── Functions ───────────────────────────────────────────────────────────────
--- NOTE: production's public.exec_sql(text) is deliberately NOT reproduced here.
--- See 04_fixups.sql and the accompanying report: it is SECURITY DEFINER owned by
--- postgres with EXECUTE granted to anon, i.e. arbitrary SQL as superuser for
--- anyone holding the public anon key. Staging must not inherit it.
-
-CREATE OR REPLACE FUNCTION public.get_user_type()
- RETURNS text LANGUAGE sql STABLE SECURITY DEFINER
-AS $function$
-  select user_type from public.profiles where id = auth.uid();
-$function$;
-
-CREATE OR REPLACE FUNCTION public.get_client_id()
- RETURNS uuid LANGUAGE sql STABLE SECURITY DEFINER
-AS $function$
-  select id from public.clients where profile_id = auth.uid();
-$function$;
-
-CREATE OR REPLACE FUNCTION public.get_partner_id()
- RETURNS uuid LANGUAGE sql STABLE SECURITY DEFINER
-AS $function$
-  select id from public.partners where profile_id = auth.uid();
-$function$;
-
-CREATE OR REPLACE FUNCTION public.get_affiliate_id()
- RETURNS uuid LANGUAGE sql STABLE SECURITY DEFINER
-AS $function$
-  select id from affiliates where profile_id = auth.uid();
-$function$;
-
-CREATE OR REPLACE FUNCTION public.get_partner_login_target(p_partner_id uuid)
- RETURNS TABLE(subdomain text, custom_domain text, vault_subdomain text, company_name text)
- LANGUAGE sql STABLE SECURITY DEFINER
-AS $function$
-    select p.subdomain, p.custom_domain, p.vault_subdomain, p.company_name
-    from public.partners p
-    where p.id = p_partner_id
-      and exists (
-        select 1 from public.clients c
-        where c.partner_id = p.id
-          and c.profile_id = auth.uid()
-      );
-  $function$;
-
-CREATE OR REPLACE FUNCTION public.handle_new_user()
- RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER
-AS $function$
-begin
-  insert into public.profiles (id, email, full_name, user_type)
-  values (
-    new.id,
-    new.email,
-    coalesce(new.raw_user_meta_data->>'full_name', ''),
-    coalesce(new.raw_user_meta_data->>'user_type', 'client')
-  );
-  return new;
-end;
-$function$;
-
-CREATE OR REPLACE FUNCTION public.increment_affiliate_clicks(p_affiliate_id uuid)
- RETURNS void LANGUAGE sql SECURITY DEFINER
-AS $function$
-  update affiliates set
-    total_clicks = total_clicks + 1,
-    updated_at = now()
-  where id = p_affiliate_id;
-$function$;
-
-CREATE OR REPLACE FUNCTION public.increment_affiliate_stats(p_affiliate_id uuid, p_earned_cents integer)
- RETURNS void LANGUAGE sql SECURITY DEFINER
-AS $function$
-  update affiliates set
-    total_conversions = total_conversions + 1,
-    total_earned_cents = total_earned_cents + p_earned_cents,
-    updated_at = now()
-  where id = p_affiliate_id;
-$function$;
-
-CREATE OR REPLACE FUNCTION public.slugify_simple(input text)
- RETURNS text LANGUAGE sql IMMUTABLE
-AS $function$
-  SELECT trim(both '-' from regexp_replace(lower(coalesce(input, '')), '[^a-z0-9]+', '-', 'g'));
-$function$;
-
-CREATE OR REPLACE FUNCTION public.partners_autoslug()
- RETURNS trigger LANGUAGE plpgsql
-AS $function$
-BEGIN
-  IF NEW.marketing_slug IS NULL AND NEW.company_name IS NOT NULL THEN
-    NEW.marketing_slug = slugify_simple(NEW.company_name);
-  END IF;
-  RETURN NEW;
-END;
-$function$;
-
-CREATE OR REPLACE FUNCTION public.set_marketing_materials_updated_at()
- RETURNS trigger LANGUAGE plpgsql
-AS $function$
-BEGIN
-  NEW.updated_at = now();
-  RETURN NEW;
-END;
-$function$;
-
-CREATE OR REPLACE FUNCTION public.update_updated_at()
- RETURNS trigger LANGUAGE plpgsql
-AS $function$
-begin
-  new.updated_at = now();
-  return new;
-end;
-$function$;
 
 -- ── Tables (29) ─────────────────────────────────────────────────────────────
 
@@ -819,6 +712,119 @@ CREATE INDEX vault_items_auto_generated_idx ON public.vault_items USING btree (c
 CREATE INDEX vault_items_label_blind_idx ON public.vault_items USING btree (client_id, label_blind);
 CREATE INDEX idx_vault_trustees_client_id ON public.vault_trustees USING btree (client_id);
 CREATE INDEX vault_trustees_email_blind_idx ON public.vault_trustees USING btree (client_id, email_blind);
+
+-- ── Functions ───────────────────────────────────────────────────────────────
+-- NOTE: production's public.exec_sql(text) is deliberately NOT reproduced here.
+-- See 04_fixups.sql and the accompanying report: it is SECURITY DEFINER owned by
+-- postgres with EXECUTE granted to anon, i.e. arbitrary SQL as superuser for
+-- anyone holding the public anon key. Staging must not inherit it.
+
+CREATE OR REPLACE FUNCTION public.get_user_type()
+ RETURNS text LANGUAGE sql STABLE SECURITY DEFINER
+AS $function$
+  select user_type from public.profiles where id = auth.uid();
+$function$;
+
+CREATE OR REPLACE FUNCTION public.get_client_id()
+ RETURNS uuid LANGUAGE sql STABLE SECURITY DEFINER
+AS $function$
+  select id from public.clients where profile_id = auth.uid();
+$function$;
+
+CREATE OR REPLACE FUNCTION public.get_partner_id()
+ RETURNS uuid LANGUAGE sql STABLE SECURITY DEFINER
+AS $function$
+  select id from public.partners where profile_id = auth.uid();
+$function$;
+
+CREATE OR REPLACE FUNCTION public.get_affiliate_id()
+ RETURNS uuid LANGUAGE sql STABLE SECURITY DEFINER
+AS $function$
+  select id from affiliates where profile_id = auth.uid();
+$function$;
+
+CREATE OR REPLACE FUNCTION public.get_partner_login_target(p_partner_id uuid)
+ RETURNS TABLE(subdomain text, custom_domain text, vault_subdomain text, company_name text)
+ LANGUAGE sql STABLE SECURITY DEFINER
+AS $function$
+    select p.subdomain, p.custom_domain, p.vault_subdomain, p.company_name
+    from public.partners p
+    where p.id = p_partner_id
+      and exists (
+        select 1 from public.clients c
+        where c.partner_id = p.id
+          and c.profile_id = auth.uid()
+      );
+  $function$;
+
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+ RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER
+AS $function$
+begin
+  insert into public.profiles (id, email, full_name, user_type)
+  values (
+    new.id,
+    new.email,
+    coalesce(new.raw_user_meta_data->>'full_name', ''),
+    coalesce(new.raw_user_meta_data->>'user_type', 'client')
+  );
+  return new;
+end;
+$function$;
+
+CREATE OR REPLACE FUNCTION public.increment_affiliate_clicks(p_affiliate_id uuid)
+ RETURNS void LANGUAGE sql SECURITY DEFINER
+AS $function$
+  update affiliates set
+    total_clicks = total_clicks + 1,
+    updated_at = now()
+  where id = p_affiliate_id;
+$function$;
+
+CREATE OR REPLACE FUNCTION public.increment_affiliate_stats(p_affiliate_id uuid, p_earned_cents integer)
+ RETURNS void LANGUAGE sql SECURITY DEFINER
+AS $function$
+  update affiliates set
+    total_conversions = total_conversions + 1,
+    total_earned_cents = total_earned_cents + p_earned_cents,
+    updated_at = now()
+  where id = p_affiliate_id;
+$function$;
+
+CREATE OR REPLACE FUNCTION public.slugify_simple(input text)
+ RETURNS text LANGUAGE sql IMMUTABLE
+AS $function$
+  SELECT trim(both '-' from regexp_replace(lower(coalesce(input, '')), '[^a-z0-9]+', '-', 'g'));
+$function$;
+
+CREATE OR REPLACE FUNCTION public.partners_autoslug()
+ RETURNS trigger LANGUAGE plpgsql
+AS $function$
+BEGIN
+  IF NEW.marketing_slug IS NULL AND NEW.company_name IS NOT NULL THEN
+    NEW.marketing_slug = slugify_simple(NEW.company_name);
+  END IF;
+  RETURN NEW;
+END;
+$function$;
+
+CREATE OR REPLACE FUNCTION public.set_marketing_materials_updated_at()
+ RETURNS trigger LANGUAGE plpgsql
+AS $function$
+BEGIN
+  NEW.updated_at = now();
+  RETURN NEW;
+END;
+$function$;
+
+CREATE OR REPLACE FUNCTION public.update_updated_at()
+ RETURNS trigger LANGUAGE plpgsql
+AS $function$
+begin
+  new.updated_at = now();
+  return new;
+end;
+$function$;
 
 -- ── Triggers ────────────────────────────────────────────────────────────────
 CREATE TRIGGER set_updated_at BEFORE UPDATE ON public.affiliates FOR EACH ROW EXECUTE FUNCTION update_updated_at();
