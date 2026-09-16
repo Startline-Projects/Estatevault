@@ -39,7 +39,7 @@ const styles = StyleSheet.create({
     fontFamily: TOKENS.fonts.sans,
     fontWeight: "bold",
     fontSize: 9,
-    color: TOKENS.colors.navy,
+    color: TOKENS.colors.black,
     letterSpacing: TOKENS.letterSpacing.sectionLabel,
   },
   partnerLogoPlaceholder: {
@@ -55,7 +55,7 @@ const styles = StyleSheet.create({
     fontFamily: TOKENS.fonts.sans,
     fontWeight: "bold",
     fontSize: 9,
-    color: TOKENS.colors.navy,
+    color: TOKENS.colors.black,
     letterSpacing: TOKENS.letterSpacing.articleHeader,
     textAlign: "center",
   },
@@ -69,12 +69,12 @@ const styles = StyleSheet.create({
     fontFamily: TOKENS.fonts.sans,
     fontWeight: "bold",
     fontSize: 9,
-    color: TOKENS.colors.navy,
+    color: TOKENS.colors.black,
   },
   goldRule: {
     width: "100%",
     borderBottomWidth: TOKENS.borderWidth.ruleThin,
-    borderBottomColor: TOKENS.colors.gold,
+    borderBottomColor: TOKENS.colors.grayBorder,
     marginTop: 6,
   },
 });

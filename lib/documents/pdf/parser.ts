@@ -13,6 +13,7 @@
  *   `#sub X`                       → cover_subtitle
  *   `## ARTICLE <roman> — <title>` → article_header
  *   `### Section <id> — <title>`   → section_header
+ *   `## X` (any other)             → document_header
  *   `- X`                          → bullet
  *   `[PAGE_BREAK]`                 → page_break
  *   `[NOTARY_BLOCK]`               → notary_block (self-closing)
@@ -41,6 +42,8 @@ export type DocumentBlock =
   | { type: "cover_subtitle"; text: string }
   | { type: "article_header"; number: string; title: string }
   | { type: "section_header"; number: string; title: string }
+  /** A "## X" heading that is not an article, e.g. ATTESTATION, NOTARY ACKNOWLEDGMENT. */
+  | { type: "document_header"; text: string }
   | { type: "body"; text: string }
   | { type: "bullet"; text: string }
   | { type: "info_box"; rows: string[] }
@@ -102,6 +105,7 @@ const CLOSE_TAG_FOR_KIND: Record<OpenBlock["kind"], string> = {
  */
 function isStructuralLine(trimmed: string): boolean {
   if (trimmed === "[PAGE_BREAK]") return true;
+  if (/^#{1,6}(\s|sub)/.test(trimmed)) return true;
   if (trimmed === "[NOTARY_BLOCK]" || trimmed === "[/NOTARY_BLOCK]") return true;
   if (/^\[SIGNATURE(\s|\])/.test(trimmed)) return true;
   if (/^\[\/?(?:CALLOUT_(?:AMBER|NAVY|GREEN|RED)|PREFERENCE_CARD|INFO_BOX|BOLD_STATUTORY)(?:\s|\])/.test(trimmed)) return true;
@@ -234,6 +238,16 @@ export function parseRenderedText(renderedText: string): DocumentBlock[] {
       continue;
     }
 
+    // ─── Any other "## X" heading: ATTESTATION, SELF-PROVING AFFIDAVIT,
+    // NOTARY ACKNOWLEDGMENT, SCHEDULE A, and so on. Without this rule these
+    // fell through to body text and rendered with a literal "## " prefix.
+    m = trimmed.match(/^#{2,6}\s+(.+?)\s*#*$/);
+    if (m) {
+      flushBody();
+      blocks.push({ type: "document_header", text: m[1].trim() });
+      continue;
+    }
+
     // ─── Bullet: "- X" ───
     if (/^- /.test(trimmed)) {
       flushBody();
@@ -248,14 +262,25 @@ export function parseRenderedText(renderedText: string): DocumentBlock[] {
       continue;
     }
 
-    // ─── Notary block: self-closing per spec. Tolerate `[/NOTARY_BLOCK]` as no-op
-    //     so wrapper-style usage (extract.js output) parses cleanly. ───
+    // ─── Notary block ───
+    // The NotaryBlock component renders the acknowledgment itself, so anything
+    // the template writes between the tags is swallowed. Parsing it as ordinary
+    // content produced a second, non-atomic copy of the notary text that could
+    // split across a page break.
     if (trimmed === "[NOTARY_BLOCK]") {
       flushBody();
       blocks.push({ type: "notary_block" });
+      // Wrapper form: swallow the enclosed text. Self-closing form (no matching
+      // close tag) leaves the following content alone.
+      let close = -1;
+      for (let k = i + 1; k < lines.length; k++) {
+        if (lines[k].trim() === "[/NOTARY_BLOCK]") { close = k; break; }
+      }
+      if (close !== -1) i = close;
       continue;
     }
     if (trimmed === "[/NOTARY_BLOCK]") {
+      // Unmatched closing tag: ignore rather than fail the whole document.
       flushBody();
       continue;
     }

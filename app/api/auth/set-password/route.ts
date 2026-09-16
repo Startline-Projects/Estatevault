@@ -6,7 +6,7 @@ import { withRoute } from "@/lib/api/route";
 import { ok, fail } from "@/lib/api/response";
 import { authSetPasswordSchema } from "@/lib/validation/schemas";
 import { consumeVerifiedToken, peekVerifiedToken } from "@/lib/auth/emailVerification";
-import { authRateLimit } from "@/lib/rate-limit";
+import { authRateLimit, authIpRateLimit, clientIp } from "@/lib/rate-limit";
 import * as auditLogRepo from "@/lib/repos/server/auditLogRepo";
 import { sendPasswordChangedEmail } from "@/lib/email";
 
@@ -20,8 +20,13 @@ export const POST = withRoute(async (req: NextRequest) => {
   if (!normalizedEmail || !password) return fail("Missing required fields", 400);
   if (password.length < 8) return fail("Password must be at least 8 characters", 400);
 
+  // Per-email and per-source. The email dimension alone let one attacker grind
+  // many accounts at once, each with its own budget.
   const { success } = await authRateLimit.limit(normalizedEmail);
-  if (!success) return fail("Too many attempts. Please wait and try again.", 429);
+  const bySource = await authIpRateLimit.limit(`set-password:${clientIp(req)}`);
+  if (!success || !bySource.success) {
+    return fail("Too many attempts. Please wait and try again.", 429);
+  }
 
   // BUG-11: validate the token but DON'T consume it yet. The single-use burn
   // happens only at a successful return below, so a transient failure (e.g.

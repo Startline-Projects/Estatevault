@@ -47,7 +47,7 @@ const FAQ_ITEMS = [
   },
   {
     q: 'What happens with complex cases?',
-    a: "If a client's intake indicates an irrevocable trust, special needs planning, Medicaid asset protection, or business succession, the platform halts document generation and flags the case directly to you for a full engagement. These are your clients, not referrals.",
+    a: "If a client's intake indicates a special-needs dependent, an irrevocable trust, Medicaid planning, or an active estate dispute, the platform halts document generation and flags the case directly to you for a full engagement. These are your clients, not referrals.",
   },
   {
     q: 'Are the documents compliant with Michigan law?',
@@ -431,7 +431,7 @@ export default function AttorneyPartnerPage() {
               { n: 1, t: 'Client completes the intake', d: 'A 15-minute questionnaire covers everything you need. No paralegal time required.' },
               { n: 2, t: 'Software drafts the documents', d: 'Attorney-quality Michigan documents based on EPIC, generated in minutes.' },
               { n: 3, t: 'You review and approve', d: 'Your name, your bar number on delivery. You set your own review fee.' },
-              { n: 4, t: 'Complex cases become engagements', d: 'Irrevocable trusts, Medicaid planning, business succession, flagged to you.' },
+              { n: 4, t: 'Complex cases become engagements', d: 'Special-needs dependents, irrevocable trusts, Medicaid planning, estate disputes, flagged to you.' },
             ].map((s, i) => (
               <div key={s.n} className={`${styles.howStep} ${styles.reveal}`} ref={registerReveal(4 + i)}>
                 <div className={styles.howNum}>{s.n}</div>
@@ -1046,8 +1046,8 @@ export default function AttorneyPartnerPage() {
               come straight to you.
             </h2>
             <p>
-              When a client&apos;s situation involves irrevocable trusts, special needs planning,
-              Medicaid asset protection, or business succession, the platform flags the case
+              When a client&apos;s situation involves a special-needs dependent, an irrevocable
+              trust, Medicaid planning, or an active estate dispute, the platform flags the case
               and routes it directly to you.
             </p>
           </div>

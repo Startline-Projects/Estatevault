@@ -15,6 +15,22 @@ import CityAutocomplete from "@/components/intake/CityAutocomplete";
 import DateOfBirthInput from "@/components/intake/DateOfBirthInput";
 import NameInput from "@/components/quiz/NameInput";
 import QuestionLabel from "@/components/quiz/QuestionLabel";
+import { findResumePoint } from "@/lib/intake/incomplete-steps";
+import { BeneficiaryContingency, contingenciesComplete, CONTINGENCY_OPTIONS } from "@/components/intake/BeneficiaryContingency";
+import { JointTrusteeAuthority, JOINT_TRUSTEE_AUTHORITY_OPTIONS } from "@/components/intake/JointTrusteeAuthority";
+import { FuneralPreference, FUNERAL_PREFERENCE_OPTIONS } from "@/components/intake/FuneralPreference";
+import { HardStopQuestions, hardStopQuestionsAnswered } from "@/components/intake/HardStopQuestions";
+import { evaluateHardStop } from "@/lib/compliance/hardStop";
+import {
+  PoaStep,
+  PadStep,
+  isPoaStepComplete,
+  isPadStepComplete,
+  togglePoaPower,
+  ALL_POA_POWERS,
+  POA_EFFECTIVE_OPTIONS,
+  ORGAN_DONATION_OPTIONS,
+} from "@/components/intake/PoaPadSteps";
 
 type Stage = "acknowledgment" | "intake" | "redirecting";
 
@@ -28,13 +44,6 @@ const ASSET_OPTIONS = [
   "Digital assets and cryptocurrency",
 ];
 
-const ALL_POA_POWERS = [
-  "Banking and finances",
-  "Real estate transactions",
-  "Business operations",
-  "Tax filings",
-];
-
 const relOptions = ["Spouse/Partner", "Adult Child", "Sibling", "Parent", "Friend", "Other"];
 const maritalOptions = ["Single", "Married", "Divorced", "Widowed"];
 const benRelOptions = ["Spouse/Partner", "Child", "Parent", "Sibling", "Other"];
@@ -45,14 +54,22 @@ export default function TrustPage() {
   const [partnerParam, setPartnerParam] = useState("");
   const [stage, setStage] = useState<Stage>("acknowledgment");
   const [hardStopped, setHardStopped] = useState(false);
+  // Which trigger fired, so the referral card can say why.
+  const [hardStopReasons, setHardStopReasons] = useState<string[]>([]);
   const [userId, setUserId] = useState<string | null>(null);
   const [intake, setIntake] = useState<TrustIntake>(initialTrustIntake);
   const [currentCard, setCurrentCard] = useState(0);
   const [animating, setAnimating] = useState(false);
+  /** Set when a saved session was routed back for answers added after it was saved. */
+  const [resumeNotice, setResumeNotice] = useState<number | null>(null);
+  /** Step id from ?resume=, applied once the card list is known. */
+  const [pendingResumeStep, setPendingResumeStep] = useState<string | null>(null);
   const [direction, setDirection] = useState<"forward" | "back">("forward");
   const [customAgeMode, setCustomAgeMode] = useState(false);
   const [customAgeError, setCustomAgeError] = useState("");
   const hasMinorChildren = intake.hasMinorChildren === "Yes";
+  /** A trust is joint when the client actually names a second grantor. */
+  const isJointTrust = intake.isJointTrust === "Yes" && (intake.secondGrantorName ?? "").trim() !== "";
   const [openReviewSections, setOpenReviewSections] = useState<Record<string, boolean>>({
     residency: false,
     personal: false,
@@ -95,7 +112,31 @@ export default function TrustPage() {
 
   useEffect(() => {
     async function init() {
-      setPartnerParam(new URLSearchParams(window.location.search).get("partner") || "");
+      const params = new URLSearchParams(window.location.search);
+      setPartnerParam(params.get("partner") || "");
+
+      // Returned here from checkout because a question was added after this
+      // session was saved. Restore the answers and open the step that asks.
+      const resumeStep = params.get("resume");
+      if (resumeStep) {
+        let saved: string | null = sessionStorage.getItem("trustIntake");
+        if (!saved) {
+          try {
+            const ls = localStorage.getItem("trustIntake");
+            if (ls) { const env = JSON.parse(ls); saved = JSON.stringify(env.data ?? env); }
+          } catch { /* corrupt */ }
+        }
+        if (saved) {
+          try {
+            const parsed = JSON.parse(saved);
+            setIntake({ ...initialTrustIntake, ...parsed });
+            const resume = findResumePoint("trust", parsed);
+            if (resume) setResumeNotice(resume.missingFields.length);
+          } catch { /* corrupt */ }
+        }
+        setStage("intake");
+        setPendingResumeStep(resumeStep);
+      }
       const { data } = await getLatestQuiz();
       if (data) {
         setUserId(data.userId);
@@ -125,18 +166,30 @@ export default function TrustPage() {
   const activeCardId = visibleCards[safeIndex];
   const progress = ((safeIndex + 1) / totalCards) * 100;
 
+  // Apply ?resume=<step> once the card list exists for this intake.
+  useEffect(() => {
+    if (!pendingResumeStep) return;
+    const idx = visibleCards.indexOf(pendingResumeStep as CardId);
+    if (idx >= 0) setCurrentCard(idx);
+    setPendingResumeStep(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingResumeStep, visibleCards.join(",")]);
+
   function isCardComplete(): boolean {
     switch (activeCardId) {
       case "residency":
         return intake.state === "Michigan" && intake.maritalStatus !== "";
       case "about":
-        return intake.firstName.trim() !== "" && intake.lastName.trim() !== "" && intake.dateOfBirth !== "" && intake.dateOfBirth <= maxDob && intake.city.trim() !== "" && intake.hasMinorChildren !== "" && intake.hasSpecialNeedsDependent !== "";
+        return intake.firstName.trim() !== "" && intake.lastName.trim() !== "" && intake.dateOfBirth !== "" && intake.dateOfBirth <= maxDob && intake.city.trim() !== "" && intake.hasMinorChildren !== "" && intake.hasSpecialNeedsDependent !== "" && hardStopQuestionsAnswered(intake);
       case "trustee":
+        if (intake.isJointTrust === "") return false;
+        if (intake.isJointTrust === "Yes" && intake.secondGrantorName.trim() === "") return false;
+        if (isJointTrust && !intake.jointTrusteeAuthority) return false;
         return intake.primaryTrustee !== "" && (intake.primaryTrustee === "Myself" || intake.trusteeName.trim() !== "") && intake.successorTrusteeName.trim() !== "" && intake.successorTrusteeRelationship !== "" && intake.additionalSuccessorTrustees.every(st => !st.name.trim() || st.relationship !== "");
       case "beneficiaries": {
         if (intake.beneficiaries.length === 0) return false;
         if (intake.beneficiaries.some((b) => !b.name.trim() || !b.relationship)) return false;
-        if (intake.hasContingentBeneficiary === "") return false;
+        if (!contingenciesComplete(intake.beneficiaries)) return false;
         if (intake.beneficiaries.length > 1) {
           if (!intake.beneficiariesEqualShares) return false;
           if (intake.beneficiariesEqualShares === "No") {
@@ -145,17 +198,6 @@ export default function TrustPage() {
             if (Math.round(t) !== 100) return false;
           }
         }
-        if (intake.hasContingentBeneficiary === "Yes" && (intake.contingentBeneficiaries.length === 0 || intake.contingentBeneficiaries.some((b) => !b.name.trim() || !b.relationship))) return false;
-        if (intake.hasContingentBeneficiary === "Yes" && intake.contingentBeneficiaries.length > 1) {
-          if (!intake.contingentEqualShares) return false;
-          if (intake.contingentEqualShares === "No") {
-            if (intake.contingentBeneficiaries.some((b) => !b.share?.trim())) return false;
-            const shareTotal = intake.contingentBeneficiaries.reduce((sum, b) => sum + (parseFloat(b.share) || 0), 0);
-            if (Math.round(shareTotal) !== 100) return false;
-          }
-        }
-        if (hasMinorChildren && !intake.distributionAge) return false;
-        if (hasMinorChildren && parseInt(intake.distributionAge, 10) < 18) return false;
         return true;
       }
       case "guardian":
@@ -165,11 +207,11 @@ export default function TrustPage() {
       case "pourover":
         return intake.executorName.trim() !== "" && intake.executorRelationship !== "";
       case "poa":
-        return intake.poaAgentName.trim() !== "" && intake.poaAgentRelationship !== "" && intake.poaPowers.length > 0;
+        return isPoaStepComplete(intake);
       case "healthcare":
-        return intake.patientAdvocateName.trim() !== "" && intake.patientAdvocateRelationship !== "" && intake.organDonation !== "" && intake.hasHealthcareWishes !== "" && (intake.hasHealthcareWishes === "No" || intake.healthcareWishesDescription.trim() !== "");
+        return isPadStepComplete(intake);
       case "gifts":
-        return intake.hasSpecificGifts !== "" && (intake.hasSpecificGifts === "No" || intake.specificGiftsDescription.trim() !== "");
+        return intake.funeralPreference !== "" && intake.hasSpecificGifts !== "" && (intake.hasSpecificGifts === "No" || intake.specificGiftsDescription.trim() !== "");
       case "review":
         return true;
       default:
@@ -185,14 +227,30 @@ export default function TrustPage() {
 
   function handleContinue() {
     if (!isCardComplete() || hasPartialName) return;
-    // Hard stop (Core Rule 4) — special-needs dependent halts generation. The
-    // referral (with the lead's contact details) is logged by HardStopCard's
-    // contact form, so the partner can see WHO applied.
-    if (intake.hasSpecialNeedsDependent === "Yes") {
+    // Hard stop (Core Rule 4). Asks the shared evaluator rather than testing one
+    // field, so all four triggers halt here and the screen can never drift from
+    // what the server gates on. The referral (with the lead's contact details)
+    // is logged by HardStopCard's contact form, so the partner can see WHO
+    // applied.
+    const hardStop = evaluateHardStop(intake as unknown as Record<string, unknown>);
+    if (hardStop.halted) {
+      setHardStopReasons(hardStop.reasons);
       setHardStopped(true);
       return;
     }
     if (activeCardId === "review") {
+      // A session saved before a question was added reaches review without an
+      // answer. Route back to the step that asks it rather than failing
+      // validation at checkout, where the client could do nothing about it.
+      const resume = findResumePoint("trust", intake as unknown as Record<string, unknown>);
+      if (resume) {
+        const idx = visibleCards.indexOf(resume.step as CardId);
+        if (idx >= 0) {
+          setResumeNotice(resume.missingFields.length);
+          animateTransition("back", () => setCurrentCard(idx));
+          return;
+        }
+      }
       const complexity = checkComplexity(intake);
       const intakeJson = JSON.stringify(intake);
       sessionStorage.setItem("trustIntake", intakeJson);
@@ -204,6 +262,9 @@ export default function TrustPage() {
       router.push("/trust/checkout");
       return;
     }
+    // The notice explains why this session came back here; once the client
+    // moves on it has served its purpose.
+    setResumeNotice(null);
     animateTransition("forward", () => setCurrentCard((c) => c + 1));
   }
 
@@ -221,7 +282,7 @@ export default function TrustPage() {
   if (hardStopped) {
     return (
       <PartnerThemedShell showHeader={false}>
-        <HardStopCard partnerId={partnerParam || undefined} reason="Special-needs dependent" />
+        <HardStopCard partnerId={partnerParam || undefined} reason={hardStopReasons[0]} />
       </PartnerThemedShell>
     );
   }
@@ -254,7 +315,7 @@ export default function TrustPage() {
     pourover: "Your Pour-Over Will",
     poa: "Power of Attorney",
     healthcare: "Healthcare Directive",
-    gifts: "Specific Gifts",
+    gifts: "Gifts & Final Wishes",
     review: "Final Review",
   };
 
@@ -266,18 +327,7 @@ export default function TrustPage() {
   }
 
   function togglePower(power: string) {
-    if (power === "Banking and finances") return; // cannot uncheck
-    if (power === "All of the above") {
-      setIntake((prev) => ({
-        ...prev,
-        poaPowers: prev.poaPowers.length === ALL_POA_POWERS.length ? ["Banking and finances"] : [...ALL_POA_POWERS],
-      }));
-      return;
-    }
-    setIntake((prev) => ({
-      ...prev,
-      poaPowers: prev.poaPowers.includes(power) ? prev.poaPowers.filter((p) => p !== power) : [...prev.poaPowers, power],
-    }));
+    setIntake((prev) => ({ ...prev, poaPowers: togglePoaPower(prev.poaPowers, power) }));
   }
 
   function renderCard() {
@@ -348,6 +398,7 @@ export default function TrustPage() {
             <div className="mt-5"><QuestionLabel required>City of residence</QuestionLabel><CityAutocomplete value={intake.city} onChange={(v) => update({ city: v })} placeholder="e.g. Grand Rapids" /></div>
             <div className="mt-5"><QuestionLabel required>Do you have minor children (under 18)?</QuestionLabel><YesNoTiles value={intake.hasMinorChildren} onChange={(v) => update({ hasMinorChildren: v, ...(v === "No" ? { guardianName: "", guardianRelationship: "", successorGuardianName: "" } : {}) })} /></div>
             <div className="mt-5"><QuestionLabel required>Do you have a dependent with special needs?</QuestionLabel><YesNoTiles value={intake.hasSpecialNeedsDependent} onChange={(v) => update({ hasSpecialNeedsDependent: v })} /></div>
+            <HardStopQuestions intake={intake} onChange={(patch) => update(patch)} />
             <div className="mt-5">
               <QuestionLabel>Trust name (optional)</QuestionLabel>
               <p className="mb-2 text-xs text-charcoal/50">Leave blank to use the default: &quot;The [Your Name] Revocable Living Trust&quot;</p>
@@ -359,6 +410,34 @@ export default function TrustPage() {
       case "trustee":
         return (
           <>
+            {/* Approved by the reviewing attorney, 2026-09-14. A trust is
+                joint when a second grantor is actually named. */}
+            <div className="mb-5">
+              <QuestionLabel required>Are you creating this trust jointly with your spouse or partner?</QuestionLabel>
+              <YesNoTiles
+                value={intake.isJointTrust}
+                onChange={(v) => update({
+                  isJointTrust: v,
+                  ...(v === "No" ? { secondGrantorName: "", secondGrantorRelationship: "", jointTrusteeAuthority: "" } : {}),
+                })}
+              />
+              {intake.isJointTrust === "Yes" && (
+                <div className="mt-4">
+                  <QuestionLabel required>Their full name</QuestionLabel>
+                  <NameInput
+                    value={intake.secondGrantorName}
+                    onChange={(v) => update({ secondGrantorName: v })}
+                    onPartialChange={partialHandler("second-grantor")}
+                  />
+                </div>
+              )}
+            </div>
+            {isJointTrust && (
+              <JointTrusteeAuthority
+                value={intake.jointTrusteeAuthority}
+                onChange={(v) => update({ jointTrusteeAuthority: v })}
+              />
+            )}
             <p className="mb-2 text-xs text-charcoal/60 leading-relaxed">Your trustee is responsible for managing the assets inside your trust. While you are alive and capable, you remain in full control as your own trustee.</p>
             <p className="mb-5 text-xs text-charcoal/50">Most people name <strong>Myself</strong> as the primary trustee. Your successor trustee automatically takes over only if you become incapacitated or pass away, they have no control during your lifetime.</p>
             <QuestionLabel>Who are you creating trust for?</QuestionLabel>
@@ -446,6 +525,11 @@ export default function TrustPage() {
                 </div>
                 <NameInput value={b.name} onChange={(v) => { const u = [...intake.beneficiaries]; u[idx] = { ...u[idx], name: v }; update({ beneficiaries: u }); }} />
                 <div className="mt-3"><QuestionLabel required>Relationship</QuestionLabel><div className="grid grid-cols-2 gap-2">{benRelOptions.map((opt) => (<ChoiceTile key={opt} label={opt} selected={b.relationship === opt} onClick={() => { const u = [...intake.beneficiaries]; u[idx] = { ...u[idx], relationship: opt }; update({ beneficiaries: u }); }} />))}</div></div>
+                <BeneficiaryContingency
+                  beneficiary={b}
+                  soleBeneficiary={intake.beneficiaries.length === 1}
+                  onChange={(patch) => { const u = [...intake.beneficiaries]; u[idx] = { ...u[idx], ...patch }; update({ beneficiaries: u }); }}
+                />
               </div>
             ))}
             <button type="button" onClick={() => update({ beneficiaries: [...intake.beneficiaries, { name: "", relationship: "", share: "" }] })} className="mt-3 text-sm text-gold font-medium hover:text-gold/80">+ Add another beneficiary</button>
@@ -513,57 +597,6 @@ export default function TrustPage() {
                 </div>
               );
             })()}
-            {/* Contingent beneficiary */}
-            <div className="mt-5">
-              <QuestionLabel>Add a contingent beneficiary?</QuestionLabel>
-              <p className="mb-3 text-xs text-charcoal/50">A contingent beneficiary inherits only if your primary beneficiary cannot. Example: your children inherit if your spouse passes before you.</p>
-              <YesNoTiles value={intake.hasContingentBeneficiary} onChange={(v) => { update({ hasContingentBeneficiary: v }); if (v === "Yes" && intake.contingentBeneficiaries.length === 0) update({ contingentBeneficiaries: [{ name: "", relationship: "", share: "" }] }); if (v === "No") update({ contingentBeneficiaries: [], contingentEqualShares: "" }); }} />
-            </div>
-            {intake.hasContingentBeneficiary === "Yes" && (
-              <>
-                {intake.contingentBeneficiaries.map((cb, idx) => (
-                  <div key={idx} className="mt-5 rounded-lg bg-gray-50 p-4">
-                    <QuestionLabel required>{idx === 0 ? "Contingent beneficiary name" : `Contingent beneficiary ${idx + 1} name`}</QuestionLabel>
-                    <NameInput value={cb.name} onChange={(v) => { const u = [...intake.contingentBeneficiaries]; u[idx] = { ...u[idx], name: v }; update({ contingentBeneficiaries: u }); }} />
-                    <div className="mt-3"><QuestionLabel>Relationship</QuestionLabel>
-                      <div className="grid grid-cols-2 gap-2">{["Child", "Parent", "Sibling", "Friend", "Charity/Organization", "Other"].map((opt) => (<ChoiceTile key={opt} label={opt} selected={cb.relationship === opt} onClick={() => { const u = [...intake.contingentBeneficiaries]; u[idx] = { ...u[idx], relationship: opt }; update({ contingentBeneficiaries: u }); }} />))}</div>
-                    </div>
-                  </div>
-                ))}
-                {intake.contingentBeneficiaries.length < 3 && (
-                  <button type="button" onClick={() => update({ contingentBeneficiaries: [...intake.contingentBeneficiaries, { name: "", relationship: "", share: "" }] })} className="mt-3 text-sm text-gold font-medium hover:text-gold/80">+ Add another contingent beneficiary</button>
-                )}
-                {intake.contingentBeneficiaries.length > 1 && (
-                  <div className="mt-5">
-                    <QuestionLabel>Should these beneficiaries receive equal shares?</QuestionLabel>
-                    <YesNoTiles value={intake.contingentEqualShares} onChange={(v) => { update({ contingentEqualShares: v, contingentBeneficiaries: intake.contingentBeneficiaries.map((b) => ({ ...b, share: "" })) }); }} />
-                    {intake.contingentEqualShares === "No" && (() => {
-                      const total = intake.contingentBeneficiaries.reduce((sum, b) => sum + (parseFloat(b.share) || 0), 0);
-                      const rounded = Math.round(total);
-                      return (
-                        <div className="mt-3 space-y-2">
-                          {intake.contingentBeneficiaries.map((cb, idx) => (
-                            <div key={idx} className="flex items-center gap-3 rounded-xl border-2 border-gray-200 bg-white px-4 py-3">
-                              <span className="flex-1 truncate text-sm font-medium text-navy">{cb.name || `Beneficiary ${idx + 1}`}</span>
-                              <div className="flex items-center gap-1.5">
-                                <input type="number" min={0} max={100} value={cb.share}
-                                  onChange={(e) => { const u = [...intake.contingentBeneficiaries]; u[idx] = { ...u[idx], share: e.target.value }; update({ contingentBeneficiaries: u }); }}
-                                  className="w-16 rounded-lg border-2 border-gray-200 px-2 py-1.5 text-center text-sm font-medium focus:border-gold focus:outline-none transition-colors"
-                                  placeholder="0" />
-                                <span className="text-sm text-charcoal/50">%</span>
-                              </div>
-                            </div>
-                          ))}
-                          <p className={`text-sm font-medium ${rounded === 100 ? "text-green-600" : "text-red-500"}`}>
-                            Total: {total % 1 === 0 ? total : total.toFixed(1)}%{rounded === 100 ? ", all set" : ", must equal 100%"}
-                          </p>
-                        </div>
-                      );
-                    })()}
-                  </div>
-                )}
-              </>
-            )}
           </>
         );
 
@@ -641,77 +674,19 @@ export default function TrustPage() {
         );
 
       case "poa":
-        return (
-          <>
-            <p className="mb-5 text-xs text-charcoal/60">This person manages your finances if you become incapacitated.</p>
-            <QuestionLabel required>Agent name</QuestionLabel><NameInput value={intake.poaAgentName} onChange={(v) => update({ poaAgentName: v })} />
-            <div className="mt-5"><QuestionLabel>Agent relationship</QuestionLabel><div className="grid grid-cols-2 gap-3">{relOptions.map((opt) => (<ChoiceTile key={opt} label={opt} selected={intake.poaAgentRelationship === opt} onClick={() => update({ poaAgentRelationship: opt })} />))}</div></div>
-            <div className="mt-5">
-              <QuestionLabel>Successor agent name</QuestionLabel>
-              <NameInput
-                value={intake.poaSuccessorAgentName}
-                onChange={(v) => {
-                  update({ poaSuccessorAgentName: v });
-                  if (!v) update({ poaSuccessorAgentRelationship: "" });
-                }}
-                optional
-                onPartialChange={partialHandler("poa-successor")}
-              />
-              {intake.poaSuccessorAgentName.trim() !== "" && (
-                <div className="mt-3">
-                  <QuestionLabel>Successor agent relationship</QuestionLabel>
-                  <div className="grid grid-cols-2 gap-3">
-                    {relOptions.map((opt) => (
-                      <ChoiceTile
-                        key={opt}
-                        label={opt}
-                        selected={intake.poaSuccessorAgentRelationship === opt}
-                        onClick={() => update({ poaSuccessorAgentRelationship: opt })}
-                      />
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-            <div className="mt-5"><QuestionLabel>Powers granted</QuestionLabel>
-              <div className="space-y-3">
-                {ALL_POA_POWERS.map((power) => (
-                  <button key={power} type="button" onClick={() => togglePower(power)}
-                    className={`min-h-[44px] w-full rounded-xl border-2 px-5 py-3.5 text-left text-sm font-medium transition-all ${intake.poaPowers.includes(power) ? "border-gold bg-gold/10 text-navy" : "border-gray-200 bg-white text-charcoal hover:border-gold/40"} ${power === "Banking and finances" ? "opacity-80" : ""}`}>
-                    <span className="mr-2">{intake.poaPowers.includes(power) ? "☑" : "☐"}</span>{power}{power === "Banking and finances" ? " (required)" : ""}
-                  </button>
-                ))}
-                <button type="button" onClick={() => togglePower("All of the above")}
-                  className={`min-h-[44px] w-full rounded-xl border-2 px-5 py-3.5 text-left text-sm font-medium transition-all ${intake.poaPowers.length === ALL_POA_POWERS.length ? "border-gold bg-gold/10 text-navy" : "border-gray-200 bg-white text-charcoal hover:border-gold/40"}`}>
-                  <span className="mr-2">{intake.poaPowers.length === ALL_POA_POWERS.length ? "☑" : "☐"}</span>All of the above
-                </button>
-              </div>
-            </div>
-          </>
-        );
+        return <PoaStep intake={intake} update={update} partialHandler={partialHandler} />;
 
       case "healthcare":
-        return (
-          <>
-            <p className="mb-5 text-xs text-charcoal/60">This person makes medical decisions for you if you cannot make them yourself.</p>
-            <QuestionLabel required>Patient advocate name</QuestionLabel><NameInput value={intake.patientAdvocateName} onChange={(v) => update({ patientAdvocateName: v })} />
-            <div className="mt-5"><QuestionLabel>Relationship</QuestionLabel><div className="grid grid-cols-2 gap-3">{relOptions.map((opt) => (<ChoiceTile key={opt} label={opt} selected={intake.patientAdvocateRelationship === opt} onClick={() => update({ patientAdvocateRelationship: opt })} />))}</div></div>
-            <div className="mt-5"><QuestionLabel>Successor patient advocate</QuestionLabel><NameInput value={intake.successorPatientAdvocateName} onChange={(v) => update({ successorPatientAdvocateName: v })} optional onPartialChange={partialHandler("successor-advocate")} /></div>
-            <div className="mt-5"><QuestionLabel>Do you wish to be an organ and tissue donor?</QuestionLabel><YesNoTiles value={intake.organDonation} onChange={(v) => update({ organDonation: v })} /></div>
-            <div className="mt-5"><QuestionLabel>Do you have specific healthcare wishes to document?</QuestionLabel><YesNoTiles value={intake.hasHealthcareWishes} onChange={(v) => update({ hasHealthcareWishes: v, ...(v === "No" ? { healthcareWishesDescription: "" } : {}) })} /></div>
-            {intake.hasHealthcareWishes === "Yes" && (
-              <div className="mt-5">
-                <textarea value={intake.healthcareWishesDescription} onChange={(e) => update({ healthcareWishesDescription: e.target.value })} placeholder="Example: I do not wish to be kept on life support if there is no reasonable chance of recovery." rows={4} className="w-full rounded-xl border-2 border-gray-200 bg-white px-4 py-3 text-sm text-charcoal placeholder:text-gray-400 focus:border-gold focus:outline-none focus:ring-1 focus:ring-gold/30 transition-colors resize-none" />
-                <p className="mt-2 text-xs text-charcoal/60">This is your personal instruction, it guides your advocate&apos;s decisions.</p>
-              </div>
-            )}
-          </>
-        );
+        return <PadStep intake={intake} update={update} partialHandler={partialHandler} />;
 
       case "gifts":
         return (
           <>
-            <p className="mb-2 text-xs text-charcoal/60">For example: &quot;My grandmother&apos;s ring to my daughter Sarah&quot;</p>
+            <FuneralPreference
+              value={intake.funeralPreference}
+              onChange={(v) => update({ funeralPreference: v })}
+            />
+            <p className="mb-2 mt-6 text-xs text-charcoal/60">For example: &quot;My grandmother&apos;s ring to my daughter Sarah&quot;</p>
             <QuestionLabel>Do you have any specific gifts you&apos;d like to leave?</QuestionLabel>
             <YesNoTiles value={intake.hasSpecificGifts} onChange={(v) => update({ hasSpecificGifts: v, ...(v === "No" ? { specificGiftsDescription: "" } : {}) })} />
             {intake.hasSpecificGifts === "Yes" && (
@@ -766,16 +741,13 @@ export default function TrustPage() {
               ? "Custom split"
               : "Equal shares"
             : "Sole beneficiary";
-        const contingentSummary =
-          intake.hasContingentBeneficiary === "Yes" && intake.contingentBeneficiaries.length > 0
-            ? intake.contingentBeneficiaries
-                .map((b) =>
-                  intake.contingentEqualShares === "No" && b.share
-                    ? `${b.name} (${b.relationship}) — ${b.share}%`
-                    : `${b.name} (${b.relationship})`
-                )
-                .join(", ")
-            : "None designated";
+        const contingencyLabel = (b: { contingency?: string; contingentName?: string }) => {
+          const opt = CONTINGENCY_OPTIONS.find((o) => o.value === b.contingency);
+          if (!opt) return "Not answered";
+          return b.contingency === "named_individual"
+            ? `${opt.label}: ${b.contingentName || "(not named)"}`
+            : opt.label;
+        };
         const allOpen = Object.values(openReviewSections).every(Boolean);
         const setAll = (val: boolean) =>
           setOpenReviewSections((s) => Object.fromEntries(Object.keys(s).map((k) => [k, val])) as Record<string, boolean>);
@@ -802,11 +774,20 @@ export default function TrustPage() {
               <Row label="Date of birth" value={intake.dateOfBirth} />
               <Row label="City" value={intake.city} />
               <Row label="Minor children" value={intake.hasMinorChildren} />
+              <Row label="Special-needs dependent" value={intake.hasSpecialNeedsDependent} />
+              <Row label="Irrevocable trust" value={intake.wantsIrrevocableTrust} />
+              <Row label="Medicaid planning" value={intake.hasMedicaidPlanning} />
+              <Row label="Estate dispute" value={intake.hasEstateDispute} />
             </Section>
 
             <Section k="trust" title="Trust & Trustees" target="trustee">
               <Row label="Trust name" value={intake.trustName || `The ${intake.firstName} ${intake.lastName} Revocable Living Trust`.trim()} />
               <Row label="Primary trustee" value={intake.primaryTrustee === "Myself" ? "Yourself" : intake.trusteeName} />
+              <Row label="Joint trust" value={intake.isJointTrust} />
+              {isJointTrust && <Row label="Second grantor" value={intake.secondGrantorName} />}
+              {isJointTrust && (
+                <Row label="Co-Trustees act" value={JOINT_TRUSTEE_AUTHORITY_OPTIONS.find((o) => o.value === intake.jointTrusteeAuthority)?.label ?? ""} />
+              )}
               <Row label="Successor trustee" value={intake.successorTrusteeName} />
               <Row label="Relationship" value={intake.successorTrusteeRelationship} />
               {intake.additionalSuccessorTrustees.filter((s) => s.name.trim()).map((s, i) => (
@@ -826,13 +807,13 @@ export default function TrustPage() {
                         ? ` · ${b.share}%`
                         : ""}
                     </p>
+                    <p className="mt-1 text-xs text-charcoal/50">If they pass first: {contingencyLabel(b)}</p>
                   </div>
                 ))}
               </div>
               {hasMinorChildren && intake.distributionAge && (
                 <Row label="Distribution age" value={intake.distributionAge} />
               )}
-              <Row label="Contingent" value={contingentSummary} />
             </Section>
 
             {hasMinorChildren && (
@@ -866,20 +847,25 @@ export default function TrustPage() {
               <Row label="Successor agent" value={intake.poaSuccessorAgentName} />
               <Row label="Successor relationship" value={intake.poaSuccessorAgentRelationship} />
               <Row label="Powers" value={intake.poaPowers.join(", ")} />
+              <Row label="Takes effect" value={POA_EFFECTIVE_OPTIONS.find((o) => o.value === intake.poaEffective)?.label ?? ""} />
             </Section>
 
             <Section k="healthcare" title="Healthcare Directive" target="healthcare">
               <Row label="Advocate" value={intake.patientAdvocateName} />
               <Row label="Relationship" value={intake.patientAdvocateRelationship} />
               <Row label="Successor advocate" value={intake.successorPatientAdvocateName} />
-              <Row label="Organ donation" value={intake.organDonation} />
+              <Row label="Organ donation" value={ORGAN_DONATION_OPTIONS.find((o) => o.value === intake.organDonation)?.label ?? ""} />
+              {intake.organDonation === "specific_purposes" && (
+                <Row label="Donation purposes" value={<span className="whitespace-pre-wrap">{intake.organDonationPurposes}</span>} />
+              )}
               <Row label="Healthcare wishes" value={intake.hasHealthcareWishes} />
               {intake.hasHealthcareWishes === "Yes" && (
                 <Row label="Wishes" value={<span className="whitespace-pre-wrap">{intake.healthcareWishesDescription}</span>} />
               )}
             </Section>
 
-            <Section k="gifts" title="Specific Gifts" target="gifts">
+            <Section k="gifts" title="Gifts &amp; Final Wishes" target="gifts">
+              <Row label="Remains" value={FUNERAL_PREFERENCE_OPTIONS.find((o) => o.value === intake.funeralPreference)?.label ?? ""} />
               <Row label="Has gifts" value={intake.hasSpecificGifts} />
               {intake.hasSpecificGifts === "Yes" && (
                 <Row label="Description" value={<span className="whitespace-pre-wrap">{intake.specificGiftsDescription}</span>} />
@@ -906,6 +892,15 @@ export default function TrustPage() {
           <div className="rounded-2xl bg-white p-6 md:p-8 shadow-xl">
             <p className="mb-6 text-xs font-medium uppercase tracking-wider text-gold">{moduleTitles[activeCardId]}</p>
             {activeCardId === "review" && <h2 className="mb-4 text-lg font-bold text-navy">Does everything look right?</h2>}
+            {resumeNotice !== null && (
+              <div className="mb-5 rounded-xl border-2 border-gold/40 bg-gold/5 px-4 py-3">
+                <p className="text-xs leading-relaxed text-charcoal">
+                  We&apos;ve added {resumeNotice === 1 ? "a question" : "a few questions"} since you started. Your
+                  existing answers have been kept, so you only need to complete
+                  {resumeNotice === 1 ? " this one" : " these"} to continue.
+                </p>
+              </div>
+            )}
             {renderCard()}
             {activeCardId === "review" ? (
               <div className="mt-8 flex gap-3">

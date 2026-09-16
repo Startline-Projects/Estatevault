@@ -175,9 +175,19 @@ export async function handleDocumentCheckout(
   // document is created. Re-derive from whatever intake we have; if halted,
   // park the order for an attorney and never create document records or queue
   // generation. No override.
-  const intakeForStop =
-    (quizForIntake?.answers as Record<string, unknown> | undefined) ??
-    (existingOrder?.intake_data as Record<string, unknown> | null | undefined);
+  // The E2EE purge blanks quiz_sessions.answers to {} once documents are
+  // generated, leaving the ROW in place. A replay after that point therefore
+  // finds a truthy row holding nothing, so emptiness — not row presence — is
+  // what decides whether these answers are usable.
+  const quizAnswers = quizForIntake?.answers as Record<string, unknown> | null | undefined;
+  const quizAnswersArePurged = !quizAnswers || Object.keys(quizAnswers).length === 0;
+
+  // `??` does not fall through on {}, so a purged session used to short-circuit
+  // this fallback and hand evaluateHardStop an empty object — which reports
+  // "not halted" and silently skipped Core Rule 4 on every post-purge replay.
+  const intakeForStop = quizAnswersArePurged
+    ? (existingOrder?.intake_data as Record<string, unknown> | null | undefined)
+    : quizAnswers;
   if (evaluateHardStop(intakeForStop).halted) {
     console.error(`Hard stop hit in webhook for order ${orderId}; halting generation.`);
     await orderRepo.update(supabase, orderId, { status: "needs_attorney" });
@@ -197,11 +207,20 @@ export async function handleDocumentCheckout(
   if (!lockedOrDelivered) {
     updatePayload.status = "generating";
   }
-  if (quizForIntake) {
+  // Only overwrite the order's intake snapshot with answers that actually hold
+  // something. Replays reach this line after the purge, and writing {} or
+  // { email } here destroyed the snapshot captured at checkout — which is the
+  // only copy left once the quiz session is purged.
+  if (quizForIntake && !quizAnswersArePurged) {
     updatePayload.intake_data = customerEmail
-      ? { ...(quizForIntake.answers as Record<string, unknown>), email: customerEmail }
-      : quizForIntake.answers;
+      ? { ...(quizAnswers as Record<string, unknown>), email: customerEmail }
+      : quizAnswers;
     updatePayload.quiz_session_id = quizForIntake.id;
+  } else if (quizForIntake) {
+    console.warn(
+      `[webhook] order ${orderId}: quiz session ${quizForIntake.id} is purged; ` +
+        "keeping the existing intake_data snapshot rather than overwriting it.",
+    );
   }
   await orderRepo.update(supabase, orderId, updatePayload);
 

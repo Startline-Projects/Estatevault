@@ -22,7 +22,8 @@ describe("mapIntakeToTemplateData", () => {
       guardianName: "Alice Johnson",
       guardianRelationship: "Sister",
       successorGuardianName: "Tom Brown",
-      organDonation: "yes_all",
+      organDonation: "any_purpose",
+      funeralPreference: "family_decides",
       hasSpecificGifts: "No",
     });
 
@@ -43,7 +44,7 @@ describe("mapIntakeToTemplateData", () => {
     expect(d.primary_beneficiaries[0].share_percent).toBe("100");
     expect(d.guardian?.full_name).toBe("Alice Johnson");
     expect(d.successor_guardian?.full_name).toBe("Tom Brown");
-    expect(d.organ_donation).toBe("yes_all");
+    expect(d.organ_donation).toBe("any_purpose");
     expect(d.has_specific_gifts).toBe(false);
   });
 
@@ -77,7 +78,8 @@ describe("mapIntakeToTemplateData", () => {
     expect(d.has_children).toBe(false);
     expect(d.bond_waiver).toBe(true);
     expect(d.no_contest_clause).toBe(true);
-    expect(d.dpoa_powers).toEqual(["banking", "real_estate", "business", "tax", "insurance", "government_benefits", "retirement", "digital"]);
+    // A power is granted only when the client selected it. No selection, no powers.
+    expect(d.dpoa_powers).toEqual([]);
     expect(d.children).toEqual([]);
     expect(d.primary_beneficiaries).toEqual([]);
   });
@@ -97,7 +99,8 @@ describe("mapIntakeToTemplateData", () => {
     expect(result.error).toBeNull();
     const bens = result.data!.primary_beneficiaries;
     expect(bens).toHaveLength(3);
-    expect(bens[0].share_percent).toBe("33");
+    // Largest-remainder split (BUG-20): shares must total exactly 100.
+    expect(bens[0].share_percent).toBe("34");
     expect(bens[1].share_percent).toBe("33");
     expect(bens[2].share_percent).toBe("33");
   });

@@ -129,15 +129,11 @@ export const quizAnswersSchema = z.object({
   shareWithAdvisor: z.boolean(),
 });
 
-export function detectQuizHardStop(answers: z.infer<typeof quizAnswersSchema>): string | null {
-  if (answers.specialNeedsChildren === HARD_STOP_VALUES.specialNeedsChildren) {
-    return "special_needs_dependent";
-  }
-  if (answers.additionalSituation === HARD_STOP_VALUES.additionalSituation) {
-    return "special_needs_family_member";
-  }
-  return null;
-}
+// detectQuizHardStop used to live here: a second evaluator with its own reason
+// vocabulary that knew nothing about the will/trust intake shape. It was folded
+// into lib/compliance/hardStop.ts so there is one evaluator and one set of
+// reason strings. Use firstHardStopReason() for the quiz route's single-reason
+// response, evaluateHardStop() everywhere else.
 
 // ---- Checkout (Phase 3) ----
 
@@ -161,7 +157,14 @@ const beneficiarySchema = z.object({
   name: z.string().min(1).max(200),
   relationship: BENEFICIARY_REL,
   share: shareString,
-});
+  // What happens to THIS beneficiary's share. Values map 1:1 to the
+  // {{#IF contingency ...}} branches in the will, trust and pour-over templates.
+  contingency: z.enum(["other_beneficiaries", "descendants", "named_individual"]),
+  contingentName: z.string().max(200).optional().default(""),
+}).refine(
+  (b) => b.contingency !== "named_individual" || (b.contingentName ?? "").trim().length > 0,
+  { message: "Name the person who takes this beneficiary's share", path: ["contingentName"] },
+);
 
 const contingentBeneficiarySchema = z.object({
   name: z.string().min(1).max(200),
@@ -172,6 +175,13 @@ const contingentBeneficiarySchema = z.object({
 const RELATIONSHIP_OR_EMPTY = z.union([RELATIONSHIP, z.literal("")]);
 const GUARDIAN_REL_OR_EMPTY = z.union([GUARDIAN_REL, z.literal("")]);
 
+const POA_POWERS = [
+  "Banking and finances",
+  "Real estate transactions",
+  "Business operations",
+  "Tax filings",
+] as const;
+
 const willIntakeSchema = z.object({
   email: z.string().email().optional(),
   firstName: z.string().min(1).max(100),
@@ -181,6 +191,11 @@ const willIntakeSchema = z.object({
   state: z.string().min(1).max(50),
   maritalStatus: MARITAL_STATUS,
   hasMinorChildren: YES_NO,
+  // Core Rule 4 hard stops. A "Yes" to any of these halts generation, so the
+  // schema requires an answer rather than letting one default to "No".
+  wantsIrrevocableTrust: YES_NO,
+  hasMedicaidPlanning: YES_NO,
+  hasEstateDispute: YES_NO,
   executorName: z.string().min(1).max(200),
   executorRelationship: RELATIONSHIP,
   successorExecutorName: z.string().max(200),
@@ -193,7 +208,27 @@ const willIntakeSchema = z.object({
   hasContingentBeneficiary: YES_NO,
   contingentBeneficiaries: z.array(contingentBeneficiarySchema).max(20),
   contingentEqualShares: z.string().max(10),
-  organDonation: YES_NO,
+  // Four answers per the attorney's instruction. Values map 1:1 to the organ
+  // donation branches in the Advance Healthcare Directive.
+  organDonation: z.enum(["none", "any_purpose", "specific_purposes", "silent"]),
+  organDonationPurposes: z.string().max(2000).optional().default(""),
+  // A will order also generates a Power of Attorney and a Patient Advocate
+  // Designation, so the will flow collects the same answers as the trust flow.
+  poaAgentName: z.string().min(1).max(200),
+  poaAgentRelationship: RELATIONSHIP,
+  poaSuccessorAgentName: z.string().max(200),
+  poaSuccessorAgentRelationship: RELATIONSHIP_OR_EMPTY,
+  poaPowers: z.array(z.enum(POA_POWERS)).min(1),
+  poaEffective: z.enum(["immediate", "springing"]),
+  patientAdvocateName: z.string().min(1).max(200),
+  patientAdvocateRelationship: RELATIONSHIP,
+  successorPatientAdvocateName: z.string().max(200),
+  secondSuccessorPatientAdvocateName: z.string().max(200).optional().default(""),
+  hasHealthcareWishes: YES_NO,
+  healthcareWishesDescription: z.string().max(5000),
+  // The three approved clauses of the will's Section 8.2. No default: every
+  // will previously shipped a clause the client never chose.
+  funeralPreference: z.enum(["burial", "cremation", "family_decides"]),
   hasSpecificGifts: YES_NO,
   specificGiftsDescription: z.string().max(5000),
 }).refine(
@@ -214,12 +249,6 @@ const TRUST_ASSET_TYPES = [
   "Digital assets and cryptocurrency",
 ] as const;
 
-const POA_POWERS = [
-  "Banking and finances",
-  "Real estate transactions",
-  "Business operations",
-  "Tax filings",
-] as const;
 
 const trustIntakeSchema = z.object({
   email: z.string().email().optional(),
@@ -230,10 +259,19 @@ const trustIntakeSchema = z.object({
   state: z.string().min(1).max(50),
   maritalStatus: MARITAL_STATUS,
   trustName: z.string().max(300),
+  // Core Rule 4 hard stops. A "Yes" to any of these halts generation, so the
+  // schema requires an answer rather than letting one default to "No".
+  wantsIrrevocableTrust: YES_NO,
+  hasMedicaidPlanning: YES_NO,
+  hasEstateDispute: YES_NO,
   primaryTrustee: z.enum(["Myself", "Someone else"]),
   trusteeName: z.string().max(200),
   successorTrusteeName: z.string().min(1).max(200),
   successorTrusteeRelationship: RELATIONSHIP,
+  isJointTrust: YES_NO,
+  secondGrantorName: z.string().max(200).optional().default(""),
+  secondGrantorRelationship: z.string().max(100).optional().default(""),
+  jointTrusteeAuthority: z.enum(["either_alone", "jointly"]).optional().or(z.literal("")).default(""),
   additionalSuccessorTrustees: z.array(z.object({
     name: z.string().min(1).max(200),
     relationship: RELATIONSHIP,
@@ -255,15 +293,25 @@ const trustIntakeSchema = z.object({
   poaSuccessorAgentName: z.string().max(200),
   poaSuccessorAgentRelationship: RELATIONSHIP_OR_EMPTY,
   poaPowers: z.array(z.enum(POA_POWERS)).min(1),
+  // Drives Article III of the DPOA. Must stay in step with the {{#IF
+  // dpoa_effective ...}} branches in dpoa-michigan-v1.1.0.
+  poaEffective: z.enum(["immediate", "springing"]),
   patientAdvocateName: z.string().min(1).max(200),
   patientAdvocateRelationship: RELATIONSHIP,
   successorPatientAdvocateName: z.string().max(200),
-  organDonation: YES_NO,
+  secondSuccessorPatientAdvocateName: z.string().max(200).optional().default(""),
+  // Four answers per the attorney's instruction. Values map 1:1 to the organ
+  // donation branches in the Advance Healthcare Directive.
+  organDonation: z.enum(["none", "any_purpose", "specific_purposes", "silent"]),
+  organDonationPurposes: z.string().max(2000).optional().default(""),
   hasHealthcareWishes: YES_NO,
   healthcareWishesDescription: z.string().max(5000),
   hasContingentBeneficiary: YES_NO,
   contingentBeneficiaries: z.array(contingentBeneficiarySchema).max(20),
   contingentEqualShares: z.string().max(10),
+  // The three approved clauses of the will's Section 8.2. No default: every
+  // will previously shipped a clause the client never chose.
+  funeralPreference: z.enum(["burial", "cremation", "family_decides"]),
   hasSpecificGifts: YES_NO,
   specificGiftsDescription: z.string().max(5000),
 }).refine(
@@ -852,4 +900,11 @@ export const clientAdvisorUpdateSchema = z.object({
 // A partner queuing a pre-launch client invite during onboarding (B2).
 export const waitlistInviteSchema = z.object({
   client_email: z.string().email(),
+});
+
+
+// POST /api/partner/certify — Admin/sales-rep confers certification on a named
+// partner. The partner no longer certifies themselves.
+export const partnerCertifySchema = z.object({
+  partnerId: z.string().uuid(),
 });

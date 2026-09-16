@@ -7,6 +7,9 @@ export interface TrustIntake {
   state: string;
   maritalStatus: string;
   hasSpecialNeedsDependent: string;
+  wantsIrrevocableTrust: string;
+  hasMedicaidPlanning: string;
+  hasEstateDispute: string;
   trustName: string;
   // Trustee
   primaryTrustee: string;
@@ -14,8 +17,19 @@ export interface TrustIntake {
   successorTrusteeName: string;
   successorTrusteeRelationship: string;
   additionalSuccessorTrustees: Array<{ name: string; relationship: string }>;
+  /** Joint trusts only: "either_alone" | "jointly". */
+  /** "Yes" | "No" — a joint trust also needs the second grantor named. */
+  isJointTrust: string;
+  secondGrantorName: string;
+  secondGrantorRelationship: string;
+  jointTrusteeAuthority: string;
   // Beneficiaries
-  beneficiaries: Array<{ name: string; relationship: string; share: string }>;
+  /**
+   * Each beneficiary carries its own contingency: what happens to THAT share if
+   * they do not survive. `contingency` is empty until answered — never
+   * defaulted, because it is dispositive.
+   */
+  beneficiaries: Array<{ name: string; relationship: string; share: string; contingency?: string; contingentName?: string }>;
   beneficiariesEqualShares: string;
   distributionAge: string;
   // Guardian
@@ -36,11 +50,16 @@ export interface TrustIntake {
   poaSuccessorAgentName: string;
   poaSuccessorAgentRelationship: string;
   poaPowers: string[];
+  /** "immediate" | "springing" — drives Article III of the DPOA. */
+  poaEffective: string;
   // Healthcare directive
   patientAdvocateName: string;
   patientAdvocateRelationship: string;
   successorPatientAdvocateName: string;
+  secondSuccessorPatientAdvocateName: string;
   organDonation: string;
+  /** Only meaningful when organDonation is "specific_purposes". */
+  organDonationPurposes: string;
   hasHealthcareWishes: string;
   healthcareWishesDescription: string;
   // Contingent beneficiaries
@@ -48,6 +67,8 @@ export interface TrustIntake {
   contingentBeneficiaries: Array<{ name: string; relationship: string; share: string }>;
   contingentEqualShares: string;
   // Specific gifts
+  /** "burial" | "cremation" | "family_decides" — the will's Section 8.2. */
+  funeralPreference: string;
   hasSpecificGifts: string;
   specificGiftsDescription: string;
 }
@@ -60,12 +81,19 @@ export const initialTrustIntake: TrustIntake = {
   state: "",
   maritalStatus: "",
   hasSpecialNeedsDependent: "",
+  wantsIrrevocableTrust: "",
+  hasMedicaidPlanning: "",
+  hasEstateDispute: "",
   trustName: "",
   primaryTrustee: "",
   trusteeName: "",
   successorTrusteeName: "",
   successorTrusteeRelationship: "",
   additionalSuccessorTrustees: [],
+  isJointTrust: "",
+  secondGrantorName: "",
+  secondGrantorRelationship: "",
+  jointTrusteeAuthority: "",
   beneficiaries: [{ name: "", relationship: "", share: "" }],
   beneficiariesEqualShares: "",
   distributionAge: "",
@@ -82,16 +110,20 @@ export const initialTrustIntake: TrustIntake = {
   poaAgentRelationship: "",
   poaSuccessorAgentName: "",
   poaSuccessorAgentRelationship: "",
-  poaPowers: ["Banking and finances"],
+  poaPowers: ["Banking and finances", "Real estate transactions", "Business operations", "Tax filings"],
+  poaEffective: "immediate",
   patientAdvocateName: "",
   patientAdvocateRelationship: "",
   successorPatientAdvocateName: "",
+  secondSuccessorPatientAdvocateName: "",
   organDonation: "",
+  organDonationPurposes: "",
   hasHealthcareWishes: "",
   healthcareWishesDescription: "",
   hasContingentBeneficiary: "",
   contingentBeneficiaries: [],
   contingentEqualShares: "",
+  funeralPreference: "",
   hasSpecificGifts: "",
   specificGiftsDescription: "",
 };

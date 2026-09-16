@@ -11,7 +11,7 @@ const styles = StyleSheet.create({
   paragraph: {
     fontFamily: TOKENS.fonts.serifBold,
     fontSize: TOKENS.fontSize.body,
-    color: TOKENS.colors.navyDark,
+    color: TOKENS.colors.black,
     textAlign: "justify",
     lineHeight: 1.3,
     marginBottom: 10,

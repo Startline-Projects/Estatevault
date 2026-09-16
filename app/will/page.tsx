@@ -15,6 +15,19 @@ import CityAutocomplete from "@/components/intake/CityAutocomplete";
 import DateOfBirthInput from "@/components/intake/DateOfBirthInput";
 import NameInput from "@/components/quiz/NameInput";
 import QuestionLabel from "@/components/quiz/QuestionLabel";
+import { findResumePoint } from "@/lib/intake/incomplete-steps";
+import { BeneficiaryContingency, contingenciesComplete, CONTINGENCY_OPTIONS } from "@/components/intake/BeneficiaryContingency";
+import { FuneralPreference, FUNERAL_PREFERENCE_OPTIONS } from "@/components/intake/FuneralPreference";
+import { HardStopQuestions, hardStopQuestionsAnswered } from "@/components/intake/HardStopQuestions";
+import { evaluateHardStop } from "@/lib/compliance/hardStop";
+import {
+  PoaStep,
+  PadStep,
+  isPoaStepComplete,
+  isPadStepComplete,
+  POA_EFFECTIVE_OPTIONS,
+  ORGAN_DONATION_OPTIONS,
+} from "@/components/intake/PoaPadSteps";
 
 type Stage = "acknowledgment" | "intake" | "redirecting";
 
@@ -23,12 +36,18 @@ export default function WillPage() {
   const [partnerParam, setPartnerParam] = useState("");
   const [stage, setStage] = useState<Stage>("acknowledgment");
   const [hardStopped, setHardStopped] = useState(false);
+  // Which trigger fired, so the referral card can say why.
+  const [hardStopReasons, setHardStopReasons] = useState<string[]>([]);
   const [userId, setUserId] = useState<string | null>(null);
 
   // Intake
   const [intake, setIntake] = useState<WillIntake>(initialWillIntake);
   const [currentCard, setCurrentCard] = useState(0);
   const [animating, setAnimating] = useState(false);
+  /** Set when a saved session was routed back for answers added after it was saved. */
+  const [resumeNotice, setResumeNotice] = useState<number | null>(null);
+  /** Step id from ?resume=, applied once the card list is known. */
+  const [pendingResumeStep, setPendingResumeStep] = useState<string | null>(null);
   const [direction, setDirection] = useState<"forward" | "back">("forward");
   const hasMinorChildren = intake.hasMinorChildren === "Yes";
   const [openReviewSections, setOpenReviewSections] = useState<Record<string, boolean>>({
@@ -37,6 +56,8 @@ export default function WillPage() {
     executor: false,
     beneficiaries: false,
     guardian: false,
+    poa: false,
+    healthcare: false,
     gifts: false,
   });
   const maxDob = (() => {
@@ -70,7 +91,31 @@ export default function WillPage() {
 
   useEffect(() => {
     async function init() {
-      setPartnerParam(new URLSearchParams(window.location.search).get("partner") || "");
+      const params = new URLSearchParams(window.location.search);
+      setPartnerParam(params.get("partner") || "");
+
+      // Returned here from checkout because a question was added after this
+      // session was saved. Restore the answers and open the step that asks.
+      const resumeStep = params.get("resume");
+      if (resumeStep) {
+        let saved: string | null = sessionStorage.getItem("willIntake");
+        if (!saved) {
+          try {
+            const ls = localStorage.getItem("willIntake");
+            if (ls) { const env = JSON.parse(ls); saved = JSON.stringify(env.data ?? env); }
+          } catch { /* corrupt */ }
+        }
+        if (saved) {
+          try {
+            const parsed = JSON.parse(saved);
+            setIntake({ ...initialWillIntake, ...parsed });
+            const resume = findResumePoint("will", parsed);
+            if (resume) setResumeNotice(resume.missingFields.length);
+          } catch { /* corrupt */ }
+        }
+        setStage("intake");
+        setPendingResumeStep(resumeStep);
+      }
       const { data } = await getLatestQuiz();
       if (data) {
         setUserId(data.userId);
@@ -87,19 +132,32 @@ export default function WillPage() {
   }, [update]);
 
   // ── Intake card logic ─────────────────────────────────────────
-  type CardId = "residency" | "about" | "executor" | "beneficiaries" | "guardian" | "gifts" | "review";
+  type CardId = "residency" | "about" | "executor" | "beneficiaries" | "guardian" | "poa" | "healthcare" | "gifts" | "review";
 
   const visibleCards: CardId[] = ["residency", "about", "executor", "beneficiaries"];
   if (hasMinorChildren) visibleCards.push("guardian");
-  visibleCards.push("gifts", "review");
+  visibleCards.push("poa", "healthcare", "gifts", "review");
 
   const totalCards = visibleCards.length;
   const safeIndex = Math.min(currentCard, totalCards - 1);
   const activeCardId = visibleCards[safeIndex];
   const progress = ((safeIndex + 1) / totalCards) * 100;
 
+  // Apply ?resume=<step> once the card list exists for this intake.
+  useEffect(() => {
+    if (!pendingResumeStep) return;
+    const idx = visibleCards.indexOf(pendingResumeStep as CardId);
+    if (idx >= 0) setCurrentCard(idx);
+    setPendingResumeStep(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingResumeStep, visibleCards.join(",")]);
+
   function isCardComplete(): boolean {
     switch (activeCardId) {
+      case "poa":
+        return isPoaStepComplete(intake);
+      case "healthcare":
+        return isPadStepComplete(intake);
       case "residency":
         return intake.state === "Michigan" && intake.maritalStatus !== "";
       case "about":
@@ -110,7 +168,8 @@ export default function WillPage() {
           intake.dateOfBirth <= maxDob &&
           intake.city.trim() !== "" &&
           intake.hasMinorChildren !== "" &&
-          intake.hasSpecialNeedsDependent !== ""
+          intake.hasSpecialNeedsDependent !== "" &&
+          hardStopQuestionsAnswered(intake)
         );
       case "executor":
         return (
@@ -120,7 +179,6 @@ export default function WillPage() {
       case "beneficiaries": {
         if (intake.beneficiaries.length === 0) return false;
         if (intake.beneficiaries.some((b) => !b.name.trim() || !b.relationship)) return false;
-        if (intake.hasContingentBeneficiary === "") return false;
         if (intake.beneficiaries.length > 1) {
           if (!intake.beneficiariesEqualShares) return false;
           if (intake.beneficiariesEqualShares === "No") {
@@ -129,20 +187,7 @@ export default function WillPage() {
             if (Math.round(t) !== 100) return false;
           }
         }
-        if (intake.hasContingentBeneficiary === "Yes" && intake.contingentBeneficiaries.length === 0)
-          return false;
-        if (intake.hasContingentBeneficiary === "Yes") {
-          if (intake.contingentBeneficiaries.some((b) => !b.name.trim() || !b.relationship))
-            return false;
-          if (intake.contingentBeneficiaries.length > 1) {
-            if (!intake.contingentEqualShares) return false;
-            if (intake.contingentEqualShares === "No") {
-              if (intake.contingentBeneficiaries.some((b) => !b.share?.trim())) return false;
-              const shareTotal = intake.contingentBeneficiaries.reduce((sum, b) => sum + (parseFloat(b.share) || 0), 0);
-              if (Math.round(shareTotal) !== 100) return false;
-            }
-          }
-        }
+        if (!contingenciesComplete(intake.beneficiaries)) return false;
         return true;
       }
       case "guardian":
@@ -152,7 +197,7 @@ export default function WillPage() {
         );
       case "gifts":
         return (
-          intake.organDonation !== "" &&
+          intake.funeralPreference !== "" &&
           intake.hasSpecificGifts !== "" &&
           (intake.hasSpecificGifts === "No" ||
             intake.specificGiftsDescription.trim() !== "")
@@ -175,14 +220,30 @@ export default function WillPage() {
 
   function handleContinue() {
     if (!isCardComplete() || hasPartialName) return;
-    // Hard stop (Core Rule 4) — special-needs dependent halts generation. The
-    // referral (with the lead's contact details) is logged by HardStopCard's
-    // contact form, so the partner can see WHO applied.
-    if (intake.hasSpecialNeedsDependent === "Yes") {
+    // Hard stop (Core Rule 4). Asks the shared evaluator rather than testing one
+    // field, so all four triggers halt here and the screen can never drift from
+    // what the server gates on. The referral (with the lead's contact details)
+    // is logged by HardStopCard's contact form, so the partner can see WHO
+    // applied.
+    const hardStop = evaluateHardStop(intake as unknown as Record<string, unknown>);
+    if (hardStop.halted) {
+      setHardStopReasons(hardStop.reasons);
       setHardStopped(true);
       return;
     }
     if (activeCardId === "review") {
+      // A session saved before a question was added reaches review without an
+      // answer. Route back to the step that asks it rather than failing
+      // validation at checkout, where the client could do nothing about it.
+      const resume = findResumePoint("will", intake as unknown as Record<string, unknown>);
+      if (resume) {
+        const idx = visibleCards.indexOf(resume.step as CardId);
+        if (idx >= 0) {
+          setResumeNotice(resume.missingFields.length);
+          animateTransition("back", () => setCurrentCard(idx));
+          return;
+        }
+      }
       // Save intake to sessionStorage and go to checkout
       const intakeJson = JSON.stringify(intake);
       sessionStorage.setItem("willIntake", intakeJson);
@@ -193,6 +254,9 @@ export default function WillPage() {
       router.push("/will/checkout");
       return;
     }
+    // The notice explains why this session came back here; once the client
+    // moves on it has served its purpose.
+    setResumeNotice(null);
     animateTransition("forward", () => setCurrentCard((c) => c + 1));
   }
 
@@ -244,7 +308,7 @@ export default function WillPage() {
   if (hardStopped) {
     return (
       <PartnerThemedShell showHeader={false}>
-        <HardStopCard partnerId={partnerParam || undefined} reason="Special-needs dependent" />
+        <HardStopCard partnerId={partnerParam || undefined} reason={hardStopReasons[0]} />
       </PartnerThemedShell>
     );
   }
@@ -275,7 +339,9 @@ export default function WillPage() {
     executor: "Your Executor",
     beneficiaries: "Your Beneficiaries",
     guardian: "Minor Children",
-    gifts: "Specific Gifts",
+    poa: "Power of Attorney",
+    healthcare: "Healthcare Directive",
+    gifts: "Gifts & Final Wishes",
     review: "Final Review",
   };
 
@@ -283,6 +349,10 @@ export default function WillPage() {
 
   function renderCard() {
     switch (activeCardId) {
+      case "poa":
+        return <PoaStep intake={intake} update={update} partialHandler={partialHandler} />;
+      case "healthcare":
+        return <PadStep intake={intake} update={update} partialHandler={partialHandler} />;
       case "residency":
         return (
           <>
@@ -389,6 +459,7 @@ export default function WillPage() {
                 onChange={(v) => update({ hasSpecialNeedsDependent: v })}
               />
             </div>
+            <HardStopQuestions intake={intake} onChange={(patch) => update(patch)} />
           </>
         );
 
@@ -495,6 +566,15 @@ export default function WillPage() {
                     ))}
                   </div>
                 </div>
+                <BeneficiaryContingency
+                  beneficiary={b}
+                  soleBeneficiary={intake.beneficiaries.length === 1}
+                  onChange={(patch) => {
+                    const u = [...intake.beneficiaries];
+                    u[idx] = { ...u[idx], ...patch };
+                    update({ beneficiaries: u });
+                  }}
+                />
               </div>
             ))}
             <button
@@ -549,112 +629,6 @@ export default function WillPage() {
                 })()}
               </div>
             )}
-            {/* Contingent beneficiary */}
-            <div className="mt-5">
-              <QuestionLabel>Add a contingent beneficiary?</QuestionLabel>
-              <p className="mb-3 text-xs text-charcoal/50">A contingent beneficiary inherits only if your primary beneficiary cannot. Example: your children inherit if your spouse passes before you.</p>
-              <YesNoTiles
-                value={intake.hasContingentBeneficiary}
-                onChange={(v) => {
-                  update({ hasContingentBeneficiary: v });
-                  if (v === "Yes" && intake.contingentBeneficiaries.length === 0) {
-                    update({ contingentBeneficiaries: [{ name: "", relationship: "", share: "" }] });
-                  }
-                  if (v === "No") update({ contingentBeneficiaries: [], contingentEqualShares: "" });
-                }}
-              />
-            </div>
-            {intake.hasContingentBeneficiary === "Yes" && (
-              <>
-                {intake.contingentBeneficiaries.map((cb, idx) => (
-                  <div key={idx} className="mt-5 rounded-lg bg-gray-50 p-4">
-                    <QuestionLabel required>{idx === 0 ? "Contingent beneficiary name" : `Contingent beneficiary ${idx + 1} name`}</QuestionLabel>
-                    <NameInput
-                      value={cb.name}
-                      onChange={(v) => {
-                        const updated = [...intake.contingentBeneficiaries];
-                        updated[idx] = { ...updated[idx], name: v };
-                        update({ contingentBeneficiaries: updated });
-                      }}
-                    />
-                    <div className="mt-3">
-                      <QuestionLabel>Relationship</QuestionLabel>
-                      <div className="grid grid-cols-2 gap-2">
-                        {["Child", "Parent", "Sibling", "Friend", "Charity/Organization", "Other"].map((opt) => (
-                          <ChoiceTile
-                            key={opt}
-                            label={opt}
-                            selected={cb.relationship === opt}
-                            onClick={() => {
-                              const updated = [...intake.contingentBeneficiaries];
-                              updated[idx] = { ...updated[idx], relationship: opt };
-                              update({ contingentBeneficiaries: updated });
-                            }}
-                          />
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                ))}
-                {intake.contingentBeneficiaries.length < 3 && (
-                  <button
-                    type="button"
-                    onClick={() => update({ contingentBeneficiaries: [...intake.contingentBeneficiaries, { name: "", relationship: "", share: "" }] })}
-                    className="mt-3 text-sm text-gold font-medium hover:text-gold/80"
-                  >
-                    + Add another contingent beneficiary
-                  </button>
-                )}
-                {intake.contingentBeneficiaries.length > 1 && (
-                  <div className="mt-5">
-                    <QuestionLabel>Should these beneficiaries receive equal shares?</QuestionLabel>
-                    <YesNoTiles
-                      value={intake.contingentEqualShares}
-                      onChange={(v) => {
-                        update({
-                          contingentEqualShares: v,
-                          contingentBeneficiaries: intake.contingentBeneficiaries.map((b) => ({ ...b, share: "" })),
-                        });
-                      }}
-                    />
-                    {intake.contingentEqualShares === "No" && (() => {
-                      const total = intake.contingentBeneficiaries.reduce((sum, b) => sum + (parseFloat(b.share) || 0), 0);
-                      const rounded = Math.round(total);
-                      return (
-                        <div className="mt-3 space-y-2">
-                          {intake.contingentBeneficiaries.map((cb, idx) => (
-                            <div key={idx} className="flex items-center gap-3 rounded-xl border-2 border-gray-200 bg-white px-4 py-3">
-                              <span className="flex-1 truncate text-sm font-medium text-navy">
-                                {cb.name || `Beneficiary ${idx + 1}`}
-                              </span>
-                              <div className="flex items-center gap-1.5">
-                                <input
-                                  type="number"
-                                  min={0}
-                                  max={100}
-                                  value={cb.share}
-                                  onChange={(e) => {
-                                    const updated = [...intake.contingentBeneficiaries];
-                                    updated[idx] = { ...updated[idx], share: e.target.value };
-                                    update({ contingentBeneficiaries: updated });
-                                  }}
-                                  className="w-16 rounded-lg border-2 border-gray-200 px-2 py-1.5 text-center text-sm font-medium focus:border-gold focus:outline-none transition-colors"
-                                  placeholder="0"
-                                />
-                                <span className="text-sm text-charcoal/50">%</span>
-                              </div>
-                            </div>
-                          ))}
-                          <p className={`text-sm font-medium ${rounded === 100 ? "text-green-600" : "text-red-500"}`}>
-                            Total: {total % 1 === 0 ? total : total.toFixed(1)}%{rounded === 100 ? ", all set" : ", must equal 100%"}
-                          </p>
-                        </div>
-                      );
-                    })()}
-                  </div>
-                )}
-              </>
-            )}
           </>
         );
 
@@ -698,12 +672,9 @@ export default function WillPage() {
       case "gifts":
         return (
           <>
-            <QuestionLabel>
-              Do you wish to be an organ and tissue donor?
-            </QuestionLabel>
-            <YesNoTiles
-              value={intake.organDonation}
-              onChange={(v) => update({ organDonation: v })}
+            <FuneralPreference
+              value={intake.funeralPreference}
+              onChange={(v) => update({ funeralPreference: v })}
             />
             <div className="mt-6">
               <p className="mb-2 text-xs text-charcoal/60">
@@ -785,16 +756,15 @@ export default function WillPage() {
               ? "Custom split"
               : "Equal shares"
             : "Sole beneficiary";
-        const contingentSummary =
-          intake.hasContingentBeneficiary === "Yes" && intake.contingentBeneficiaries.length > 0
-            ? intake.contingentBeneficiaries
-                .map((b) =>
-                  intake.contingentEqualShares === "No" && b.share
-                    ? `${b.name} (${b.relationship}) — ${b.share}%`
-                    : `${b.name} (${b.relationship})`
-                )
-                .join(", ")
-            : "None designated";
+        // Each beneficiary now carries its own contingency, so the summary is
+        // per person rather than one global line.
+        const contingencyLabel = (b: { contingency?: string; contingentName?: string }) => {
+          const opt = CONTINGENCY_OPTIONS.find((o) => o.value === b.contingency);
+          if (!opt) return "Not answered";
+          return b.contingency === "named_individual"
+            ? `${opt.label}: ${b.contingentName || "(not named)"}`
+            : opt.label;
+        };
         const allOpen = Object.values(openReviewSections).every(Boolean);
         const setAll = (val: boolean) =>
           setOpenReviewSections((s) => Object.fromEntries(Object.keys(s).map((k) => [k, val])) as Record<string, boolean>);
@@ -821,6 +791,10 @@ export default function WillPage() {
               <Row label="Date of birth" value={intake.dateOfBirth} />
               <Row label="City" value={intake.city} />
               <Row label="Minor children" value={intake.hasMinorChildren} />
+              <Row label="Special-needs dependent" value={intake.hasSpecialNeedsDependent} />
+              <Row label="Irrevocable trust" value={intake.wantsIrrevocableTrust} />
+              <Row label="Medicaid planning" value={intake.hasMedicaidPlanning} />
+              <Row label="Estate dispute" value={intake.hasEstateDispute} />
             </Section>
 
             <Section k="executor" title="Executor" target="executor">
@@ -842,10 +816,12 @@ export default function WillPage() {
                         ? ` · ${b.share}%`
                         : ""}
                     </p>
+                    <p className="mt-1 text-xs text-charcoal/50">
+                      If they pass first: {contingencyLabel(b)}
+                    </p>
                   </div>
                 ))}
               </div>
-              <Row label="Contingent" value={contingentSummary} />
             </Section>
 
             {hasMinorChildren && (
@@ -856,8 +832,30 @@ export default function WillPage() {
               </Section>
             )}
 
-            <Section k="gifts" title="Gifts & Healthcare" target="gifts">
-              <Row label="Organ donation" value={intake.organDonation} />
+            <Section k="poa" title="Power of Attorney" target="poa">
+              <Row label="Agent" value={intake.poaAgentName} />
+              <Row label="Relationship" value={intake.poaAgentRelationship} />
+              <Row label="Successor agent" value={intake.poaSuccessorAgentName} />
+              <Row label="Powers" value={intake.poaPowers.join(", ")} />
+              <Row label="Takes effect" value={POA_EFFECTIVE_OPTIONS.find((o) => o.value === intake.poaEffective)?.label ?? ""} />
+            </Section>
+
+            <Section k="healthcare" title="Healthcare Directive" target="healthcare">
+              <Row label="Advocate" value={intake.patientAdvocateName} />
+              <Row label="Relationship" value={intake.patientAdvocateRelationship} />
+              <Row label="Successor advocate" value={intake.successorPatientAdvocateName} />
+              <Row label="Organ donation" value={ORGAN_DONATION_OPTIONS.find((o) => o.value === intake.organDonation)?.label ?? ""} />
+              {intake.organDonation === "specific_purposes" && (
+                <Row label="Donation purposes" value={<span className="whitespace-pre-wrap">{intake.organDonationPurposes}</span>} />
+              )}
+              <Row label="Healthcare wishes" value={intake.hasHealthcareWishes} />
+              {intake.hasHealthcareWishes === "Yes" && (
+                <Row label="Wishes" value={<span className="whitespace-pre-wrap">{intake.healthcareWishesDescription}</span>} />
+              )}
+            </Section>
+
+            <Section k="gifts" title="Gifts &amp; Final Wishes" target="gifts">
+              <Row label="Remains" value={FUNERAL_PREFERENCE_OPTIONS.find((o) => o.value === intake.funeralPreference)?.label ?? ""} />
               <Row label="Specific gifts" value={intake.hasSpecificGifts} />
               {intake.hasSpecificGifts === "Yes" && (
                 <Row label="Description" value={<span className="whitespace-pre-wrap">{intake.specificGiftsDescription}</span>} />
@@ -907,6 +905,15 @@ export default function WillPage() {
               </h2>
             )}
 
+            {resumeNotice !== null && (
+              <div className="mb-5 rounded-xl border-2 border-gold/40 bg-gold/5 px-4 py-3">
+                <p className="text-xs leading-relaxed text-charcoal">
+                  We&apos;ve added {resumeNotice === 1 ? "a question" : "a few questions"} since you started. Your
+                  existing answers have been kept, so you only need to complete
+                  {resumeNotice === 1 ? " this one" : " these"} to continue.
+                </p>
+              </div>
+            )}
             {renderCard()}
 
             {activeCardId === "review" ? (

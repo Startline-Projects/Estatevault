@@ -7,17 +7,17 @@ const UNDERLINE = "__________________________";
 const styles = StyleSheet.create({
   box: {
     backgroundColor: TOKENS.colors.white,
-    // @react-pdf/renderer does not support borderStyle: "double". Per the spec,
-    // we fall back to a 2pt solid navy border on all four sides; the heavier
-    // weight still visually distinguishes the notary block from body content.
+    // @react-pdf/renderer does not support borderStyle: "double", so a 2pt
+    // solid black rule stands in; the heavier weight still sets the notary
+    // block apart from body content without introducing brand colour.
     borderTopWidth: TOKENS.borderWidth.ruleThick,
     borderBottomWidth: TOKENS.borderWidth.ruleThick,
     borderLeftWidth: TOKENS.borderWidth.ruleThick,
     borderRightWidth: TOKENS.borderWidth.ruleThick,
-    borderTopColor: TOKENS.colors.navy,
-    borderBottomColor: TOKENS.colors.navy,
-    borderLeftColor: TOKENS.colors.navy,
-    borderRightColor: TOKENS.colors.navy,
+    borderTopColor: TOKENS.colors.black,
+    borderBottomColor: TOKENS.colors.black,
+    borderLeftColor: TOKENS.colors.black,
+    borderRightColor: TOKENS.colors.black,
     padding: 18,
     marginTop: 16,
     marginBottom: 16,
@@ -26,7 +26,7 @@ const styles = StyleSheet.create({
     fontFamily: TOKENS.fonts.sans,
     fontWeight: "bold",
     fontSize: TOKENS.fontSize.notaryLabel,
-    color: TOKENS.colors.navyDark,
+    color: TOKENS.colors.black,
     letterSpacing: TOKENS.letterSpacing.articleHeader,
     marginBottom: 14,
   },
@@ -52,8 +52,8 @@ const styles = StyleSheet.create({
     fontSize: 10,
     color: TOKENS.colors.black,
   },
-  goldDot: {
-    color: TOKENS.colors.gold,
+  separator: {
+    color: TOKENS.colors.black,
   },
   commission: {
     fontFamily: TOKENS.fonts.serif,
@@ -73,17 +73,26 @@ const styles = StyleSheet.create({
  * title in Helvetica-bold letter-spaced 3pt, signature rule, "Notary Public,
  * State of Michigan" line, county/acting-in row, and commission-expires line.
  */
-export function NotaryBlock(): React.ReactElement {
+export interface NotaryBlockProps {
+  /**
+   * County of the principal's residence. Pre-filled where known so the notary
+   * only has to complete their own county. Blank when the intake did not supply
+   * one — never guessed.
+   */
+  county?: string;
+}
+
+export function NotaryBlock({ county }: NotaryBlockProps = {}): React.ReactElement {
   return (
-    <View style={styles.box}>
+    <View style={styles.box} wrap={false}>
       <Text style={styles.title}>NOTARY ACKNOWLEDGMENT</Text>
       <View style={styles.rule} />
       <Text style={styles.ruleLabel}>Notary Public, State of Michigan</Text>
       <View style={styles.twoColRow}>
         <Text style={styles.cellText}>County of {UNDERLINE}</Text>
         <Text style={styles.cellText}>
-          <Text style={styles.goldDot}> · </Text>
-          Acting in {UNDERLINE} County, Michigan
+          <Text style={styles.separator}> · </Text>
+          Acting in {county ? county : UNDERLINE} County, Michigan
         </Text>
       </View>
       <Text style={styles.commission}>My commission expires: {UNDERLINE}</Text>

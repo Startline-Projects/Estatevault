@@ -46,3 +46,9 @@ next-env.d.ts
 # claude local config (contains secrets / personal allowlist)
 .claude/mcp.json
 .claude/settings.local.json
+temp_auto_push.bat
+temp_interactive_push.bat
+
+# generated test PDFs and scratch renders
+/Testing Scripts/output/
+/.scratch/

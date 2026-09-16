@@ -24,9 +24,9 @@ export function applyPromo(): Promise<ApiResult<{ applied: boolean }>> {
 }
 
 // Mark the signed-in partner's certification complete (B2 training exam).
-export function certifyMe(): Promise<ApiResult<{ success: boolean }>> {
-  return post("/api/partner/certify");
-}
+// certifyMe() was removed: a partner could call POST /api/partner/certify with
+// an empty body and certify themselves. That route is Admin/sales-rep only now
+// and takes the partner it is certifying.
 
 // Upload the partner's logo (server-side storage + logo_url set). Returns URL.
 export function uploadLogo(file: File): Promise<ApiResult<{ url: string }>> {

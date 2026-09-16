@@ -8,35 +8,28 @@ export interface SectionHeaderProps {
 }
 
 const styles = StyleSheet.create({
-  row: {
-    flexDirection: "row",
-    alignItems: "stretch",
+  container: {
     marginTop: TOKENS.spacing.sectionBefore,
     marginBottom: TOKENS.spacing.paragraphAfter,
   },
-  bar: {
-    width: TOKENS.borderWidth.leftBar,
-    backgroundColor: TOKENS.colors.gold,
-  },
   text: {
-    paddingLeft: 12,
-    color: TOKENS.colors.navy,
-    fontFamily: TOKENS.fonts.sans,
-    fontWeight: "bold",
+    fontFamily: TOKENS.fonts.serifBold,
     fontSize: TOKENS.fontSize.sectionHeader,
+    color: TOKENS.colors.black,
+    textAlign: "center",
   },
 });
 
 /**
- * Gold-left-bar section marker, e.g. "Section 1.1.  Identification of Testator."
+ * Section heading, centered bold serif — e.g. "Section 1.1.  Identification of
+ * Testator."
  *
- * Visual: 4pt gold left bar (full text height), 12pt gap, then navy
- * Helvetica-bold 11pt. Two spaces sit between the section number and the title.
+ * The gold left bar was branded styling and has been removed; instrument body
+ * pages use traditional centered headings only.
  */
 export function SectionHeader({ number, title }: SectionHeaderProps): React.ReactElement {
   return (
-    <View style={styles.row}>
-      <View style={styles.bar} />
+    <View style={styles.container} wrap={false}>
       <Text style={styles.text}>
         Section {number}.{title ? `  ${title}` : ""}
       </Text>

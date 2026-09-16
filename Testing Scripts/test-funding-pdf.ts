@@ -1,6 +1,7 @@
-import { writeFileSync } from "fs";
+import { writeFileSync, mkdirSync } from "fs";
 import { join } from "path";
 import { generateFundingInstructionsPDF } from "../lib/documents/generate-funding-instructions";
+import { OUTPUT_DIR } from "./_generate-doc";
 
 async function main() {
   const firstName = process.argv[2] || "John";
@@ -16,11 +17,12 @@ async function main() {
     "Digital assets and cryptocurrency",
   ];
 
+  mkdirSync(OUTPUT_DIR, { recursive: true });
   console.log(`Generating Trust Funding Instructions PDF for ${firstName} ${lastName}...`);
 
   const pdfBytes = await generateFundingInstructionsPDF(firstName, lastName, assetTypes);
 
-  const outputPath = join(__dirname, "Trust Funding Instructions.pdf");
+  const outputPath = join(OUTPUT_DIR, "Trust Funding Instructions.pdf");
   writeFileSync(outputPath, pdfBytes);
 
   console.log(`\n✅ PDF saved to: ${outputPath}`);

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import {
   authSetPasswordSchema,
@@ -191,7 +191,9 @@ describe("H-01 no listUsers() in API routes", () => {
     "app/api/checkout/will/route.ts",
     "app/api/checkout/trust/route.ts",
     "app/api/checkout/vault-subscription/route.ts",
-    "app/api/partners/create-review-attorney/route.ts",
+    // app/api/partners/create-review-attorney/route.ts was deleted in d80514e
+    // (single attorney model). The test hardcoded its path and failed on
+    // ENOENT rather than on anything about listUsers.
     "app/api/auth/set-password/route.ts",
   ];
   for (const f of files) {
@@ -199,6 +201,23 @@ describe("H-01 no listUsers() in API routes", () => {
       expect(src(f)).not.toMatch(/listUsers\s*\(/);
     });
   }
+
+  it("no API route anywhere calls listUsers(), including ones added later", () => {
+    // The list above is a fixed set that goes stale as routes come and go.
+    // This sweeps the whole tree, so a new route is covered without an edit.
+    const offenders: string[] = [];
+    const walk = (dir: string) => {
+      for (const entry of readdirSync(dir, { withFileTypes: true })) {
+        const full = join(dir, entry.name);
+        if (entry.isDirectory()) walk(full);
+        else if (entry.name.endsWith(".ts") && /listUsers\s*\(/.test(readFileSync(full, "utf8"))) {
+          offenders.push(full);
+        }
+      }
+    };
+    walk(join(process.cwd(), "app", "api"));
+    expect(offenders).toEqual([]);
+  });
   it("the webhook account-provisioning uses the targeted find_auth_user_by_email RPC", () => {
     expect(src("lib/webhooks/stripe/handleDocumentCheckout.ts")).toMatch(/find_auth_user_by_email/);
     expect(src("lib/webhooks/stripe/resolveOrCreateGuestClient.ts")).toMatch(/find_auth_user_by_email/);

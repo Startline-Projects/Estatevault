@@ -4,6 +4,7 @@ import { withRoute } from "@/lib/api/route";
 import { ok, fail } from "@/lib/api/response";
 import { authRecoverySchema } from "@/lib/validation/schemas";
 import { resolveSenderForEmail, renderEmailHeader, renderEmailFooter, sendEmail, type EmailBrand } from "@/lib/email";
+import { recoveryRateLimit, authIpRateLimit, clientIp } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
 
@@ -44,6 +45,13 @@ export const POST = withRoute(async (req: NextRequest) => {
   const normalizedEmail = String(email || "").trim().toLowerCase();
 
   if (!normalizedEmail) return ok({ success: true });
+
+  // Both dimensions, and both answer the same neutral success as everything
+  // else here — a caller must not learn from a 429 that they found a real
+  // address, or that someone else is being targeted from their network.
+  const byEmail = await recoveryRateLimit.limit(`email:${normalizedEmail}`);
+  const byIp = await authIpRateLimit.limit(`recovery:${clientIp(req)}`);
+  if (!byEmail.success || !byIp.success) return ok({ success: true });
 
   const { origin } = new URL(req.url);
   const admin = createAdminClient();

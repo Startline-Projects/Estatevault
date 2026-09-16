@@ -30,6 +30,7 @@ import {
 import fs from "fs";
 import path from "path";
 import { parseDocumentText, TYPE_NAMES, type ParsedLine } from "./generate-pdf";
+import { getInstructionSheet } from "./instruction-sheets";
 
 const FONT = "Times New Roman";
 const SANS = "Arial";
@@ -143,6 +144,62 @@ function notaryTable(): Table {
   });
 }
 
+/**
+ * "Operation of This Document" sheet, on its own page after the body.
+ *
+ * The attorney-reviewed DOCX is converted back to PDF and delivered
+ * (app/api/attorney/upload-reviewed/route.ts), so this sheet has to be here or
+ * every attorney-reviewed order ships without it.
+ */
+function instructionSheetBlocks(documentType: string): Paragraph[] {
+  const sheet = getInstructionSheet(documentType);
+  if (!sheet) return [];
+
+  const out: Paragraph[] = [
+    new Paragraph({ children: [new PageBreak()] }),
+    new Paragraph({
+      alignment: AlignmentType.CENTER,
+      spacing: { after: 80 },
+      children: [run(sheet.title, { bold: true, size: 32, color: NAVY })],
+    }),
+    new Paragraph({
+      alignment: AlignmentType.CENTER,
+      spacing: { after: 240 },
+      children: [run(sheet.subtitle, { size: BODY_PT, color: GRAY })],
+    }),
+  ];
+
+  let stepNum = 0;
+  for (const item of sheet.blocks) {
+    if (item.type !== "step") stepNum = 0;
+
+    if (item.type === "heading") {
+      out.push(new Paragraph({
+        alignment: AlignmentType.CENTER,
+        spacing: { before: 200, after: 100 },
+        children: [run(item.text.toUpperCase(), { bold: true, size: HEADING_PT, color: NAVY })],
+      }));
+    } else if (item.type === "paragraph") {
+      out.push(new Paragraph({ spacing: { after: 120 }, children: [run(item.text, { bold: item.bold })] }));
+    } else if (item.type === "bullet") {
+      out.push(new Paragraph({
+        spacing: { after: 80 },
+        indent: { left: 360, hanging: 180 },
+        children: [run(`\u2022  ${item.text}`, { bold: item.bold })],
+      }));
+    } else {
+      stepNum++;
+      out.push(new Paragraph({
+        spacing: { after: 80 },
+        indent: { left: 360, hanging: 360 },
+        children: [run(`${stepNum}.`, { bold: true, font: SANS, color: NAVY }), run(`\t${item.text}`)],
+      }));
+    }
+  }
+
+  return out;
+}
+
 function lineToBlocks(line: ParsedLine): (Paragraph | Table)[] {
   if (line.type === "blank") return [new Paragraph({ children: [] })];
   if (line.type === "signature_line") return signatureParagraphs(line.label || "Signature");
@@ -210,6 +267,7 @@ export async function generateDOCX(
   titlePage.push(new Paragraph({ children: [new PageBreak()] }));
 
   const body = parseDocumentText(documentText).flatMap(lineToBlocks);
+  const instructions = instructionSheetBlocks(documentType);
 
   const doc = new Document({
     sections: [
@@ -222,7 +280,7 @@ export async function generateDOCX(
         },
         headers: { default: header },
         footers: { default: footer },
-        children: [...titlePage, ...body],
+        children: [...titlePage, ...body, ...instructions],
       },
     ],
   });

@@ -1,5 +1,6 @@
 import type { TemplateWillIntake as WillIntake } from "./intake-adapter";
 import { computeDerivedFields } from "./computed-fields";
+import { assignNumbering } from "./article-numbering";
 
 /**
  * A lookup namespace: a flat record keyed by field name. Values may be any JSON-ish
@@ -226,7 +227,43 @@ function evaluateVar(node: VarNode, ns: Namespace, template: string): string {
     cur = (cur as Record<string, unknown>)[parts[i]];
   }
   if (cur === null || cur === undefined) return "";
-  return typeof cur === "string" ? cur : String(cur);
+  return neutralizeSyntax(typeof cur === "string" ? cur : String(cur));
+}
+
+/**
+ * Sentinels standing in for engine syntax inside a substituted value, swapped
+ * back after numbering has run. Private-use code points, so no real document
+ * text can collide with them.
+ */
+const SENTINELS: Array<[RegExp, string, RegExp, string]> = [
+  [/\[\[/g, "\uE000", /\uE000/g, "[["],
+  [/\]\]/g, "\uE001", /\uE001/g, "]]"],
+  [/\{\{/g, "\uE002", /\uE002/g, "{{"],
+  [/\}\}/g, "\uE003", /\uE003/g, "}}"],
+];
+
+/**
+ * Stop a client's own words from being executed as template syntax.
+ *
+ * A merge value is data, not template. Before this, a client who typed
+ * `[[ARTICLE:x]]` into a free-text answer silently renumbered every article and
+ * section that followed it in their own document, and one who typed `{{` failed
+ * generation outright on the leftover-tag check. Substituted values now carry
+ * sentinels through the numbering pass and come back as the literal characters
+ * the client typed, so their words render exactly as written and only the
+ * template drives the structure.
+ */
+function neutralizeSyntax(value: string): string {
+  let out = value;
+  for (const [find, sentinel] of SENTINELS) out = out.replace(find, sentinel);
+  return out;
+}
+
+/** Restore the literal characters the sentinels stand for. */
+function restoreSyntax(text: string): string {
+  let out = text;
+  for (const [, , sentinel, literal] of SENTINELS) out = out.replace(sentinel, literal);
+  return out;
 }
 
 /**
@@ -271,6 +308,24 @@ function evaluateNodes(nodes: TemplateNode[], ns: Namespace, template: string): 
 }
 
 /**
+ * Remove `{{!-- ... --}}` comments from a template before anything else reads it.
+ *
+ * A template is the delivered document: a note left in the prose renders into
+ * the client's PDF, which is why review markers are kept in
+ * PENDING_ATTORNEY_REVIEW.md rather than in the templates. A comment form the
+ * renderer strips gives such a marker somewhere to live next to the text it
+ * describes, without any chance of it reaching a client.
+ *
+ * A comment occupying a whole line takes its line ending with it, so stripping
+ * one never splits the paragraph around it in two.
+ */
+export function stripComments(template: string): string {
+  return template
+    .replace(/^[ \t]*\{\{!--[\s\S]*?--\}\}[ \t]*\r?\n/gm, "")
+    .replace(/\{\{!--[\s\S]*?--\}\}/g, "");
+}
+
+/**
  * Render a document template against a WillIntake, producing a fully-resolved string
  * ready for PDF generation. Supports merge variables (`{{field}}` / `{{a.b}}`),
  * conditional blocks (`{{#IF condition}}...{{/IF}}`), and loops
@@ -286,15 +341,22 @@ function evaluateNodes(nodes: TemplateNode[], ns: Namespace, template: string): 
  */
 export function renderTemplate(template: string, intake: WillIntake): string {
   const ns: Namespace = { ...(intake as unknown as Namespace), ...computeDerivedFields(intake) };
-  const ast = parseTemplate(template);
-  const out = evaluateNodes(ast, ns, template);
+  const source = stripComments(template);
+  const ast = parseTemplate(source);
+  const evaluated = evaluateNodes(ast, ns, source);
+
+  // Numerals are assigned from what actually rendered, so a conditional article
+  // or section dropping out never leaves a gap or a dangling reference.
+  const numbered = assignNumbering(evaluated).text;
 
   // Defensive post-condition: no unprocessed tags should remain. A leftover `{{`
   // indicates an unclosed/garbled token the parser treated as literal text.
-  if (/\{\{\s*[#/]?\s*[A-Za-z_]/.test(out)) {
-    const idx = out.search(/\{\{\s*[#/]?\s*[A-Za-z_]/);
-    throw new Error(`Trailing template tags remain after processing.${context(out, idx)}`);
+  // Runs before the sentinels are restored, so it judges the template only and
+  // never fails a document over braces a client typed into an answer.
+  if (/\{\{\s*[#/]?\s*[A-Za-z_]/.test(numbered)) {
+    const idx = numbered.search(/\{\{\s*[#/]?\s*[A-Za-z_]/);
+    throw new Error(`Trailing template tags remain after processing.${context(numbered, idx)}`);
   }
 
-  return out;
+  return restoreSyntax(numbered);
 }

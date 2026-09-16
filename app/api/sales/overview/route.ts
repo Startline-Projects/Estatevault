@@ -1,5 +1,6 @@
 import { NextRequest } from "next/server";
 import { requireAuth } from "@/lib/api/auth";
+import { DEFAULT_ATTORNEY_REVIEW_FEE } from "@/lib/orders/pricing";
 import { withRoute } from "@/lib/api/route";
 import { ok } from "@/lib/api/response";
 import { DEFAULT_COMMISSION_RATE } from "@/lib/sales/constants";
@@ -76,7 +77,13 @@ export const GET = withRoute(async (req: NextRequest) => {
     company_name: p.company_name,
     bar_number: p.bar_number || "N/A",
     tier: p.tier,
-    review_fee: p.custom_review_fee,
+    // The charged fee, not partners.custom_review_fee — that column is not
+    // read by checkout (single in-house reviewer; see createCheckoutSession),
+    // so showing it here meant a dashboard that disagreed with the invoice.
+    review_fee: DEFAULT_ATTORNEY_REVIEW_FEE,
+    // Kept visible so an admin can see a stale override still sitting on the
+    // row, and that it has no effect.
+    custom_review_fee_unused: p.custom_review_fee,
     created_at: p.created_at ?? "",
     profile_name: p.profile_id ? profileMap[p.profile_id]?.full_name || "Unknown" : "Unknown",
     profile_email: p.profile_id ? profileMap[p.profile_id]?.email || "" : "",

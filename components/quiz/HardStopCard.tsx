@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { usePartnerBranding } from "@/components/partner/PartnerThemedShell";
 import { recordHardStopReferral } from "@/lib/api-client/referrals";
+import { HARD_STOP_REASONS } from "@/lib/compliance/hardStop";
 
 interface HardStopCardProps {
   // When present, the card collects the lead's contact details and logs an
@@ -12,7 +13,37 @@ interface HardStopCardProps {
   reason?: string;
 }
 
+// PENDING ATTORNEY APPROVAL — the heading and body for each hard-stop reason.
+// The card used to carry one fixed message about special-needs planning, which
+// was shown for whichever trigger fired. Now that four triggers can fire, each
+// says why this situation needs an attorney. Logged in
+// PENDING_ATTORNEY_REVIEW.md with the questions themselves.
+const REASON_COPY: Record<string, { heading: string; body: string }> = {
+  [HARD_STOP_REASONS.specialNeeds]: {
+    heading: "Your family deserves specialized attention.",
+    body: "Caring for a loved one with special needs requires a specialized trust that should be drafted by a licensed attorney. Share your details and an experienced Michigan attorney will reach out.",
+  },
+  [HARD_STOP_REASONS.irrevocableTrust]: {
+    heading: "An irrevocable trust needs an attorney.",
+    body: "An irrevocable trust generally cannot be undone once it is signed, so it is drafted by a licensed attorney rather than from a questionnaire. Share your details and an experienced Michigan attorney will reach out.",
+  },
+  [HARD_STOP_REASONS.medicaid]: {
+    heading: "Medicaid planning needs an attorney.",
+    body: "Planning for Medicaid or long-term care involves timing rules that change what your documents should say, and getting them wrong can affect your eligibility. Share your details and an experienced Michigan attorney will reach out.",
+  },
+  [HARD_STOP_REASONS.estateDispute]: {
+    heading: "A disputed estate needs an attorney.",
+    body: "When there is already a disagreement about an estate, documents prepared from a questionnaire can make it harder to resolve. Share your details and an experienced Michigan attorney will reach out.",
+  },
+};
+
+const FALLBACK_COPY = {
+  heading: "Your situation needs an attorney.",
+  body: "Based on your answers, your situation calls for advice this platform cannot give. Share your details and an experienced Michigan attorney will reach out.",
+};
+
 export default function HardStopCard({ partnerId, reason }: HardStopCardProps) {
+  const copy = (reason && REASON_COPY[reason]) || FALLBACK_COPY;
   const branding = usePartnerBranding();
   const accent = branding?.accentColor || "#1C3557";
 
@@ -84,12 +115,8 @@ export default function HardStopCard({ partnerId, reason }: HardStopCardProps) {
   // partner-attributed flow and EstateVault's own direct site.
   return cardWrap(
     <>
-      <h2 className="mt-6 text-xl font-bold text-navy">Your family deserves specialized attention.</h2>
-      <p className="mt-3 text-sm text-charcoal/70 leading-relaxed">
-        Caring for a loved one with special needs requires a specialized trust that should be drafted
-        by a licensed attorney. Share your details and an experienced Michigan attorney will reach
-        out.
-      </p>
+      <h2 className="mt-6 text-xl font-bold text-navy">{copy.heading}</h2>
+      <p className="mt-3 text-sm text-charcoal/70 leading-relaxed">{copy.body}</p>
 
       <form onSubmit={handleSubmit} className="mt-6 space-y-3 text-left">
         <div>

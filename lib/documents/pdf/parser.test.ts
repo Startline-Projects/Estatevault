@@ -336,8 +336,8 @@ describe("parser: end-to-end on real template", () => {
       successor_personal_representative: { full_name: "Sue Doe", relationship: "Sister", city: "Lansing", state: "Michigan" },
       second_successor_personal_representative: null,
       primary_beneficiaries: [
-        { full_name: "Alice Public", relationship: "daughter", share_percent: "50", per_stirpes: true },
-        { full_name: "Bob Public", relationship: "son", share_percent: "50", per_stirpes: true },
+        { full_name: "Alice Public", relationship: "daughter", share_percent: "50", per_stirpes: true, contingency: "descendants", contingent_full_name: "" },
+        { full_name: "Bob Public", relationship: "son", share_percent: "50", per_stirpes: true, contingency: "descendants", contingent_full_name: "" },
       ],
       guardian: { full_name: "Carol Adams", relationship: "Aunt", city: "Grand Rapids", state: "Michigan", phone: "(616) 555-3434" },
       successor_guardian: { full_name: "Dan Adams", relationship: "Uncle" },
@@ -345,14 +345,12 @@ describe("parser: end-to-end on real template", () => {
       specific_gifts: [
         { item_description: "my grandmother's wedding ring", recipient_full_name: "Alice Public", recipient_relationship: "daughter", fallback: "residuary" },
       ],
-      organ_donation: "yes_all",
+      organ_donation: "any_purpose",
       funeral_preference: "burial",
       has_funeral_representative: true,
       funeral_representative: { full_name: "Greg Hall", relationship: "Brother", phone: "(313) 555-7777" },
       patient_advocate: { full_name: "Ed Brown", relationship: "Friend", city: "Detroit", state: "Michigan", phone: "(313) 555-9999" },
       successor_patient_advocate: { full_name: "Fay Green", relationship: "Friend", city: "Detroit", state: "Michigan", phone: "(313) 555-1234" },
-      life_sustaining_treatment_preference: "withhold_if_terminal_or_pvs",
-      artificial_nutrition_preference: "withhold_if_terminal_or_pvs",
     };
   }
 
@@ -370,6 +368,7 @@ describe("parser: end-to-end on real template", () => {
       cover_subtitle: 0,
       article_header: 0,
       section_header: 0,
+      document_header: 0,
       body: 0,
       bullet: 0,
       info_box: 0,

@@ -111,12 +111,27 @@ describe("safeParse-then-fail pattern", () => {
     // must surface a 400. Routes that read `parsed.success ? data : default`
     // are using-with-default (e.g. stripe/connect/onboard) and legitimately
     // never emit 400.
-    const rejecting = parsing.filter((f) => /!\s*\w+\.success/.test(src(f)));
+    //
+    // One deliberate exception: app/api/referrals soft-fails. A hard-stop
+    // referral is logged best-effort while the client is being routed to an
+    // attorney, and a malformed body must never turn into an error in the
+    // client's face — it answers ok({recorded:false}) instead. Allowlisted
+    // rather than silently matched, so a second soft-failing route has to be
+    // argued for here.
+    const SOFT_FAIL_BY_DESIGN = ["app/api/referrals/route.ts"];
+    const rejecting = parsing
+      .filter((f) => /!\s*\w+\.success/.test(src(f)))
+      .filter((f) => !SOFT_FAIL_BY_DESIGN.includes(f));
     const bad = rejecting.filter((f) => {
       const code = src(f);
       return !(/\b400\b/.test(code) || /FALLBACK/.test(code));
     });
     expect(bad).toEqual([]);
+
+    // and the allowlisted one really does soft-fail, rather than having drifted
+    for (const f of SOFT_FAIL_BY_DESIGN) {
+      expect(src(f), f).toMatch(/recorded:\s*false/);
+    }
   });
 
   it("parsing routes import schemas from the central registry, not ad-hoc", () => {
