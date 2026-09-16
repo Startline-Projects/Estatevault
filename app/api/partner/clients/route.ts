@@ -1,5 +1,6 @@
 import { type NextRequest } from "next/server";
 import { requireAuth } from "@/lib/api/auth";
+import { requireCertifiedPartner } from "@/lib/api/certification";
 import { ok, fail } from "@/lib/api/response";
 import { partnerClientsCreateSchema, partnerClientsUpdateSchema } from "@/lib/validation/schemas";
 import { withRoute } from "@/lib/api/route";
@@ -44,10 +45,10 @@ export const GET = withRoute(async (req: NextRequest) => {
   const auth = await requireAuth(["partner"], req);
   if ("error" in auth) return auth.error;
 
-  const { data: partner } = await partnerRepo.getByProfileId(auth.admin, auth.profile.id);
-  if (!partner) return ok({ clients: [] });
+  const gate = await requireCertifiedPartner(auth.admin, auth.profile.id);
+  if (!gate.ok) return gate.error;
 
-  const { data: clients } = await clientRepo.listByPartnerWithOrders(auth.admin, partner.id);
+  const { data: clients } = await clientRepo.listByPartnerWithOrders(auth.admin, gate.partnerId);
   return ok({ clients: clients ?? [] });
 });
 

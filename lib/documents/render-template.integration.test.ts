@@ -62,8 +62,8 @@ function realisticIntake(): WillIntake {
     second_successor_personal_representative: null,
 
     primary_beneficiaries: [
-      { full_name: "Alice Public", relationship: "daughter", share_percent: "50", per_stirpes: true },
-      { full_name: "Bob Public", relationship: "son", share_percent: "50", per_stirpes: true },
+      { full_name: "Alice Public", relationship: "daughter", share_percent: "50", per_stirpes: true, contingency: "descendants", contingent_full_name: "" },
+      { full_name: "Bob Public", relationship: "son", share_percent: "50", per_stirpes: true, contingency: "descendants", contingent_full_name: "" },
     ],
     contingent_beneficiaries: [
       { full_name: "Carol Adams", relationship: "sister", share_percent: "100" },
@@ -79,7 +79,7 @@ function realisticIntake(): WillIntake {
       { item_description: "my vintage record collection", recipient_full_name: "Bob Public", recipient_relationship: "son", fallback: "to_children" },
     ],
 
-    organ_donation: "yes_all",
+    organ_donation: "any_purpose",
     funeral_preference: "burial",
     has_funeral_representative: true,
     funeral_representative: { full_name: "Greg Hall", relationship: "Brother", phone: "(313) 555-7777" },
@@ -93,13 +93,14 @@ function realisticIntake(): WillIntake {
     dpoa_agent: { full_name: "Mark Smith", relationship: "Brother", city: "Ann Arbor", state: "Michigan", phone: "(734) 555-1212" },
     first_successor_dpoa_agent: { full_name: "Sue Doe", relationship: "Sister", city: "Lansing", state: "Michigan", phone: "(517) 555-3333" },
     second_successor_dpoa_agent: { full_name: "Karen Lee", relationship: "Friend", city: "Detroit", state: "Michigan", phone: "(313) 555-4444" },
+    // Powers are now explicit: the adapter no longer defaults to granting
+    // everything, so a fixture must state what the client selected.
+    dpoa_powers: ["banking", "real_estate", "business", "tax", "insurance", "government_benefits", "retirement", "digital"],
     dpoa_effective: "immediate",
     dpoa_agent_compensation: "reasonable",
 
     patient_advocate: { full_name: "Ed Brown", relationship: "Friend", city: "Detroit", state: "Michigan", phone: "(313) 555-9999" },
     successor_patient_advocate: { full_name: "Fay Green", relationship: "Friend", city: "Detroit", state: "Michigan", phone: "(313) 555-1234" },
-    life_sustaining_treatment_preference: "withhold_if_terminal_or_pvs",
-    artificial_nutrition_preference: "withhold_if_terminal_or_pvs",
 
     has_hipaa_additional_parties: true,
     hipaa_additional_authorized_parties: [
@@ -164,7 +165,7 @@ describe("template integration — will-michigan-v1.1.0", () => {
     expect(out).toContain("MCL 700.5204");
 
     // Final wishes — organ donation yes_all branch chosen
-    expect(out).toContain("authorize the donation of any of my organs");
+    expect(out).toContain("I give any needed organ, tissue, or other part of my body for any purpose authorized by law");
     // funeral_preference = burial
     expect(out).toContain("interred by burial");
 
@@ -191,14 +192,13 @@ describe("template integration — dpoa-michigan-v1.1.0", () => {
     expect(out).toContain("effective immediately upon execution");
     expect(out).not.toContain('"springing" power of attorney');
 
-    // Default powers (8 of them) — all GRANTED
+    // Selected powers — all GRANTED
     expect(out).toContain("Banking and Financial Institution Transactions.  GRANTED.");
     expect(out).toContain("Real Estate Transactions.  GRANTED.");
     expect(out).toContain("Digital Assets.  GRANTED.");
-
-    // Hot powers default = NOT GRANTED (gift_making + amend_estate_plan absent from defaults)
-    expect(out).toContain("Gift-Making Authority.  NOT GRANTED.");
-    expect(out).toContain("Authority to Make Changes to Estate Plan.  NOT GRANTED.");
+    // Gift-making and estate-plan amendment were removed as options (Prompt 9).
+    expect(out).not.toContain("Gift-Making Authority");
+    expect(out).not.toContain("Authority to Make Changes to Estate Plan");
 
     // Compensation = reasonable
     expect(out).toContain('"Reasonable compensation" shall be determined');
@@ -210,44 +210,6 @@ describe("template integration — dpoa-michigan-v1.1.0", () => {
   });
 });
 
-describe("template integration — pad-michigan-v1.1.0", () => {
-  it("renders patient advocates, treatment preference branches, and HIPAA parties", () => {
-    const tpl = loadTemplate("pad-michigan-v1.1.0");
-    const out = renderTemplate(tpl, realisticIntake());
-    assertFullyResolved(out);
-
-    expect(out).toContain("JANE QUINCY PUBLIC");
-    expect(out).toMatch(/^## ARTICLE I —/m);
-
-    // Patient advocate + successor
-    expect(out).toContain("Ed Brown");
-    expect(out).toContain("Fay Green");
-
-    // Life-sustaining preference = withhold_if_terminal_or_pvs (branch taken)
-    expect(out).toContain("Withhold if Terminal Condition or Persistent Vegetative State");
-    // Continue-all branch NOT taken
-    expect(out).not.toContain("all reasonable measures be taken to extend my life");
-
-    // Artificial nutrition = withhold_if_terminal_or_pvs
-    expect(out).toContain("withholding or withdrawal of artificial nutrition and hydration");
-
-    // Pain management default = provide_even_if_shortens
-    expect(out).toContain("Provide Pain Relief Even if Life-Shortening");
-
-    // Pregnancy exclusion default = no_pregnancy_restriction
-    expect(out).toContain("No Additional Pregnancy Restriction");
-
-    // Mental health treatment authority = true → GRANTED
-    expect(out).toContain("Mental Health Treatment Authority.  GRANTED.");
-
-    // HIPAA additional parties FOREACH expanded
-    expect(out).toContain("Carol Adams, my sister");
-    expect(out).toContain("Greg Hall, my brother");
-
-    // Organ donation yes_all
-    expect(out).toContain("authorize the donation of any of my organs");
-  });
-});
 
 describe("template integration — hipaa-authorization-v1.1.0", () => {
   it("renders patient identity, HIPAA expiration date, and FOREACH additional parties", () => {

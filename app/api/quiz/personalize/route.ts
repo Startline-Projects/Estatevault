@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { quizPersonalizeSchema, detectQuizHardStop } from "@/lib/validation/schemas";
+import { quizPersonalizeSchema } from "@/lib/validation/schemas";
+import { firstHardStopReason } from "@/lib/compliance/hardStop";
 import { claude, CLAUDE_MODEL } from "@/lib/claude";
 
 const WILL_FALLBACK = {
@@ -32,7 +33,7 @@ export async function POST(request: Request) {
     }
     const { quiz_answers, recommendation } = parsed.data;
 
-    const hardStop = detectQuizHardStop(quiz_answers);
+    const hardStop = firstHardStopReason(quiz_answers);
     if (hardStop) {
       return NextResponse.json(
         { error: "hard_stop", reason: hardStop, referral: "/attorney-referral" },

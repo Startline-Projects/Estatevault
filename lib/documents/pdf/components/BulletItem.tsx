@@ -16,7 +16,7 @@ const styles = StyleSheet.create({
   bullet: {
     fontFamily: TOKENS.fonts.serif,
     fontSize: TOKENS.fontSize.body,
-    color: TOKENS.colors.navy,
+    color: TOKENS.colors.black,
     width: 8 + 6, // bullet + ~6pt of glyph room
     marginRight: 8,
   },

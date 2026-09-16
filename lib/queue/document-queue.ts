@@ -24,7 +24,8 @@ export interface DocumentJob {
   product_type: string;
   partner_id?: string;
   attorney_review: boolean;
-  status: "queued" | "processing" | "complete" | "failed";
+  /** "blocked" = held for an incomplete intake; a human must complete it before a retry can succeed. */
+  status: "queued" | "processing" | "complete" | "failed" | "blocked";
   created_at: string;
   started_at: string | null;
   completed_at: string | null;

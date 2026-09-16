@@ -75,7 +75,10 @@ function hash(value: string): string {
 }
 
 export function generateCode(): string {
-  return Math.floor(100000 + Math.random() * 900000).toString();
+  // crypto.randomInt, not Math.random: this code is the only thing standing
+  // between a stranger and a password write, and V8's PRNG state is
+  // recoverable from a few outputs drawn in the same process.
+  return String(crypto.randomInt(100000, 1000000));
 }
 
 export async function storeCode(email: string, code: string): Promise<void> {

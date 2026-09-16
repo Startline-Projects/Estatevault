@@ -18,12 +18,15 @@ const VALID_WILL_INTAKE = {
   city: "Detroit",
   state: "Michigan",
   maritalStatus: "Married" as const,
+  wantsIrrevocableTrust: "No" as const,
+  hasMedicaidPlanning: "No" as const,
+  hasEstateDispute: "No" as const,
   hasMinorChildren: "No" as const,
   executorName: "Jane Doe",
   executorRelationship: "Spouse/Partner" as const,
   successorExecutorName: "",
   successorExecutorRelationship: "",
-  beneficiaries: [{ name: "Jane Doe", relationship: "Spouse/Partner" as const, share: "100" }],
+  beneficiaries: [{ name: "Jane Doe", relationship: "Spouse/Partner" as const, share: "100", contingency: "other_beneficiaries" as const }],
   beneficiariesEqualShares: "Yes" as const,
   guardianName: "",
   guardianRelationship: "",
@@ -31,7 +34,21 @@ const VALID_WILL_INTAKE = {
   hasContingentBeneficiary: "No" as const,
   contingentBeneficiaries: [],
   contingentEqualShares: "",
-  organDonation: "Yes" as const,
+  organDonation: "any_purpose" as const,
+  organDonationPurposes: "",
+  poaAgentName: "Jane Doe",
+  poaAgentRelationship: "Spouse/Partner" as const,
+  poaSuccessorAgentName: "",
+  poaSuccessorAgentRelationship: "",
+  poaPowers: ["Banking and finances" as const],
+  poaEffective: "immediate" as const,
+  patientAdvocateName: "Jane Doe",
+  patientAdvocateRelationship: "Spouse/Partner" as const,
+  successorPatientAdvocateName: "",
+  secondSuccessorPatientAdvocateName: "",
+  hasHealthcareWishes: "No" as const,
+  healthcareWishesDescription: "",
+  funeralPreference: "family_decides" as const,
   hasSpecificGifts: "No" as const,
   specificGiftsDescription: "",
 };
@@ -43,13 +60,20 @@ const VALID_TRUST_INTAKE = {
   city: "Detroit",
   state: "Michigan",
   maritalStatus: "Married" as const,
+  wantsIrrevocableTrust: "No" as const,
+  hasMedicaidPlanning: "No" as const,
+  hasEstateDispute: "No" as const,
   trustName: "The John Doe Revocable Living Trust",
   primaryTrustee: "Myself" as const,
   trusteeName: "",
   successorTrusteeName: "Jane Doe",
   successorTrusteeRelationship: "Spouse/Partner" as const,
+  isJointTrust: "No" as const,
+  secondGrantorName: "",
+  secondGrantorRelationship: "",
+  jointTrusteeAuthority: "" as const,
   additionalSuccessorTrustees: [],
-  beneficiaries: [{ name: "Jane Doe", relationship: "Spouse/Partner" as const, share: "100" }],
+  beneficiaries: [{ name: "Jane Doe", relationship: "Spouse/Partner" as const, share: "100", contingency: "other_beneficiaries" as const }],
   beneficiariesEqualShares: "Yes" as const,
   distributionAge: "",
   hasMinorChildren: "No" as const,
@@ -66,15 +90,19 @@ const VALID_TRUST_INTAKE = {
   poaSuccessorAgentName: "",
   poaSuccessorAgentRelationship: "",
   poaPowers: ["Banking and finances" as const],
+  poaEffective: "immediate" as const,
   patientAdvocateName: "Jane Doe",
   patientAdvocateRelationship: "Spouse/Partner" as const,
   successorPatientAdvocateName: "",
-  organDonation: "Yes" as const,
+  secondSuccessorPatientAdvocateName: "",
+  organDonation: "any_purpose" as const,
+  organDonationPurposes: "",
   hasHealthcareWishes: "No" as const,
   healthcareWishesDescription: "",
   hasContingentBeneficiary: "No" as const,
   contingentBeneficiaries: [],
   contingentEqualShares: "",
+  funeralPreference: "family_decides" as const,
   hasSpecificGifts: "No" as const,
   specificGiftsDescription: "",
 };
@@ -104,7 +132,7 @@ describe("willCheckoutSchema", () => {
     // beneficiariesEqualShares "". That must validate — the one beneficiary gets 100%.
     expect(willCheckoutSchema.safeParse({ intakeAnswers: {
       ...VALID_WILL_INTAKE,
-      beneficiaries: [{ name: "Jane Doe", relationship: "Spouse/Partner" as const, share: "" }],
+      beneficiaries: [{ name: "Jane Doe", relationship: "Spouse/Partner" as const, share: "", contingency: "other_beneficiaries" as const }],
       beneficiariesEqualShares: "",
     } }).success).toBe(true);
   });
@@ -112,8 +140,8 @@ describe("willCheckoutSchema", () => {
     expect(willCheckoutSchema.safeParse({ intakeAnswers: {
       ...VALID_WILL_INTAKE,
       beneficiaries: [
-        { name: "A", relationship: "Child" as const, share: "60" },
-        { name: "B", relationship: "Child" as const, share: "30" },
+        { name: "A", relationship: "Child" as const, share: "60", contingency: "other_beneficiaries" as const },
+        { name: "B", relationship: "Child" as const, share: "30", contingency: "other_beneficiaries" as const },
       ],
       beneficiariesEqualShares: "No",
     } }).success).toBe(false);
@@ -144,17 +172,27 @@ describe("trustCheckoutSchema", () => {
   it("accepts a single beneficiary with blank share and blank equal-shares flag (implicit 100%)", () => {
     expect(trustCheckoutSchema.safeParse({ intakeAnswers: {
       ...VALID_TRUST_INTAKE,
-      beneficiaries: [{ name: "Jane Doe", relationship: "Spouse/Partner" as const, share: "" }],
+      beneficiaries: [{ name: "Jane Doe", relationship: "Spouse/Partner" as const, share: "", contingency: "other_beneficiaries" as const }],
       beneficiariesEqualShares: "",
     } }).success).toBe(true);
   });
 });
 
 describe("amendmentCheckoutSchema", () => {
-  it("requires userId + changeType + description", () => {
-    expect(amendmentCheckoutSchema.safeParse({ userId: "abc", changeType: "x", description: "y" }).success).toBe(true);
-    expect(amendmentCheckoutSchema.safeParse({ userId: "", changeType: "x", description: "y" }).success).toBe(false);
-    expect(amendmentCheckoutSchema.safeParse({ userId: "abc", changeType: "", description: "y" }).success).toBe(false);
+  it("requires userId + changeType + description + the signed acknowledgment", () => {
+    const valid = { userId: "abc", changeType: "x", description: "y", acknowledgmentSigned: true as const };
+    expect(amendmentCheckoutSchema.safeParse(valid).success).toBe(true);
+    expect(amendmentCheckoutSchema.safeParse({ ...valid, userId: "" }).success).toBe(false);
+    expect(amendmentCheckoutSchema.safeParse({ ...valid, changeType: "" }).success).toBe(false);
+  });
+});
+
+describe("Core Rule 3 — the acknowledgment cannot be skipped", () => {
+  it("rejects an amendment with no acknowledgment, or a falsified one", () => {
+    const base = { userId: "abc", changeType: "x", description: "y" };
+    expect(amendmentCheckoutSchema.safeParse(base).success).toBe(false);
+    expect(amendmentCheckoutSchema.safeParse({ ...base, acknowledgmentSigned: false }).success).toBe(false);
+    expect(amendmentCheckoutSchema.safeParse({ ...base, acknowledgmentSigned: "yes" }).success).toBe(false);
   });
 });
 

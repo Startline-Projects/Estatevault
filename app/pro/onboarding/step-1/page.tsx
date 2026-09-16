@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { PARTNER_PLATFORM_FEE, PARTNER_SPLITS, PROMO_CODES, formatPrice } from "@/lib/orders/pricing";
+import { PARTNER_PLATFORM_FEE, PARTNER_SPLITS, formatPrice } from "@/lib/orders/pricing";
 import { checkoutPartner } from "@/lib/api-client/checkout";
 import { getMe, applyPromo } from "@/lib/api-client/partner";
 
@@ -37,7 +37,10 @@ export default function Step1Page() {
       // Promo comp: the server re-validates the stored code and grants the fee
       // waiver (the screen can't flip the financial flag itself anymore).
       const cameFromInternal = typeof document !== "undefined" && document.referrer.includes(window.location.host);
-      if (!cameFromInternal && partner.promo_code && partner.promo_code.toUpperCase() in PROMO_CODES && !partner.one_time_fee_paid && !partner.annual_fee_paid) {
+      // Whether the stored code is enabled is the server's call — the list is
+      // no longer shipped to the browser. applyPromo() answers {applied:false}
+      // for a code that is not enabled.
+      if (!cameFromInternal && partner.promo_code && !partner.one_time_fee_paid && !partner.annual_fee_paid) {
         const { data: promo } = await applyPromo();
         if (promo?.applied) {
           router.push(nextStep);

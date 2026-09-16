@@ -6,9 +6,12 @@ import { withRoute } from "@/lib/api/route";
 import { ok, fail } from "@/lib/api/response";
 import { createAdminClient, requireAuth } from "@/lib/api/auth";
 import { claude, CLAUDE_MODEL } from "@/lib/claude";
-import { uploadDocument } from "@/lib/documents/storage";
+import { uploadDocument, type DocumentProvenance } from "@/lib/documents/storage";
 import { getTemplate } from "@/lib/documents/templates/resolve";
 import { tryTemplateRender } from "@/lib/documents/generate-from-template";
+import { TemplateBlockedError } from "@/lib/documents/generate-from-template";
+import { markDocumentBlocked, countBlockedForOrder, alertAdminOrderBlocked, type BlockedDocument } from "@/lib/documents/blocked";
+
 
 export const GET = withRoute(async (request: NextRequest) => {
   const auth = await requireAuth(["admin"], request);
@@ -71,6 +74,7 @@ export const GET = withRoute(async (request: NextRequest) => {
     const isTestOrder = order.order_type === "test";
     const isAttorneyReview = order.attorney_review_requested === true;
     const results: Array<{ docType: string; success: boolean; path?: string; error?: string }> = [];
+    const blocked: BlockedDocument[] = [];
 
     // Partner branding
     let partnerName: string | undefined;
@@ -93,11 +97,16 @@ export const GET = withRoute(async (request: NextRequest) => {
         let documentText: string;
         let pdfBuffer: Buffer;
 
+        let provenance: DocumentProvenance | undefined;
         const templateResult = await tryTemplateRender(docType, intake, partnerName, partnerLogoUrl, clientFullName);
         if (templateResult) {
           pdfBuffer = templateResult.pdfBuffer;
           documentText = templateResult.documentText;
-          log.push(`${docType}: template-rendered ${documentText.length} chars`);
+          provenance = {
+            templateVersion: templateResult.templateVersion,
+            sourceFingerprint: templateResult.sourceFingerprint,
+          };
+          log.push(`${docType}: template-rendered ${documentText.length} chars (v${templateResult.templateVersion})`);
         } else {
           const template = await getTemplate(docType);
           const userPrompt = template.buildPrompt(intake);
@@ -137,7 +146,7 @@ export const GET = withRoute(async (request: NextRequest) => {
         }
 
         const storageClientId = isTestOrder ? "test" : (order.client_id || "unknown");
-        const path = await uploadDocument(storageClientId, order.id, docType, pdfBuffer, docxBuffer);
+        const path = await uploadDocument(storageClientId, order.id, docType, pdfBuffer, docxBuffer, provenance);
 
         // Restore status to match siblings
         const targetStatus = isAttorneyReview && order.status === "review" ? "review" : "delivered";
@@ -150,9 +159,30 @@ export const GET = withRoute(async (request: NextRequest) => {
         results.push({ docType, success: true, path });
       } catch (e) {
         const msg = e instanceof Error ? e.message : String(e);
+        // Strict mode: incomplete intake. Regenerating cannot help until the
+        // missing answers exist, so hold the order rather than retry-looping.
+        if (e instanceof TemplateBlockedError) {
+          await markDocumentBlocked(supabase, order.id, docType, e.reasons);
+          blocked.push({ docType, reasons: e.reasons });
+          log.push(`${docType}: BLOCKED, ${msg}`);
+          continue;
+        }
         log.push(`${docType}: FAILED, ${msg}`);
         results.push({ docType, success: false, error: msg });
       }
+    }
+
+    // Fulfillment gate: an order with any blocked document is never delivered.
+    const blockedCount = blocked.length || (await countBlockedForOrder(supabase, order.id));
+    if (blockedCount > 0) {
+      await supabase.from("orders").update({ status: "blocked" }).eq("id", order.id);
+      await alertAdminOrderBlocked({
+        orderId: order.id,
+        clientName: String(intake.firstName || "") + " " + String(intake.lastName || ""),
+        blocked,
+      });
+      log.push(`${blockedCount} document(s) BLOCKED on an incomplete intake — order held, admin alerted`);
+      return ok({ order_id: orderId, blocked: blockedCount, results, log });
     }
 
     return ok({

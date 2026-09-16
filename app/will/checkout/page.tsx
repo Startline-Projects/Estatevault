@@ -9,6 +9,7 @@ import PartnerThemedShell, { usePartnerBranding } from "@/components/partner/Par
 import EmailVerifyGate from "@/components/auth/EmailVerifyGate";
 import { PRICES, formatPrice } from "@/lib/orders/pricing";
 import { checkConflict as checkConflictApi, checkoutWill, validatePromoCode } from "@/lib/api-client/checkout";
+import { findResumePoint } from "@/lib/intake/incomplete-steps";
 
 function BrandedWordmark({ className = "" }: { className?: string }) {
   const branding = usePartnerBranding();
@@ -51,13 +52,6 @@ export default function WillCheckoutPage() {
 
   useEffect(() => {
     async function init() {
-      const supabase = createClient();
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        setUserId(user.id);
-        setPromoEmail(user.email || "");
-        setCustomerEmail(user.email || "");
-      }
       let raw = sessionStorage.getItem("willIntake");
       if (!raw) {
         const ls = localStorage.getItem("willIntake");
@@ -74,12 +68,32 @@ export default function WillCheckoutPage() {
         }
       }
       if (!raw) { router.push("/will"); return; }
+      let restored: Record<string, unknown>;
       try {
-        setIntakeData(JSON.parse(raw));
+        restored = JSON.parse(raw);
       } catch {
         router.push("/will");
         return;
       }
+      // A session saved before a question was added arrives here without an
+      // answer. Send it back to the step that asks, keeping the answers it has,
+      // instead of failing validation the client cannot act on.
+      const resume = findResumePoint("will", restored);
+      if (resume) {
+        router.push(`/will?resume=${resume.step}`);
+        return;
+      }
+
+      // Auth comes after the guard on purpose: a sign-in failure must not
+      // leave an incomplete session sitting on the checkout page.
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        setUserId(user.id);
+        setPromoEmail(user.email || "");
+        setCustomerEmail(user.email || "");
+      }
+      setIntakeData(restored as typeof intakeData);
       setPartnerId(sessionStorage.getItem("willPartner") || "");
     }
     init();

@@ -2,12 +2,12 @@ import { NextRequest } from "next/server";
 import { requireAuth } from "@/lib/api/auth";
 import { withRoute } from "@/lib/api/route";
 import { ok } from "@/lib/api/response";
-import { PROMO_CODES } from "@/lib/orders/pricing";
+import { isPromoEnabled } from "@/lib/orders/promo";
 import * as partnerRepo from "@/lib/repos/server/partnerRepo";
 
 // B2: applies a partner's stored promo code, comping the one-time platform fee.
 // SECURITY: the comp (one_time_fee_paid) is granted here, server-side, only
-// after re-validating the code against PROMO_CODES — the screen can no longer
+// after re-validating the code against the enabled set — the screen can no longer
 // flip the financial flag itself. No-op if the partner already paid or has no
 // valid code. Returns { applied } so the screen knows whether to skip payment.
 export const POST = withRoute(async (req: NextRequest) => {
@@ -22,7 +22,7 @@ export const POST = withRoute(async (req: NextRequest) => {
   }
 
   const code = (partner.promo_code ?? "").toUpperCase();
-  const valid = code in PROMO_CODES;
+  const valid = isPromoEnabled(code);
   if (!valid) return ok({ applied: false });
 
   await partnerRepo.update(auth.admin, partner.id, {

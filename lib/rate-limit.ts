@@ -21,6 +21,18 @@ function makeLimiter(prefix: string, limiter: ConstructorParameters<typeof Ratel
 }
 
 export const authRateLimit = makeLimiter('rl:auth', Ratelimit.slidingWindow(5, '1 m'))
+
+// Auth limits keyed only on the target email let one attacker work many
+// accounts in parallel, each under its own budget. This second dimension caps
+// what a single source address can attempt across ALL accounts. Deliberately
+// looser than the per-email limit so a shared office NAT is not locked out by
+// one colleague's typo.
+export const authIpRateLimit = makeLimiter('rl:auth:ip', Ratelimit.slidingWindow(30, '1 m'))
+
+// Password-reset requests. /api/auth/recovery had no limit at all: it mails a
+// reset link to any address supplied, so an unlimited caller could use it to
+// bomb a victim's inbox or to farm the platform's mail reputation.
+export const recoveryRateLimit = makeLimiter('rl:auth:recovery', Ratelimit.slidingWindow(3, '15 m'))
 export const checkoutRateLimit = makeLimiter('rl:checkout', Ratelimit.slidingWindow(10, '1 m'))
 export const apiRateLimit = makeLimiter('rl:api', Ratelimit.slidingWindow(100, '1 m'))
 
@@ -53,3 +65,16 @@ export const checkEmailTargetRateLimit = makeLimiter('rl:check-email:target', Ra
 // Trustee OTP resend — a new code resets the per-code attempt counter, so cap
 // resends to stop unlimited fresh guess batches (H-4). Keyed per request id.
 export const trusteeOtpResendRateLimit = makeLimiter('rl:trustee:otp', Ratelimit.slidingWindow(3, '1 h'))
+
+
+/**
+ * The caller's IP, as far as the platform can tell. Vercel sets
+ * x-forwarded-for; the leftmost entry is the client. Falls back to a single
+ * shared bucket when there is no header, which fails closed-ish: unknown
+ * callers share one budget rather than each getting their own.
+ */
+export function clientIp(req: { headers: { get(name: string): string | null } }): string {
+  const forwarded = req.headers.get('x-forwarded-for')
+  const first = forwarded?.split(',')[0]?.trim()
+  return first || req.headers.get('x-real-ip') || 'unknown'
+}

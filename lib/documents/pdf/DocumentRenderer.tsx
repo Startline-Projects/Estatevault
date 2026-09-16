@@ -17,6 +17,7 @@ import {
   PowerIndicator,
   SignatureBlock,
   NotaryBlock,
+  DocumentHeader,
   CoverTitle,
   CoverSubtitle,
   BoldStatutory,
@@ -31,6 +32,8 @@ export interface DocumentRendererProps {
   branding: BrandingContext;
   /** Used by the BrandedFooter to label the page. */
   clientFullName: string;
+  /** County of residence, pre-filled into the notary block where known. */
+  county?: string;
 }
 
 /**
@@ -40,7 +43,7 @@ export interface DocumentRendererProps {
  * and the trailing `never` assignment is a compile-time guard — adding a new
  * variant to the union without updating this function is a type error.
  */
-function dispatchBlock(block: DocumentBlock, index: number): React.ReactElement {
+function dispatchBlock(block: DocumentBlock, index: number, county?: string): React.ReactElement {
   switch (block.type) {
     case "cover_title":
       return <CoverTitle key={index} text={block.text} />;
@@ -50,6 +53,8 @@ function dispatchBlock(block: DocumentBlock, index: number): React.ReactElement 
       return <ArticleHeader key={index} number={block.number} title={block.title} />;
     case "section_header":
       return <SectionHeader key={index} number={block.number} title={block.title} />;
+    case "document_header":
+      return <DocumentHeader key={index} text={block.text} />;
     case "body":
       return <BodyText key={index} text={block.text} />;
     case "bullet":
@@ -77,7 +82,7 @@ function dispatchBlock(block: DocumentBlock, index: number): React.ReactElement 
     case "signature":
       return <SignatureBlock key={index} label={block.label} />;
     case "notary_block":
-      return <NotaryBlock key={index} />;
+      return <NotaryBlock key={index} county={county} />;
     case "page_break":
       return <View key={index} break />;
     case "bold_statutory":
@@ -103,11 +108,44 @@ function dispatchBlock(block: DocumentBlock, index: number): React.ReactElement 
  * The result is a React element ready to feed into `pdf(...).toBuffer()` or
  * `renderToBuffer(...)` for serialization.
  */
+/**
+ * Collapse consecutive `signature` blocks into a single group.
+ *
+ * Each signature line is its own block, so marking them individually atomic
+ * still lets a witness block break in half across a page. Grouping the run and
+ * setting `wrap={false}` on the wrapper moves the whole run to the next page
+ * instead.
+ */
+type RenderItem =
+  | { kind: "block"; block: DocumentBlock; index: number }
+  | { kind: "signature_group"; labels: string[]; index: number };
+
+function groupSignatureRuns(blocks: DocumentBlock[]): RenderItem[] {
+  const items: RenderItem[] = [];
+  let i = 0;
+  while (i < blocks.length) {
+    if (blocks[i].type === "signature") {
+      const labels: string[] = [];
+      const start = i;
+      while (i < blocks.length && blocks[i].type === "signature") {
+        labels.push((blocks[i] as { type: "signature"; label: string }).label);
+        i++;
+      }
+      items.push({ kind: "signature_group", labels, index: start });
+      continue;
+    }
+    items.push({ kind: "block", block: blocks[i], index: i });
+    i++;
+  }
+  return items;
+}
+
 export function DocumentRenderer({
   renderedText,
   documentType,
   branding,
   clientFullName,
+  county,
 }: DocumentRendererProps): React.ReactElement {
   const config = DOCUMENT_CONFIG[documentType];
   const blocks = parseRenderedText(renderedText);
@@ -119,7 +157,17 @@ export function DocumentRenderer({
       documentTitle={config.title}
       templateVersion={config.version}
     >
-      {blocks.map((b, i) => dispatchBlock(b, i))}
+      {groupSignatureRuns(blocks).map((item) =>
+        item.kind === "signature_group" ? (
+          <View key={item.index} wrap={false}>
+            {item.labels.map((label, k) => (
+              <SignatureBlock key={k} label={label} />
+            ))}
+          </View>
+        ) : (
+          dispatchBlock(item.block, item.index, county)
+        ),
+      )}
     </DocumentLayout>
   );
 }

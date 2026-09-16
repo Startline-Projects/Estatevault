@@ -7,7 +7,12 @@ import { vaultClientCheckout } from "@/lib/api-client/partner";
 
 function generatePassword(length = 12) {
   const chars = "ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!@#$";
-  return Array.from({ length }, () => chars[Math.floor(Math.random() * chars.length)]).join("");
+  // This runs in the browser, so it uses the Web Crypto RNG rather than
+  // Math.random — it is a real client credential, suggested to a partner who
+  // then hands it to their client.
+  const bytes = new Uint32Array(length);
+  crypto.getRandomValues(bytes);
+  return Array.from(bytes, (b) => chars[b % chars.length]).join("");
 }
 
 const STEPS = ["Client Info", "Set PIN", "Review & Pay"];

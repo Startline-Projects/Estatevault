@@ -580,6 +580,8 @@ export type Database = {
           delivered_at: string | null
           document_type: string
           generated_at: string | null
+          generation_error: string | null
+          source_fingerprint: string | null
           id: string
           order_id: string | null
           parent_document_id: string | null
@@ -608,6 +610,8 @@ export type Database = {
           delivered_at?: string | null
           document_type: string
           generated_at?: string | null
+          generation_error?: string | null
+          source_fingerprint?: string | null
           id?: string
           order_id?: string | null
           parent_document_id?: string | null
@@ -636,6 +640,8 @@ export type Database = {
           delivered_at?: string | null
           document_type?: string
           generated_at?: string | null
+          generation_error?: string | null
+          source_fingerprint?: string | null
           id?: string
           order_id?: string | null
           parent_document_id?: string | null

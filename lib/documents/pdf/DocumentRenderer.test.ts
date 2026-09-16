@@ -83,8 +83,8 @@ function realisticIntake(overrides: Partial<WillIntake> = {}): WillIntake {
     second_successor_personal_representative: null,
 
     primary_beneficiaries: [
-      { full_name: "Alice Sample Smith", relationship: "daughter", share_percent: "50", per_stirpes: true },
-      { full_name: "Bob Sample Smith", relationship: "son", share_percent: "50", per_stirpes: true },
+      { full_name: "Alice Sample Smith", relationship: "daughter", share_percent: "50", per_stirpes: true, contingency: "descendants", contingent_full_name: "" },
+      { full_name: "Bob Sample Smith", relationship: "son", share_percent: "50", per_stirpes: true, contingency: "descendants", contingent_full_name: "" },
     ],
     contingent_beneficiaries: [
       { full_name: "Carol Adams", relationship: "sister", share_percent: "100" },
@@ -100,7 +100,7 @@ function realisticIntake(overrides: Partial<WillIntake> = {}): WillIntake {
       { item_description: "my vintage record collection", recipient_full_name: "Bob Sample Smith", recipient_relationship: "son", fallback: "to_children" },
     ],
 
-    organ_donation: "yes_all",
+    organ_donation: "any_purpose",
     funeral_preference: "burial",
     has_funeral_representative: true,
     funeral_representative: { full_name: "Greg Hall", relationship: "Brother", phone: "(313) 555-7777" },

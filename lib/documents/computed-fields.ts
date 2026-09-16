@@ -90,6 +90,20 @@ export function computeDerivedFields(intake: WillIntake): Record<string, unknown
     hipaa_additional_authorized_parties_not_empty: hipaaParties.length > 0,
     trust_name_display: trustNameDisplay,
     trust_name_display_upper: trustNameDisplay.toUpperCase(),
+    // A trust's name carries its own "The", so a sentence that supplies one
+    // would otherwise read "the The Hassan Revocable Living Trust". Use this
+    // after an article and `trust_name_display` where the name stands alone.
+    trust_name_bare: trustNameDisplay.replace(/^the\s+/i, ""),
     has_assets: trustAssets.length > 0,
+
+    // ── Trust Package documents ──
+    // The trust's execution date is unknown until the client signs, so it
+    // prints as a fill-in rule rather than a guessed date.
+    trust_date: (intake.trust_date || "").trim() || "______________________",
+    /** Both trustees on a joint trust, one on a single trust. */
+    certification_signatories: intake.is_joint_trust && intake.grantor_2_full_name
+      ? `${client_full_name} and ${intake.grantor_2_full_name}`
+      : client_full_name,
+    grantor_2_address: (intake.grantor_2_address || "").trim() || "______________________",
   };
 }

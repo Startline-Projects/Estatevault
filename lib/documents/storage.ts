@@ -10,12 +10,23 @@ import { createAdminClient } from "@/lib/api/auth";
 // Plaintext PDF buffer is discarded after seal. Server retains no copy.
 //
 // Optionally seals a parallel copy to the assigned review attorney.
+/**
+ * What produced a document. Recorded against the row at generation time so the
+ * document can later be checked for staleness and attributed to a template.
+ * Absent for legacy Claude-generated documents.
+ */
+export interface DocumentProvenance {
+  templateVersion: string;
+  sourceFingerprint: string | null;
+}
+
 export async function uploadDocument(
   clientId: string,
   orderId: string,
   documentType: string,
   pdfBuffer: Buffer,
   docxBuffer?: Buffer,
+  provenance?: DocumentProvenance,
 ): Promise<string> {
   const supabase = createAdminClient();
   const path = `${clientId}/${orderId}/${documentType}.pdf`;
@@ -132,6 +143,10 @@ export async function uploadDocument(
     storage_path: path,
     status: "generated",
     generated_at: new Date().toISOString(),
+    // template_version was the literal "1.0" at every row-insert site and was
+    // never updated afterwards. Generation is the only moment that knows which
+    // template actually ran, so it is recorded here.
+    ...(provenance?.templateVersion ? { template_version: provenance.templateVersion } : {}),
   }).eq("order_id", orderId).eq("document_type", documentType);
   if (coreUpd.error) {
     throw new Error(`documents update failed: ${coreUpd.error.message}`);
@@ -140,6 +155,9 @@ export async function uploadDocument(
   // Extended update — requires 20260509_e2ee_phase12_documents.sql. Tolerate
   // failure so older envs still generate working docs.
   const extUpd = await supabase.from("documents").update({
+    // Null for a legacy/Claude-generated document, which has no template intake
+    // coupling to go stale. Requires migration-document-generation-blocked.sql.
+    ...(provenance ? { source_fingerprint: provenance.sourceFingerprint } : {}),
     sealed,
     sealed_for_user_id: sealedFor,
     attorney_sealed_path: attorneySealedPath,
