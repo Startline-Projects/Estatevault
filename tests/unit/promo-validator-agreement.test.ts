@@ -13,7 +13,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { readFileSync } from "fs";
 import { join } from "path";
-import { promoDecision, promoKind, isPromoEnabled, TEST_PROMO_SWITCH_KEY } from "@/lib/orders/promo";
+import { promoDecision, promoKind, isPromoEnabled, isTrustedPromoOrigin, TEST_PROMO_SWITCH_KEY } from "@/lib/orders/promo";
 import { VALID_WILL_INTAKE } from "../fixtures/intake";
 
 const h = vi.hoisted(() => ({
@@ -161,6 +161,43 @@ describe("promoDecision — the one verdict both sides use", () => {
     expect(promoKind("LAUNCH")).toBe("free");
     expect(isPromoEnabled("PILOT")).toBe(true);
     expect(isPromoEnabled("FREE134")).toBe(false);
+  });
+});
+
+describe("isTrustedPromoOrigin compares the host, it does not search the string", () => {
+  const from = (headers: Record<string, string>) =>
+    isTrustedPromoOrigin(new Request("http://localhost/x", { headers }));
+
+  it.each([
+    "https://estatevault.us",
+    "https://www.estatevault.us",
+    "https://app.estatevault.us",
+    "https://ESTATEVAULT.US",
+    "https://www.estatevault.us.",             // fully-qualified form of the same host
+    "http://localhost:3000",
+    "http://pro.localhost:3000",
+    "http://127.0.0.1:3000",
+  ])("trusts %s", (origin) => expect(from({ origin })).toBe(true));
+
+  it.each([
+    "https://estatevault.us.evil.example",      // the platform's name as a subdomain of someone else's
+    "https://evil-estatevault.us",               // a lookalike registrable domain
+    "https://notestatevault.us",
+    "https://evil.example",
+    "https://localhost.evil.example",
+    "https://127.0.0.1.evil.example",
+    "not a url",
+    "",
+  ])("refuses %s", (origin) => expect(from({ origin })).toBe(false));
+
+  it("applies the same rule to a Referer, whose path and query are attacker-controlled", () => {
+    expect(from({ referer: "https://app.estatevault.us/will/checkout?x=1" })).toBe(true);
+    expect(from({ referer: "https://evil.example/?next=https://estatevault.us" })).toBe(false);
+    expect(from({ referer: "https://evil.example/estatevault.us/localhost" })).toBe(false);
+  });
+
+  it("refuses a request with neither header", () => {
+    expect(from({})).toBe(false);
   });
 });
 
