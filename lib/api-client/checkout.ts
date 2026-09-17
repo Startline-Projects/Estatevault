@@ -46,6 +46,8 @@ export function verifyAttorneyCheckout(sessionId: string, password: string): Pro
   return publicPost("/api/checkout/attorney/verify", { session_id: sessionId, password });
 }
 
-export function validatePromoCode(code: string): Promise<ApiResult<{ valid: boolean }>> {
+export type ValidatePromoResult = { valid: boolean; kind?: "free" | "test" | null };
+
+export function validatePromoCode(code: string): Promise<ApiResult<ValidatePromoResult>> {
   return publicPost("/api/checkout/validate-promo", { code });
 }

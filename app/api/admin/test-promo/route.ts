@@ -5,12 +5,13 @@ import { ok, fail } from "@/lib/api/response";
 import { adminTestPromoSchema } from "@/lib/validation/schemas";
 import * as appSettingsRepo from "@/lib/repos/server/appSettingsRepo";
 import * as auditLogRepo from "@/lib/repos/server/auditLogRepo";
+import { TEST_PROMO_SWITCH_KEY } from "@/lib/orders/promo";
 
 export const GET = withRoute(async (_req: NextRequest) => {
   const auth = await requireAuth(["admin"]);
   if ("error" in auth) return auth.error;
 
-  const { data, error } = await appSettingsRepo.getByKey(auth.admin, "test_promo_code");
+  const { data, error } = await appSettingsRepo.getByKey(auth.admin, TEST_PROMO_SWITCH_KEY);
 
   if (error) {
     console.error("app_settings read error:", error.message);
@@ -32,7 +33,7 @@ export const POST = withRoute(async (req: NextRequest) => {
 
   const { error: upsertErr } = await appSettingsRepo.upsertByKey(
     auth.admin,
-    "test_promo_code",
+    TEST_PROMO_SWITCH_KEY,
     { active: !!active },
     auth.user.id,
   );

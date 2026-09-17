@@ -49,3 +49,56 @@ export function promoKind(code: string | null | undefined): PromoKind | null {
 export function isPromoEnabled(code: string | null | undefined): boolean {
   return promoKind(code) !== null;
 }
+
+/**
+ * The app_settings row that switches test-kind codes on and off. Both places
+ * that read it name it through this constant so they cannot drift apart.
+ */
+export const TEST_PROMO_SWITCH_KEY = "test_promo_code";
+
+/**
+ * Test-kind codes may only be redeemed from the platform's own pages. This
+ * check used to live inline in the charger; the validator now asks the same
+ * question, so the two cannot disagree about where a test order may come from.
+ */
+export function isTrustedPromoOrigin(request: Request): boolean {
+  const origin = request.headers.get("origin") || request.headers.get("referer") || "";
+  return (
+    origin.includes("estatevault.us") ||
+    origin.includes("localhost") ||
+    origin.includes("127.0.0.1")
+  );
+}
+
+export type PromoRefusal = "unknown_code" | "untrusted_origin" | "test_switch_off";
+
+export type PromoDecision =
+  | { accepted: true; kind: PromoKind }
+  | { accepted: false; kind: PromoKind | null; refusal: PromoRefusal };
+
+/**
+ * The one answer to "will the charger honour this code right now?".
+ *
+ * The checkout page asks it before the client commits (POST
+ * /api/checkout/validate-promo) and createCheckoutSession asks it again when
+ * the order is placed. Both must reach the same verdict from the same inputs,
+ * or the page tells a client a code works and the charge then ignores it — or
+ * the reverse. The validator used to keep its own hardcoded list and did
+ * exactly that.
+ *
+ * A free code is honoured whenever it is configured. A test code additionally
+ * needs the request to come from a trusted origin and the admin switch
+ * (app_settings.test_promo_code.active) to be on. The caller supplies both
+ * facts so this stays pure and each caller keeps its own I/O.
+ */
+export function promoDecision(
+  code: string | null | undefined,
+  ctx: { testSwitchOn: boolean; trustedOrigin: boolean },
+): PromoDecision {
+  const kind = promoKind(code);
+  if (kind === null) return { accepted: false, kind, refusal: "unknown_code" };
+  if (kind === "free") return { accepted: true, kind };
+  if (!ctx.trustedOrigin) return { accepted: false, kind, refusal: "untrusted_origin" };
+  if (!ctx.testSwitchOn) return { accepted: false, kind, refusal: "test_switch_off" };
+  return { accepted: true, kind };
+}

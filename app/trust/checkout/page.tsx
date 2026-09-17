@@ -115,7 +115,7 @@ export default function TrustCheckoutPage() {
       if (err || !data) { setError("This code is not valid"); setPromoApplied(false); return; }
       if (data.valid) {
         setPromoApplied(true);
-        setIsTestMode(code === "TEST");
+        setIsTestMode(data.kind === "test");
         setAttorneyReview(false);
         setError("");
       } else {

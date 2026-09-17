@@ -9,7 +9,12 @@ import { evaluateHardStop } from "@/lib/compliance/hardStop";
 import { peekVerifiedToken } from "@/lib/auth/emailVerification";
 import { createAdminClient } from "@/lib/api/auth";
 import { PRICES, REFERRAL_FEE_CENTS } from "@/lib/orders/pricing";
-import { promoKind } from "@/lib/orders/promo";
+import {
+  isTrustedPromoOrigin,
+  promoDecision,
+  promoKind,
+  TEST_PROMO_SWITCH_KEY,
+} from "@/lib/orders/promo";
 import { resolveReviewRouting } from "@/lib/attorney-review/routing";
 import { getPlatformDefaultReviewFee } from "@/lib/attorney-review/fee";
 import * as clientRepo from "@/lib/repos/server/clientRepo";
@@ -329,7 +334,9 @@ export async function createCheckoutSession(
 
   // ── FREE PROMO ─────────────────────────────────────────
   if (isPromoFree) {
-    return handleFreePromo(supabase, config, input, order.id, clientId);
+    // The address the client row above was resolved from is the only address
+    // the free path may act on — see the note in handleFreePromo.
+    return handleFreePromo(supabase, config, input, order.id, clientId, conflictEmail);
   }
 
   // ── STRIPE SESSION ─────────────────────────────────────
@@ -429,16 +436,20 @@ async function handleTestPromo(
 ): Promise<NextResponse> {
   const { intakeAnswers, declinedAttorneyReview } = input;
 
-  const origin = request.headers.get("origin") || request.headers.get("referer") || "";
-  const isTrustedOrigin = origin.includes("estatevault.us") || origin.includes("localhost") || origin.includes("127.0.0.1");
-  if (!isTrustedOrigin) {
-    return NextResponse.json({ error: "Invalid promo code." }, { status: 400 });
+  // Same decision the validator makes (/api/checkout/validate-promo), from the
+  // same function, so a code the page accepted cannot be refused here or vice
+  // versa. The switch is only read for a trusted origin, as before.
+  const trustedOrigin = isTrustedPromoOrigin(request);
+  let testSwitchOn = false;
+  if (trustedOrigin) {
+    const { data: setting } = await appSettingsRepo.getByKey(supabase, TEST_PROMO_SWITCH_KEY);
+    testSwitchOn = (setting?.value as { active?: boolean })?.active ?? false;
   }
-
-  const { data: setting } = await appSettingsRepo.getByKey(supabase, "test_promo_code");
-  const testActive = (setting?.value as { active?: boolean })?.active ?? false;
-  if (!testActive) {
-    return NextResponse.json({ error: "This code is not valid" }, { status: 400 });
+  const decision = promoDecision(input.promoCode, { testSwitchOn, trustedOrigin });
+  if (!decision.accepted) {
+    const message =
+      decision.refusal === "untrusted_origin" ? "Invalid promo code." : "This code is not valid";
+    return NextResponse.json({ error: message }, { status: 400 });
   }
 
   const clientIp = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
@@ -530,7 +541,11 @@ async function handleTestPromo(
     action: "test_promo.used",
     resource_type: "order",
     resource_id: order.id,
-    metadata: { product_type: config.productType, promo_code: "TEST", ip: clientIp },
+    metadata: {
+      product_type: config.productType,
+      promo_code: input.promoCode?.trim().toUpperCase() ?? null,
+      ip: clientIp,
+    },
   });
 
   return NextResponse.json({ test: true, orderId: order.id });
@@ -542,19 +557,21 @@ async function handleFreePromo(
   input: CheckoutInput,
   orderId: string,
   clientId: string,
+  accountEmail: string | undefined,
 ): Promise<NextResponse> {
-  const { userId, intakeAnswers, promoCode, email: promoEmail, verifiedToken } = input;
+  const { userId, intakeAnswers, promoCode, verifiedToken } = input;
 
-  const emailAddr = (promoEmail || intakeAnswers.email) as string | undefined;
+  // One address for both decisions. The caller resolved `clientId` from
+  // `accountEmail` (customerEmail, then email, then the intake's). This
+  // function used to look up, prove and create the account from a different
+  // precedence (email, then the intake's), so a request carrying
+  // customerEmail=<stranger> and email=<own, proved> re-pointed the stranger's
+  // client row at the caller's profile. The proof is now for the same address
+  // the client row came from, so it can only ever link a client to its owner.
+  const emailAddr = accountEmail;
   if (!emailAddr) {
     return NextResponse.json({ error: "Email is required for promo orders" }, { status: 400 });
   }
-
-  await orderRepo.update(supabase, orderId, {
-    amount_total: 0, ev_cut: 0, partner_cut: 0, attorney_cut: 0,
-    status: "generating",
-    attorney_review_requested: false,
-  });
 
   let profileId = userId;
   const { generateTempPassword } = await import("@/lib/utils/generate-password");
@@ -579,6 +596,10 @@ async function handleFreePromo(
       const proved =
         !!verifiedToken && (await peekVerifiedToken(emailAddr, verifiedToken));
       if (!proved) {
+        // The order row was inserted `pending` before we got here. Undo it the
+        // way the Stripe-failure path does (BUG-9), so a refused request leaves
+        // nothing on the account whose address the caller typed in.
+        await orderRepo.deleteById(supabase, orderId);
         // Neutral on purpose: the same message whether or not the address has
         // an account, so this cannot be used to enumerate customers.
         return NextResponse.json(
@@ -619,6 +640,18 @@ async function handleFreePromo(
     }
   }
 
+  // Only now, with the account question settled, does this become a $0
+  // generating order. It used to happen before the mailbox check above, which
+  // left a `generating` order on whichever account's address an anonymous
+  // caller typed in — and plan-conflict counts `generating` as owned, so one
+  // refused POST was enough to lock the real owner out of buying that package.
+  // A refused request now leaves the order `pending`, which owns nothing.
+  await orderRepo.update(supabase, orderId, {
+    amount_total: 0, ev_cut: 0, partner_cut: 0, attorney_cut: 0,
+    status: "generating",
+    attorney_review_requested: false,
+  });
+
   await documentRepo.insertMany(
     supabase,
     config.docTypes.map((dt) => ({
@@ -634,7 +667,11 @@ async function handleFreePromo(
     action: "checkout.promo_free",
     resource_type: "order",
     resource_id: orderId,
-    metadata: { product_type: config.productType, promo_code: promoCode, email: emailAddr },
+    metadata: {
+      product_type: config.productType,
+      promo_code: promoCode?.trim().toUpperCase() ?? null,
+      email: emailAddr,
+    },
   });
 
   // No profile UUID in the payload: an anonymous caller should learn nothing
