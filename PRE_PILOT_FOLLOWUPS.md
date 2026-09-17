@@ -1,11 +1,35 @@
 # Pre-pilot follow-ups
 
 Found during the staging no-payment smoke test of 2026-09-17 (preview built from
-`staging` @ `7569ca8`). **None of these blocked the smoke test. All need resolving
-before the pilot.**
+`staging` @ `7569ca8`) and the two fix batches that followed.
 
-Status key: ☐ open · ☑ fixed on `template-revisions-v2-final` (fix batch 2) — an item marked ☑
-is only live once that PR is merged and deployed.
+Status key: ☐ open · ☑ fixed on `template-revisions-v2-final` (fix batch 2).
+**An item marked ☑ is only live once that branch is merged to `staging` and deployed.**
+As of 2026-09-17 it is NOT: `origin/staging` is still `7569ca8`; the four fix-batch-2
+commits (`6db30d9` … `04fc8f1`) exist only on the branch.
+
+## Pilot readiness — what blocks a first real client, and what does not
+
+### Blockers
+
+| # | Item | What unblocks it |
+|---|------|------------------|
+| B1 | **The paid path has never been smoke-tested.** Both purchases, the attorney-review add-on, the blocked-document test and the webhook hard-stop gate are all parked on Stripe test keys. | Test keys on Preview, then one run. |
+| B2 | **Fix batch 2 is unmerged** — so the password-reset link is still dead (item 2) and a Trust Package still generates four of seven documents (item 4). | Merge the PR, confirm the preview rebuilt, do one real password reset on it. |
+| B3 | **`PDF_RENDERER` / compliance sign-off (item 1).** A Trust Package cannot be fulfilled with the flag unset, and `HANDOFF.md` says it must stay unset until sign-off. `MOCK_DOC_GENERATION` must not be set anywhere a client can reach. | A decision in the review session. Will Packages are not affected. |
+| B4 | **Production database needs `20260916_000_trust_package_document_types.sql` before the code.** | Being applied by Sam, 2026-09-17. |
+| B5 | **Production env was never checked (item 6).** The rate limiter fails OPEN without `UPSTASH_REDIS_REST_URL` / `_REST_TOKEN`, the example file named them wrongly until fix batch 2, and the boot-time guard that would catch it never runs. | Read the Production env vars in Vercel; two minutes. |
+| B6 | **Promo-code namespace (decision A)** — only if any `PROMO_CODES` will be set in production during the pilot. With it empty this is inert. | A decision; or keep `PROMO_CODES` empty for the pilot. |
+| B7 | **Client-facing trust copy (decision E)** — the trust success page shows raw identifiers such as `certification_of_trust` and says the attorney "will review all 4 documents". Trust Package only. | Approved wording for four labels and one sentence. |
+
+### Not blockers — fix after the pilot starts
+
+Item 3 (orphaned staging PDFs — housekeeping; the erasure-policy question behind it should be
+raised, but nothing breaks) · item 5 (leftover `quiz_sessions` rows) · item 7 (resume vs schema
+edge cases — unreachable through the UI) · decision B (`verifiedToken` hand-off — fails closed) ·
+decision C (.com vs .us — only affects test-kind promo codes) · decision D (wording) ·
+grandfathered four-document trust orders (a business call, no defect) · remove `PROMO_CODES`
+from the Preview environment (do it now; it is not a pilot question).
 
 ---
 
@@ -153,6 +177,34 @@ created) has it too, and on the free path it can also leave the just-created acc
 retry with the same email is told to sign in. Delete the quiz session in both rollbacks, or
 move the account check ahead of the order and quiz-session inserts so a refused request
 writes nothing.
+
+---
+
+## 6. ☐ Production environment has never been verified, and the guard that would catch it is dead
+
+`lib/rate-limit.ts` hands every route a limiter that always allows when
+`UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN` are absent — no in-memory fallback, no
+error, every `429` branch becomes dead code. Preview is configured correctly (429s observed in the
+smoke test). Production has not been looked at, and `.env.local.example` told whoever provisioned
+it to set `UPSTASH_REDIS_URL` / `_TOKEN`, which the limiter does not read.
+
+`lib/env.ts` lists both as required and throws at boot under `NODE_ENV=production` — but its only
+caller is `instrumentation.ts`, and Next 14.2 runs that file only with
+`experimental.instrumentationHook: true`, which `next.config.mjs` does not set. So a
+mis-configured production starts silently. **Before pilot:** read the Production env in Vercel.
+**Fix:** enable the hook (check first that every variable `lib/env.ts` requires really is set, or
+the next deploy will refuse to boot).
+
+---
+
+## 7. ☐ The resume check and the checkout schema disagree on two healthcare answers
+
+`lib/intake/incomplete-steps.ts` treats `organDonation` as answered if it is any non-empty string,
+and does not list `hasHealthcareWishes` at all; `willIntakeSchema` / `trustIntakeSchema` require an
+enum and a Yes/No. A stored snapshot with a legacy value (e.g. `organDonation: "Yes"`) passes
+resume, reaches checkout, and gets a 400 it cannot explain. Not reachable by someone filling the
+questionnaire today — the card's own gate (`components/intake/PoaPadSteps.tsx`) enforces both —
+only by a restored pre-change snapshot or a direct API call. Make the three agree.
 
 ---
 
