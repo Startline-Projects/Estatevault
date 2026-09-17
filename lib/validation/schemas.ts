@@ -191,8 +191,13 @@ const willIntakeSchema = z.object({
   state: z.string().min(1).max(50),
   maritalStatus: MARITAL_STATUS,
   hasMinorChildren: YES_NO,
-  // Core Rule 4 hard stops. A "Yes" to any of these halts generation, so the
-  // schema requires an answer rather than letting one default to "No".
+  // Core Rule 4 hard stops — all four. A "Yes" to any of these halts
+  // generation, so the schema requires an answer rather than letting one
+  // default to "No". Every trigger the questionnaire asks must be listed here:
+  // z.object() strips keys it does not know, so a trigger missing from this
+  // list is silently discarded before evaluateHardStop ever sees it. The
+  // special-needs question was collected and dropped that way.
+  hasSpecialNeedsDependent: YES_NO,
   wantsIrrevocableTrust: YES_NO,
   hasMedicaidPlanning: YES_NO,
   hasEstateDispute: YES_NO,
@@ -259,8 +264,8 @@ const trustIntakeSchema = z.object({
   state: z.string().min(1).max(50),
   maritalStatus: MARITAL_STATUS,
   trustName: z.string().max(300),
-  // Core Rule 4 hard stops. A "Yes" to any of these halts generation, so the
-  // schema requires an answer rather than letting one default to "No".
+  // Core Rule 4 hard stops — all four; see the note on willIntakeSchema.
+  hasSpecialNeedsDependent: YES_NO,
   wantsIrrevocableTrust: YES_NO,
   hasMedicaidPlanning: YES_NO,
   hasEstateDispute: YES_NO,
@@ -329,6 +334,15 @@ type _QuizSchemaCheck = z.infer<typeof quizAnswersSchema> extends QuizAnswers ? 
 type _WillSchemaCheck = z.infer<typeof willIntakeSchema> extends WillIntake ? true : never;
 type _TrustSchemaCheck = z.infer<typeof trustIntakeSchema> extends TrustIntake ? true : never;
 
+// Compile-time guard for the three conditionals above. Each collapses to
+// `never` when its schema fails to cover a field the intake type requires —
+// which is exactly the case where Zod would strip that answer at the API
+// boundary. As bare type aliases they asserted nothing: the special-needs
+// trigger was missing from both intake schemas and nothing complained. Assigning
+// `true` to a `never` does.
+export const INTAKE_SCHEMAS_COVER_THEIR_TYPES: [_QuizSchemaCheck, _WillSchemaCheck, _TrustSchemaCheck] =
+  [true, true, true];
+
 // POST /api/checkout/will
 export const willCheckoutSchema = z.object({
   attorneyReview: z.boolean().optional().default(false),
@@ -337,6 +351,12 @@ export const willCheckoutSchema = z.object({
   email: z.string().email().optional(),
   partnerId: z.string().nullable().optional(),
   customerEmail: z.string().email().optional(),
+  // Mailbox proof minted by the email-verification flow. With it, a returning
+  // client can redeem a free code against the account that already holds their
+  // address; without it the free-promo path may only create accounts for
+  // unclaimed addresses. It has to be declared here or z.object() strips it and
+  // the "proved" branch in createCheckoutSession can never be reached.
+  verifiedToken: z.string().min(1).optional(),
 });
 
 // POST /api/checkout/trust — adds trust-specific fields
@@ -351,11 +371,7 @@ export const trustCheckoutSchema = z.object({
   partnerId: z.string().nullable().optional(),
   customerEmail: z.string().email().optional(),
   confirmOverride: z.boolean().optional(),
-  // Mailbox proof minted by the email-verification flow. With it, a returning
-  // client can redeem a free code against the account that already holds their
-  // address; without it the free-promo path may only create accounts for
-  // unclaimed addresses. It has to be declared here or z.object() strips it and
-  // the "proved" branch in createCheckoutSession can never be reached.
+  // See willCheckoutSchema.
   verifiedToken: z.string().min(1).optional(),
 });
 
@@ -371,8 +387,6 @@ export const amendmentCheckoutSchema = z.object({
 export const vaultSubscriptionCheckoutSchema = z.object({
   partner_slug: z.string().max(200).optional(),
   email: z.string().email().optional(),
-  // See willCheckoutSchema.
-  verifiedToken: z.string().min(1).optional(),
   full_name: z.string().max(200).optional(),
 });
 
