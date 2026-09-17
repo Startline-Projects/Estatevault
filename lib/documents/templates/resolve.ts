@@ -1,3 +1,5 @@
+import { TemplateBlockedError } from "@/lib/documents/generate-from-template";
+
 export async function getTemplate(docType: string) {
   switch (docType) {
     case "will": {
@@ -21,6 +23,17 @@ export async function getTemplate(docType: string) {
       return { systemPrompt: pourOverWillSystemPrompt, buildPrompt: buildPourOverWillPrompt };
     }
     default:
-      throw new Error(`Unknown document type: ${docType}`);
+      // No legacy generator exists for this type — the Certification of Trust,
+      // the Assignments and the Funding Instructions were only ever written as
+      // templates. Reaching here means the template path did not produce the
+      // document either (PDF_RENDERER is off, or the intake failed the
+      // template's checks in non-strict mode). Retrying cannot help, so this is
+      // a hold: every caller already turns TemplateBlockedError into a `blocked`
+      // document, a `blocked` order and ONE admin alert. As a plain Error the
+      // order went `failed`, which the reconcile cron retries every 15 minutes —
+      // re-running the Claude documents that had succeeded, each time, forever.
+      throw new TemplateBlockedError(docType, [
+        "a generator for this document type: it can only be produced from its template, and the template path did not produce it (PDF_RENDERER must be react-pdf or react-pdf-strict; if it is, see the server log for the template check that failed)",
+      ]);
   }
 }

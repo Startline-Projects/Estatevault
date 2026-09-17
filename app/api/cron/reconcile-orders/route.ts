@@ -21,15 +21,11 @@ import { ok, fail } from "@/lib/api/response";
 import { createAdminClient } from "@/lib/api/auth";
 import { reconcilePaidOrder } from "@/lib/orders/reconcileOrder";
 import { sendFulfillmentFailureAlert } from "@/lib/email";
+import { orderDocumentProgress } from "@/lib/documents/trust-package";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
-
-const EXPECTED_DOCS: Record<string, string[]> = {
-  will: ["will", "poa", "healthcare_directive"],
-  trust: ["trust", "pour_over_will", "poa", "healthcare_directive"],
-};
 
 // Only act on orders old enough that the normal paths have had their chance.
 const RETRY_AFTER_MINUTES = 15;
@@ -56,15 +52,19 @@ async function triggerGeneration(orderId: string) {
 }
 
 // True when every expected document for the order has an uploaded file.
-async function hasAllFinishedDocs(admin: Admin, orderId: string, productType: string) {
-  const expected = EXPECTED_DOCS[productType] || [];
-  if (!expected.length) return true;
+async function hasAllFinishedDocs(
+  admin: Admin,
+  orderId: string,
+  productType: string,
+  intake: Record<string, unknown> | null,
+) {
   const { data: docs } = await admin
     .from("documents")
     .select("document_type, storage_path")
     .eq("order_id", orderId);
-  const ready = new Set((docs || []).filter((d) => d.storage_path).map((d) => d.document_type));
-  return expected.every((t) => ready.has(t));
+  // Measured against the rows the order has (seven or eight for a Trust Package
+  // today, four for one created before that) — never a private list here.
+  return orderDocumentProgress(productType, intake, docs || []).complete;
 }
 
 export const GET = withRoute(async (req: NextRequest) => {
@@ -86,7 +86,7 @@ export const GET = withRoute(async (req: NextRequest) => {
   //  - review: attorney-locked but PDFs missing (rare)                → surface only
   const { data: stuck, error } = await admin
     .from("orders")
-    .select("id, status, product_type, created_at, stripe_session_id")
+    .select("id, status, product_type, created_at, stripe_session_id, intake_data")
     .in("product_type", ["will", "trust"])
     .in("status", ["pending", "failed", "generating", "review"])
     .not("stripe_session_id", "is", null)
@@ -106,7 +106,7 @@ export const GET = withRoute(async (req: NextRequest) => {
 
   for (const o of stuck || []) {
     // If the finished PDFs are already present, nothing is wrong — skip.
-    if (await hasAllFinishedDocs(admin, o.id, o.product_type)) {
+    if (await hasAllFinishedDocs(admin, o.id, o.product_type, (o.intake_data as Record<string, unknown> | null) ?? null)) {
       healthy++;
       continue;
     }

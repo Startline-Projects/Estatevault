@@ -191,7 +191,7 @@ describe("the free-promo checkout path must not touch an existing account's pass
     let threw: unknown = null;
     await createCheckoutSession(
       post("http://localhost/api/checkout/will", {}),
-      { productType: "will", baseAmount: 40000, defaultEvCut: 10000, docTypes: ["will"],
+      { productType: "will", baseAmount: 40000, defaultEvCut: 10000,
         recommendation: "will", stripeName: "Will", stripeDescription: "", attorneyDescription: "",
         successPath: "/will/success", cancelPath: "/will/checkout" } as never,
       { userId: null, attorneyReview: false, intakeAnswers: { email: KNOWN_ACCOUNT },

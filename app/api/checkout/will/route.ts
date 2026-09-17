@@ -10,7 +10,6 @@ const WILL_CONFIG: ProductConfig = {
   productType: "will",
   baseAmount: PRICES.will,
   defaultEvCut: EV_DEFAULT_CUT.will,
-  docTypes: ["will", "poa", "healthcare_directive"],
   recommendation: "will",
   stripeName: "Will Package",
   stripeDescription:

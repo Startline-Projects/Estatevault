@@ -11,6 +11,7 @@ import { apiRateLimit } from "@/lib/rate-limit";
 import * as quizSessionRepo from "@/lib/repos/server/quizSessionRepo";
 import * as orderRepo from "@/lib/repos/server/orderRepo";
 import * as auditLogRepo from "@/lib/repos/server/auditLogRepo";
+import { documentTypesForOrder } from "@/lib/documents/trust-package";
 
 export const POST = withRoute(async (request: NextRequest) => {
   const auth = await requireAuth();
@@ -39,9 +40,21 @@ export const POST = withRoute(async (request: NextRequest) => {
     ? await quizSessionRepo.getLatestAnswersByClient(admin, order.client_id).then(r => r, () => ({ data: null }))
     : { data: null };
 
-  const documentTypes = order.product_type === "trust"
-    ? ["trust", "pour_over_will", "poa", "healthcare_directive"]
-    : ["will", "poa", "healthcare_directive"];
+  // The order's own rows decide what is generated (see documentTypesForOrder);
+  // the intake only matters for an order that has no rows yet.
+  const intakeForTypes =
+    (order.intake_data && typeof order.intake_data === "object"
+      ? (order.intake_data as Record<string, unknown>)
+      : (quiz?.answers as Record<string, unknown> | null | undefined)) ?? null;
+  const { data: orderDocRows } = await admin
+    .from("documents")
+    .select("document_type")
+    .eq("order_id", order_id);
+  const documentTypes = documentTypesForOrder(
+    order.product_type,
+    intakeForTypes,
+    (orderDocRows || []).map((d) => d.document_type),
+  );
 
   const job: DocumentJob = {
     job_id: randomUUID(),

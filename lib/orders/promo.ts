@@ -60,14 +60,21 @@ export const TEST_PROMO_SWITCH_KEY = "test_promo_code";
  * Test-kind codes may only be redeemed from the platform's own pages. This
  * check used to live inline in the charger; the validator now asks the same
  * question, so the two cannot disagree about where a test order may come from.
+ *
+ * The host is parsed and compared, not searched for. The original test was
+ * `origin.includes("estatevault.us")`, which https://estatevault.us.evil.example
+ * and https://evil.example/?ref=estatevault.us both satisfied.
  */
 export function isTrustedPromoOrigin(request: Request): boolean {
-  const origin = request.headers.get("origin") || request.headers.get("referer") || "";
-  return (
-    origin.includes("estatevault.us") ||
-    origin.includes("localhost") ||
-    origin.includes("127.0.0.1")
-  );
+  const raw = request.headers.get("origin") || request.headers.get("referer") || "";
+  let host: string;
+  try {
+    host = new URL(raw).hostname.toLowerCase().replace(/\.$/, ""); // "estatevault.us." is the same host
+  } catch {
+    return false; // absent or unparseable
+  }
+  if (host === "localhost" || host === "127.0.0.1" || host.endsWith(".localhost")) return true;
+  return host === "estatevault.us" || host.endsWith(".estatevault.us");
 }
 
 export type PromoRefusal = "unknown_code" | "untrusted_origin" | "test_switch_off";
