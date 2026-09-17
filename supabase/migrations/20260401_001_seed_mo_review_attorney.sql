@@ -17,8 +17,8 @@ SET user_type = 'review_attorney',
     bar_verified_at = now()
 WHERE email = 'mmurshed@thepeoplesfirmpllc.com';
 
--- Set managed_by_admin to the admin user (ockmedk@gmail.com)
+-- Set managed_by_admin to the admin user (info@estatevault.us)
 UPDATE profiles
-SET managed_by_admin = (SELECT id FROM profiles WHERE email = 'ockmedk@gmail.com' LIMIT 1)
+SET managed_by_admin = (SELECT id FROM profiles WHERE email = 'info@estatevault.us' LIMIT 1)
 WHERE email = 'mmurshed@thepeoplesfirmpllc.com'
-  AND (SELECT id FROM profiles WHERE email = 'ockmedk@gmail.com' LIMIT 1) IS NOT NULL;
+  AND (SELECT id FROM profiles WHERE email = 'info@estatevault.us' LIMIT 1) IS NOT NULL;

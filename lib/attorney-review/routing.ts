@@ -24,7 +24,13 @@ import type { ReviewRouting, PartnerForRouting } from "./types";
 import { DEFAULT_ATTORNEY_REVIEW_FEE } from "@/lib/orders/pricing";
 
 export const INHOUSE_ATTORNEY_EMAIL = "test-attorney@estatevault.test";
-export const ESTATEVAULT_ADMIN_EMAIL = "ockmedk@gmail.com";
+// The platform admin. Two things depend on this address being RIGHT:
+//  - fulfilment-failure alerts are sent to it (lib/email.ts), and
+//  - the Stripe webhook looks up the PROFILE with this email and records it as
+//    fee_controlled_by on every paid attorney review (handleAttorneyReview).
+// So an admin account must exist in Supabase Auth under exactly this address,
+// in every environment, or reviews are recorded with no controlling admin.
+export const ESTATEVAULT_ADMIN_EMAIL = "info@estatevault.us";
 export const DEFAULT_REVIEW_FEE_CENTS = DEFAULT_ATTORNEY_REVIEW_FEE;
 
 /**
