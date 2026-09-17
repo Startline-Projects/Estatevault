@@ -17,6 +17,7 @@ import { mapIntakeToTemplateData } from "@/lib/documents/intake-adapter";
 
 import * as auditLogRepo from "@/lib/repos/server/auditLogRepo";
 import * as documentRepo from "@/lib/repos/server/documentRepo";
+import { documentTypesForOrder } from "@/lib/documents/trust-package";
 
 type SupabaseAdmin = ReturnType<typeof createAdminClient>;
 
@@ -138,9 +139,19 @@ export const GET = withRoute(async (request: NextRequest) => {
       if (data) quizAnswers = (data.answers as Record<string, unknown>) || {};
     }
 
-    const documentTypes = order.product_type === "trust"
-      ? ["trust", "pour_over_will", "poa", "healthcare_directive"]
-      : ["will", "poa", "healthcare_directive"];
+    // Generate the documents this order was created with. A private 4-type list
+    // here left a Trust Package's other three or four rows `pending` forever on
+    // an order marked delivered; see documentTypesForOrder for why the rows,
+    // and not a re-derived list, decide.
+    const { data: orderDocRows } = await supabase
+      .from("documents")
+      .select("document_type")
+      .eq("order_id", order.id);
+    const documentTypes = documentTypesForOrder(
+      order.product_type,
+      quizAnswers,
+      (orderDocRows || []).map((d) => d.document_type),
+    );
 
     console.log("Processing order directly:", order.id, "documents:", documentTypes);
 

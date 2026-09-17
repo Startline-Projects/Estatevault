@@ -6,6 +6,7 @@ import { calculateSplit } from "@/lib/stripe-payouts";
 import { AFFILIATE_COOKIE } from "@/lib/affiliate";
 import { checkPlanConflict } from "@/lib/orders/plan-conflict";
 import { evaluateHardStop } from "@/lib/compliance/hardStop";
+import { expectedDocumentTypes } from "@/lib/documents/trust-package";
 import { peekVerifiedToken } from "@/lib/auth/emailVerification";
 import { createAdminClient } from "@/lib/api/auth";
 import { PRICES, REFERRAL_FEE_CENTS } from "@/lib/orders/pricing";
@@ -35,7 +36,6 @@ export type ProductConfig = {
   productType: "will" | "trust";
   baseAmount: number;
   defaultEvCut: number;
-  docTypes: string[];
   recommendation: string;
   stripeName: string;
   stripeDescription: string;
@@ -527,15 +527,25 @@ async function handleTestPromo(
     await orderRepo.update(supabase, order.id, { quiz_session_id: quizSession.id });
   }
 
-  await documentRepo.insertMany(
+  // The document rows are what generation fills in. If they were not created,
+  // this order can never produce anything — so undo it and say so, rather than
+  // send the caller to a success page (the webhook treats the same failure as
+  // fatal, BUG-24). The likeliest cause is a database that has not had
+  // 20260916_000_trust_package_document_types.sql applied.
+  const { error: testDocsErr } = await documentRepo.insertMany(
     supabase,
-    config.docTypes.map((dt) => ({
+    expectedDocumentTypes(config.productType, intakeAnswers).map((dt) => ({
       order_id: order.id,
       document_type: dt,
       status: "pending",
       template_version: "1.0",
     })),
   );
+  if (testDocsErr) {
+    console.error("Test order document rows failed; rolled back order:", testDocsErr.message);
+    await orderRepo.deleteById(supabase, order.id);
+    return NextResponse.json({ error: "Failed to create test order" }, { status: 500 });
+  }
 
   await supabase.from("audit_log").insert({
     action: "test_promo.used",
@@ -652,15 +662,25 @@ async function handleFreePromo(
     attorney_review_requested: false,
   });
 
-  await documentRepo.insertMany(
+  // Same rows, same shape, as the webhook creates for a paid order — including
+  // client_id, without which a document never appears in the client's dashboard
+  // and cannot be downloaded ("Document has no associated client").
+  const { error: docsErr } = await documentRepo.insertMany(
     supabase,
-    config.docTypes.map((dt) => ({
+    expectedDocumentTypes(config.productType, intakeAnswers).map((dt) => ({
       order_id: orderId,
+      client_id: clientId,
       document_type: dt,
       status: "pending",
       template_version: "1.0",
     })),
   );
+  if (docsErr) {
+    // See handleTestPromo: no rows means nothing can ever be generated.
+    console.error("Free-promo document rows failed; rolled back order:", docsErr.message);
+    await orderRepo.deleteById(supabase, orderId);
+    return NextResponse.json({ error: "Failed to create order" }, { status: 500 });
+  }
 
   await supabase.from("audit_log").insert({
     actor_id: profileId || null,

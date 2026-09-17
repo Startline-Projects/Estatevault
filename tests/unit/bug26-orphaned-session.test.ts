@@ -123,7 +123,6 @@ const WILL_CONFIG = {
   productType: "will" as const,
   baseAmount: 40000,
   defaultEvCut: 10000,
-  docTypes: ["will", "poa_financial", "poa_medical"],
   recommendation: "will",
   stripeName: "Will Package",
   stripeDescription: "Complete Will Package",

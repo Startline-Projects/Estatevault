@@ -10,7 +10,6 @@ const TRUST_CONFIG: ProductConfig = {
   productType: "trust",
   baseAmount: PRICES.trust,
   defaultEvCut: EV_DEFAULT_CUT.trust,
-  docTypes: ["trust", "pour_over_will", "poa", "healthcare_directive"],
   recommendation: "trust",
   stripeName: "Trust Package",
   stripeDescription:

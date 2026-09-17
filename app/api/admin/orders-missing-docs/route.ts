@@ -2,11 +2,7 @@ import { NextRequest } from "next/server";
 import { requireAuth } from "@/lib/api/auth";
 import { withRoute } from "@/lib/api/route";
 import { ok, fail } from "@/lib/api/response";
-
-const EXPECTED_DOCS: Record<string, string[]> = {
-  will: ["will", "poa", "healthcare_directive"],
-  trust: ["trust", "pour_over_will", "poa", "healthcare_directive"],
-};
+import { orderDocumentProgress } from "@/lib/documents/trust-package";
 
 export const GET = withRoute(async (_req: NextRequest) => {
   const auth = await requireAuth(["admin"]);
@@ -15,7 +11,7 @@ export const GET = withRoute(async (_req: NextRequest) => {
   const { data: orders, error: ordersErr } = await auth.admin
     .from("orders")
     .select(
-      "id, client_id, product_type, status, order_type, created_at, attorney_review_requested, stripe_session_id, stripe_payment_intent_id",
+      "id, client_id, product_type, status, order_type, created_at, attorney_review_requested, stripe_session_id, stripe_payment_intent_id, intake_data",
     )
     .in("product_type", ["will", "trust"])
     // Include paid-but-stuck states alongside in-flight ones:
@@ -80,11 +76,12 @@ export const GET = withRoute(async (_req: NextRequest) => {
     // BUG-13: generation/queue failed.
     const queueFailed = o.status === "failed";
 
-    const expected = EXPECTED_DOCS[o.product_type] || [];
     const orderDocs = (docs || []).filter((d) => d.order_id === o.id);
-    const ready = new Set(orderDocs.filter((d) => d.storage_path).map((d) => d.document_type));
-    const present = expected.filter((t) => ready.has(t));
-    const missing = expected.filter((t) => !ready.has(t));
+    const { expected, present, missing } = orderDocumentProgress(
+      o.product_type,
+      (o.intake_data as Record<string, unknown> | null) ?? null,
+      orderDocs,
+    );
     const hasPendingRows = orderDocs.some((d) => !d.storage_path);
 
     // Surface a row if it is a known stuck/failed state, or an in-flight order

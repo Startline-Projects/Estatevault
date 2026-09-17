@@ -12,9 +12,10 @@ import { TemplateBlockedError } from "@/lib/documents/generate-from-template";
 import { markDocumentBlocked, countBlockedForOrder, alertAdminOrderBlocked, type BlockedDocument } from "@/lib/documents/blocked";
 
 import * as auditLogRepo from "@/lib/repos/server/auditLogRepo";
+import { documentTypesForOrder } from "@/lib/documents/trust-package";
 
 // Public, post-payment generation trigger fired by the order success page
-// (the customer has no session there yet). Listed in middleware publicPaths.
+// (the customer has no session there yet). Listed in PUBLIC_PATHS (lib/supabase/publicPaths.ts).
 // Abuse is bounded below: only orders already past payment (status
 // "generating") generate, and already-finished orders short-circuit — so a
 // caller cannot drive repeated Claude generation for an order.
@@ -86,9 +87,19 @@ export const GET = withRoute(async (request: NextRequest) => {
     log.push(mockGen ? "5. MOCK_DOC_GENERATION on — using placeholder docs" : "5. ANTHROPIC_API_KEY is set");
 
     const isTestOrder = order.order_type === "test";
-    const documentTypes = order.product_type === "trust"
-      ? ["trust", "pour_over_will", "poa", "healthcare_directive"]
-      : ["will", "poa", "healthcare_directive"];
+    // Generate the documents this order was created with. A private 4-type list
+    // here left a Trust Package's other three or four rows `pending` forever on
+    // an order marked delivered; see documentTypesForOrder for why the rows,
+    // and not a re-derived list, decide.
+    const { data: orderDocRows } = await supabase
+      .from("documents")
+      .select("document_type")
+      .eq("order_id", orderId);
+    const documentTypes = documentTypesForOrder(
+      order.product_type,
+      quizAnswers,
+      (orderDocRows || []).map((d) => d.document_type),
+    );
 
     log.push(`6. Will generate ${documentTypes.length} documents: ${documentTypes.join(", ")}`);
 

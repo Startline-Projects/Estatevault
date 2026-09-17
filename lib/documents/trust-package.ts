@@ -95,3 +95,56 @@ export function expectedDocumentTypes(
   }
   return ["will", "poa", "healthcare_directive"];
 }
+
+/**
+ * The documents a generator should produce, or a monitor should expect, for an
+ * order that ALREADY EXISTS: the rows it was created with, in delivery order.
+ * Only an order with no rows at all falls back to what the product owes.
+ *
+ * Why the rows and not a fresh expectedDocumentTypes() call:
+ *  - The rows ARE the order's contract. Whatever created them (webhook, free
+ *    promo, test promo) already asked expectedDocumentTypes once, with the
+ *    intake it had. Re-deriving the list later, possibly from a different
+ *    snapshot, can only disagree — and a generated file whose type has no row
+ *    is silently dropped (uploadDocument updates by order_id + document_type).
+ *  - Orders created before the Trust Package grew from four documents to
+ *    seven/eight have four rows. Measured against today's list they would look
+ *    permanently unfinished: the reconcile cron would re-dispatch and alert on
+ *    them every fifteen minutes, forever, for documents they were never sold.
+ */
+export function documentTypesForOrder(
+  productType: string,
+  intake: Record<string, unknown> | null | undefined,
+  existingRowTypes: ReadonlyArray<string | null | undefined>,
+): string[] {
+  const rows = Array.from(new Set(existingRowTypes.filter((t): t is string => !!t)));
+  if (rows.length === 0) return expectedDocumentTypes(productType, intake);
+
+  const deliveryOrder =
+    productType === "trust" ? trustPackageDocumentTypes(true) : expectedDocumentTypes(productType, intake);
+  const rank = (t: string) => {
+    const i = deliveryOrder.indexOf(t);
+    return i === -1 ? deliveryOrder.length : i;
+  };
+  return rows.sort((a, b) => rank(a) - rank(b));
+}
+
+export interface OrderDocumentProgress {
+  expected: string[];
+  present: string[];
+  missing: string[];
+  complete: boolean;
+}
+
+/** Which of an order's documents have a finished file, and which do not. */
+export function orderDocumentProgress(
+  productType: string,
+  intake: Record<string, unknown> | null | undefined,
+  docs: ReadonlyArray<{ document_type: string | null; storage_path: string | null }>,
+): OrderDocumentProgress {
+  const expected = documentTypesForOrder(productType, intake, docs.map((d) => d.document_type));
+  const ready = new Set(docs.filter((d) => d.storage_path).map((d) => d.document_type));
+  const present = expected.filter((t) => ready.has(t));
+  const missing = expected.filter((t) => !ready.has(t));
+  return { expected, present, missing, complete: expected.length > 0 && missing.length === 0 };
+}
