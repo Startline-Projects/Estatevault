@@ -9,7 +9,12 @@ import { evaluateHardStop } from "@/lib/compliance/hardStop";
 import { peekVerifiedToken } from "@/lib/auth/emailVerification";
 import { createAdminClient } from "@/lib/api/auth";
 import { PRICES, REFERRAL_FEE_CENTS } from "@/lib/orders/pricing";
-import { promoKind } from "@/lib/orders/promo";
+import {
+  isTrustedPromoOrigin,
+  promoDecision,
+  promoKind,
+  TEST_PROMO_SWITCH_KEY,
+} from "@/lib/orders/promo";
 import { resolveReviewRouting } from "@/lib/attorney-review/routing";
 import { getPlatformDefaultReviewFee } from "@/lib/attorney-review/fee";
 import * as clientRepo from "@/lib/repos/server/clientRepo";
@@ -431,16 +436,20 @@ async function handleTestPromo(
 ): Promise<NextResponse> {
   const { intakeAnswers, declinedAttorneyReview } = input;
 
-  const origin = request.headers.get("origin") || request.headers.get("referer") || "";
-  const isTrustedOrigin = origin.includes("estatevault.us") || origin.includes("localhost") || origin.includes("127.0.0.1");
-  if (!isTrustedOrigin) {
-    return NextResponse.json({ error: "Invalid promo code." }, { status: 400 });
+  // Same decision the validator makes (/api/checkout/validate-promo), from the
+  // same function, so a code the page accepted cannot be refused here or vice
+  // versa. The switch is only read for a trusted origin, as before.
+  const trustedOrigin = isTrustedPromoOrigin(request);
+  let testSwitchOn = false;
+  if (trustedOrigin) {
+    const { data: setting } = await appSettingsRepo.getByKey(supabase, TEST_PROMO_SWITCH_KEY);
+    testSwitchOn = (setting?.value as { active?: boolean })?.active ?? false;
   }
-
-  const { data: setting } = await appSettingsRepo.getByKey(supabase, "test_promo_code");
-  const testActive = (setting?.value as { active?: boolean })?.active ?? false;
-  if (!testActive) {
-    return NextResponse.json({ error: "This code is not valid" }, { status: 400 });
+  const decision = promoDecision(input.promoCode, { testSwitchOn, trustedOrigin });
+  if (!decision.accepted) {
+    const message =
+      decision.refusal === "untrusted_origin" ? "Invalid promo code." : "This code is not valid";
+    return NextResponse.json({ error: message }, { status: 400 });
   }
 
   const clientIp = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
@@ -532,7 +541,11 @@ async function handleTestPromo(
     action: "test_promo.used",
     resource_type: "order",
     resource_id: order.id,
-    metadata: { product_type: config.productType, promo_code: "TEST", ip: clientIp },
+    metadata: {
+      product_type: config.productType,
+      promo_code: input.promoCode?.trim().toUpperCase() ?? null,
+      ip: clientIp,
+    },
   });
 
   return NextResponse.json({ test: true, orderId: order.id });
