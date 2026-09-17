@@ -20,6 +20,8 @@ commits (`6db30d9` … `04fc8f1`) exist only on the branch.
 | B4 | **Production database needs `20260916_000_trust_package_document_types.sql` before the code.** | Being applied by Sam, 2026-09-17. |
 | B5 | **Production env was never checked (item 6).** The rate limiter fails OPEN without `UPSTASH_REDIS_REST_URL` / `_REST_TOKEN`, the example file named them wrongly until fix batch 2, and the boot-time guard that would catch it never runs. | Read the Production env vars in Vercel; two minutes. |
 | B6 | **Promo-code namespace (decision A)** — only if any `PROMO_CODES` will be set in production during the pilot. With it empty this is inert. | A decision; or keep `PROMO_CODES` empty for the pilot. |
+| B8 | **The reviewing attorney is a test address (item 8).** `INHOUSE_ATTORNEY_EMAIL` is `test-attorney@estatevault.test`; the webhook picks the reviewer for a paid $300 review by looking that email up. No such account → the review is assigned to nobody. | The real attorney's address, and an account under it in each environment. |
+| B9 | **The admin account must exist under `info@estatevault.us` (item 8).** The admin address changed from a personal Gmail to the platform mailbox; the webhook finds the admin's profile by it. | Change the production admin user's email (or create one) BEFORE this code deploys; create one on staging. |
 | B7 | **Client-facing trust copy (decision E)** — the trust success page shows raw identifiers such as `certification_of_trust` and says the attorney "will review all 4 documents". Trust Package only. | Approved wording for four labels and one sentence. |
 
 ### Not blockers — fix after the pilot starts
@@ -205,6 +207,26 @@ enum and a Yes/No. A stored snapshot with a legacy value (e.g. `organDonation: "
 resume, reaches checkout, and gets a 400 it cannot explain. Not reachable by someone filling the
 questionnaire today — the card's own gate (`components/intake/PoaPadSteps.tsx`) enforces both —
 only by a restored pre-change snapshot or a direct API call. Make the three agree.
+
+---
+
+## 8. ☐ Two accounts are found by hardcoded email, and neither is known to exist
+
+`lib/attorney-review/routing.ts` hardcodes two addresses that `handleAttorneyReview` (the Stripe
+webhook's attorney-review step) turns into profile ids by lookup:
+
+- `INHOUSE_ATTORNEY_EMAIL = "test-attorney@estatevault.test"` → `attorney_reviews.attorney_id`, the
+  reviewer. Still a test address.
+- `ESTATEVAULT_ADMIN_EMAIL = "info@estatevault.us"` → `attorney_reviews.fee_controlled_by`, and the
+  recipient of fulfilment-failure alerts. Changed from a personal Gmail address on 2026-09-17; the
+  seed migration `20260401_001` was updated to match.
+
+If either account is missing the review row is still created, just without that id. That used to be
+silent; the webhook now logs an error naming the missing address. Staging has no users at all, so
+both are missing there. **Before pilot:** an admin user under `info@estatevault.us` and an attorney
+user under the real attorney's address, in production and staging — and someone reading the
+`info@` mailbox, since failure alerts now go there. Longer term these belong in configuration
+(`app_settings` or env), not in source.
 
 ---
 
