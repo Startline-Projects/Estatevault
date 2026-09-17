@@ -1,6 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import type { Database } from "@/types/db.generated";
+import { isPublicPath } from "./publicPaths";
 
 export async function updateSession(request: NextRequest) {
   // Forward pathname as a request header so server components (e.g. layouts)
@@ -172,10 +173,7 @@ export async function updateSession(request: NextRequest) {
   }
 
   // Public routes, no auth required
-  const publicPaths = ["/", "/quiz", "/will", "/trust", "/auth", "/attorney-referral", "/pro-partners", "/partners", "/professionals", "/farewell", "/khan-lawgroup", "/api/webhooks", "/api/csp-report", "/api/documents/process", "/api/documents/cleanup-test-orders", "/api/documents/process-now", "/api/documents/regenerate-missing", "/api/documents/check-status", "/api/documents/download-by-session", "/api/attorney/check-sla", "/api/checkout", "/api/quiz", "/api/professionals", "/api/farewell", "/api/referrals", "/api/auth/set-password", "/api/auth/handoff", "/api/auth/signup", "/api/auth/recovery", "/api/auth/resend-verification", "/api/auth/check-email", "/api/auth/send-verify-code", "/api/auth/verify-code", "/api/auth/send-verify-link", "/api/auth/verify-link", "/api/auth/check-verification", "/a", "/affiliate-signup", "/api/affiliate", "/api/contact", "/vault/trustee-confirm", "/api/vault/trustees", "/api/partners/branding", "/trustee", "/api/trustee"];
-  const isPublic = publicPaths.some(
-    (p) => pathname === p || pathname.startsWith(p + "/")
-  );
+  const isPublic = isPublicPath(pathname);
 
   // Partner slug pages (e.g. /the-peoples-firm) are public, single-segment paths
   // that don't match known app routes are treated as partner landing pages

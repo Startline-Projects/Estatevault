@@ -4,7 +4,7 @@ import { ok, fail } from "@/lib/api/response";
 import { withRoute } from "@/lib/api/route";
 
 // Public read-only document-readiness poll for the post-payment success page
-// (the visitor has no session yet). Listed in middleware publicPaths. Returns
+// (the visitor has no session yet). Listed in PUBLIC_PATHS (lib/supabase/publicPaths.ts). Returns
 // only non-sensitive status fields keyed by an opaque order UUID.
 export const GET = withRoute(async (req: NextRequest): Promise<NextResponse> => {
   const orderId = new URL(req.url).searchParams.get("order_id");

@@ -1,10 +1,17 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { exchangeResetToken } from "@/lib/api-client/auth";
+import {
+  decideResetLinkView,
+  RESET_DEAD_LINK_MESSAGE,
+  RESET_EXCHANGED_MARKER,
+  RESET_RETRY_MESSAGE,
+  type ExchangeOutcome,
+} from "@/lib/auth/resetLinkState";
 
 export default function ResetPasswordPage() {
   const router = useRouter();
@@ -23,27 +30,48 @@ export default function ResetPasswordPage() {
   const passwordsMatch = password === confirmPassword && confirmPassword.length > 0;
   const isValid = hasMinLength && hasNumber && passwordsMatch;
 
+  // The link is single-use, so the exchange must run exactly once per page load
+  // (React's development double-invoke would otherwise spend it and then fail).
+  const exchanged = useRef(false);
+
   useEffect(() => {
+    if (exchanged.current) return;
+    exchanged.current = true;
+
     async function bootstrap() {
       const params = new URLSearchParams(window.location.search);
       const tokenHash = params.get("token_hash");
-      const type = params.get("type");
-      if (tokenHash && type === "recovery") {
-        const result = await exchangeResetToken(tokenHash);
-        if (result.data) {
-          setSessionReady(true);
-          return;
-        }
-        if (result.error === "link_already_used") {
-          setLinkUsed(true);
-          return;
-        }
-        setError("This reset link is invalid or has expired. Please request a new one.");
-        return;
+      const hasToken = !!tokenHash && params.get("type") === "recovery";
+
+      let exchange: ExchangeOutcome | null = null;
+      if (hasToken) {
+        const result = await exchangeResetToken(tokenHash!);
+        exchange = result.data ? { ok: true } : { ok: false, error: result.error || "" };
+        if (exchange.ok) sessionStorage.setItem(RESET_EXCHANGED_MARKER, "1");
+      }
+
+      const exchangedInThisTab = sessionStorage.getItem(RESET_EXCHANGED_MARKER) === "1";
+      const hasSession = exchangedInThisTab
+        ? !!(await createClient().auth.getSession()).data.session
+        : false;
+
+      const view = decideResetLinkView({ hasToken, exchange, exchangedInThisTab, hasSession });
+      if (view.kind === "ready") {
+        // Drop the spent token from the address bar so a reload does not try to
+        // exchange it again.
+        if (hasToken) window.history.replaceState(null, "", window.location.pathname);
+        setSessionReady(true);
+      } else if (view.kind === "linkUsed") {
+        setLinkUsed(true);
+      } else if (view.kind === "deadLink") {
+        setError(RESET_DEAD_LINK_MESSAGE);
+      } else if (view.kind === "retry") {
+        setError(view.message);
       }
     }
 
-    bootstrap();
+    // A network failure or a non-JSON 5xx must not leave the page "loading" forever.
+    bootstrap().catch(() => setError(RESET_RETRY_MESSAGE));
   }, []);
 
   async function handleSubmit(e: React.FormEvent) {
@@ -63,6 +91,7 @@ export default function ResetPasswordPage() {
     }
 
     setDone(true);
+    sessionStorage.removeItem(RESET_EXCHANGED_MARKER);
     const supabase2 = createClient();
     const { data: { user } } = await supabase2.auth.getUser();
     const role = user?.user_metadata?.role;
@@ -129,7 +158,7 @@ export default function ResetPasswordPage() {
             Choose a strong password for your account.
           </p>
 
-          {!sessionReady && (
+          {!sessionReady && !error && (
             <div className="mt-4 rounded-lg bg-yellow-50 border border-yellow-200 px-4 py-3 text-sm text-yellow-800">
               Loading your session... If this persists, request a new reset link.
             </div>
