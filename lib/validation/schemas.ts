@@ -351,6 +351,12 @@ export const trustCheckoutSchema = z.object({
   partnerId: z.string().nullable().optional(),
   customerEmail: z.string().email().optional(),
   confirmOverride: z.boolean().optional(),
+  // Mailbox proof minted by the email-verification flow. With it, a returning
+  // client can redeem a free code against the account that already holds their
+  // address; without it the free-promo path may only create accounts for
+  // unclaimed addresses. It has to be declared here or z.object() strips it and
+  // the "proved" branch in createCheckoutSession can never be reached.
+  verifiedToken: z.string().min(1).optional(),
 });
 
 // POST /api/checkout/amendment
@@ -365,6 +371,8 @@ export const amendmentCheckoutSchema = z.object({
 export const vaultSubscriptionCheckoutSchema = z.object({
   partner_slug: z.string().max(200).optional(),
   email: z.string().email().optional(),
+  // See willCheckoutSchema.
+  verifiedToken: z.string().min(1).optional(),
   full_name: z.string().max(200).optional(),
 });
 

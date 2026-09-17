@@ -8,15 +8,18 @@
  * creates accounts but never touches existing ones.
  */
 
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { VALID_WILL_INTAKE } from "../fixtures/intake";
 
-const { peekVerifiedToken, updateUserById, findIdByEmail, adminCreateUser, rateLimit } =
+const { peekVerifiedToken, updateUserById, findIdByEmail, adminCreateUser, rateLimit, orderUpdate, orderDelete } =
   vi.hoisted(() => ({
     peekVerifiedToken: vi.fn(),
     updateUserById: vi.fn(),
     findIdByEmail: vi.fn(),
     adminCreateUser: vi.fn(),
     rateLimit: vi.fn(),
+    orderUpdate: vi.fn(),
+    orderDelete: vi.fn(),
   }));
 
 vi.mock("@/lib/auth/emailVerification", () => ({
@@ -80,7 +83,8 @@ vi.mock("@/lib/stripe", () => ({
 }));
 
 vi.mock("@/lib/repos/server/orderRepo", () => ({
-  update: vi.fn().mockResolvedValue({ data: null, error: null }),
+  update: (...a: unknown[]) => orderUpdate(...a),
+  deleteById: (...a: unknown[]) => orderDelete(...a),
   insert: vi.fn().mockResolvedValue({ data: { id: "order-1" }, error: null }),
   create: vi.fn().mockResolvedValue({ data: { id: "order-1" }, error: null }),
 }));
@@ -113,8 +117,13 @@ beforeEach(() => {
   vi.clearAllMocks();
   rateLimit.mockResolvedValue({ success: true });
   updateUserById.mockResolvedValue({ data: null, error: null });
+  orderUpdate.mockResolvedValue({ data: null, error: null });
+  orderDelete.mockResolvedValue({ data: null, error: null });
   peekVerifiedToken.mockResolvedValue(false);
-  findIdByEmail.mockResolvedValue({ data: { id: "victim-profile-id" } });
+  // Only the known account resolves to a profile; any other address is unclaimed.
+  findIdByEmail.mockImplementation(async (_supabase: unknown, email: string) => ({
+    data: email === KNOWN_ACCOUNT ? { id: "victim-profile-id" } : null,
+  }));
 });
 
 describe("POST /api/auth/set-password requires mailbox proof", () => {
@@ -195,5 +204,103 @@ describe("the free-promo checkout path must not touch an existing account's pass
 
     // No caller-supplied email should ever be enough to change a password.
     expect(updateUserById).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * The other half of the same branch: a client who HAS proved the mailbox may
+ * redeem a free code against their existing account. Declaring verifiedToken
+ * on the checkout schemas is what makes this reachable at all — z.object()
+ * used to strip it, so `proved` could never be true and every existing-account
+ * redemption 409'd, token or no token.
+ *
+ * These go through the route so the schema is exercised, not around it.
+ */
+describe("a verified returning client can redeem against their own account", () => {
+  async function checkoutWill(body: Record<string, unknown>) {
+    const { POST } = await import("@/app/api/checkout/will/route");
+    return POST(post("http://localhost/api/checkout/will", body));
+  }
+
+  const REPEAT = {
+    attorneyReview: false,
+    intakeAnswers: { ...VALID_WILL_INTAKE, email: KNOWN_ACCOUNT },
+    email: KNOWN_ACCOUNT,
+    promoCode: "SMOKE",
+  };
+
+  beforeEach(() => {
+    vi.stubEnv("PROMO_CODES", "SMOKE:free");
+    // The account exists (findIdByEmail resolves it in the outer beforeEach)
+    // and holds no order, so plan-conflict does not intervene: the empty list
+    // the admin stub returns for `clients` is "no owned plan".
+  });
+  afterEach(() => vi.unstubAllEnvs());
+
+  it("takes the proved branch: 200, the existing account, no new user, password untouched", async () => {
+    peekVerifiedToken.mockResolvedValue(true);
+    const res = await checkoutWill({ ...REPEAT, verifiedToken: "the-real-token" });
+    expect(res.status, JSON.stringify(await res.clone().json())).toBe(200);
+    expect(await res.json()).toEqual({ free: true, orderId: "order-1", email: KNOWN_ACCOUNT });
+    expect(peekVerifiedToken).toHaveBeenCalledWith(KNOWN_ACCOUNT, "the-real-token");
+    expect(adminCreateUser).not.toHaveBeenCalled();
+    expect(updateUserById).not.toHaveBeenCalled();
+    // and only now does the order become a $0 generating order
+    expect(orderUpdate).toHaveBeenCalledWith(expect.anything(), "order-1", expect.objectContaining({ status: "generating", amount_total: 0 }));
+  });
+
+  it("without a token the same request is refused, and the token is never even checked", async () => {
+    const res = await checkoutWill(REPEAT);
+    expect(res.status).toBe(409);
+    expect(await res.json()).toEqual({ error: "Please sign in to continue with this email address." });
+    expect(peekVerifiedToken).not.toHaveBeenCalled();
+    expect(adminCreateUser).not.toHaveBeenCalled();
+    expect(updateUserById).not.toHaveBeenCalled();
+  });
+
+  it("a forged token is refused", async () => {
+    peekVerifiedToken.mockResolvedValue(false);
+    const res = await checkoutWill({ ...REPEAT, verifiedToken: "not-the-real-token" });
+    expect(res.status).toBe(409);
+    expect(peekVerifiedToken).toHaveBeenCalledWith(KNOWN_ACCOUNT, "not-the-real-token");
+    expect(adminCreateUser).not.toHaveBeenCalled();
+  });
+
+  it("a refused request never becomes a generating order, and the pending row is rolled back", async () => {
+    // The $0 / generating flip used to precede the mailbox check. Because
+    // plan-conflict counts `generating` as an owned plan, an anonymous POST
+    // naming a stranger's email left them unable to buy that package. The
+    // `pending` row inserted before the check is now removed the way the
+    // Stripe-failure path removes its orphan (BUG-9).
+    const res = await checkoutWill(REPEAT);
+    expect(res.status).toBe(409);
+    expect(orderUpdate).not.toHaveBeenCalledWith(
+      expect.anything(), "order-1", expect.objectContaining({ status: "generating" }),
+    );
+    expect(orderDelete).toHaveBeenCalledWith(expect.anything(), "order-1");
+  });
+
+  it("the mailbox proved must be the one the client row was resolved from", async () => {
+    // Confused deputy: createCheckoutSession resolves the client row from
+    // customerEmail first, but the free path used to look up, prove and link the
+    // account from `email`. A caller who had proved their OWN mailbox could name
+    // a stranger as customerEmail and have the stranger's client row re-pointed
+    // at the caller's profile — the stranger's orders and documents included.
+    const ATTACKER = "attacker@example.com";
+    peekVerifiedToken.mockImplementation(async (email: string) => email === ATTACKER);
+    const res = await checkoutWill({
+      ...REPEAT,
+      customerEmail: KNOWN_ACCOUNT,       // the stranger's account resolves the client row
+      email: ATTACKER,                    // the caller's own, genuinely verified, mailbox
+      intakeAnswers: { ...VALID_WILL_INTAKE, email: ATTACKER },
+      verifiedToken: "attackers-own-token",
+    });
+    expect(res.status).toBe(409);
+    // the proof was demanded for the account that owns the client row…
+    expect(peekVerifiedToken).toHaveBeenCalledWith(KNOWN_ACCOUNT, "attackers-own-token");
+    expect(peekVerifiedToken).not.toHaveBeenCalledWith(ATTACKER, expect.anything());
+    // …and no account was created or linked for the caller
+    expect(adminCreateUser).not.toHaveBeenCalled();
+    expect(orderDelete).toHaveBeenCalledWith(expect.anything(), "order-1");
   });
 });

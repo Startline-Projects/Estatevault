@@ -329,7 +329,9 @@ export async function createCheckoutSession(
 
   // ── FREE PROMO ─────────────────────────────────────────
   if (isPromoFree) {
-    return handleFreePromo(supabase, config, input, order.id, clientId);
+    // The address the client row above was resolved from is the only address
+    // the free path may act on — see the note in handleFreePromo.
+    return handleFreePromo(supabase, config, input, order.id, clientId, conflictEmail);
   }
 
   // ── STRIPE SESSION ─────────────────────────────────────
@@ -542,19 +544,21 @@ async function handleFreePromo(
   input: CheckoutInput,
   orderId: string,
   clientId: string,
+  accountEmail: string | undefined,
 ): Promise<NextResponse> {
-  const { userId, intakeAnswers, promoCode, email: promoEmail, verifiedToken } = input;
+  const { userId, intakeAnswers, promoCode, verifiedToken } = input;
 
-  const emailAddr = (promoEmail || intakeAnswers.email) as string | undefined;
+  // One address for both decisions. The caller resolved `clientId` from
+  // `accountEmail` (customerEmail, then email, then the intake's). This
+  // function used to look up, prove and create the account from a different
+  // precedence (email, then the intake's), so a request carrying
+  // customerEmail=<stranger> and email=<own, proved> re-pointed the stranger's
+  // client row at the caller's profile. The proof is now for the same address
+  // the client row came from, so it can only ever link a client to its owner.
+  const emailAddr = accountEmail;
   if (!emailAddr) {
     return NextResponse.json({ error: "Email is required for promo orders" }, { status: 400 });
   }
-
-  await orderRepo.update(supabase, orderId, {
-    amount_total: 0, ev_cut: 0, partner_cut: 0, attorney_cut: 0,
-    status: "generating",
-    attorney_review_requested: false,
-  });
 
   let profileId = userId;
   const { generateTempPassword } = await import("@/lib/utils/generate-password");
@@ -579,6 +583,10 @@ async function handleFreePromo(
       const proved =
         !!verifiedToken && (await peekVerifiedToken(emailAddr, verifiedToken));
       if (!proved) {
+        // The order row was inserted `pending` before we got here. Undo it the
+        // way the Stripe-failure path does (BUG-9), so a refused request leaves
+        // nothing on the account whose address the caller typed in.
+        await orderRepo.deleteById(supabase, orderId);
         // Neutral on purpose: the same message whether or not the address has
         // an account, so this cannot be used to enumerate customers.
         return NextResponse.json(
@@ -619,6 +627,18 @@ async function handleFreePromo(
     }
   }
 
+  // Only now, with the account question settled, does this become a $0
+  // generating order. It used to happen before the mailbox check above, which
+  // left a `generating` order on whichever account's address an anonymous
+  // caller typed in — and plan-conflict counts `generating` as owned, so one
+  // refused POST was enough to lock the real owner out of buying that package.
+  // A refused request now leaves the order `pending`, which owns nothing.
+  await orderRepo.update(supabase, orderId, {
+    amount_total: 0, ev_cut: 0, partner_cut: 0, attorney_cut: 0,
+    status: "generating",
+    attorney_review_requested: false,
+  });
+
   await documentRepo.insertMany(
     supabase,
     config.docTypes.map((dt) => ({
@@ -634,7 +654,11 @@ async function handleFreePromo(
     action: "checkout.promo_free",
     resource_type: "order",
     resource_id: orderId,
-    metadata: { product_type: config.productType, promo_code: promoCode, email: emailAddr },
+    metadata: {
+      product_type: config.productType,
+      promo_code: promoCode?.trim().toUpperCase() ?? null,
+      email: emailAddr,
+    },
   });
 
   // No profile UUID in the payload: an anonymous caller should learn nothing
