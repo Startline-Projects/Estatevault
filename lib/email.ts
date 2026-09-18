@@ -971,11 +971,11 @@ export async function sendFulfillmentFailureAlert({
   reason: string;
   detail?: string;
 }) {
-  const { ESTATEVAULT_ADMIN_EMAIL } = await import("@/lib/attorney-review/routing");
+  const { PLATFORM_ADMIN_EMAIL } = await import("@/lib/config/contacts");
   const adminUrl = `${getAppUrl()}/sales/admin/regenerate-docs`;
   await sendEmail({
     from: DEFAULT_FROM,
-    to: ESTATEVAULT_ADMIN_EMAIL,
+    to: PLATFORM_ADMIN_EMAIL,
     subject: `⚠️ Order fulfillment failed — ${productType} ${orderId}`,
     html: `<div style="font-family:Inter,sans-serif;max-width:560px;margin:0 auto;padding:32px;color:#2D2D2D;">
       <h1 style="color:#1C3557;">Order needs attention</h1>

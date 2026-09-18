@@ -2,7 +2,7 @@ import { createClient } from "@supabase/supabase-js";
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 require("dotenv").config({ path: ".env.local" });
 
-import { INHOUSE_ATTORNEY_EMAIL } from "../lib/attorney-review/routing";
+import { REVIEW_ATTORNEY_EMAIL } from "../lib/config/contacts";
 
 async function main() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -16,11 +16,11 @@ async function main() {
   const { data: profile, error: profErr } = await supabase
     .from("profiles")
     .select("id, email, full_name")
-    .eq("email", INHOUSE_ATTORNEY_EMAIL)
+    .eq("email", REVIEW_ATTORNEY_EMAIL)
     .single();
 
   if (profErr || !profile) {
-    console.error(`No profile found for ${INHOUSE_ATTORNEY_EMAIL}`);
+    console.error(`No profile found for ${REVIEW_ATTORNEY_EMAIL}`);
     process.exit(1);
   }
 

@@ -26,8 +26,10 @@ vi.mock("@/lib/stripe-payouts", () => ({ getAccountStatus: (...a: unknown[]) => 
 vi.mock("@/lib/attorney-review/fee", () => ({ getPlatformDefaultReviewFee: (...a: unknown[]) => h.platformDefaultFee(...a) }));
 vi.mock("@/lib/attorney-review/routing", () => ({
   resolveReviewRouting: (...a: unknown[]) => h.resolveRouting(...a),
-  INHOUSE_ATTORNEY_EMAIL: "mo@example.test",
-  ESTATEVAULT_ADMIN_EMAIL: "admin@example.test",
+}));
+vi.mock("@/lib/config/contacts", () => ({
+  REVIEW_ATTORNEY_EMAIL: "mo@example.test",
+  PLATFORM_ADMIN_EMAIL: "admin@example.test",
 }));
 vi.mock("@/lib/repos/server/partnerRepo", () => ({ getReviewRoutingInfo: (...a: unknown[]) => h.getReviewRoutingInfo(...a) }));
 vi.mock("@/lib/repos/server/orderRepo", () => ({ getAttorneyCut: (...a: unknown[]) => h.getAttorneyCut(...a) }));

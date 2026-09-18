@@ -1,5 +1,6 @@
 /**
- * Creates a review attorney account for testing.
+ * Creates (or resets) the review-attorney account the webhook routes paid
+ * reviews to — the address in lib/config/contacts.ts.
  *
  * Usage:
  *   npx tsx scripts/create-review-attorney.ts
@@ -14,8 +15,12 @@ import { createClient } from "@supabase/supabase-js";
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 require("dotenv").config({ path: ".env.local" });
 
-const ATTORNEY_EMAIL = "mmurshed@thepeoplesfirmpllc.com";
-const ATTORNEY_NAME = "Mo Murshed";
+import { REVIEW_ATTORNEY_EMAIL } from "../lib/config/contacts";
+
+// The account the webhook assigns paid reviews to. One source of truth: change
+// the address in lib/config/contacts.ts, not here.
+const ATTORNEY_EMAIL = REVIEW_ATTORNEY_EMAIL;
+const ATTORNEY_NAME = "Review Attorney";
 
 async function main() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;

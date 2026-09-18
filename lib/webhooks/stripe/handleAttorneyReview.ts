@@ -18,8 +18,8 @@ export async function handleAttorneyReview(
   partnerId: string | undefined,
   productType: "will" | "trust",
 ) {
-  const { resolveReviewRouting, INHOUSE_ATTORNEY_EMAIL, ESTATEVAULT_ADMIN_EMAIL } =
-    await import("@/lib/attorney-review/routing");
+  const { resolveReviewRouting } = await import("@/lib/attorney-review/routing");
+  const { REVIEW_ATTORNEY_EMAIL, PLATFORM_ADMIN_EMAIL } = await import("@/lib/config/contacts");
 
   const slaDeadline = new Date();
   slaDeadline.setHours(slaDeadline.getHours() + 96);
@@ -36,22 +36,22 @@ export async function handleAttorneyReview(
     }
   }
 
-  const { data: moProfile } = await profileRepo.findIdByEmailMaybe(supabase, INHOUSE_ATTORNEY_EMAIL);
-  const { data: adminProfile } = await profileRepo.findIdByEmailMaybe(supabase, ESTATEVAULT_ADMIN_EMAIL);
+  const { data: reviewerProfile } = await profileRepo.findIdByEmailMaybe(supabase, REVIEW_ATTORNEY_EMAIL);
+  const { data: adminProfile } = await profileRepo.findIdByEmailMaybe(supabase, PLATFORM_ADMIN_EMAIL);
   // Both lookups are by a hardcoded email. If the account is missing the review
   // is still created — with no reviewer, or no controlling admin — so say so
   // loudly rather than let a paid review sit unassigned without a trace.
-  if (!moProfile) {
-    console.error(`[attorney-review] no profile for the in-house attorney (${INHOUSE_ATTORNEY_EMAIL}); order ${orderId} will have no reviewer`);
+  if (!reviewerProfile) {
+    console.error(`[attorney-review] no profile for the review recipient (${REVIEW_ATTORNEY_EMAIL}); order ${orderId} will have no reviewer`);
   }
   if (!adminProfile) {
-    console.error(`[attorney-review] no profile for the platform admin (${ESTATEVAULT_ADMIN_EMAIL}); order ${orderId} will have no fee_controlled_by`);
+    console.error(`[attorney-review] no profile for the platform admin (${PLATFORM_ADMIN_EMAIL}); order ${orderId} will have no fee_controlled_by`);
   }
   const platformDefaultFee = await getPlatformDefaultReviewFee(supabase);
 
   const routing = resolveReviewRouting(
     partnerForRouting,
-    moProfile?.id || null,
+    reviewerProfile?.id || null,
     adminProfile?.id || null,
     platformDefaultFee,
   );
