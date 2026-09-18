@@ -65,16 +65,19 @@ async function main() {
     userId = newUser.user.id;
   }
 
-  // Upsert profile with review_attorney type
+  // Upsert profile with review_attorney type.
+  //
+  // No bar number, bar_verified or is_payroll here. This script used to stamp one
+  // specific attorney's bar number on whatever account it created — and the
+  // account it creates is now REVIEW_ATTORNEY_EMAIL, which during the pilot is a
+  // relay inbox, not an attorney. Recording a bar-verified attorney under that
+  // address would be false. Attorney credentials belong on the reviewing
+  // attorney's own account (see supabase/migrations/20260401_001).
   await supabase.from("profiles").upsert({
     id: userId,
     email: ATTORNEY_EMAIL,
     full_name: ATTORNEY_NAME,
     user_type: "review_attorney",
-    is_payroll: true,
-    bar_number: "P-79739",
-    bar_verified: true,
-    bar_verified_at: new Date().toISOString(),
   });
 
   console.log("\nReview attorney account ready!");
