@@ -1,7 +1,7 @@
 /**
  * Core Rule 4 at the API boundary — the checkout gate.
  *
- * evaluateHardStop was already covered for all four triggers, and so was the
+ * evaluateHardStop was already covered for all three triggers, and so was the
  * gate in createCheckoutSession — but every one of those tests handed the
  * evaluator a hand-built object. None parsed a request through the checkout
  * schema first. That is where the special-needs trigger went missing: the
@@ -132,12 +132,11 @@ describe.each(PRODUCTS)("$product: every trigger survives the schema and halts",
     expect(evaluateHardStop(parsed.intakeAnswers as Record<string, unknown>)).toEqual({ halted: false, reasons: [] });
   });
 
-  it("all four at once are all reported, in the evaluator's order", () => {
+  it("all three at once are all reported, in the evaluator's order", () => {
     const allYes = Object.fromEntries(HARD_STOP_TRIGGERS.map((t) => [t.field, "Yes"]));
     const parsed = schema.parse({ intakeAnswers: { ...intake, ...allYes } });
     expect(evaluateHardStop(parsed.intakeAnswers as Record<string, unknown>).reasons).toEqual([
       HARD_STOP_REASONS.specialNeeds,
-      HARD_STOP_REASONS.irrevocableTrust,
       HARD_STOP_REASONS.medicaid,
       HARD_STOP_REASONS.estateDispute,
     ]);
@@ -162,6 +161,15 @@ describe.each(PRODUCTS)("$product checkout route refuses every trigger before an
     // Guard against a false pass: a 400 here means the fixture, not the gate.
     expect(res.status, JSON.stringify(await res.clone().json())).toBe(200);
     expect(await res.json()).toMatchObject({ free: true, orderId: "order-1" });
+    expect(h.orderInsert).toHaveBeenCalledTimes(1);
+  });
+
+  it("irrevocable trust is no longer a hard stop: an old client still sending the answer is served, not halted", async () => {
+    // Removed 2026-09-18. z.object() strips the undeclared key, so a cached page
+    // that still posts it is neither rejected nor routed to an attorney.
+    const res = await checkout(product, { ...intake, wantsIrrevocableTrust: "Yes" });
+    expect(res.status, JSON.stringify(await res.clone().json())).toBe(200);
+    expect(await res.json()).toMatchObject({ free: true });
     expect(h.orderInsert).toHaveBeenCalledTimes(1);
   });
 

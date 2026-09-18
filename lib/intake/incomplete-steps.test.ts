@@ -17,7 +17,6 @@ function preDeployWillSession(): Record<string, unknown> {
     city: "Dearborn",
     state: "Michigan",
     maritalStatus: "Married",
-    wantsIrrevocableTrust: "No",
     hasMedicaidPlanning: "No",
     hasEstateDispute: "No",
     executorName: "Raga Hassan",

@@ -138,7 +138,6 @@ const BASIC_INTAKE = {
   maritalStatus: "Single",
   hasMinorChildren: "No",
   hasSpecialNeedsDependents: "No",
-  irrevocableTrust: "No",
 };
 
 describe("BUG-26 — orphaned session self-healing in checkout", () => {

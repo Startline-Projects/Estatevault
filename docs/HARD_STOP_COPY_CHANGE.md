@@ -5,17 +5,24 @@ four hard stops the marketing pages promised were enforced nowhere. The three
 questions now exist and halt generation at both server gates, and the copy is
 corrected to match what the platform actually does.
 
-## The canonical four
+## The canonical three (updated 2026-09-18)
 
 A hard stop fires, and document generation halts, on exactly these:
 
 1. Special-needs dependent
-2. Irrevocable trust
-3. Medicaid planning
-4. Active estate dispute
+2. Medicaid planning
+3. Active estate dispute
 
 Defined once, in `lib/compliance/hardStop.ts` (`HARD_STOP_REASONS`). Nothing
 else halts generation.
+
+**Irrevocable trust was removed on 2026-09-18 by the founder's decision.** When
+this document was written it was the second of four. The questionnaire no
+longer asks about it, the evaluator no longer has a branch for it, and an answer
+left on an old order is ignored. **The partner-facing copy quoted in "Changes,
+verbatim" below still names irrevocable trust as a hard stop and has NOT been
+changed** — that is a separate decision, pending with the founder. Until it is
+made, those five "After" passages overstate what halts.
 
 **"Business succession" was removed everywhere.** It was listed on two partner
 pages as a hard stop. Nothing has ever asked about it, no evaluator branch

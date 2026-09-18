@@ -15,7 +15,6 @@ export const VALID_WILL_INTAKE = {
   state: "Michigan",
   maritalStatus: "Married" as const,
   hasSpecialNeedsDependent: "No" as const,
-  wantsIrrevocableTrust: "No" as const,
   hasMedicaidPlanning: "No" as const,
   hasEstateDispute: "No" as const,
   hasMinorChildren: "No" as const,
@@ -58,7 +57,6 @@ export const VALID_TRUST_INTAKE = {
   state: "Michigan",
   maritalStatus: "Married" as const,
   hasSpecialNeedsDependent: "No" as const,
-  wantsIrrevocableTrust: "No" as const,
   hasMedicaidPlanning: "No" as const,
   hasEstateDispute: "No" as const,
   trustName: "The John Doe Revocable Living Trust",
@@ -105,10 +103,9 @@ export const VALID_TRUST_INTAKE = {
   specificGiftsDescription: "",
 };
 
-/** The four Core Rule 4 triggers as the intake schemas spell them. */
+/** The three Core Rule 4 triggers as the intake schemas spell them. */
 export const HARD_STOP_TRIGGERS = [
   { name: "special-needs dependent", field: "hasSpecialNeedsDependent", reason: "Special-needs dependent" },
-  { name: "irrevocable trust", field: "wantsIrrevocableTrust", reason: "Irrevocable trust" },
   { name: "Medicaid planning", field: "hasMedicaidPlanning", reason: "Medicaid planning" },
   { name: "active estate dispute", field: "hasEstateDispute", reason: "Active estate dispute" },
 ] as const;

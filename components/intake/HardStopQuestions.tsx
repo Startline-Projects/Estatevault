@@ -3,10 +3,15 @@
 /*
  * Core Rule 4 hard-stop questions.
  *
- * Three of the platform's four hard stops had no question behind them: the
- * marketing pages promised that an irrevocable trust, Medicaid planning or a
- * contested estate would halt generation, and nothing asked. These are the
- * questions, and each answer maps 1:1 to a branch of evaluateHardStop().
+ * The platform has three hard stops. The special-needs question is asked on the
+ * About You step itself; the other two — Medicaid planning and a contested
+ * estate — were promised on the marketing pages with nothing asking, and are
+ * asked here. Each answer maps 1:1 to a branch of evaluateHardStop().
+ *
+ * There used to be a third question here, "Are you looking to create an
+ * irrevocable trust?". It was removed on 2026-09-18 by the founder's decision:
+ * irrevocable trust is no longer a hard stop (see CLAUDE.md, Core Rule 4). Do
+ * not restore it.
  *
  * A "Yes" to any of them stops the flow and routes to an attorney, so none of
  * them has a default and none may be skipped.
@@ -18,11 +23,6 @@ import YesNoTiles from "@/components/quiz/YesNoTiles";
 // PENDING ATTORNEY APPROVAL — question wording and the explanatory lines below
 // are the development team's. Logged in PENDING_ATTORNEY_REVIEW.md.
 export const HARD_STOP_QUESTIONS = [
-  {
-    field: "wantsIrrevocableTrust" as const,
-    question: "Are you looking to create an irrevocable trust?",
-    help: "An irrevocable trust generally cannot be changed or cancelled once it is signed. This platform prepares revocable trusts, which you can change at any time.",
-  },
   {
     field: "hasMedicaidPlanning" as const,
     question: "Are you planning for Medicaid or long-term care costs?",

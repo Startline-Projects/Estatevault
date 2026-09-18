@@ -20,7 +20,7 @@ B2B2C white-label estate planning platform.
 1. Platform NEVER gives legal advice — generates documents from answers only.
 2. Quiz results: "Based on your answers…" — never "We recommend…"
 3. Clients must sign acknowledgment before any document is generated.
-4. Hard stops (special needs dependent, irrevocable trust) halt generation → attorney referral. Hardcoded, no override.
+4. Hard stops (special-needs dependent, Medicaid planning, active estate dispute) halt generation → attorney referral. Hardcoded, no override. Irrevocable trust is deliberately NOT a hard stop — removed 2026-09-18 by the founder's decision; do not restore its question or its branch in `lib/compliance/hardStop.ts`.
 5. Fixed pricing — partners cannot change these:
    - Will Package: $400 · Trust Package: $600
    - Attorney Review Add-On: $300 (100% to attorney)

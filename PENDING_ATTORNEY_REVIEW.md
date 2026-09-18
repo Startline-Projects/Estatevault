@@ -8,10 +8,14 @@ signed off by Mo Murshed across four rounds, the last a blanket email approval
 on 2026-09-14 covering both review packages and everything written after them.
 Keep that email with this file — it is what the ☑ marks below rest on.
 
-A compliance audit then found that three of Core Rule 4's four hard stops had no
-question behind them and halted nothing. The questions were written and wired;
-their wording is the one open entry, filed under the rule this file sets for
-itself — anything client-facing written after the close goes back to him.
+A compliance audit then found that three of Core Rule 4's hard stops (four at the
+time) had no question behind them and halted nothing. The questions were written
+and wired; their wording is the one open entry, filed under the rule this file sets
+for itself — anything client-facing written after the close goes back to him.
+
+**2026-09-18:** irrevocable trust was removed as a hard stop by the founder's
+decision. Its question and its referral-screen copy were deleted from the product
+and are withdrawn from the open entry below; two questions remain for review.
 
 This file is the review source of truth. Prose markers are deliberately **not**
 placed inside the `.txt` templates, because a marker inside a template renders
@@ -36,7 +40,7 @@ file is rendered.
 | Approval on file | blanket email from Mo Murshed, 2026-09-14 |
 | Reopened | 2026-09-15 — audit fix pass, Core Rule 4 questions |
 | Approved | 5 entries on 2026-09-14 · 27 on 2026-09-13 · 47 on 2026-09-02 |
-| Withdrawn | 2 entries — the questions no longer exist |
+| Withdrawn | 2 entries — the questions no longer exist · plus, from the open entry, the irrevocable-trust question and its referral copy (2026-09-18) |
 | Reviewing attorney | Mo Murshed |
 | Also pending | Drake (UPL review), Mike (legal sign-off) — see the compliance checklist |
 | Related | `PROMPT6_REGENERATION.md` — schema proposal, not a review item |
@@ -51,16 +55,13 @@ One entry, opened after the record was closed. See the note in the header.
 
 ### Questionnaire — hard-stop questions (will flow and trust flow)
 
-**Where:** Three new questions on the About You step, beside the existing special-needs question
+**Where:** Two questions on the About You step, beside the existing special-needs question (a third, irrevocable trust, was withdrawn 2026-09-18)
 
 **Source file:** `components/intake/HardStopQuestions.tsx`
 
 **Text:**
 
 ```text
-Are you looking to create an irrevocable trust?
-An irrevocable trust generally cannot be changed or cancelled once it is signed. This platform prepares revocable trusts, which you can change at any time.
-
 Are you planning for Medicaid or long-term care costs?
 Medicaid has rules about how and when assets can be transferred. Those rules affect what your documents should say.
 
@@ -68,16 +69,13 @@ Is there a disagreement in your family about your estate?
 For example, a contested will, a dispute over who should inherit, or a court matter that is already underway.
 ```
 
-**Why it was written:** Core Rule 4 names four hard stops. Only one — special-needs dependent — had a question behind it; the other three were promised on the marketing pages and enforced nowhere, because nothing asked. These are the questions. Each maps 1:1 to a branch of `evaluateHardStop()`, a "Yes" to any of them halts generation at both server gates, none has a default, and the step cannot be completed unanswered. The wording and the explanatory line under each question are the development team's.
+**Why it was written:** Core Rule 4 named four hard stops at the time (three since 2026-09-18). Only one — special-needs dependent — had a question behind it; the others were promised on the marketing pages and enforced nowhere, because nothing asked. These are the questions. Each maps 1:1 to a branch of `evaluateHardStop()`, a "Yes" to any of them halts generation at both server gates, none has a default, and the step cannot be completed unanswered. The wording and the explanatory line under each question are the development team's.
 
-**Worth his attention specifically:** each explanatory line states why the situation is out of scope, which is the closest this questionnaire comes to saying something legal. The irrevocable-trust line asserts that such a trust "generally cannot be changed or cancelled once it is signed"; the Medicaid line refers to transfer timing rules without naming the look-back period.
+**Worth his attention specifically:** each explanatory line states why the situation is out of scope, which is the closest this questionnaire comes to saying something legal. The Medicaid line refers to transfer timing rules without naming the look-back period.
 
 **Same entry, the referral screen.** The card a client lands on after a hard stop carried one fixed message about special-needs planning, which was shown whichever trigger fired. It now says why this particular situation needs an attorney:
 
 ```text
-An irrevocable trust needs an attorney.
-An irrevocable trust generally cannot be undone once it is signed, so it is drafted by a licensed attorney rather than from a questionnaire. Share your details and an experienced Michigan attorney will reach out.
-
 Medicaid planning needs an attorney.
 Planning for Medicaid or long-term care involves timing rules that change what your documents should say, and getting them wrong can affect your eligibility. Share your details and an experienced Michigan attorney will reach out.
 
