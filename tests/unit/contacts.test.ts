@@ -70,6 +70,14 @@ describe("one source of truth", () => {
     }
   });
 
+  it("the review-recipient script does not stamp attorney credentials on the account it creates", () => {
+    // During the pilot that account is a relay inbox, not a licensed attorney.
+    const script = read("scripts/create-review-attorney.ts");
+    expect(script).not.toMatch(/bar_number\s*:/);
+    expect(script).not.toMatch(/bar_verified\s*:/);
+    expect(script).not.toMatch(/is_payroll\s*:/);
+  });
+
   it("the seed migration, which cannot import, names the same admin address", () => {
     const sql = read("supabase/migrations/20260401_001_seed_mo_review_attorney.sql");
     expect(sql).toContain(`email = '${PLATFORM_ADMIN_EMAIL}'`);
