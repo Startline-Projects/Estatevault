@@ -3,10 +3,9 @@
 Found during the staging no-payment smoke test of 2026-09-17 (preview built from
 `staging` @ `7569ca8`) and the two fix batches that followed.
 
-Status key: ☐ open · ☑ fixed on `template-revisions-v2-final` (fix batch 2).
-**An item marked ☑ is only live once that branch is merged to `staging` and deployed.**
-As of 2026-09-17 it is NOT: `origin/staging` is still `7569ca8`; the four fix-batch-2
-commits (`6db30d9` … `04fc8f1`) exist only on the branch.
+Status key: ☐ open · ☑ fixed. Fix batch 2 merged to `staging` as PR #8 (`53d2218`) on 2026-09-17;
+the admin-email commit followed as `1e47d2c`. **☑ means fixed on `staging`; whether the preview or
+production has rebuilt is a separate question — check the deployment id.**
 
 ## Pilot readiness — what blocks a first real client, and what does not
 
@@ -15,13 +14,13 @@ commits (`6db30d9` … `04fc8f1`) exist only on the branch.
 | # | Item | What unblocks it |
 |---|------|------------------|
 | B1 | **The paid path has never been smoke-tested.** Both purchases, the attorney-review add-on, the blocked-document test and the webhook hard-stop gate are all parked on Stripe test keys. | Test keys on Preview, then one run. |
-| B2 | **Fix batch 2 is unmerged** — so the password-reset link is still dead (item 2) and a Trust Package still generates four of seven documents (item 4). | Merge the PR, confirm the preview rebuilt, do one real password reset on it. |
+| B2 | **Fix batch 2 — ☑ merged and proven.** Password reset verified end to end on the rebuilt preview on 2026-09-17 (exchange route 200, session established, password set, sign-in succeeded, token consumed). The trust document-set change is merged but its 7/8-row behaviour is only exercised by a trust order, which is parked with B1. | — |
 | B3 | **`PDF_RENDERER` / compliance sign-off (item 1).** A Trust Package cannot be fulfilled with the flag unset, and `HANDOFF.md` says it must stay unset until sign-off. `MOCK_DOC_GENERATION` must not be set anywhere a client can reach. | A decision in the review session. Will Packages are not affected. |
 | B4 | **Production database needs `20260916_000_trust_package_document_types.sql` before the code.** | Being applied by Sam, 2026-09-17. |
 | B5 | **Production env was never checked (item 6).** The rate limiter fails OPEN without `UPSTASH_REDIS_REST_URL` / `_REST_TOKEN`, the example file named them wrongly until fix batch 2, and the boot-time guard that would catch it never runs. | Read the Production env vars in Vercel; two minutes. |
 | B6 | **Promo-code namespace (decision A)** — only if any `PROMO_CODES` will be set in production during the pilot. With it empty this is inert. | A decision; or keep `PROMO_CODES` empty for the pilot. |
-| B8 | **The reviewing attorney is a test address (item 8).** `INHOUSE_ATTORNEY_EMAIL` is `test-attorney@estatevault.test`; the webhook picks the reviewer for a paid $300 review by looking that email up. No such account → the review is assigned to nobody. | The real attorney's address, and an account under it in each environment. |
-| B9 | **The admin account must exist under `info@estatevault.us` (item 8).** The admin address changed from a personal Gmail to the platform mailbox; the webhook finds the admin's profile by it. | Change the production admin user's email (or create one) BEFORE this code deploys; create one on staging. |
+| B8 | **The reviewing attorney was a test address (item 8) — ☑ code fixed, accounts pending.** Paid reviews now route to the pilot relay `ahm3dkass@gmail.com` (`lib/config/contacts.ts`, marked PILOT RELAY; post-pilot: the reviewing attorney's own address). | An account under that address with `user_type = review_attorney` in production and staging (`scripts/create-review-attorney.ts` creates it). |
+| B9 | **The admin account must exist under `info@estatevault.us` (item 8) — ☑ code fixed, accounts pending.** Both addresses now live in one file, `lib/config/contacts.ts`; `scripts/create-admin.ts` creates the account under it. | Production: change the admin user's email (or create one) with `user_type = admin`, BEFORE deploy. Staging: create it. |
 | B7 | **Client-facing trust copy (decision E)** — the trust success page shows raw identifiers such as `certification_of_trust` and says the attorney "will review all 4 documents". Trust Package only. | Approved wording for four labels and one sentence. |
 
 ### Not blockers — fix after the pilot starts
@@ -210,23 +209,31 @@ only by a restored pre-change snapshot or a direct API call. Make the three agre
 
 ---
 
-## 8. ☐ Two accounts are found by hardcoded email, and neither is known to exist
+## 8. ☑ Two accounts are found by hardcoded email — one source of truth now; the accounts themselves are B8/B9
 
-`lib/attorney-review/routing.ts` hardcodes two addresses that `handleAttorneyReview` (the Stripe
-webhook's attorney-review step) turns into profile ids by lookup:
+`handleAttorneyReview` (the Stripe webhook's attorney-review step) turns two addresses into
+profile ids by lookup. They were two constants in `lib/attorney-review/routing.ts`, one a personal
+Gmail address and one a test placeholder. Both now live in **`lib/config/contacts.ts`** and nothing
+else may spell them (`tests/unit/contacts.test.ts`):
 
-- `INHOUSE_ATTORNEY_EMAIL = "test-attorney@estatevault.test"` → `attorney_reviews.attorney_id`, the
-  reviewer. Still a test address.
-- `ESTATEVAULT_ADMIN_EMAIL = "info@estatevault.us"` → `attorney_reviews.fee_controlled_by`, and the
-  recipient of fulfilment-failure alerts. Changed from a personal Gmail address on 2026-09-17; the
-  seed migration `20260401_001` was updated to match.
+- `PLATFORM_ADMIN_EMAIL = "info@estatevault.us"` → `attorney_reviews.fee_controlled_by`, and the
+  recipient of fulfilment-failure alerts. The seed migration `20260401_001` repeats it (SQL cannot
+  import); the test keeps the two in step.
+- `REVIEW_ATTORNEY_EMAIL = "ahm3dkass@gmail.com"` → `attorney_reviews.attorney_id`, the reviewer.
+  **Pilot relay to the founder's inbox**, marked as such in the file; post-pilot it becomes the
+  reviewing attorney's own address. `scripts/create-review-attorney.ts`,
+  `scripts/reassign-pending-reviews.ts`, `scripts/create-admin.ts` and `scripts/reset-db.ts` all
+  read from the same file, so running them creates exactly the accounts the webhook looks for.
 
-If either account is missing the review row is still created, just without that id. That used to be
-silent; the webhook now logs an error naming the missing address. Staging has no users at all, so
-both are missing there. **Before pilot:** an admin user under `info@estatevault.us` and an attorney
-user under the real attorney's address, in production and staging — and someone reading the
-`info@` mailbox, since failure alerts now go there. Longer term these belong in configuration
-(`app_settings` or env), not in source.
+If either account is missing the review row is still created, just without that id, and the webhook
+logs an error naming the address. Staging has no users at all. **Before pilot:** the two accounts,
+in production and staging (B8, B9), and someone reading the `info@` mailbox.
+
+Placeholder addresses remaining in the repo, all legitimately test-only: `tests/fixtures/users.ts`
+and `scripts/create-staging-test-users.ts` (the six `@estatevault.test` test accounts; documented in
+`TESTING_PLAN.md`), and the `@example.com` hints in form placeholders. Dev-only admin logins
+`admin2@` / `admin3@` / `salesadmin@estatevault.us` in `scripts/create-admin-dummy.ts`,
+`create-admin3.ts`, `create-sales-admin.ts` are separate accounts, not the platform admin.
 
 ---
 

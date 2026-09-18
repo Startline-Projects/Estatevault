@@ -15,7 +15,11 @@ import { createClient } from "@supabase/supabase-js";
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 require("dotenv").config({ path: ".env.local" });
 
-const ADMIN_EMAIL = "admin@estatevault.us";
+import { PLATFORM_ADMIN_EMAIL } from "../lib/config/contacts";
+
+// The address the platform looks the admin up by. One source of truth: change
+// it in lib/config/contacts.ts, not here.
+const ADMIN_EMAIL = PLATFORM_ADMIN_EMAIL;
 const ADMIN_NAME = "Admin";
 
 async function main() {
