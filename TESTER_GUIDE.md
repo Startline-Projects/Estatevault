@@ -31,7 +31,7 @@ These are core business rules. If you see the platform break one of these, it is
 - The platform **never gives legal advice**. It only builds documents from the answers given.
 - Quiz results must say **"Based on your answers..."** — never "We recommend..."
 - The platform should **never use the word "death"** in text shown to clients. It uses gentler framing.
-- Certain situations (a family member with special needs, a request for an irrevocable trust) must **stop the process** and refer the person to a real attorney. This cannot be bypassed.
+- Certain situations (a family member with special needs, planning for Medicaid or long-term care, or a family disagreement about the estate) must **stop the process** and refer the person to a real attorney. This cannot be bypassed. (Wanting an irrevocable trust is no longer one of them — that was removed on 2026-09-18.)
 - Prices are **fixed** and must never change (see Section 12.1).
 
 ---
@@ -637,7 +637,10 @@ The platform must **never** show clients:
 ### 12.3 Hard Stops
 These situations must **stop** document creation and refer the person to an attorney — with no way to bypass:
 - A dependent or family member with special needs
-- A request for an irrevocable trust
+- Planning for Medicaid or long-term care costs
+- A disagreement in the family about the estate
+
+A request for an irrevocable trust is **not** a hard stop any more (removed on 2026-09-18). The questionnaire should not ask about it at all — if it does, that is a bug.
 
 ### 12.4 Plan Conflict
 - If the account already has a will, the trust checkout must show a conflict warning.

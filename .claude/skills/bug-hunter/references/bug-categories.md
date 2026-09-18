@@ -48,9 +48,10 @@ Cross-check every number against `lib/orders/pricing.ts` and
 - **Partner self-update** — can a partner PATCH set financial flags
   (`one_time_fee_paid`, `platform_fee_amount`, `tier`, `partner_revenue_pct`)? The
   schema must strip them.
-- **Hard stops** — special-needs dependent and irrevocable trust must halt generation
-  → attorney referral, hardcoded, no override. Is the stop reachable around (skipped
-  step, alternate route, client flag)?
+- **Hard stops** — special-needs dependent, Medicaid planning and active estate dispute
+  must halt generation → attorney referral, hardcoded, no override. Is the stop reachable
+  around (skipped step, alternate route, client flag)? Irrevocable trust is NOT a hard
+  stop (removed 2026-09-18, founder's decision) — its absence is not a bug.
 - **Acknowledgment gate** — can a document generate before the client signs the
   acknowledgment? Any path that reaches doc-gen without it?
 - **No legal advice** — quiz/result copy must say "Based on your answers…", never

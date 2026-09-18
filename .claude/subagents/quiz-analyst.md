@@ -12,9 +12,12 @@ Given a set of quiz answers, determine:
 3. What personalized summary language to show the client
 
 ## Hard-Stop Conditions (must route to attorney)
-- Client has a dependent with special needs
-- Client indicates interest in an irrevocable trust
-- Combined estate value exceeds $12.06M (federal estate tax threshold)
+The three Core Rule 4 hard stops, evaluated by `evaluateHardStop()` in `lib/compliance/hardStop.ts`:
+- Client has a dependent with special needs (the only one the quiz itself asks)
+- Client is planning for Medicaid or long-term care costs (asked in the will/trust intake)
+- There is an active dispute over the client's estate (asked in the will/trust intake)
+
+Nothing else is a hard stop. Irrevocable trust was removed on 2026-09-18 by the founder's decision, and estate size has never been one.
 
 If any hard-stop is detected, return `{ "hardStop": true, "reason": "<reason>" }` immediately.
 

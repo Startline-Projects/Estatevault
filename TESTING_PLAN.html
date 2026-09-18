@@ -100,7 +100,7 @@
       <ul class="clean">
         <li><b>Money is never wrong</b> — correct prices, correct splits, no double-charge, payouts to the right account.</li>
         <li><b>Access control holds</b> — each role sees only what it should; the new B2 endpoints reject anonymous + cross-tenant callers.</li>
-        <li><b>Hard rules never break</b> — fixed pricing, hard stops (special-needs / irrevocable trust → attorney referral), acknowledgment before generation, "never say death."</li>
+        <li><b>Hard rules never break</b> — fixed pricing, hard stops (special-needs dependent / Medicaid planning / active estate dispute → attorney referral), acknowledgment before generation, "never say death."</li>
         <li><b>Core journeys work end-to-end</b> — quiz → checkout → generation → vault; partner onboarding; attorney review; trustee unlock.</li>
         <li><b>No regressions from the refactors</b> — converted screens still load + act through their new endpoints.</li>
       </ul>
@@ -146,7 +146,7 @@
 
       <h3 class="sub">B · Consumer journey: quiz → checkout → documents <span class="tag p0">P0</span><span class="tag p1">P1</span></h3>
       <ul class="clean">
-        <li><b>Hard stops</b> (special-needs / irrevocable trust) halt generation → attorney referral; assert <b>no order/document row</b> is created.</li>
+        <li><b>Hard stops</b> (special-needs dependent / Medicaid planning / active estate dispute) halt generation → attorney referral; assert <b>no order/document row</b> is created. Irrevocable trust is not a hard stop (removed 2026-09-18).</li>
         <li><b>Fixed pricing</b> at checkout: Will $400 · Trust $600 · Attorney Review +$300 · Amendment $50 — assert the Stripe session amount, not the UI label.</li>
         <li>Acknowledgment required before any document generates.</li>
         <li>Quiz prefill via <code>GET /api/client/quiz-latest</code>; success pages poll <code>check-status</code>; correct doc set per product.</li>

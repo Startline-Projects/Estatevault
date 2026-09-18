@@ -93,8 +93,7 @@ Queue job immediately after order create — skip Stripe.
 ## Phase 6: Hard Stops (legal)
 
 Block amendment if:
-- Adds special-needs dependent → attorney referral (CLAUDE.md rule 4).
-- Converts to irrevocable trust → halt.
+- The amended answers trip any Core Rule 4 hard stop — special-needs dependent, Medicaid planning, active estate dispute → attorney referral (run `evaluateHardStop`; CLAUDE.md rule 4). Irrevocable trust is not a hard stop (removed 2026-09-18).
 - More than 3 amendments in 12mo → suggest full rewrite (cleaner legally).
 
 ---

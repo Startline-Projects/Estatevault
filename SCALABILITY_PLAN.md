@@ -167,4 +167,4 @@ For each screen, the pattern is always the same three layers (copy how the vault
 
 Quick wins (B7, B4, B3) are safe and give a fast, visible structural improvement. B2+B5 is the real project — take it one area at a time, verifying each in the browser before moving on.
 
-**Never under "cleanup":** don't change the fixed prices, the revenue-split math, or the hard-stop rules (special-needs dependent, irrevocable trust). Those are business law in `CLAUDE.md`.
+**Never under "cleanup":** don't change the fixed prices, the revenue-split math, or the hard-stop rules (special-needs dependent, Medicaid planning, active estate dispute). Those are business law in `CLAUDE.md`.

@@ -49,9 +49,11 @@ Add notes for any bugs found.
 - [ ] During intake: indicate special needs dependent → generation HALTS
 - [x] Shows attorney referral message (not just an error)
 - [ ] No way to proceed past hard stop (refresh, back, URL hack)
-- [ ] During intake: indicate irrevocable trust → generation HALTS
-- [x] Shows attorney referral message
-- [x] No payment taken, no document generated
+- [ ] During intake: indicate Medicaid planning → generation HALTS
+- [ ] During intake: indicate an active dispute over the estate → generation HALTS
+- [ ] Each shows its own attorney referral message
+- [ ] No payment taken, no document generated
+- [ ] There is NO irrevocable-trust question (removed 2026-09-18 — no longer a hard stop)
 
 ### 1.6 Checkout — Will ($400)
 - [x] `/will/checkout` loads → shows order summary

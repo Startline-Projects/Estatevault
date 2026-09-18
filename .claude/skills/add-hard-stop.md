@@ -1,69 +1,64 @@
 ---
 name: add-hard-stop
-description: Insert the EstateVault hard-stop check pattern into a route or component. Ensures special-needs and irrevocable-trust conditions always halt document generation identically.
+description: Insert the EstateVault hard-stop check into a route or component. Uses the one shared evaluator so the special-needs, Medicaid-planning and estate-dispute conditions always halt document generation identically.
 ---
 
 Insert the EstateVault hard-stop check into the file the user specifies. This logic is hardcoded and must never be modified or bypassed.
 
-## The two hard-stop conditions (both must always be checked)
-1. Client has a dependent with special needs → `hasSpecialNeedsDependent === true`
-2. Client indicated an irrevocable trust → `trustType === 'irrevocable'`
+## The three hard-stop conditions (Core Rule 4 — all three are always checked)
+1. Client has a dependent with special needs → `hasSpecialNeedsDependent === "Yes"`
+2. Client is planning for Medicaid or long-term care costs → `hasMedicaidPlanning === "Yes"`
+3. There is an active dispute over the client's estate → `hasEstateDispute === "Yes"`
+
+**Irrevocable trust is NOT a hard stop.** It was removed on 2026-09-18 by the founder's decision (see `CLAUDE.md`, Core Rule 4). Do not add a check for it, and do not treat its absence as a bug.
+
+**Never write a new evaluator.** There is exactly one: `evaluateHardStop()` in `lib/compliance/hardStop.ts`, with the canonical reason strings in `HARD_STOP_REASONS`. A second, divergent evaluator existed once (`detectQuizHardStop`) and had to be removed.
 
 ## Server-side pattern (API route)
 
 ```ts
-// Hard-stop check — DO NOT MODIFY
-const HARD_STOP_REASONS = {
-  specialNeeds: 'This situation requires personalized attorney guidance. We\'ve paused document generation and will connect you with a qualified estate planning attorney.',
-  irrevocableTrust: 'Irrevocable trusts require direct attorney involvement. We\'ve paused document generation and will connect you with a qualified estate planning attorney.',
-}
+import { evaluateHardStop } from "@/lib/compliance/hardStop";
 
-function checkHardStop(answers: QuizAnswers): { stop: boolean; reason?: string } {
-  if (answers.hasSpecialNeedsDependent) {
-    return { stop: true, reason: HARD_STOP_REASONS.specialNeeds }
-  }
-  if (answers.trustType === 'irrevocable') {
-    return { stop: true, reason: HARD_STOP_REASONS.irrevocableTrust }
-  }
-  return { stop: false }
-}
-
-// Usage — call before any document generation logic
-const hardStop = checkHardStop(clientAnswers)
-if (hardStop.stop) {
-  // Log for attorney referral queue
-  await supabase.from('attorney_referrals').insert({
-    user_id: session.user.id,
-    reason: hardStop.reason,
-    quiz_answers: clientAnswers,
-  })
-  return NextResponse.json({ hardStop: true, message: hardStop.reason }, { status: 200 })
+// Hard stop (Core Rule 4) — re-derive from the answers server-side; never trust
+// a client flag. Runs BEFORE any order, Stripe session or document row.
+const hardStop = evaluateHardStop(intakeAnswers);
+if (hardStop.halted) {
+  return NextResponse.json(
+    {
+      error:
+        "Based on your answers, your family's situation needs a licensed attorney. We can't generate this document automatically.",
+      hardStop: true,
+      reasons: hardStop.reasons,
+      referralPath: "/attorney-referral",
+    },
+    { status: 409 },
+  );
 }
 ```
+
+The two existing server gates are the reference implementations — match them:
+- `lib/checkout/createCheckoutSession.ts` — 409 before any order or Stripe session; records a partner referral through `referralRepo` when a partner sent the client.
+- `lib/webhooks/stripe/handleDocumentCheckout.ts` — parks the order as `needs_attorney` and creates no document rows.
 
 ## Client-side pattern (component)
 
 ```tsx
-if (hardStop) {
-  return (
-    <div className="rounded-lg bg-amber-50 border border-amber-200 p-6 text-center">
-      <h3 className="font-semibold text-navy text-lg mb-2">
-        Let's get you the right help
-      </h3>
-      <p className="text-charcoal text-sm mb-4">{hardStopMessage}</p>
-      <p className="text-xs text-gray-500">
-        An estate planning attorney will reach out within 1 business day.
-      </p>
-    </div>
-  )
+import { evaluateHardStop } from "@/lib/compliance/hardStop";
+import HardStopCard from "@/components/quiz/HardStopCard";
+
+const hardStop = evaluateHardStop(intake as unknown as Record<string, unknown>);
+if (hardStop.halted) {
+  return <HardStopCard partnerId={partnerId} reason={hardStop.reasons[0]} />;
 }
 ```
 
+`HardStopCard` carries the reason-specific copy and the contact form that records the referral.
+
 ## Rules
 - Hard-stop check runs BEFORE any document generation — no exceptions
-- The reason strings above are final — do not rewrite them
-- Always log to `attorney_referrals` table when a hard-stop fires
-- No user action, admin override, or partner setting can bypass this check
+- Use `evaluateHardStop` and `HARD_STOP_REASONS`; never hardcode field checks or reason strings
+- Client-facing copy lives in `components/quiz/HardStopCard.tsx`; wording changes go through `PENDING_ATTORNEY_REVIEW.md`
+- No user action, admin override, promo code or partner setting can bypass this check
 - Client-side copy never uses the word "death" or "complex situation"
 
 ## Ask the user
