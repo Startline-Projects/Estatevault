@@ -79,12 +79,18 @@ const TRUSTEE_REQUIREMENTS: FieldRequirement[] = [
 ];
 
 /**
- * Core Rule 4 hard stops. Two of the three triggers had no question until
- * they were added; a session saved before then reaches checkout having never
- * been asked, and the server would let it through because an unanswered
- * trigger is not a "Yes". Route those sessions back rather than assuming No.
+ * Core Rule 4 hard stops — all three. Medicaid planning and estate dispute had
+ * no question until they were added; a session saved before then reaches
+ * checkout having never been asked, and the server would let it through because
+ * an unanswered trigger is not a "Yes". Route those sessions back rather than
+ * assuming No.
+ *
+ * Special needs was always asked, but was missing from this list, so a restored
+ * session without the answer skipped the resume and hit a 400 at checkout
+ * (the schema requires it). It gets the same treatment as the other two.
  */
 const HARD_STOP_REQUIREMENTS: FieldRequirement[] = [
+  { field: "hasSpecialNeedsDependent", step: "about", isAnswered: nonEmptyString("hasSpecialNeedsDependent") },
   { field: "hasMedicaidPlanning", step: "about", isAnswered: nonEmptyString("hasMedicaidPlanning") },
   { field: "hasEstateDispute", step: "about", isAnswered: nonEmptyString("hasEstateDispute") },
 ];

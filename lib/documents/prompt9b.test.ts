@@ -20,7 +20,7 @@ function answers(o: Record<string, unknown> = {}) {
     beneficiaries: [{ name: "Layla Hassan", relationship: "Child", share: "", contingency: "descendants" }],
     organDonation: "silent",
     funeralPreference: "family_decides",
-    hasMedicaidPlanning: "No", hasEstateDispute: "No",
+    hasSpecialNeedsDependent: "No", hasMedicaidPlanning: "No", hasEstateDispute: "No",
     ...o,
   };
 }
@@ -118,7 +118,7 @@ describe("joint co-trustee authority", () => {
 describe("trust flow collects everything the trust template requires", () => {
   const legacyTrust = {
     firstName: "Ahmed", lastName: "Hassan", city: "Dearborn Heights", state: "Michigan",
-    hasMedicaidPlanning: "No", hasEstateDispute: "No",
+    hasSpecialNeedsDependent: "No", hasMedicaidPlanning: "No", hasEstateDispute: "No",
     successorTrusteeName: "Karim Hassan", successorTrusteeRelationship: "Sibling",
     executorName: "Raga Hassan", executorRelationship: "Spouse/Partner",
     beneficiaries: [{ name: "Layla Hassan", relationship: "Child", share: "" }],
