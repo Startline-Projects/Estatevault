@@ -52,7 +52,7 @@ Match the real conventions (full detail in `references/conventions.md`). The ess
 - **Validate at the boundary.** Parse request bodies and form data with a Zod schema from `lib/validation/schemas.ts` (use the `new-zod-schema` skill to add one). Never trust client input shape.
 - **Errors don't leak.** `try/catch` in every async route; log with a `console.error('[context]', error)` prefix; return `{ error: string }` with a sane status. Never return raw DB errors or stack traces.
 - **Money is integer cents.** Never floats. The fixed prices and revenue splits in `CLAUDE.md` are law — never make them editable.
-- **Hard stops are hardcoded.** Special-needs dependent and irrevocable trust halt generation → attorney referral. No override path, ever.
+- **Hard stops are hardcoded.** Special-needs dependent, Medicaid planning and active estate dispute halt generation → attorney referral, through the one evaluator `evaluateHardStop` in `lib/compliance/hardStop.ts`. No override path, ever. Irrevocable trust is NOT a hard stop (removed 2026-09-18, founder's decision) — do not restore it.
 - **Migrations** go in `supabase/migrations/YYYYMMDD_description.sql` with RLS enabled on every user-data table. Match the newest existing migration's style, not the old root-level doc.
 - **Components**: one per file in `/components`, `[Name]Props` interface, Tailwind only (brand: navy `#1C3557`, gold `#C9A84C`, charcoal `#2D2D2D`, Inter), loading + error + success states on anything async. Voice: protection, never "death."
 

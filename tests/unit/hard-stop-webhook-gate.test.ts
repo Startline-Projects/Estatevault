@@ -125,6 +125,17 @@ describe.each(PRODUCTS)("$product webhook parks the order on every trigger", ({ 
     expectParked();
   });
 
+  it("an old order that answered Yes to the removed irrevocable-trust question is fulfilled on replay, not parked", async () => {
+    // Irrevocable trust stopped being a hard stop on 2026-09-18. Orders placed
+    // before that may carry the answer in intake_data under any of three keys.
+    h.getLatestAnswers.mockResolvedValue({ data: { id: "quiz_1", answers: {} } });
+    const clean = schema.parse({ intakeAnswers: intake }).intakeAnswers as Record<string, unknown>;
+    const old = { ...clean, wantsIrrevocableTrust: "Yes", wants_irrevocable_trust: "Yes", irrevocableTrust: "Yes" };
+    await handleDocumentCheckout(makeAdmin({ status: "pending", intake_data: old }), session, meta(product));
+    expect(h.insertMany).toHaveBeenCalledTimes(1);
+    expect(h.orderUpdate).not.toHaveBeenCalledWith(expect.anything(), "order_1", { status: "needs_attorney" });
+  });
+
   it("a clean intake creates the document rows", async () => {
     h.getLatestAnswers.mockResolvedValue({ data: { id: "quiz_1", answers: {} } });
     const clean = schema.parse({ intakeAnswers: intake }).intakeAnswers;

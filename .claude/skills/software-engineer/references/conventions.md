@@ -126,7 +126,7 @@ From `CLAUDE.md` — non-negotiable, never make editable:
 - Will $400 · Trust $600 · Attorney review add-on $300 (100% to attorney) · Amendment $50.
 - Splits: standard $300/will, $400/trust; enterprise $350/will, $450/trust.
 - Platform never gives legal advice; quiz says "Based on your answers…", never "We recommend…".
-- Hard stops (special-needs dependent, irrevocable trust) halt generation → attorney referral. Hardcoded, no override.
+- Hard stops (special-needs dependent, Medicaid planning, active estate dispute) halt generation → attorney referral. Hardcoded, no override. Irrevocable trust is NOT a hard stop (removed 2026-09-18, founder's decision).
 - Client signs acknowledgment before any document generates.
 - All money in integer cents end to end.
 

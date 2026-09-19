@@ -79,13 +79,12 @@ const TRUSTEE_REQUIREMENTS: FieldRequirement[] = [
 ];
 
 /**
- * Core Rule 4 hard stops. Three of the four triggers had no question until
+ * Core Rule 4 hard stops. Two of the three triggers had no question until
  * they were added; a session saved before then reaches checkout having never
  * been asked, and the server would let it through because an unanswered
  * trigger is not a "Yes". Route those sessions back rather than assuming No.
  */
 const HARD_STOP_REQUIREMENTS: FieldRequirement[] = [
-  { field: "wantsIrrevocableTrust", step: "about", isAnswered: nonEmptyString("wantsIrrevocableTrust") },
   { field: "hasMedicaidPlanning", step: "about", isAnswered: nonEmptyString("hasMedicaidPlanning") },
   { field: "hasEstateDispute", step: "about", isAnswered: nonEmptyString("hasEstateDispute") },
 ];

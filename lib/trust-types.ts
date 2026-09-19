@@ -7,7 +7,6 @@ export interface TrustIntake {
   state: string;
   maritalStatus: string;
   hasSpecialNeedsDependent: string;
-  wantsIrrevocableTrust: string;
   hasMedicaidPlanning: string;
   hasEstateDispute: string;
   trustName: string;
@@ -81,7 +80,6 @@ export const initialTrustIntake: TrustIntake = {
   state: "",
   maritalStatus: "",
   hasSpecialNeedsDependent: "",
-  wantsIrrevocableTrust: "",
   hasMedicaidPlanning: "",
   hasEstateDispute: "",
   trustName: "",

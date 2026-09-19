@@ -191,14 +191,13 @@ const willIntakeSchema = z.object({
   state: z.string().min(1).max(50),
   maritalStatus: MARITAL_STATUS,
   hasMinorChildren: YES_NO,
-  // Core Rule 4 hard stops — all four. A "Yes" to any of these halts
+  // Core Rule 4 hard stops — all three. A "Yes" to any of these halts
   // generation, so the schema requires an answer rather than letting one
   // default to "No". Every trigger the questionnaire asks must be listed here:
   // z.object() strips keys it does not know, so a trigger missing from this
   // list is silently discarded before evaluateHardStop ever sees it. The
   // special-needs question was collected and dropped that way.
   hasSpecialNeedsDependent: YES_NO,
-  wantsIrrevocableTrust: YES_NO,
   hasMedicaidPlanning: YES_NO,
   hasEstateDispute: YES_NO,
   executorName: z.string().min(1).max(200),
@@ -266,7 +265,6 @@ const trustIntakeSchema = z.object({
   trustName: z.string().max(300),
   // Core Rule 4 hard stops — all four; see the note on willIntakeSchema.
   hasSpecialNeedsDependent: YES_NO,
-  wantsIrrevocableTrust: YES_NO,
   hasMedicaidPlanning: YES_NO,
   hasEstateDispute: YES_NO,
   primaryTrustee: z.enum(["Myself", "Someone else"]),

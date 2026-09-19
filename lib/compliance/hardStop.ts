@@ -1,4 +1,4 @@
-// Core Rule 4 — hard stops. Four situations must halt document generation and
+// Core Rule 4 — hard stops. Three situations must halt document generation and
 // route the family to a licensed attorney. This is the single source of truth,
 // used by the intake pages, the checkout route, the quiz personalization route
 // and the Stripe webhook. Hardcoded, no override (a client flag can never
@@ -17,7 +17,6 @@ export type HardStopResult = {
  */
 export const HARD_STOP_REASONS = {
   specialNeeds: "Special-needs dependent",
-  irrevocableTrust: "Irrevocable trust",
   medicaid: "Medicaid planning",
   estateDispute: "Active estate dispute",
 } as const;
@@ -51,21 +50,20 @@ export function evaluateHardStop(
     reasons.push(HARD_STOP_REASONS.specialNeeds);
   }
 
-  // 2. Irrevocable trust. The platform only ever drafts a revocable trust, so
-  //    a client who needs an irrevocable one needs an attorney, not this
-  //    questionnaire. (Was previously not enforced at all — see BUG-3.)
-  if (yes("wantsIrrevocableTrust", "wants_irrevocable_trust", "irrevocableTrust")) {
-    reasons.push(HARD_STOP_REASONS.irrevocableTrust);
-  }
+  // (Irrevocable trust was a hard stop until 2026-09-18, when the founder
+  // removed it: the questionnaire no longer asks, and an answer left on an old
+  // order — wantsIrrevocableTrust / wants_irrevocable_trust / irrevocableTrust —
+  // is deliberately ignored, so a webhook replay cannot halt on a stop that no
+  // longer exists. Do not restore the branch; see CLAUDE.md, Core Rule 4.)
 
-  // 3. Medicaid planning. Transfer timing and look-back rules change what the
+  // 2. Medicaid planning. Transfer timing and look-back rules change what the
   //    documents should say; generating from a questionnaire could cost the
   //    client their eligibility.
   if (yes("hasMedicaidPlanning", "has_medicaid_planning", "medicaidPlanning")) {
     reasons.push(HARD_STOP_REASONS.medicaid);
   }
 
-  // 4. Active estate dispute. A contested estate is litigation, not document
+  // 3. Active estate dispute. A contested estate is litigation, not document
   //    preparation.
   if (yes("hasEstateDispute", "has_estate_dispute", "estateDispute")) {
     reasons.push(HARD_STOP_REASONS.estateDispute);

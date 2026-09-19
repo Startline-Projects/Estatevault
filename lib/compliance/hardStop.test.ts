@@ -1,8 +1,10 @@
 /**
- * Core Rule 4 — all four triggers, one evaluator, both server gates.
+ * Core Rule 4 — all three triggers, one evaluator, both server gates.
  *
- * Three of the four (irrevocable trust, Medicaid planning, active estate
- * dispute) were promised on the marketing pages and enforced nowhere. These
+ * Two of the three (Medicaid planning, active estate dispute) were promised on
+ * the marketing pages and enforced nowhere. Irrevocable trust was a fourth
+ * until 2026-09-18, when the founder removed it; the last describe block pins
+ * that removal so it is not mistaken for a regression. These
  * tests pin each one at the evaluator and at both places that can still stop an
  * order: the checkout session and the Stripe webhook.
  */
@@ -14,14 +16,12 @@ import { evaluateHardStop, firstHardStopReason, HARD_STOP_REASONS } from "./hard
 
 const TRIGGERS = [
   { name: "special-needs dependent", field: "hasSpecialNeedsDependent", reason: HARD_STOP_REASONS.specialNeeds },
-  { name: "irrevocable trust", field: "wantsIrrevocableTrust", reason: HARD_STOP_REASONS.irrevocableTrust },
   { name: "Medicaid planning", field: "hasMedicaidPlanning", reason: HARD_STOP_REASONS.medicaid },
   { name: "active estate dispute", field: "hasEstateDispute", reason: HARD_STOP_REASONS.estateDispute },
 ] as const;
 
 const CLEAN = {
   hasSpecialNeedsDependent: "No",
-  wantsIrrevocableTrust: "No",
   hasMedicaidPlanning: "No",
   hasEstateDispute: "No",
 };
@@ -39,13 +39,12 @@ describe("every trigger halts", () => {
 
   it("reports every trigger that fired, once each", () => {
     const all = evaluateHardStop({
-      hasSpecialNeedsDependent: "Yes", wantsIrrevocableTrust: "Yes",
+      hasSpecialNeedsDependent: "Yes",
       hasMedicaidPlanning: "Yes", hasEstateDispute: "Yes",
       specialNeedsChildren: "Yes", // same situation by another name
     });
     expect(all.reasons).toEqual([
       HARD_STOP_REASONS.specialNeeds,
-      HARD_STOP_REASONS.irrevocableTrust,
       HARD_STOP_REASONS.medicaid,
       HARD_STOP_REASONS.estateDispute,
     ]);
@@ -57,14 +56,13 @@ describe("every trigger halts", () => {
   });
 
   it("reads the snake_case shape the webhook gets back off the order", () => {
-    expect(evaluateHardStop({ wants_irrevocable_trust: "Yes" }).halted).toBe(true);
     expect(evaluateHardStop({ has_medicaid_planning: "Yes" }).halted).toBe(true);
     expect(evaluateHardStop({ has_estate_dispute: "Yes" }).halted).toBe(true);
     expect(evaluateHardStop({ has_special_needs_dependent: "Yes" }).halted).toBe(true);
   });
 
   it("an unanswered trigger is not a Yes, and not a halt", () => {
-    expect(evaluateHardStop({ wantsIrrevocableTrust: "" }).halted).toBe(false);
+    expect(evaluateHardStop({ hasMedicaidPlanning: "" }).halted).toBe(false);
     expect(evaluateHardStop({}).halted).toBe(false);
     expect(evaluateHardStop(null).halted).toBe(false);
   });
@@ -129,7 +127,7 @@ describe("the questions exist and cannot be skipped", () => {
 
   it("every trigger has a question in both flows", () => {
     const component = read("components/intake/HardStopQuestions.tsx");
-    for (const f of ["wantsIrrevocableTrust", "hasMedicaidPlanning", "hasEstateDispute"]) {
+    for (const f of ["hasMedicaidPlanning", "hasEstateDispute"]) {
       expect(component).toContain(f);
     }
     for (const page of ["app/will/page.tsx", "app/trust/page.tsx"]) {
@@ -145,9 +143,51 @@ describe("the questions exist and cannot be skipped", () => {
   it("none of them has a default", () => {
     const willTypes = read("lib/will-types.ts");
     const trustTypes = read("lib/trust-types.ts");
-    for (const f of ["wantsIrrevocableTrust", "hasMedicaidPlanning", "hasEstateDispute"]) {
+    for (const f of ["hasMedicaidPlanning", "hasEstateDispute"]) {
       expect(willTypes).toContain(`${f}: ""`);
       expect(trustTypes).toContain(`${f}: ""`);
+    }
+  });
+});
+
+describe("irrevocable trust is no longer a hard stop (removed 2026-09-18, founder's decision)", () => {
+  // Not a regression. The question was taken out of the questionnaire and the
+  // rule was taken out of Core Rule 4 (CLAUDE.md) in the same change. If this
+  // block fails because someone put the branch back, read CLAUDE.md first.
+  const read = (p: string) => readFileSync(join(__dirname, "..", "..", p), "utf8");
+
+  it("there are exactly three reasons", () => {
+    expect(Object.keys(HARD_STOP_REASONS).sort()).toEqual(["estateDispute", "medicaid", "specialNeeds"]);
+  });
+
+  it.each(["wantsIrrevocableTrust", "wants_irrevocable_trust", "irrevocableTrust"])(
+    "an old answer under %s is ignored, so a webhook replay cannot halt on it",
+    (key) => {
+      expect(evaluateHardStop({ ...CLEAN, [key]: "Yes" })).toEqual({ halted: false, reasons: [] });
+    },
+  );
+
+  it("and it does not mask a real trigger sitting next to it", () => {
+    const r = evaluateHardStop({ ...CLEAN, wantsIrrevocableTrust: "Yes", hasEstateDispute: "Yes" });
+    expect(r).toEqual({ halted: true, reasons: [HARD_STOP_REASONS.estateDispute] });
+  });
+
+  it("the questionnaire asks two questions here, neither of them this one", () => {
+    const component = read("components/intake/HardStopQuestions.tsx");
+    expect(component.match(/field: "(\w+)" as const/g)).toEqual([
+      'field: "hasMedicaidPlanning" as const',
+      'field: "hasEstateDispute" as const',
+    ]);
+    expect(component).not.toMatch(/question: "[^"]*irrevocable/i);
+  });
+
+  it("no field, schema entry, review row, resume requirement, adapter key or referral copy is left", () => {
+    for (const f of [
+      "lib/will-types.ts", "lib/trust-types.ts", "lib/validation/schemas.ts",
+      "app/will/page.tsx", "app/trust/page.tsx", "lib/intake/incomplete-steps.ts",
+      "lib/documents/intake-adapter.ts", "components/quiz/HardStopCard.tsx",
+    ]) {
+      expect(read(f), f).not.toMatch(/wantsIrrevocableTrust|wants_irrevocable_trust|irrevocable/i);
     }
   });
 });

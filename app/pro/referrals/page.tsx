@@ -108,9 +108,9 @@ export default function ProReferralsPage() {
           <span className="text-4xl">🔗</span>
           <p className="mt-4 text-sm text-charcoal/50">No referrals yet</p>
           <p className="text-xs text-charcoal/60 mt-1 max-w-md mx-auto">
-            When a client triggers a hard stop (a special-needs dependent, an irrevocable trust,
-            Medicaid planning, or an active estate dispute), they are automatically routed to an
-            attorney. You earn a $75 referral fee for each case that converts.
+            When a client triggers a hard stop (a special-needs dependent, Medicaid planning,
+            or an active estate dispute), they are automatically routed to an attorney. You
+            earn a $75 referral fee for each case that converts.
           </p>
         </div>
       ) : (

@@ -62,7 +62,7 @@ Never load the full codebase unless explicitly needed.
 
 **Key constraints:**
 - Never give legal advice — generate documents from answers only
-- Hard stops: special needs dependent, irrevocable trust → attorney referral (hardcoded, no override)
+- Hard stops: special-needs dependent, Medicaid planning, active estate dispute → attorney referral (hardcoded, no override). Irrevocable trust is NOT one — removed 2026-09-18 by the founder's decision; do not restore it.
 - Pricing is fixed (see CLAUDE.md)
 **Never:** Touch `components/` or page UI.
 

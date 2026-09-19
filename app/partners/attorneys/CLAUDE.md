@@ -16,7 +16,7 @@ Sections: Nav · Hero · Logo bar · Problem/Solution · How it works · Demo ·
 ## Attorney-specific features
 - Attorneys set their own review fee ($150–$1,500) — 100% goes to them
 - Attorney name + bar number on every approved document
-- Complex cases (irrevocable trust, special needs, Medicaid, business succession) hard-stop → routed to attorney as full engagements
+- Complex cases (special-needs dependent, Medicaid planning, active estate dispute) hard-stop → routed to attorney as full engagements. Irrevocable trust (removed 2026-09-18) and business succession (never implemented) are NOT hard stops.
 - Promo code `TPFP` waives platform fee (built into page state)
 
 ## Review network

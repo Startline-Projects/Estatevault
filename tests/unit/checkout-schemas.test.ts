@@ -158,7 +158,7 @@ describe("Core Rule 4 — every trigger the questionnaire asks must survive the 
   // asked on both questionnaires, carried by both intake types, and dropped
   // here, so the checkout gate never saw a "Yes". Each trigger now has to be
   // answered — an unanswered one is a 400, never a silent "No".
-  const TRIGGERS = ["hasSpecialNeedsDependent", "wantsIrrevocableTrust", "hasMedicaidPlanning", "hasEstateDispute"] as const;
+  const TRIGGERS = ["hasSpecialNeedsDependent", "hasMedicaidPlanning", "hasEstateDispute"] as const;
 
   it.each(TRIGGERS)("will: %s is required and kept", (field) => {
     const { [field]: _omit, ...without } = VALID_WILL_INTAKE;

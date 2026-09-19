@@ -13,7 +13,7 @@ The app is a B2B2C estate-planning platform with five user types (client, partne
 Testing goals, in priority order:
 1. **Money is never wrong** — correct prices, correct splits, no double-charge, payouts to the right account.
 2. **Access control holds** — each role sees only what it should; the new B2 endpoints reject anonymous + cross-tenant callers.
-3. **Hard rules never break** — fixed pricing, hard stops (special-needs / irrevocable trust → attorney referral), acknowledgment before generation, "never say death."
+3. **Hard rules never break** — fixed pricing, hard stops (special-needs dependent / Medicaid planning / active estate dispute → attorney referral), acknowledgment before generation, "never say death."
 4. **The core journeys work end-to-end** — quiz → checkout → document generation → vault; partner onboarding; attorney review; trustee unlock.
 5. **No regressions from the refactors** — the converted screens still load and act through their new endpoints.
 
@@ -63,7 +63,7 @@ Priority: **P0** = money/security/hard-rules (must pass before any release) · *
 - [P1] Mobile Bearer token works on the marketing routes now on `requireAuth` (3.3) — GET with `Authorization: Bearer` succeeds where cookie-less.
 
 ### B. Consumer journey: quiz → checkout → documents  — P0/P1
-- [P0] **Hard stops**: special-needs dependent and irrevocable-trust answers halt generation → attorney-referral screen, no document created. (covered: `quiz-flow.spec.ts`; verify the copy + that no order/doc row appears.)
+- [P0] **Hard stops**: special-needs dependent, Medicaid-planning and active-estate-dispute answers halt generation → attorney-referral screen, no document created. (covered: `quiz-flow.spec.ts` for special needs only; verify the copy + that no order/doc row appears.) Irrevocable trust is not a hard stop (removed 2026-09-18) — the questionnaire must not ask it.
 - [P0] **Fixed pricing** at checkout: Will $400, Trust $600, Attorney Review +$300, Amendment $50 — assert the Stripe session amount, not the UI label.
 - [P0] **Acknowledgment required** before any document generates.
 - [P1] Quiz prefill on `will`/`trust` pages now loads via `GET /api/client/quiz-latest` (B2) — logged-in user sees prefilled executor/guardian; anonymous user just gets a blank form (no error).
@@ -189,7 +189,7 @@ The Stripe-webhook / attorney-review / trustee-unlock e2e specs were `test.fixme
 **Still open in Stage 3 (documented, not yet written):**
 - **Signed-event route test** — POST a `stripe.webhooks.generateTestHeaderString`-signed `checkout.session.completed` to `/api/webhooks/stripe`; assert order update + **idempotency** (dup event → single row) + **bad signature → 400**. The webhook secret is in `.env.test`, but this writes to the **shared staging DB**, so it's gated like Stage 2 seeding. (Bad-signature 400 is already covered by `api-auth-guards`; transfer idempotency by `stripe-transfer-idempotency` unit.)
 - **Attorney-review + trustee-unlock fixmes** (10 stubs) — need the seeded users + the harness fixes (`/etc/hosts`, ports).
-- **Hard-stop end-to-end** — assert no order/document row on special-needs / irrevocable-trust answers.
+- **Hard-stop end-to-end** — assert no order/document row on special-needs / Medicaid-planning / estate-dispute answers.
 
 **Net after Stage 3:** the core "money is never wrong" rules (splits, doc sets, payouts, the amendment double-generate guard) and the two security invariants (forged flags, fixed $300) are now locked by fast deterministic tests.
 

@@ -15,17 +15,13 @@ interface HardStopCardProps {
 
 // PENDING ATTORNEY APPROVAL — the heading and body for each hard-stop reason.
 // The card used to carry one fixed message about special-needs planning, which
-// was shown for whichever trigger fired. Now that four triggers can fire, each
+// was shown for whichever trigger fired. Now that three triggers can fire, each
 // says why this situation needs an attorney. Logged in
 // PENDING_ATTORNEY_REVIEW.md with the questions themselves.
 const REASON_COPY: Record<string, { heading: string; body: string }> = {
   [HARD_STOP_REASONS.specialNeeds]: {
     heading: "Your family deserves specialized attention.",
     body: "Caring for a loved one with special needs requires a specialized trust that should be drafted by a licensed attorney. Share your details and an experienced Michigan attorney will reach out.",
-  },
-  [HARD_STOP_REASONS.irrevocableTrust]: {
-    heading: "An irrevocable trust needs an attorney.",
-    body: "An irrevocable trust generally cannot be undone once it is signed, so it is drafted by a licensed attorney rather than from a questionnaire. Share your details and an experienced Michigan attorney will reach out.",
   },
   [HARD_STOP_REASONS.medicaid]: {
     heading: "Medicaid planning needs an attorney.",

@@ -177,7 +177,6 @@ const lenientWillIntakeSchema = z.object({
   // reaches the webhook's hard-stop re-derivation is the shape the client
   // answered, in snake_case alongside everything else.
   has_special_needs_dependent: z.string().default(""),
-  wants_irrevocable_trust: z.string().default(""),
   has_medicaid_planning: z.string().default(""),
   has_estate_dispute: z.string().default(""),
   has_hipaa_additional_parties: z.boolean().default(false),
@@ -656,7 +655,6 @@ export function mapIntakeToTemplateData(
       };
     }
     mapped.has_special_needs_dependent = str(raw.hasSpecialNeedsDependent ?? raw.has_special_needs_dependent ?? "");
-    mapped.wants_irrevocable_trust = str(raw.wantsIrrevocableTrust ?? raw.wants_irrevocable_trust ?? "");
     mapped.has_medicaid_planning = str(raw.hasMedicaidPlanning ?? raw.has_medicaid_planning ?? "");
     mapped.has_estate_dispute = str(raw.hasEstateDispute ?? raw.has_estate_dispute ?? "");
 

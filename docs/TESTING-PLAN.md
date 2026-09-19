@@ -51,7 +51,7 @@ The current seed can't exercise several critical paths. Extend `scripts/test-db-
 | Quiz happy path → trust recommendation | 🟡 | add explicit net-worth/asset branch asserting trust |
 | Michigan-only gate rejects other states | ❌ | residency step, both flows |
 | Hard stop: special-needs dependent → attorney referral, no checkout | ❌ 🔺 | quiz B2 + G1 → `/attorney-referral` |
-| Hard stop: irrevocable trust → referral | ❌ 🔺 | per CLAUDE.md rule 4 |
+| Hard stop: Medicaid planning / active estate dispute → referral | ❌ 🔺 | per CLAUDE.md rule 4 — will + trust "about" step. (Irrevocable trust is not a hard stop since 2026-09-18.) |
 | Acknowledgment gate shown before any intake/generation | 🟡 🔺 | rule 3 — assert intake blocked until accepted |
 | Age gate (DOB < 18 rejected) | ❌ | will + trust "about" step |
 | Beneficiary shares must sum to 100% | ❌ | unequal-shares validation |
@@ -133,7 +133,7 @@ Covers the partner-scoped client lockout end to end. Requires seed from §3.
 5. RPC guard: `get_partner_login_target` returns host fields only for the caller's own partner (API/unit test; assert no `stripe_account_id` etc. in payload).
 
 ### 5.2 `quiz-hard-stops.spec.ts` — P0 🔺
-Special-needs dependent and irrevocable-trust paths halt generation → `/attorney-referral`. No checkout reachable. (CLAUDE rule 4, hardcoded.)
+Special-needs dependent, Medicaid-planning and active-estate-dispute paths halt generation → `/attorney-referral`. No checkout reachable. (CLAUDE rule 4, hardcoded.) Irrevocable trust is not a hard stop — assert the questionnaire does not ask about it.
 
 ### 5.3 `pricing-immutable.spec.ts` — P0 🔺
 Assert checkout totals = fixed prices; partner settings exposes no price edit; splits match `calculate-split` for both tiers. (rule 5/6)
