@@ -17,6 +17,8 @@ function preDeployWillSession(): Record<string, unknown> {
     city: "Dearborn",
     state: "Michigan",
     maritalStatus: "Married",
+    // Asked since 2026-06-09, well before the POA/PAD steps (2026-08-25).
+    hasSpecialNeedsDependent: "No",
     hasMedicaidPlanning: "No",
     hasEstateDispute: "No",
     executorName: "Raga Hassan",
@@ -101,6 +103,31 @@ describe("a pre-deploy session is redirected, not failed", () => {
     const resume = findResumePoint("trust", preDeployWillSession())!;
     expect(resume.step).toBe("trustee");
     expect(resume.missingFields).toContain("isJointTrust");
+  });
+
+  it.each(["will", "trust"] as const)(
+    "%s: a session missing the special-needs answer goes back to About You, not to a 400 at checkout",
+    (flow) => {
+      const full: Record<string, unknown> = { ...completeSession(), isJointTrust: "No" };
+      const { hasSpecialNeedsDependent: _omit, ...missing } = full;
+      const resume = findResumePoint(flow, missing)!;
+      expect(resume.step).toBe("about");
+      expect(resume.missingFields).toEqual(["hasSpecialNeedsDependent"]);
+      // blank is unanswered too; "No" is an answer
+      expect(findResumePoint(flow, { ...missing, hasSpecialNeedsDependent: "" })!.step).toBe("about");
+      expect(findResumePoint(flow, { ...missing, hasSpecialNeedsDependent: "No" })).toBeNull();
+    },
+  );
+
+  it("asks all three hard-stop questions on About You before anything later in the flow", () => {
+    for (const flow of ["will", "trust"] as const) {
+      const first3 = FLOW_REQUIREMENTS[flow].slice(0, 3).map((r) => [r.field, r.step]);
+      expect(first3).toEqual([
+        ["hasSpecialNeedsDependent", "about"],
+        ["hasMedicaidPlanning", "about"],
+        ["hasEstateDispute", "about"],
+      ]);
+    }
   });
 
   it("treats blank strings and empty arrays as unanswered", () => {
