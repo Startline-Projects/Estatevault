@@ -37,7 +37,7 @@ const FAQS = [
   {
     question: "What happens when a client triggers a hard stop?",
     answer:
-      "If a client indicates a special-needs dependent, an irrevocable trust, Medicaid planning, or an active estate dispute, document generation halts automatically. The client is routed to a licensed attorney for consultation. You earn a $75 referral fee if the case converts. This is a compliance safeguard and cannot be overridden.",
+      "If a client indicates a special-needs dependent, Medicaid planning, or an active estate dispute, document generation halts automatically. The client is routed to a licensed attorney for consultation. You earn a $75 referral fee if the case converts. This is a compliance safeguard and cannot be overridden.",
   },
   {
     question: "Can I change the pricing my clients see?",
